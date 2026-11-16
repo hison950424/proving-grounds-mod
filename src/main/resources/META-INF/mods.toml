@@ -1,0 +1,25 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="provinggrounds"
+version="1.0.0"
+displayName="Proving Grounds"
+description='''
+Competitive multiplayer game modes: Battle Royale, TDM, DOM, GK.
+'''
+
+[[dependencies.provinggrounds]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47.3,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.provinggrounds]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="BOTH"
