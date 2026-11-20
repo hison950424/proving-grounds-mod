@@ -10,6 +10,12 @@ java {
     toolchain.languageVersion = JavaLanguageVersion.of(17)
 }
 
+// 原始碼一律以 UTF-8 編譯。Java 17 在繁中 Windows 預設用 CP950，
+// 不指定的話中文字串（設定註解、訊息）會變成亂碼。
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
 minecraft {
     mappings channel: 'official', version: '1.20.1'
 
