@@ -23,3 +23,19 @@ Competitive multiplayer game modes: Battle Royale, TDM, DOM, GK.
     versionRange="[1.20.1,1.21)"
     ordering="NONE"
     side="BOTH"
+
+# 可選依賴：只管載入順序。戰利品表透過物品 ID 引用它們的物品，程式碼不 import 它們的類別。
+# 沒安裝時模組照常運作，只是戰利品表裡這些物品不會出現。
+[[dependencies.provinggrounds]]
+    modId="tacz"
+    mandatory=false
+    versionRange="*"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.provinggrounds]]
+    modId="lrtactical"
+    mandatory=false
+    versionRange="*"
+    ordering="AFTER"
+    side="BOTH"

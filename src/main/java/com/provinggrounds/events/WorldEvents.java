@@ -1,37 +1,51 @@
 package com.provinggrounds.events;
 
 import com.provinggrounds.core.GameManager;
+import com.provinggrounds.data.PlayerDataManager;
+import com.provinggrounds.modes.BattleRoyaleMode;
 import net.minecraft.server.MinecraftServer;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.server.ServerStartedEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
+/**
+ * 檔案: WorldEvents.java
+ * 目的: 伺服器生命週期（啟動、關閉）與每 tick 分派。
+ */
 public class WorldEvents {
 
     @SubscribeEvent
     public void onServerStarted(ServerStartedEvent event) {
         MinecraftServer server = event.getServer();
         GameManager.get().setServer(server);
-        // 崩潰恢復：若 SavedData 顯示有未完成遊戲，重置回大廳
+        // 讀取跨局玩家資料（world/data/provinggrounds_players.dat）
+        PlayerDataManager.get().attach(server);
+        // 崩潰恢復：一律從大廳開始；參賽者重新登入時依 pg_br 標記還原
         GameManager.get().reset();
     }
 
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
-        // 伺服器關閉時乾淨重置（下次啟動從大廳開始）
+        // 伺服器關閉：還原線上玩家並重置（箱子留給下一局開局清理）
+        BattleRoyaleMode.get().forceStop(false);
         GameManager.get().reset();
     }
 
-    /** 每 tick 鉤子。遊戲模式邏輯在這裡分派。 */
+    @SubscribeEvent
+    public void onServerStopped(ServerStoppedEvent event) {
+        PlayerDataManager.get().detach();
+    }
+
+    /** 每 tick 鉤子。遊戲模式邏輯在這裡分派（結算 END 狀態也要繼續 tick，才能清理與還原）。 */
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        if (!GameManager.get().isInGame()) return;
+        if (GameManager.get().isInLobby()) return;
 
-        // 各模式 tick 邏輯（之後各 Mode 類實作）
         switch (GameManager.get().getMode()) {
-            case BATTLE_ROYALE -> tickBR();
+            case BATTLE_ROYALE -> BattleRoyaleMode.get().tick();
             case TDM           -> tickTDM();
             case DOM           -> tickDOM();
             case GK            -> tickGK();
@@ -39,8 +53,7 @@ public class WorldEvents {
         }
     }
 
-    private void tickBR()  { /* BattleRoyaleMode.get().tick() */ }
-    private void tickTDM() { /* TDMMode.get().tick() */ }
-    private void tickDOM() { /* DOMMode.get().tick() */ }
-    private void tickGK()  { /* GKMode.get().tick() */ }
+    private void tickTDM() { /* Phase 2：TDMMode.get().tick() */ }
+    private void tickDOM() { /* Phase 2：DOMMode.get().tick() */ }
+    private void tickGK()  { /* Phase 2：GKMode.get().tick() */ }
 }

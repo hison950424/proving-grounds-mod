@@ -3,8 +3,12 @@ package com.provinggrounds;
 import com.provinggrounds.command.PGCommand;
 import com.provinggrounds.config.PGConfig;
 import com.provinggrounds.core.GameManager;
+import com.provinggrounds.events.BREvents;
 import com.provinggrounds.events.PlayerEvents;
 import com.provinggrounds.events.WorldEvents;
+import com.provinggrounds.modes.br.BRMovement;
+import com.provinggrounds.network.PGNetwork;
+import com.provinggrounds.registry.PGBlocks;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -27,16 +31,22 @@ public class ProvingGroundsMod {
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
         modBus.addListener(this::setup);
 
+        // 方塊、物品、方塊實體（戰利品箱）
+        PGBlocks.register(modBus);
+
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, PGConfig.SERVER_SPEC);
 
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new PlayerEvents());
         MinecraftForge.EVENT_BUS.register(new WorldEvents());
+        MinecraftForge.EVENT_BUS.register(new BREvents());
+        MinecraftForge.EVENT_BUS.register(new BRMovement());
 
         LOGGER.info("Proving Grounds initializing...");
     }
 
     private void setup(final FMLCommonSetupEvent event) {
+        event.enqueueWork(PGNetwork::register);
         LOGGER.info("Proving Grounds setup complete.");
     }
 

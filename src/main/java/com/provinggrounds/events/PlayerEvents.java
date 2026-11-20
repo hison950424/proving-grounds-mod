@@ -34,6 +34,8 @@ public class PlayerEvents {
     public void onPlayerDeath(LivingDeathEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer victim)) return;
         if (!GameManager.get().isInGame()) return;
+        // BR 的擊殺/死亡/助攻由 BattleRoyaleMode 自己記錄，避免重複計算
+        if (GameManager.get().getMode() == GameManager.GameMode.BATTLE_ROYALE) return;
 
         // 記錄死亡
         PlayerDataManager.get().addDeath(victim);

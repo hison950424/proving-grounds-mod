@@ -1,0 +1,53 @@
+package com.provinggrounds.events;
+
+import com.provinggrounds.modes.BattleRoyaleMode;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingFallEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+
+/**
+ * 檔案: BREvents.java
+ * 目的: 把 Forge 事件（死亡、受傷、摔落、登入、登出）轉給 BattleRoyaleMode。
+ *       白話：遊戲發生這些事時，會先「通知」這裡，再由這裡交給大逃殺程式處理。
+ */
+public class BREvents {
+
+    /** 參賽者死亡 → 改成 BR 淘汰流程（掉物品、變觀察者），取消原版死亡畫面。 */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public void onDeath(LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer victim)) return;
+        BattleRoyaleMode br = BattleRoyaleMode.get();
+        if (!br.isRunning()) return;
+        if (br.onLethalDamage(victim, event.getSource())) event.setCanceled(true);
+    }
+
+    /** 記錄誰打過誰（助攻判定）。 */
+    @SubscribeEvent
+    public void onDamage(LivingDamageEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer victim)) return;
+        BattleRoyaleMode br = BattleRoyaleMode.get();
+        if (br.isRunning()) br.onDamaged(victim, event.getSource(), event.getAmount());
+    }
+
+    /** 跳傘中落地不受摔落傷害（不論有沒有開傘）。 */
+    @SubscribeEvent
+    public void onFall(LivingFallEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer p)) return;
+        if (BattleRoyaleMode.get().isDropping(p.getUUID())) event.setCanceled(true);
+    }
+
+    @SubscribeEvent
+    public void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer p) BattleRoyaleMode.get().onLogin(p);
+    }
+
+    /** 優先度 HIGH：要在 PlayerEvents 把玩家移出 GameManager 之前先處理淘汰。 */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer p) BattleRoyaleMode.get().onLogout(p);
+    }
+}
