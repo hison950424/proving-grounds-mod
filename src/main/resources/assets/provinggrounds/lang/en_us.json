@@ -2,5 +2,7 @@
   "block.provinggrounds.crate_low": "Wooden Crate (Low Tier)",
   "block.provinggrounds.crate_mid": "Iron Crate (Mid Tier)",
   "block.provinggrounds.crate_high": "Gold Crate (High Tier)",
-  "block.provinggrounds.crate_airdrop": "Airdrop Crate"
+  "block.provinggrounds.crate_airdrop": "Airdrop Crate",
+  "key.categories.provinggrounds": "Proving Grounds",
+  "key.provinggrounds.menu": "Open Main Menu"
 }

@@ -30,6 +30,17 @@ public final class PGNetwork {
             BRStatePacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, KillFeedPacket.class, KillFeedPacket::encode, KillFeedPacket::decode,
             KillFeedPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, MenuDataPacket.class, MenuDataPacket::encode, MenuDataPacket::decode,
+            MenuDataPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, MenuRequestPacket.class, MenuRequestPacket::encode, MenuRequestPacket::decode,
+            MenuRequestPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, StartBRPacket.class, StartBRPacket::encode, StartBRPacket::decode,
+            StartBRPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+    }
+
+    /** 客戶端 → 伺服器。 */
+    public static void sendToServer(Object packet) {
+        CHANNEL.sendToServer(packet);
     }
 
     public static void sendTo(ServerPlayer player, Object packet) {
