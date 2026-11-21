@@ -91,6 +91,7 @@ public final class ClientForgeEvents {
     @SubscribeEvent
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientMenuData.clear();
+        com.provinggrounds.client.ClientLobbyData.clear();
         ClientBRState.clear();
         FORCED_CRAWL.clear();
     }

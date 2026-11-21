@@ -77,6 +77,7 @@ public class GameManager {
         mode  = GameMode.NONE;
         activePlayers.clear();
         TeamManager.get().reset();
+        LobbyManager.get().onReturnToLobby(server); // 觀戰者「本局結束後加入」、清掉準備狀態
         ProvingGroundsMod.LOGGER.info("Game reset to LOBBY.");
     }
 

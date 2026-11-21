@@ -369,7 +369,7 @@ public class PGCommand {
                 .then(Commands.argument("players", EntityArgument.players())
                     .then(Commands.argument("team", StringArgumentType.word())
                         .suggests((ctx, b) -> {
-                            for (TeamManager.Team t : TeamManager.Team.values()) b.suggest(t.name().toLowerCase(Locale.ROOT));
+                            for (String s : new String[] { "solo", "1", "2", "3", "4", "red", "blue", "green", "yellow" }) b.suggest(s);
                             return b.buildFuture();
                         })
                         .executes(ctx -> teamJoin(ctx.getSource(), EntityArgument.getPlayers(ctx, "players"),
@@ -390,27 +390,31 @@ public class PGCommand {
             fail(src, "遊戲進行中不能換隊。");
             return 0;
         }
-        TeamManager.Team team;
-        try {
-            team = TeamManager.Team.valueOf(teamName.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            fail(src, "未知隊伍：" + teamName + "。可用：red, blue, green, yellow, solo");
+        TeamManager.Team team = TeamManager.Team.parse(teamName);
+        if (team == null) {
+            fail(src, "未知隊伍：" + teamName + "。可用：隊伍編號（1、2、3…）、red, blue, green, yellow, solo");
             return 0;
         }
         for (ServerPlayer p : players) TeamManager.get().assignTeam(p, team);
+        com.provinggrounds.core.LobbyManager.get().broadcast();
         ok(src, players.size() + " 位玩家已加入 " + team.displayName + "。", true);
         return players.size();
     }
 
     private static int teamLeave(CommandSourceStack src, Collection<ServerPlayer> players) {
         for (ServerPlayer p : players) TeamManager.get().unassign(p);
+        com.provinggrounds.core.LobbyManager.get().broadcast();
         ok(src, players.size() + " 位玩家已離開隊伍（開局時會是孤狼）。", true);
         return players.size();
     }
 
     private static int teamList(CommandSourceStack src) {
         ok(src, "目前分隊（未分隊 = 孤狼）：", false);
-        for (TeamManager.Team t : TeamManager.Team.values()) {
+        java.util.TreeMap<Integer, TeamManager.Team> teams = new java.util.TreeMap<>();
+        for (ServerPlayer p : src.getServer().getPlayerList().getPlayers()) {
+            TeamManager.get().getTeam(p).ifPresent(t -> teams.put(t.id, t));
+        }
+        for (TeamManager.Team t : teams.values()) {
             StringBuilder names = new StringBuilder();
             for (ServerPlayer p : TeamManager.get().getTeamPlayers(t, src.getServer())) {
                 if (names.length() > 0) names.append("、");

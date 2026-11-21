@@ -13,26 +13,62 @@ import java.util.*;
 
 /**
  * 檔案: TeamManager.java
- * 目的: 隊伍分配管理。紅/藍/綠/黃固定隊伍（人數無上限）與孤狼（每人一隊）。
- *       開局時同步建立原版計分板隊伍（pg_red、pg_solo_1…），設定「對其他隊伍隱藏名牌」，
+ * 目的: 隊伍分配管理。隊伍數量與每隊人數都沒有上限，另有孤狼（每人一隊）。
+ *       開局時同步建立原版計分板隊伍（pg_team_1、pg_solo_1…），設定「對其他隊伍隱藏名牌」，
  *       讓只有同隊玩家看得到彼此的名條。
  */
 public class TeamManager {
 
-    public enum Team {
-        RED(ChatFormatting.RED, "紅隊"),
-        BLUE(ChatFormatting.BLUE, "藍隊"),
-        GREEN(ChatFormatting.GREEN, "綠隊"),
-        YELLOW(ChatFormatting.YELLOW, "黃隊"),
-        SOLO(ChatFormatting.GRAY, "孤狼");
+    /**
+     * 隊伍。編號 1、2、3… 沒有上限；0 = 孤狼（每人自成一隊）。
+     * 前 8 隊有固定顏色與名稱（紅藍綠黃青粉橙白），之後顏色循環、名稱為「第 N 隊」。
+     * 同一個編號永遠是同一個物件，所以可以直接用 == 比較。
+     */
+    public static final class Team {
+        private static final ChatFormatting[] COLORS = {
+            ChatFormatting.RED, ChatFormatting.BLUE, ChatFormatting.GREEN, ChatFormatting.YELLOW,
+            ChatFormatting.AQUA, ChatFormatting.LIGHT_PURPLE, ChatFormatting.GOLD, ChatFormatting.WHITE,
+            ChatFormatting.DARK_RED, ChatFormatting.DARK_BLUE, ChatFormatting.DARK_GREEN, ChatFormatting.DARK_AQUA,
+            ChatFormatting.DARK_PURPLE };
+        private static final String[] NAMES = { "紅隊", "藍隊", "綠隊", "黃隊", "青隊", "粉隊", "橙隊", "白隊" };
+        private static final Map<Integer, Team> CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
+        public static final Team SOLO = new Team(0, ChatFormatting.GRAY, "孤狼");
+
+        public final int id;
         public final ChatFormatting color;
         public final String displayName;
 
-        Team(ChatFormatting color, String displayName) {
+        private Team(int id, ChatFormatting color, String displayName) {
+            this.id = id;
             this.color = color;
             this.displayName = displayName;
         }
+
+        /** 取得第 n 隊（n <= 0 為孤狼）。 */
+        public static Team of(int n) {
+            if (n <= 0) return SOLO;
+            return CACHE.computeIfAbsent(n, k -> new Team(k, COLORS[(k - 1) % COLORS.length],
+                k <= NAMES.length ? NAMES[k - 1] : "第 " + k + " 隊"));
+        }
+
+        /** 指令用名稱：solo、red/blue/green/yellow 或數字。認不得回傳 null。 */
+        @javax.annotation.Nullable
+        public static Team parse(String s) {
+            String v = s.toLowerCase(java.util.Locale.ROOT);
+            switch (v) {
+                case "solo": return SOLO;
+                case "red": return of(1);
+                case "blue": return of(2);
+                case "green": return of(3);
+                case "yellow": return of(4);
+                default:
+                    try { return of(Integer.parseInt(v)); } catch (NumberFormatException e) { return null; }
+            }
+        }
+
+        @Override
+        public String toString() { return id == 0 ? "SOLO" : "TEAM_" + id; }
     }
 
     private static final String VANILLA_PREFIX = "pg_";
@@ -55,11 +91,11 @@ public class TeamManager {
         playerTeams.remove(player.getUUID());
     }
 
-    /** 自動平衡分配（紅藍兩隊，人數少的隊先加）。 */
-    public void autoAssign(ServerPlayer player) {
-        long redCount  = playerTeams.values().stream().filter(t -> t == Team.RED).count();
-        long blueCount = playerTeams.values().stream().filter(t -> t == Team.BLUE).count();
-        assignTeam(player, (redCount <= blueCount) ? Team.RED : Team.BLUE);
+    /** 把玩家隨機平均分到 1..teamCount 隊（管理員按「自動分隊」）。 */
+    public void balance(List<ServerPlayer> players, int teamCount) {
+        List<ServerPlayer> shuffled = new ArrayList<>(players);
+        Collections.shuffle(shuffled);
+        for (int i = 0; i < shuffled.size(); i++) assignTeam(shuffled.get(i), Team.of(i % Math.max(1, teamCount) + 1));
     }
 
     public Optional<Team> getTeam(ServerPlayer player) {
@@ -84,7 +120,7 @@ public class TeamManager {
     /** 隊伍識別字串：固定隊伍用隊名，孤狼用 UUID（每人一隊）。用於計算存活隊伍數。 */
     public String teamKey(UUID id) {
         Team t = getTeamOrSolo(id);
-        return t == Team.SOLO ? "solo:" + id : t.name();
+        return t == Team.SOLO ? "solo:" + id : "team:" + t.id;
     }
 
     public List<ServerPlayer> getTeamPlayers(Team team, MinecraftServer server) {
@@ -104,7 +140,7 @@ public class TeamManager {
         int soloIndex = 1;
         for (ServerPlayer p : players) {
             Team t = getTeamOrSolo(p.getUUID());
-            String name = t == Team.SOLO ? VANILLA_PREFIX + "solo_" + (soloIndex++) : VANILLA_PREFIX + t.name().toLowerCase();
+            String name = t == Team.SOLO ? VANILLA_PREFIX + "solo_" + (soloIndex++) : VANILLA_PREFIX + "team_" + t.id;
             PlayerTeam team = sb.getPlayerTeam(name);
             if (team == null) {
                 team = sb.addPlayerTeam(name);

@@ -27,6 +27,7 @@ public class PGConfig {
     // ── 大廳 ──────────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.IntValue lobbyCountdownSeconds;
     public final ForgeConfigSpec.IntValue minPlayersToStart;
+    public final ForgeConfigSpec.IntValue forceStartSeconds;
 
     // ── BR：縮圈 ──────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.IntValue brGameDurationSeconds;
@@ -120,6 +121,8 @@ public class PGConfig {
         builder.push("lobby");
         lobbyCountdownSeconds = builder.comment("開始倒計時秒數（BR 在這段時間分批刷新戰利品）")
             .defineInRange("countdown_seconds", 30, 5, 300);
+        forceStartSeconds = builder.comment("管理員按「強制開始」後，全體提示並倒數的秒數")
+            .defineInRange("force_start_seconds", 10, 1, 60);
         minPlayersToStart = builder.comment("最少開始人數（1 = 方便單人測試）")
             .defineInRange("min_players", 1, 1, 100);
         builder.pop();

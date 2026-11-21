@@ -21,9 +21,16 @@ public class PlayerEvents {
         ProvingGroundsMod.LOGGER.info("Player {} logged in.", player.getName().getString());
     }
 
+    /** 大廳：觀戰者登入時維持觀察者模式、「本局結束後加入」的人回大廳。優先度 LOW：在 BR 的還原之後。 */
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOW)
+    public void onLobbyLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) com.provinggrounds.core.LobbyManager.get().onLogin(player);
+    }
+
     @SubscribeEvent
     public void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        com.provinggrounds.core.LobbyManager.get().onLogout(player);
         if (GameManager.get().isInGame()) {
             GameManager.get().removePlayer(player);
         }

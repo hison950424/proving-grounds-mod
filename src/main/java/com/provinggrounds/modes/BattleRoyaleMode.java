@@ -237,7 +237,7 @@ public class BattleRoyaleMode {
 
         List<ServerPlayer> players = new ArrayList<>();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (!p.isSpectator()) players.add(p);
+            if (!p.isSpectator() && !com.provinggrounds.core.LobbyManager.isSpectator(p)) players.add(p);
         }
         int min = PGConfig.SERVER.minPlayersToStart.get();
         if (players.size() < min) return "人數不足：需要至少 " + min + " 人，目前 " + players.size() + " 人。";
@@ -896,7 +896,8 @@ public class BattleRoyaleMode {
         CompoundTag tag = p.getPersistentData().getCompound(RESTORE_TAG);
         boolean sameGame = tag.contains("game") && tag.getLong("game") == gameId && phase != Phase.IDLE;
 
-        if (phase == Phase.PREPARING && !isParticipant(p.getUUID()) && !p.isSpectator()) {
+        if (phase == Phase.PREPARING && !isParticipant(p.getUUID()) && !p.isSpectator()
+                && !com.provinggrounds.core.LobbyManager.isSpectator(p)) {
             join(p);
             if (level != null) {
                 List<ServerPlayer> all = new ArrayList<>();

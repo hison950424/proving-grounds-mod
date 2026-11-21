@@ -30,6 +30,7 @@ public record MenuRequestPacket() {
             ServerPlayer player = ctx.get().getSender();
             if (player == null) return;
             PGNetwork.sendTo(player, build(player));
+            PGNetwork.sendTo(player, com.provinggrounds.core.LobbyManager.get().buildPacket(player.server));
         });
         ctx.get().setPacketHandled(true);
     }
