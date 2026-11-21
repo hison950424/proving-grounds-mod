@@ -18,7 +18,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Deque;
+import java.util.List;
+import net.minecraft.world.level.ChunkPos;
 
 /**
  * 檔案: LootSpawner.java
@@ -49,7 +53,10 @@ public class LootSpawner {
         this.level = level;
         this.map = map;
         this.mode = mode;
-        this.queue = new ArrayDeque<>(map.lootPoints);
+        // 依區塊排序：同一個區塊的點位連在一起處理，區塊只要載入一次，減少開局卡頓
+        List<BlockPos> sorted = new ArrayList<>(map.lootPoints);
+        sorted.sort(Comparator.comparingLong((BlockPos p) -> ChunkPos.asLong(p.getX() >> 4, p.getZ() >> 4)));
+        this.queue = new ArrayDeque<>(sorted);
         this.random = level.getRandom();
     }
 

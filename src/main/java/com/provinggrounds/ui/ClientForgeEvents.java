@@ -66,17 +66,28 @@ public final class ClientForgeEvents {
     // ── 趴下／站起來的動畫放慢一倍 ───────────────────────────────────────────
     // 原版每 tick 把「游泳程度」往目標移動 0.09（約 11 tick 完成），鏡頭高度每 tick 移動剩餘距離的一半。
     // 這裡在每 tick 結束時把這一步的變化量砍半，動畫時間就變成約兩倍。欄位是 private，用反射（SRG 名稱）存取。
-    private static final java.lang.reflect.Field SWIM_AMOUNT =
-        net.minecraftforge.fml.util.ObfuscationReflectionHelper.findField(net.minecraft.world.entity.LivingEntity.class, "f_20931_");
-    private static final java.lang.reflect.Field SWIM_AMOUNT_O =
-        net.minecraftforge.fml.util.ObfuscationReflectionHelper.findField(net.minecraft.world.entity.LivingEntity.class, "f_20932_");
-    private static final java.lang.reflect.Field EYE_HEIGHT =
-        net.minecraftforge.fml.util.ObfuscationReflectionHelper.findField(net.minecraft.client.Camera.class, "f_90562_");
-    private static final java.lang.reflect.Field EYE_HEIGHT_O =
-        net.minecraftforge.fml.util.ObfuscationReflectionHelper.findField(net.minecraft.client.Camera.class, "f_90563_");
+    // 找不到欄位（例如之後換 Minecraft 版本）時是 null，動畫維持原版速度，不會讓整個客戶端事件崩潰
+    @javax.annotation.Nullable private static final java.lang.reflect.Field SWIM_AMOUNT =
+        findField(net.minecraft.world.entity.LivingEntity.class, "f_20931_");
+    @javax.annotation.Nullable private static final java.lang.reflect.Field SWIM_AMOUNT_O =
+        findField(net.minecraft.world.entity.LivingEntity.class, "f_20932_");
+    @javax.annotation.Nullable private static final java.lang.reflect.Field EYE_HEIGHT =
+        findField(net.minecraft.client.Camera.class, "f_90562_");
+    @javax.annotation.Nullable private static final java.lang.reflect.Field EYE_HEIGHT_O =
+        findField(net.minecraft.client.Camera.class, "f_90563_");
+
+    @javax.annotation.Nullable
+    private static java.lang.reflect.Field findField(Class<?> type, String srgName) {
+        try {
+            return net.minecraftforge.fml.util.ObfuscationReflectionHelper.findField(type, srgName);
+        } catch (RuntimeException e) {
+            ProvingGroundsMod.LOGGER.warn("Prone animation: field {} not found; using vanilla speed.", srgName);
+            return null;
+        }
+    }
 
     private static void slowProneAnimation(Minecraft mc) {
-        if (mc.level == null) return;
+        if (mc.level == null || SWIM_AMOUNT == null || SWIM_AMOUNT_O == null || EYE_HEIGHT == null || EYE_HEIGHT_O == null) return;
         try {
             for (Player p : mc.level.players()) {
                 if (!com.provinggrounds.client.ClientProneData.inTransition(p.getUUID())) continue;

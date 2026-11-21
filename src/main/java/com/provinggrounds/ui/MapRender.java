@@ -60,9 +60,16 @@ public final class MapRender {
                     ni.setPixelRGBA(x, z, b < 4 ? 0 : MapColor.getColorFromPackedId(b));
                 }
             }
-            if (texture != null) texture.close();
-            texture = new DynamicTexture(ni);
-            Minecraft.getInstance().getTextureManager().register(TEXTURE, texture);
+            if (texture != null && texture.getPixels() != null
+                    && texture.getPixels().getWidth() == img.size() && texture.getPixels().getHeight() == img.size()) {
+                // 同尺寸：直接換像素重新上傳，不用建新材質
+                texture.setPixels(ni);
+                texture.upload();
+            } else {
+                // 尺寸不同（換地圖）：註冊新材質，TextureManager 會自動關閉舊的，這裡不要再 close 一次
+                texture = new DynamicTexture(ni);
+                Minecraft.getInstance().getTextureManager().register(TEXTURE, texture);
+            }
             builtVersion = img.version();
             builtMap = img.mapId();
         }
@@ -109,10 +116,15 @@ public final class MapRender {
         double pr = r / v.blocksPerPixel();
         int n = (int) Math.max(48, Math.min(1440, pr * 2 * Math.PI / 1.5));
         double scx = v.px(cx), scz = v.pz(cz);
+        // 整個圓都在視窗外（例如小地圖只看得到圈內一小塊）就不用畫
+        if (scx + pr < v.x() || scx - pr > v.x() + v.w() || scz + pr < v.y() || scz - pr > v.y() + v.h()) return;
+        if (pr > Math.hypot(v.w(), v.h()) + Math.hypot(scx - (v.x() + v.w() / 2.0), scz - (v.y() + v.h() / 2.0))) return; // 視窗整個在圓內
         for (int i = 0; i < n; i++) {
             if (dashed && (i / 6) % 2 == 1) continue;
             double a = i * Math.PI * 2 / n;
             int sx = (int) (scx + Math.cos(a) * pr), sz = (int) (scz + Math.sin(a) * pr);
+            // 只畫落在視窗裡的點（小地圖上大圈的大部分點都在外面，省下大量繪圖）
+            if (sx < v.x() - thickness || sx > v.x() + v.w() || sz < v.y() - thickness || sz > v.y() + v.h()) continue;
             g.fill(sx, sz, sx + thickness, sz + thickness, color);
         }
     }

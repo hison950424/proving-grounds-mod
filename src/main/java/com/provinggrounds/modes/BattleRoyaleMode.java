@@ -214,13 +214,13 @@ public class BattleRoyaleMode {
         return part != null && part.downed && part.seat != null && part.seat == vehicle;
     }
 
-    /** 自由落體或開傘中（取消摔落傷害用）。 */
     /** 在飛機上、自由落體或開傘中（不能趴下）。 */
     public boolean isAirborne(UUID id) {
         Participant p = participants.get(id);
         return p != null && p.alive && (p.state == PlayerState.PLANE || p.state == PlayerState.FREEFALL || p.state == PlayerState.CHUTE);
     }
 
+    /** 自由落體或開傘中（取消摔落傷害用）。 */
     public boolean isDropping(UUID id) {
         Participant p = participants.get(id);
         return p != null && p.alive && (p.state == PlayerState.FREEFALL || p.state == PlayerState.CHUTE);
@@ -291,7 +291,7 @@ public class BattleRoyaleMode {
         markForRestore(p);
         participants.put(p.getUUID(), new Participant(p));
         GameManager.get().addPlayer(p);
-        p.setGameMode(GameType.SURVIVAL);
+        p.setGameMode(GameType.ADVENTURE); // 冒險模式：不能破壞／放置地圖方塊（同舊 Datapack），仍可開箱、用祭壇、開槍
         p.getInventory().clearContent();
         p.removeAllEffects();
         applyMaxHealth(p);
@@ -1224,7 +1224,7 @@ public class BattleRoyaleMode {
         damagers.remove(vp.id);
 
         if (v.getCamera() != v) v.setCamera(v);
-        v.setGameMode(GameType.SURVIVAL);
+        v.setGameMode(GameType.ADVENTURE);
         v.getInventory().clearContent();
         v.removeAllEffects();
         applyMaxHealth(v);
