@@ -1,0 +1,6 @@
+{
+  "name": "provinggrounds.ammo.medium.name",
+  "display": "provinggrounds:medium_display",
+  "stack_size": 60,
+  "sort": 2
+}

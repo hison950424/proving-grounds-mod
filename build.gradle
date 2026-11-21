@@ -22,6 +22,8 @@ minecraft {
     runs {
         // 外部模組的 Mixin 在開發環境需要重新對應名稱
         configureEach {
+            // 我們自己的 Mixin（正式 jar 由 manifest 的 MixinConfigs 載入，開發環境要用參數指定）
+            arg '-mixin.config=provinggrounds.mixins.json'
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
         }
@@ -61,6 +63,9 @@ dependencies {
     // fg.deobf 會把正式版 jar 轉成開發環境的名稱，直接丟進 run/mods 會開不起來。
     runtimeOnly fg.deobf('blank:tacz-1.20.1:1.1.8-hotfix')
     runtimeOnly fg.deobf('blank:lrtactical-1.20.1:0.4.3')
+
+    // Mixin 註解（Forge 執行時已內建 Mixin，只有編譯時需要）
+    compileOnly 'org.spongepowered:mixin:0.8.5'
 }
 
 jar {
@@ -72,7 +77,8 @@ jar {
             'Implementation-Title'    : project.name,
             'Implementation-Version'  : project.jar.archiveVersion,
             'Implementation-Vendor'   : 'provinggrounds',
-            'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+            'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+            'MixinConfigs'            : 'provinggrounds.mixins.json'
         ])
     }
 }

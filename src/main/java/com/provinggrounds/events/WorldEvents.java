@@ -26,6 +26,8 @@ public class WorldEvents {
         PlayerDataManager.get().attach(server);
         // 崩潰恢復：一律從大廳開始；參賽者重新登入時依 pg_br 標記還原
         GameManager.get().reset();
+        // 彈藥分類檢查（槍械包有沒有放、幾把槍已分類）
+        for (String line : com.provinggrounds.compat.AmmoCategories.report()) com.provinggrounds.ProvingGroundsMod.LOGGER.info(line);
     }
 
     @SubscribeEvent

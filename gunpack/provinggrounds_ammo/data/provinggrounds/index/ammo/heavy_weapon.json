@@ -1,0 +1,6 @@
+{
+  "name": "provinggrounds.ammo.heavy_weapon.name",
+  "display": "provinggrounds:heavy_weapon_display",
+  "stack_size": 6,
+  "sort": 5
+}

@@ -55,6 +55,11 @@ public class PGCommand {
                 .then(Commands.literal("reload").executes(ctx -> reload(ctx.getSource())))
                 .then(Commands.literal("reset").executes(ctx -> reset(ctx.getSource())))
                 .then(Commands.literal("status").executes(ctx -> status(ctx.getSource())))
+                // 彈藥分類檢查
+                .then(Commands.literal("ammo").executes(ctx -> {
+                    for (String line : com.provinggrounds.compat.AmmoCategories.report()) ok(ctx.getSource(), line, false);
+                    return 1;
+                }))
 
                 .then(Commands.literal("mode")
                     .then(Commands.argument("mode", StringArgumentType.word())
@@ -85,6 +90,7 @@ public class PGCommand {
     private static int reload(CommandSourceStack src) {
         try {
             PGConfig.SERVER_SPEC.afterReload();
+            com.provinggrounds.compat.AmmoCategories.rebuild(); // 玩家端要重新進入伺服器才會更新
             ok(src, "設定已重載。", true);
             ProvingGroundsMod.LOGGER.info("Config reloaded by {}", src.getTextName());
         } catch (Exception e) {

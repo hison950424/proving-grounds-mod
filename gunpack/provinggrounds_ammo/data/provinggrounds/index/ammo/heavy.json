@@ -1,0 +1,6 @@
+{
+  "name": "provinggrounds.ammo.heavy.name",
+  "display": "provinggrounds:heavy_display",
+  "stack_size": 48,
+  "sort": 3
+}

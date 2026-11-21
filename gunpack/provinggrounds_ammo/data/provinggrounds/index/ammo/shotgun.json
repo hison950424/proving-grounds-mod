@@ -1,0 +1,6 @@
+{
+  "name": "provinggrounds.ammo.shotgun.name",
+  "display": "provinggrounds:shotgun_display",
+  "stack_size": 36,
+  "sort": 4
+}

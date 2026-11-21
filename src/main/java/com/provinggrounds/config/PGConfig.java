@@ -101,6 +101,10 @@ public class PGConfig {
     // ── GK ──────────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.IntValue gkRoundTimeSeconds;
 
+    // ── 彈藥分類（所有模式通用） ─────────────────────────────────────────────────
+    public final ForgeConfigSpec.BooleanValue ammoEnabled;
+    public final ForgeConfigSpec.ConfigValue<List<? extends String>> ammoLight, ammoMedium, ammoHeavy, ammoShotgun, ammoHeavyWeapon;
+
     // ── 防彈（所有模式通用） ───────────────────────────────────────────────────
     public final ForgeConfigSpec.BooleanValue bulletproofEnabled;
     public final ForgeConfigSpec.BooleanValue bulletproofHeadBodySplit;
@@ -270,6 +274,32 @@ public class PGConfig {
         bulletproofNetherite = builder.comment("獄髓全套減傷").defineInRange("netherite", 0.40, 0.0, 0.95);
         bulletproofTurtle = builder.comment("海龜殼（只有頭盔）全套減傷（占位）").defineInRange("turtle", 0.10, 0.0, 0.95);
         builder.pop();
+
+        builder.comment("彈藥分類：把各槍械包的子彈歸成 5 大類，槍改吃對應的大類彈藥。",
+                "大類彈藥由槍械包 provinggrounds_ammo 提供（伺服器與玩家的 tacz 資料夾都要放）。",
+                "清單裡是原本的子彈 ID（命名空間:名稱）；不在任何清單裡的子彈維持原樣。",
+                "修改後要重新進入伺服器才會在玩家端生效。")
+            .push("ammo");
+        ammoEnabled = builder.comment("是否啟用彈藥分類").define("enabled", true);
+        ammoLight = ammoList(builder, "light", "輕型彈藥（手槍、衝鋒槍）",
+            "tacz:9mm", "tacz:45acp", "tacz:57x28", "tacz:762x25", "tacz:46x30", "tacz:22wmr", "suffuse:.22wmr",
+            "suffuse:7.65x20mm", "suffuse:6x35mm", "tacz:357mag", "suffuse:44mag", "tacz:50ae", "tacz:500mag");
+        ammoMedium = ammoList(builder, "medium", "中型彈藥（突擊步槍、輕機槍）",
+            "tacz:556x45", "tacz:545x39", "suffuse:545x39", "tacz:762x39", "tacz:58x42", "suffuse:6.8tvcm", "tacz:68x51fury");
+        ammoHeavy = ammoList(builder, "heavy", "重型彈藥（戰鬥步槍、精確射手步槍、狙擊槍）",
+            "tacz:308", "tacz:30_06", "tacz:338", "suffuse:338nm", "suffuse:.408ct", "tacz:50bmg", "tacz:762x54",
+            "tacz:792x57", "tacz:45_70", "suffuse:14.5x114mm", "suffuse:12.7x55");
+        ammoShotgun = ammoList(builder, "shotgun", "霰彈",
+            "tacz:12g", "suffuse:23mm", "suffuse:boomstickshot");
+        ammoHeavyWeapon = ammoList(builder, "heavy_weapon", "重火力彈藥（榴彈、火箭）",
+            "tacz:40mm", "suffuse:35x32mm", "tacz:rpg_rocket", "suffuse:120mm");
+        builder.pop();
+    }
+
+    private static ForgeConfigSpec.ConfigValue<List<? extends String>> ammoList(
+            ForgeConfigSpec.Builder builder, String key, String comment, String... defaults) {
+        return builder.comment(comment + " → provinggrounds:" + key)
+            .defineListAllowEmpty(List.of(key), () -> List.of(defaults), o -> o instanceof String s && s.contains(":"));
     }
 
     private static boolean isRatio(Object o) {

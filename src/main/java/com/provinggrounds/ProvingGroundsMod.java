@@ -3,6 +3,7 @@ package com.provinggrounds;
 import com.provinggrounds.command.PGCommand;
 import com.provinggrounds.config.PGConfig;
 import com.provinggrounds.core.GameManager;
+import com.provinggrounds.compat.AmmoCategories;
 import com.provinggrounds.compat.GunCompat;
 import com.provinggrounds.events.ArmorEvents;
 import com.provinggrounds.events.BREvents;
@@ -38,6 +39,7 @@ public class ProvingGroundsMod {
         PGBlocks.register(modBus);
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, PGConfig.SERVER_SPEC);
+        modBus.addListener(AmmoCategories::onConfig); // 彈藥分類對照表
 
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new PlayerEvents());
