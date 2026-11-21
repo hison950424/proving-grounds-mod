@@ -1,6 +1,7 @@
 package com.provinggrounds.compat;
 
 import com.provinggrounds.ProvingGroundsMod;
+import com.provinggrounds.events.ArmorEvents;
 import com.provinggrounds.modes.br.BRDowned;
 import net.minecraftforge.fml.ModList;
 
@@ -19,6 +20,8 @@ public final class GunCompat {
             if (adapter.registerBlocker(BRDowned::isDowned)) {
                 ProvingGroundsMod.LOGGER.info("Gun adapter enabled: {}", adapter.name());
             }
+            adapter.registerHitListener(ArmorEvents::recordHit); // 防彈：記錄爆頭
+
         } else {
             ProvingGroundsMod.LOGGER.info("No supported gun mod loaded; gun adapter disabled.");
         }

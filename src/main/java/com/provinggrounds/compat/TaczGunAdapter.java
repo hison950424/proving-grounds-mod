@@ -1,10 +1,12 @@
 package com.provinggrounds.compat;
 
 import com.provinggrounds.ProvingGroundsMod;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.fml.LogicalSide;
 
 import java.lang.reflect.Method;
 import java.util.function.Predicate;
@@ -16,6 +18,7 @@ import java.util.function.Predicate;
  *         com.tacz.guns.api.event.common.GunShootEvent  開槍
  *         com.tacz.guns.api.event.common.GunMeleeEvent  槍托近戰
  *         com.tacz.guns.api.event.common.GunReloadEvent 換彈
+ *       另外監聽 EntityHurtByGunEvent.Pre 取得爆頭判定（防彈計算用）。
  */
 public class TaczGunAdapter implements GunAdapter {
 
@@ -58,6 +61,40 @@ public class TaczGunAdapter implements GunAdapter {
         }
         ProvingGroundsMod.LOGGER.info("TACZ adapter: hooked {} / {} events.", hooked, EVENTS.length);
         return hooked > 0;
+    }
+
+    /**
+     * 掛 EntityHurtByGunEvent.Pre（TACZ 在扣血前觸發，帶有爆頭判定）。
+     * 用最低優先度、且不接收已取消的事件，拿到其他模組修改後的最終爆頭結果。
+     */
+    @Override
+    public boolean registerHitListener(HitListener listener) {
+        String className = "com.tacz.guns.api.event.common.EntityHurtByGunEvent$Pre";
+        try {
+            Class<?> raw = Class.forName(className);
+            if (!Event.class.isAssignableFrom(raw)) return false;
+            Method getTarget = raw.getMethod("getHurtEntity");
+            Method getBullet = raw.getMethod("getBullet");
+            Method isHeadShot = raw.getMethod("isHeadShot");
+            Method getSide = raw.getMethod("getLogicalSide");
+            @SuppressWarnings("unchecked")
+            Class<Event> type = (Class<Event>) raw;
+            MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, false, type, event -> {
+                try {
+                    if (getSide.invoke(event) != LogicalSide.SERVER) return;
+                    if (getTarget.invoke(event) instanceof Entity target && getBullet.invoke(event) instanceof Entity bullet) {
+                        listener.onHit(target, bullet, (Boolean) isHeadShot.invoke(event));
+                    }
+                } catch (ReflectiveOperationException | ClassCastException ignored) {
+                    // 取不到資料就當作身體中彈
+                }
+            });
+            ProvingGroundsMod.LOGGER.info("TACZ adapter: hit listener hooked.");
+            return true;
+        } catch (ClassNotFoundException | NoSuchMethodException e) {
+            ProvingGroundsMod.LOGGER.warn("TACZ adapter: cannot hook {} ({}); headshot armor split disabled.", className, e.toString());
+            return false;
+        }
     }
 
     /** 找「回傳 LivingEntity、沒有參數」的方法（TACZ 1.1.x 是 getShooter）。 */

@@ -101,6 +101,7 @@ public class PGConfig {
 
     // ── 防彈（所有模式通用） ───────────────────────────────────────────────────
     public final ForgeConfigSpec.BooleanValue bulletproofEnabled;
+    public final ForgeConfigSpec.BooleanValue bulletproofHeadBodySplit;
     public final ForgeConfigSpec.DoubleValue bulletproofLeather;
     public final ForgeConfigSpec.DoubleValue bulletproofChainmail;
     public final ForgeConfigSpec.DoubleValue bulletproofIron;
@@ -245,10 +246,13 @@ public class PGConfig {
         builder.pop();
 
         builder.comment("防彈：被 TACZ 子彈打中時，依身上原版防具額外減傷。",
-                "數值是「穿全套」的減傷比例，每件占 1/4（例：只穿鐵胸甲 = 20% ÷ 4 = 5%）。",
-                "這是額外的減傷，原版護甲值本來就會擋掉子彈的非穿甲部分。")
+                "數值是「穿全套」的減傷比例。只減子彈的一般部分，穿甲部分（依每把槍的穿甲率）不減。",
+                "爆頭只看頭盔；身體中彈看胸甲、護腿、靴子（每件 1/3）。",
+                "原版護甲值本來就會再擋一次一般部分（TACZ 原本的行為）。")
             .push("bulletproof");
         bulletproofEnabled = builder.comment("是否啟用防彈").define("enabled", true);
+        bulletproofHeadBodySplit = builder.comment("爆頭只看頭盔、身體只看其他三件；false = 不分部位，四件各占 1/4")
+            .define("head_body_split", true);
         bulletproofLeather = builder.comment("皮革全套減傷").defineInRange("leather", 0.10, 0.0, 0.95);
         bulletproofChainmail = builder.comment("鎖鏈全套減傷（占位）").defineInRange("chainmail", 0.15, 0.0, 0.95);
         bulletproofIron = builder.comment("鐵全套減傷").defineInRange("iron", 0.20, 0.0, 0.95);
