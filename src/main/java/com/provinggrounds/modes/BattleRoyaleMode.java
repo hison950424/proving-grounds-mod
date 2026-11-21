@@ -803,11 +803,12 @@ public class BattleRoyaleMode {
         part.altarTicks = 0;
         part.altarTarget = null;
 
-        // 復活牌：孤狼、離線、競技模式已用過祭壇的人沒有；隊友全滅時也沒有（沒人能撿）
+        // 復活牌：孤狼、離線、競技模式已用過祭壇的人沒有；
+        // 沒有「站著」的隊友時也沒有（倒地的隊友不算，他們接著會在 resolveTeams 裡一起死亡）
         boolean solo = TeamManager.get().getTeamOrSolo(part.id) == TeamManager.Team.SOLO;
         boolean teammateAlive = false;
         for (Participant other : participants.values()) {
-            if (other != part && other.alive && TeamManager.get().isSameTeam(other.id, part.id)) { teammateAlive = true; break; }
+            if (other != part && other.alive && !other.downed && TeamManager.get().isSameTeam(other.id, part.id)) { teammateAlive = true; break; }
         }
         boolean hasCard = !solo && teammateAlive && cause != Cause.LOGOUT && !(competitive && part.usedAltar);
         part.finalDead = !hasCard;
