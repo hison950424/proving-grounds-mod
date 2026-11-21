@@ -249,19 +249,37 @@ public class MainMenuScreen extends Screen {
         MenuDataPacket menu = ClientMenuData.get();
         boolean op = menu != null && menu.isOp();
         if (row.entry() != null) {
-            if (!op) return;
+            if (!op) { PGButton.playDeny(); return; }
             // 管理員：點玩家 = 選取／取消選取
+            PGButton.playClick(1.0f);
             selected = row.entry().id().equals(selected) ? null : row.entry().id();
             rebuildWidgets();
             return;
         }
         // 點隊伍標題
-        LobbyStatePacket.Entry sel = find(ClientLobbyData.get(), selected);
+        LobbyStatePacket lobby = ClientLobbyData.get();
+        LobbyStatePacket.Entry sel = find(lobby, selected);
+        LobbyStatePacket.Entry me = self(lobby);
+        boolean free = lobby != null && LobbyManager.TeamMode.values()[lobby.teamModeOrdinal()] == LobbyManager.TeamMode.FREE;
         if (row.team() == -2) {
-            if (op && sel != null && !sel.spectator()) send(LobbyManager.Action.SET_SPECTATOR, 1, sel.id());
+            if (op && sel != null && !sel.spectator()) {
+                PGButton.playClick(1.0f);
+                send(LobbyManager.Action.SET_SPECTATOR, 1, sel.id());
+            } else {
+                PGButton.playDeny();
+            }
         } else if (row.team() >= 0) {
-            if (op && sel != null) send(LobbyManager.Action.SET_PLAYER_TEAM, row.team(), sel.id());
-            else send(LobbyManager.Action.JOIN_TEAM, row.team());
+            if (op && sel != null) {
+                PGButton.playClick(1.0f);
+                send(LobbyManager.Action.SET_PLAYER_TEAM, row.team(), sel.id());
+            } else if ((free || op) && me != null && !me.spectator() && lobby.inLobby()) {
+                PGButton.playClick(1.0f);
+                send(LobbyManager.Action.JOIN_TEAM, row.team());
+            } else {
+                PGButton.playDeny(); // 管理員分隊模式、觀戰中或遊戲進行中：不能自己換隊
+            }
+        } else {
+            PGButton.playDeny(); // 「未分隊」標題不能點
         }
     }
 

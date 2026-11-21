@@ -55,6 +55,36 @@ public class PGButton extends AbstractButton {
         action.run();
     }
 
+    // ── 音效回饋 ──────────────────────────────────────────────────────────────
+
+    /** 按下可用的按鈕：清楚的點擊聲（主要按鈕音調稍高）。原版點擊聲音量只有 0.25，這裡加大。 */
+    @Override
+    public void playDownSound(net.minecraft.client.sounds.SoundManager sounds) {
+        playClick(accent ? 1.15f : 1.0f);
+    }
+
+    /** 點到不能按的按鈕（例如不是管理員按「開始」）：低沉的「噗」聲，讓玩家知道按了但沒作用。 */
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (!active && visible && button == 0 && isMouseOver(mouseX, mouseY)) {
+            playDeny();
+            return false;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    /** 共用：一般點擊聲（選單名單、大地圖等自己畫的可點區域也用這個）。 */
+    public static void playClick(float pitch) {
+        Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+            net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), pitch, 0.6f));
+    }
+
+    /** 共用：不能操作的提示聲。 */
+    public static void playDeny() {
+        Minecraft.getInstance().getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+            net.minecraft.sounds.SoundEvents.NOTE_BLOCK_BASS.value(), 0.6f, 0.5f));
+    }
+
     @Override
     protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         Font font = Minecraft.getInstance().font;
