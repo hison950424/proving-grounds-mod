@@ -1,9 +1,10 @@
 ﻿# 檔案: release.ps1
 # 目的: 每次更新模組後執行：
-#   1. build.gradle 的 version 最後一碼加 1（例如 1.0.1 → 1.0.2；加 -NoBump 則不加）
-#   2. 打包（gradlew build）→ build\libs\provinggrounds-<版本>.jar
-#   3. build\libs 只留這個版本的 jar
-#   4. 複製到桌面，並刪掉桌面上舊版本的 provinggrounds-*.jar（桌面永遠只有最新一個）
+#   1. build.gradle 的 version 最後一碼加 1（例如 1.0.3 → 1.0.4；加 -NoBump 則不加）
+#   2. 打包（gradlew build）→ build\libs\provinggrounds-<版本>.jar，build\libs 只留這個版本
+#   3. 直接替換伺服器與 Prism 客戶端 mods 資料夾裡的模組：先刪舊的 provinggrounds-*.jar，再放新的
+#      （兩個版本同時存在 Forge 會開不起來）
+#   伺服器或遊戲正在執行時 jar 被鎖住換不了，會顯示提示；關閉後用 -NoBump 再跑一次即可。
 # 用法: powershell -ExecutionPolicy Bypass -File tools\release.ps1 [-NoBump]
 param([switch]$NoBump)
 
@@ -11,6 +12,12 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $gradle = Join-Path $root 'build.gradle'
 $enc = New-Object System.Text.UTF8Encoding $false
+
+# 要替換模組的資料夾（伺服器、Prism 客戶端）
+$targets = @(
+    'C:\mcdatapack\1.20.1 Proving Grounds_Server_Mod\mods',
+    (Join-Path $env:APPDATA 'PrismLauncher\instances\1.20.1 Proving Grounds_Client_Mod\minecraft\mods')
+)
 
 # 1. 版本號加 1
 $text = [System.IO.File]::ReadAllText($gradle)
@@ -32,14 +39,25 @@ try {
 } finally { Pop-Location }
 
 $libs = Join-Path $root 'build\libs'
-$jar = Join-Path $libs "provinggrounds-$version.jar"
+$name = "provinggrounds-$version.jar"
+$jar = Join-Path $libs $name
 if (-not (Test-Path $jar)) { throw "找不到 $jar" }
+Get-ChildItem $libs -Filter 'provinggrounds-*.jar' | Where-Object { $_.Name -ne $name } | Remove-Item
 
-# 3. build\libs 只留這個版本
-Get-ChildItem $libs -Filter 'provinggrounds-*.jar' | Where-Object { $_.Name -ne "provinggrounds-$version.jar" } | Remove-Item
-
-# 4. 複製到桌面（只留最新一個）
-$desk = [Environment]::GetFolderPath('Desktop')
-Get-ChildItem $desk -Filter 'provinggrounds-*.jar' | Where-Object { $_.Name -ne "provinggrounds-$version.jar" } | Remove-Item
-Copy-Item -Force $jar $desk
-Write-Host "已複製到桌面：$(Join-Path $desk ("provinggrounds-$version.jar"))"
+# 3. 替換伺服器與客戶端的模組
+$failed = $false
+foreach ($dir in $targets) {
+    if (-not (Test-Path $dir)) {
+        Write-Host "略過（資料夾不存在）：$dir" -ForegroundColor Yellow
+        continue
+    }
+    try {
+        Get-ChildItem $dir -Filter 'provinggrounds-*.jar' | Where-Object { $_.Name -ne $name } | Remove-Item -ErrorAction Stop
+        Copy-Item -Force $jar (Join-Path $dir $name) -ErrorAction Stop
+        Write-Host "已替換：$dir\$name" -ForegroundColor Green
+    } catch {
+        $failed = $true
+        Write-Host "替換失敗（伺服器或遊戲可能正在執行）：$dir" -ForegroundColor Red
+    }
+}
+if ($failed) { Write-Host "請關閉伺服器／遊戲後執行：powershell -ExecutionPolicy Bypass -File tools\release.ps1 -NoBump" -ForegroundColor Red }
