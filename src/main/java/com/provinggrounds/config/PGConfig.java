@@ -110,6 +110,10 @@ public class PGConfig {
     public final ForgeConfigSpec.BooleanValue bulletKnockback;
     public final ForgeConfigSpec.BooleanValue bulletHurtShake;
 
+    // ── 趴下（所有模式通用） ─────────────────────────────────────────────────────
+    public final ForgeConfigSpec.BooleanValue proneEnabled;
+    public final ForgeConfigSpec.DoubleValue proneCooldownSeconds;
+
     // ── 防彈（所有模式通用） ───────────────────────────────────────────────────
     public final ForgeConfigSpec.BooleanValue bulletproofEnabled;
     public final ForgeConfigSpec.BooleanValue bulletproofHeadBodySplit;
@@ -287,6 +291,12 @@ public class PGConfig {
             .define("bullet_knockback", false);
         bulletHurtShake = builder.comment("被子彈打中畫面會不會晃動（false = 不晃；玩家端在登入後才會讀到這個設定）")
             .define("bullet_hurt_shake", false);
+        builder.pop();
+
+        builder.comment("趴下：玩家按鍵（預設 Z）趴下／站起來。").push("prone");
+        proneEnabled = builder.comment("是否允許玩家自己趴下").define("enabled", true);
+        proneCooldownSeconds = builder.comment("趴下後多久才能站起來、站起來後多久才能再趴下（秒）")
+            .defineInRange("cooldown_seconds", 1.0, 0.0, 10.0);
         builder.pop();
 
         builder.comment("彈藥分類：把各槍械包的子彈歸成 5 大類，槍改吃對應的大類彈藥。",

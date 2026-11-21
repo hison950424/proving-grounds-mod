@@ -16,8 +16,8 @@ import java.util.Optional;
  */
 public final class PGNetwork {
 
-    /** 封包格式改變時要加 1，舊版客戶端連線時會直接顯示版本不符（5 = 擊殺資訊加入擊倒）。 */
-    private static final String VERSION = "5";
+    /** 封包格式改變時要加 1，舊版客戶端連線時會直接顯示版本不符（6 = 趴下）。 */
+    private static final String VERSION = "6";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ProvingGroundsMod.MOD_ID, "main"),
@@ -43,6 +43,10 @@ public final class PGNetwork {
             MapImagePacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, MapMarkersPacket.class, MapMarkersPacket::encode, MapMarkersPacket::decode,
             MapMarkersPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, ProneSyncPacket.class, ProneSyncPacket::encode, ProneSyncPacket::decode,
+            ProneSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, ProneTogglePacket.class, ProneTogglePacket::encode, ProneTogglePacket::decode,
+            ProneTogglePacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 
     /** 客戶端 → 伺服器。 */

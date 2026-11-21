@@ -24,8 +24,9 @@ import java.util.UUID;
 /**
  * 檔案: ClientForgeEvents.java
  * 目的: 客戶端遊戲中事件（只在客戶端載入）：
- *       按下主選單鍵 → 向伺服器要資料並打開主選單；離開伺服器時清掉快取。
- *       BR 中：原版愛心換成數字血條、隱藏飢餓條。
+ *       按下主選單鍵 → 大廳開主選單、遊戲中開大地圖；離開伺服器時清掉快取。
+ *       按下趴下鍵 → 請伺服器切換趴下／站起；替趴下與倒地的玩家套用趴姿，並把趴下／站起的動畫放慢一倍。
+ *       BR 中：原版愛心換成數字血條、隱藏飢餓條。中彈不晃畫面。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
 public final class ClientForgeEvents {
@@ -48,7 +49,49 @@ public final class ClientForgeEvents {
                 mc.setScreen(new MainMenuScreen());
             }
         }
+        while (ClientModEvents.PRONE.consumeClick()) {
+            if (mc.player == null || mc.screen != null) continue;
+            // 本地先擋一次冷卻（避免連按灌封包）；真正的判斷在伺服器
+            long now = System.currentTimeMillis();
+            if (now - lastProneRequest < 250) continue;
+            lastProneRequest = now;
+            PGNetwork.sendToServer(new com.provinggrounds.network.ProneTogglePacket());
+        }
         updateCrawlPoses(mc);
+        slowProneAnimation(mc);
+    }
+
+    private static long lastProneRequest = 0;
+
+    // ── 趴下／站起來的動畫放慢一倍 ───────────────────────────────────────────
+    // 原版每 tick 把「游泳程度」往目標移動 0.09（約 11 tick 完成），鏡頭高度每 tick 移動剩餘距離的一半。
+    // 這裡在每 tick 結束時把這一步的變化量砍半，動畫時間就變成約兩倍。欄位是 private，用反射（SRG 名稱）存取。
+    private static final java.lang.reflect.Field SWIM_AMOUNT =
+        net.minecraftforge.fml.util.ObfuscationReflectionHelper.findField(net.minecraft.world.entity.LivingEntity.class, "f_20931_");
+    private static final java.lang.reflect.Field SWIM_AMOUNT_O =
+        net.minecraftforge.fml.util.ObfuscationReflectionHelper.findField(net.minecraft.world.entity.LivingEntity.class, "f_20932_");
+    private static final java.lang.reflect.Field EYE_HEIGHT =
+        net.minecraftforge.fml.util.ObfuscationReflectionHelper.findField(net.minecraft.client.Camera.class, "f_90562_");
+    private static final java.lang.reflect.Field EYE_HEIGHT_O =
+        net.minecraftforge.fml.util.ObfuscationReflectionHelper.findField(net.minecraft.client.Camera.class, "f_90563_");
+
+    private static void slowProneAnimation(Minecraft mc) {
+        if (mc.level == null) return;
+        try {
+            for (Player p : mc.level.players()) {
+                if (!com.provinggrounds.client.ClientProneData.inTransition(p.getUUID())) continue;
+                float o = SWIM_AMOUNT_O.getFloat(p), cur = SWIM_AMOUNT.getFloat(p);
+                SWIM_AMOUNT.setFloat(p, o + (cur - o) * 0.5f);
+            }
+            if (mc.player != null && com.provinggrounds.client.ClientProneData.inTransition(mc.player.getUUID())
+                    && mc.getCameraEntity() == mc.player) {
+                net.minecraft.client.Camera cam = mc.gameRenderer.getMainCamera();
+                float o = EYE_HEIGHT_O.getFloat(cam), cur = EYE_HEIGHT.getFloat(cam);
+                EYE_HEIGHT.setFloat(cam, o + (cur - o) * 0.5f);
+            }
+        } catch (IllegalAccessException ignored) {
+            // 取不到就用原版速度
+        }
     }
 
     /**
@@ -103,7 +146,8 @@ public final class ClientForgeEvents {
             FORCED_CRAWL.clear();
             return;
         }
-        Set<UUID> crawling = new HashSet<>(ClientBRState.get().crawling());
+        Set<UUID> crawling = new HashSet<>(ClientBRState.get().crawling()); // 倒地趴下
+        crawling.addAll(com.provinggrounds.client.ClientProneData.all());    // 自己按鍵趴下
         for (Player p : mc.level.players()) {
             UUID id = p.getUUID();
             if (crawling.contains(id)) {
@@ -121,6 +165,7 @@ public final class ClientForgeEvents {
         com.provinggrounds.client.ClientLobbyData.clear();
         com.provinggrounds.client.ClientMapData.clear();
         ClientBRState.clear();
+        com.provinggrounds.client.ClientProneData.clear();
         FORCED_CRAWL.clear();
     }
 }

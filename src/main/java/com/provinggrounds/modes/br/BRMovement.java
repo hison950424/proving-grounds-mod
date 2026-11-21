@@ -81,8 +81,8 @@ public final class BRMovement {
         if (!(event.getEntity() instanceof Player player)) return;
         if (!player.level().isClientSide) return;
         BRStatePacket state = ClientBRState.get();
-        if (state.selfState() == ClientBRState.SELF_DOWNED) {
-            // 倒地不能跳：把起跳的垂直速度歸零
+        if (state.selfState() == ClientBRState.SELF_DOWNED || com.provinggrounds.client.ClientProneData.isProne(player.getUUID())) {
+            // 倒地、趴下都不能跳：把起跳的垂直速度歸零
             Vec3 v = player.getDeltaMovement();
             player.setDeltaMovement(v.x, Math.min(v.y, 0), v.z);
             return;

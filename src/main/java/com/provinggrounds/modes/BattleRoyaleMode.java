@@ -215,6 +215,12 @@ public class BattleRoyaleMode {
     }
 
     /** 自由落體或開傘中（取消摔落傷害用）。 */
+    /** 在飛機上、自由落體或開傘中（不能趴下）。 */
+    public boolean isAirborne(UUID id) {
+        Participant p = participants.get(id);
+        return p != null && p.alive && (p.state == PlayerState.PLANE || p.state == PlayerState.FREEFALL || p.state == PlayerState.CHUTE);
+    }
+
     public boolean isDropping(UUID id) {
         Participant p = participants.get(id);
         return p != null && p.alive && (p.state == PlayerState.FREEFALL || p.state == PlayerState.CHUTE);
@@ -281,6 +287,7 @@ public class BattleRoyaleMode {
 
     /** 加入成為參賽者（開局時或倒數期間登入）。 */
     private void join(ServerPlayer p) {
+        com.provinggrounds.core.ProneManager.clear(p);
         markForRestore(p);
         participants.put(p.getUUID(), new Participant(p));
         GameManager.get().addPlayer(p);
@@ -1421,6 +1428,7 @@ public class BattleRoyaleMode {
         CompoundTag tag = p.getPersistentData().getCompound(RESTORE_TAG);
         GameType mode = GameType.byId(tag.contains("mode") ? tag.getInt("mode") : GameType.SURVIVAL.getId());
         p.getPersistentData().remove(RESTORE_TAG);
+        com.provinggrounds.core.ProneManager.clear(p);
 
         p.stopRiding();
         p.setForcedPose(null);

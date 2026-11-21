@@ -4,7 +4,8 @@
   "block.provinggrounds.crate_high": "Gold Crate (High Tier)",
   "block.provinggrounds.crate_airdrop": "Airdrop Crate",
   "key.categories.provinggrounds": "Proving Grounds",
-  "key.provinggrounds.menu": "Open Main Menu",
+  "key.provinggrounds.menu": "Open Main Menu / Map",
+  "key.provinggrounds.prone": "Go Prone / Stand Up",
   "block.provinggrounds.altar": "Revive Altar",
   "item.provinggrounds.revive_card": "Revive Card"
 }
