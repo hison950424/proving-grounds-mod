@@ -6,11 +6,17 @@ import com.provinggrounds.client.ClientMenuData;
 import com.provinggrounds.network.MenuRequestPacket;
 import com.provinggrounds.network.PGNetwork;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * 檔案: ClientForgeEvents.java
@@ -31,11 +37,37 @@ public final class ClientForgeEvents {
             PGNetwork.sendToServer(new MenuRequestPacket());
             mc.setScreen(new MainMenuScreen());
         }
+        updateCrawlPoses(mc);
+    }
+
+    /** 我們強制趴下的玩家（之後要還原）。 */
+    private static final Set<UUID> FORCED_CRAWL = new HashSet<>();
+
+    /**
+     * 倒地趴下：姿勢每 tick 由各端自己計算，伺服器設的強制姿勢不會同步過來，
+     * 所以客戶端也要對自己與看得到的倒地玩家設定 setForcedPose(SWIMMING)。
+     */
+    private static void updateCrawlPoses(Minecraft mc) {
+        if (mc.level == null) {
+            FORCED_CRAWL.clear();
+            return;
+        }
+        Set<UUID> crawling = new HashSet<>(ClientBRState.get().crawling());
+        for (Player p : mc.level.players()) {
+            UUID id = p.getUUID();
+            if (crawling.contains(id)) {
+                if (p.getForcedPose() != Pose.SWIMMING) p.setForcedPose(Pose.SWIMMING);
+                FORCED_CRAWL.add(id);
+            } else if (FORCED_CRAWL.remove(id)) {
+                p.setForcedPose(null);
+            }
+        }
     }
 
     @SubscribeEvent
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientMenuData.clear();
         ClientBRState.clear();
+        FORCED_CRAWL.clear();
     }
 }

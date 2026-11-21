@@ -1,5 +1,6 @@
 package com.provinggrounds.events;
 
+import com.provinggrounds.block.AltarBlockEntity;
 import com.provinggrounds.core.GameManager;
 import com.provinggrounds.data.PlayerDataManager;
 import com.provinggrounds.modes.BattleRoyaleMode;
@@ -36,6 +37,7 @@ public class WorldEvents {
     @SubscribeEvent
     public void onServerStopped(ServerStoppedEvent event) {
         PlayerDataManager.get().detach();
+        AltarBlockEntity.LOADED.clear(); // 單人模式換世界時不留舊座標
     }
 
     /** 每 tick 鉤子。遊戲模式邏輯在這裡分派（結算 END 狀態也要繼續 tick，才能清理與還原）。 */

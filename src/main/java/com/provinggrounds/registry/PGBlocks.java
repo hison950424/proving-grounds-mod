@@ -1,11 +1,14 @@
 package com.provinggrounds.registry;
 
 import com.provinggrounds.ProvingGroundsMod;
+import com.provinggrounds.block.AltarBlock;
+import com.provinggrounds.block.AltarBlockEntity;
 import com.provinggrounds.block.CrateBlock;
 import com.provinggrounds.block.CrateBlockEntity;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -40,6 +43,21 @@ public final class PGBlocks {
         BLOCK_ENTITIES.register("crate", () -> BlockEntityType.Builder.of(CrateBlockEntity::new,
             CRATE_LOW.get(), CRATE_MID.get(), CRATE_HIGH.get(), CRATE_AIRDROP.get()).build(null));
 
+    /** 復活祭壇（兩格高，就緒時亮度 7）。 */
+    public static final RegistryObject<Block> ALTAR = BLOCKS.register("altar", () -> new AltarBlock(
+        BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0f, 1200f).sound(SoundType.STONE)
+            .lightLevel(s -> s.getValue(AltarBlock.READY) ? 7 : 0)));
+    public static final RegistryObject<Item> ALTAR_ITEM = ITEMS.register("altar",
+        () -> new BlockItem(ALTAR.get(), new Item.Properties()));
+
+    @SuppressWarnings("ConstantConditions")
+    public static final RegistryObject<BlockEntityType<AltarBlockEntity>> ALTAR_BE =
+        BLOCK_ENTITIES.register("altar", () -> BlockEntityType.Builder.of(AltarBlockEntity::new, ALTAR.get()).build(null));
+
+    /** 復活牌（只會以掉落物形式存在；撿起後轉成玩家身上的資料，不進背包）。 */
+    public static final RegistryObject<Item> REVIVE_CARD = ITEMS.register("revive_card",
+        () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+
     private PGBlocks() {}
 
     private static RegistryObject<Block> crate(String name, MapColor color, SoundType sound) {
@@ -62,6 +80,7 @@ public final class PGBlocks {
             event.accept(CRATE_MID);
             event.accept(CRATE_HIGH);
             event.accept(CRATE_AIRDROP);
+            event.accept(ALTAR_ITEM);
         }
     }
 }

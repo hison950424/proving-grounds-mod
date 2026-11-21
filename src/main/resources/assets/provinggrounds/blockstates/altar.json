@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "half=lower,ready=true":  { "model": "provinggrounds:block/altar_lower" },
+    "half=lower,ready=false": { "model": "provinggrounds:block/altar_lower" },
+    "half=upper,ready=true":  { "model": "provinggrounds:block/altar_upper_ready" },
+    "half=upper,ready=false": { "model": "provinggrounds:block/altar_upper_cooldown" }
+  }
+}

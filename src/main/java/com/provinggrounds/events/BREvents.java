@@ -5,7 +5,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
+import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import com.provinggrounds.registry.PGBlocks;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -38,6 +40,18 @@ public class BREvents {
     public void onFall(LivingFallEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer p)) return;
         if (BattleRoyaleMode.get().isDropping(p.getUUID())) event.setCanceled(true);
+    }
+
+    /**
+     * 撿取：復活牌一律不進背包（同隊吸走、敵隊吸不到）；倒地中不能撿任何東西。
+     * 這個事件在背包檢查之前觸發，所以背包滿也能吸取復活牌。
+     */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public void onPickup(EntityItemPickupEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer p)) return;
+        BattleRoyaleMode br = BattleRoyaleMode.get();
+        if (!br.isRunning() && !event.getItem().getItem().is(PGBlocks.REVIVE_CARD.get())) return;
+        if (br.onItemPickup(p, event.getItem())) event.setCanceled(true);
     }
 
     @SubscribeEvent

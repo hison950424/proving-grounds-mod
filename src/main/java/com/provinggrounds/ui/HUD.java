@@ -56,11 +56,16 @@ public final class HUD {
             g.drawString(font, "登機倒數 " + s.seconds() + " 秒", x + PAD + 2, y + PAD + 13, TEXT, false);
             return;
         }
-        panel(g, x, y, 96, 34);
+        boolean cards = s.cardsHeld() > 0;
+        panel(g, x, y, 96, cards ? 47 : 34);
         g.drawString(font, "存活", x + PAD + 2, y + PAD, TEXT_DIM, false);
         g.drawString(font, String.valueOf(s.alivePlayers()), x + PAD + 30, y + PAD, TEXT, false);
         g.drawString(font, "隊伍", x + PAD + 2, y + PAD + 13, TEXT_DIM, false);
         g.drawString(font, String.valueOf(s.aliveTeams()), x + PAD + 30, y + PAD + 13, TEXT, false);
+        if (cards) {
+            g.drawString(font, "復活牌", x + PAD + 2, y + PAD + 26, TEXT_DIM, false);
+            g.drawString(font, "×" + s.cardsHeld(), x + PAD + 42, y + PAD + 26, ACCENT, false);
+        }
     }
 
     // ── 右上 ────────────────────────────────────────────────────────────────
@@ -122,14 +127,45 @@ public final class HUD {
             case ClientBRState.SELF_PLANE -> "按 Shift 跳傘";
             case ClientBRState.SELF_FREEFALL -> "自由落體｜按 Shift 開傘";
             case ClientBRState.SELF_CHUTE -> "已開傘";
-            case ClientBRState.SELF_DEAD -> "已淘汰｜觀戰中";
+            case ClientBRState.SELF_DOWNED -> "倒地中｜流血 " + mmss(s.timerSeconds()) + "｜等待隊友扶起";
+            case ClientBRState.SELF_DEAD -> switch (s.timerKind()) {
+                case ClientBRState.TIMER_CARD_GROUND -> s.timerSeconds() >= 0
+                    ? "已淘汰｜復活牌剩 " + mmss(s.timerSeconds()) + "，等待隊友撿起"
+                    : "已淘汰｜你的復活牌掉在地上，等待隊友撿起";
+                case ClientBRState.TIMER_FINAL -> "已確定死亡｜觀戰中";
+                case ClientBRState.TIMER_CARD_HELD -> "已淘汰｜隊友已撿起你的復活牌，等待祭壇復活";
+                default -> "已淘汰｜觀戰中";
+            };
             default -> null;
         };
-        if (hint == null) return;
-        int boxW = font.width(hint) + PAD * 2 + 4;
-        int x = (w - boxW) / 2, y = h - 78;
-        panel(g, x, y, boxW, 20);
-        g.drawString(font, hint, x + PAD + 2, y + 6, s.selfState() == ClientBRState.SELF_DEAD ? TEXT_DIM : TEXT, false);
+        int y = h - 78;
+        if (hint != null) {
+            boolean downed = s.selfState() == ClientBRState.SELF_DOWNED;
+            int color = downed ? DANGER : s.selfState() == ClientBRState.SELF_DEAD ? TEXT_DIM : TEXT;
+            int boxW = font.width(hint) + PAD * 2 + 4;
+            int x = (w - boxW) / 2;
+            panel(g, x, y, boxW, 20);
+            g.drawString(font, hint, x + PAD + 2, y + 6, color, false);
+        }
+        renderProgress(g, font, s, w, y - 26);
+    }
+
+    /** 讀條：扶起隊友 / 被扶起 / 啟動祭壇。 */
+    private static void renderProgress(GuiGraphics g, Font font, BRStatePacket s, int w, int y) {
+        String label = switch (s.progressKind()) {
+            case ClientBRState.PROGRESS_REVIVING -> "扶起隊友中…";
+            case ClientBRState.PROGRESS_BEING_REVIVED -> "隊友正在扶你起來…";
+            case ClientBRState.PROGRESS_ALTAR -> "啟動祭壇中…";
+            default -> null;
+        };
+        if (label == null) return;
+        int boxW = 160, x = (w - boxW) / 2;
+        panel(g, x, y, boxW, 22);
+        g.drawString(font, label, x + PAD + 2, y + 3, TEXT, false);
+        int barX = x + PAD + 2, barW = boxW - PAD * 2 - 4, barY = y + 15;
+        float p = Math.max(0f, Math.min(1f, s.progress()));
+        g.fill(barX, barY, barX + barW, barY + 3, 0xFF2A3344);
+        g.fill(barX, barY, barX + (int) (barW * p), barY + 3, ACCENT);
     }
 
     // ── 右下：擊殺提示 ──────────────────────────────────────────────────────

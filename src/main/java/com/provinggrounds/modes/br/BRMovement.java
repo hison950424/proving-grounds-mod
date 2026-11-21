@@ -48,9 +48,29 @@ public final class BRMovement {
             AttributeModifier.Operation.MULTIPLY_TOTAL));
     }
 
+    /** 移除所有 BR 速度修改（包含倒地緩速）。 */
     public static void remove(ServerPlayer player) {
         AttributeInstance attr = player.getAttribute(Attributes.MOVEMENT_SPEED);
-        if (attr != null) attr.removeModifier(SPEED_ID);
+        if (attr == null) return;
+        attr.removeModifier(SPEED_ID);
+        attr.removeModifier(DOWNED_ID);
+    }
+
+    // ── 倒地緩速（伺服器端） ─────────────────────────────────────────────────
+
+    private static final UUID DOWNED_ID = UUID.fromString("b1d4e7a3-2c5f-4e91-8a3d-6f0c9b2e1d47");
+
+    public static void applyDowned(ServerPlayer player) {
+        AttributeInstance attr = player.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (attr == null) return;
+        attr.removeModifier(DOWNED_ID);
+        attr.addTransientModifier(new AttributeModifier(DOWNED_ID, "pg_br_downed",
+            -PGConfig.SERVER.brDownedSpeedPenalty.get(), AttributeModifier.Operation.MULTIPLY_TOTAL));
+    }
+
+    public static void removeDowned(ServerPlayer player) {
+        AttributeInstance attr = player.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (attr != null) attr.removeModifier(DOWNED_ID);
     }
 
     // ── 跳躍（客戶端） ───────────────────────────────────────────────────────
@@ -61,6 +81,12 @@ public final class BRMovement {
         if (!(event.getEntity() instanceof Player player)) return;
         if (!player.level().isClientSide) return;
         BRStatePacket state = ClientBRState.get();
+        if (state.selfState() == ClientBRState.SELF_DOWNED) {
+            // 倒地不能跳：把起跳的垂直速度歸零
+            Vec3 v = player.getDeltaMovement();
+            player.setDeltaMovement(v.x, Math.min(v.y, 0), v.z);
+            return;
+        }
         if (state.jumpHeight() <= 0 || state.selfState() != ClientBRState.SELF_ALIVE) return;
         adjustJump(player, state.jumpHeight());
     }

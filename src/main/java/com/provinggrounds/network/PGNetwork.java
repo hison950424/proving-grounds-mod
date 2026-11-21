@@ -16,7 +16,8 @@ import java.util.Optional;
  */
 public final class PGNetwork {
 
-    private static final String VERSION = "1";
+    /** 封包格式改變時要加 1，舊版客戶端連線時會直接顯示版本不符（2 = 加入倒地／讀條欄位）。 */
+    private static final String VERSION = "2";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ProvingGroundsMod.MOD_ID, "main"),

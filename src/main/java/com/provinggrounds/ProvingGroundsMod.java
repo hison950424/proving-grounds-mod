@@ -3,7 +3,9 @@ package com.provinggrounds;
 import com.provinggrounds.command.PGCommand;
 import com.provinggrounds.config.PGConfig;
 import com.provinggrounds.core.GameManager;
+import com.provinggrounds.compat.GunCompat;
 import com.provinggrounds.events.BREvents;
+import com.provinggrounds.events.DownedEvents;
 import com.provinggrounds.events.PlayerEvents;
 import com.provinggrounds.events.WorldEvents;
 import com.provinggrounds.modes.br.BRMovement;
@@ -41,12 +43,14 @@ public class ProvingGroundsMod {
         MinecraftForge.EVENT_BUS.register(new WorldEvents());
         MinecraftForge.EVENT_BUS.register(new BREvents());
         MinecraftForge.EVENT_BUS.register(new BRMovement());
+        MinecraftForge.EVENT_BUS.register(new DownedEvents());
 
         LOGGER.info("Proving Grounds initializing...");
     }
 
     private void setup(final FMLCommonSetupEvent event) {
         event.enqueueWork(PGNetwork::register);
+        event.enqueueWork(GunCompat::init); // 槍械適配層：倒地時不能開槍
         LOGGER.info("Proving Grounds setup complete.");
     }
 

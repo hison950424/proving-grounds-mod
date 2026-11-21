@@ -4,5 +4,7 @@
   "block.provinggrounds.crate_high": "金箱（高階）",
   "block.provinggrounds.crate_airdrop": "空投箱",
   "key.categories.provinggrounds": "Proving Grounds",
-  "key.provinggrounds.menu": "打開主選單"
+  "key.provinggrounds.menu": "打開主選單",
+  "block.provinggrounds.altar": "復活祭壇",
+  "item.provinggrounds.revive_card": "復活牌"
 }

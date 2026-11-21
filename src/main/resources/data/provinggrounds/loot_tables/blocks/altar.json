@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [ { "type": "minecraft:item", "name": "provinggrounds:altar" } ],
+      "conditions": [
+        { "condition": "minecraft:block_state_property", "block": "provinggrounds:altar", "properties": { "half": "lower" } },
+        { "condition": "minecraft:survives_explosion" }
+      ]
+    }
+  ]
+}

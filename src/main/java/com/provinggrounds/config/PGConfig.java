@@ -63,6 +63,23 @@ public class PGConfig {
     public final ForgeConfigSpec.IntValue brAirdropHeight;
     public final ForgeConfigSpec.DoubleValue brAirdropFallSpeed;
 
+    // BR 倒地 / 扶起
+    public enum DownedStyle { CRAWL, SIT }
+    public final ForgeConfigSpec.EnumValue<DownedStyle> brDownedStyle;
+    public final ForgeConfigSpec.IntValue brBleedSeconds;
+    public final ForgeConfigSpec.DoubleValue brDownedHealth;
+    public final ForgeConfigSpec.DoubleValue brDownedSpeedPenalty;
+    public final ForgeConfigSpec.IntValue brReviveSeconds;
+    public final ForgeConfigSpec.DoubleValue brReviveRange;
+    public final ForgeConfigSpec.DoubleValue brReviveHealthRatio;
+
+    // BR 復活牌 / 祭壇
+    public final ForgeConfigSpec.IntValue brCardGroundSeconds;
+    public final ForgeConfigSpec.IntValue brAltarCooldownSeconds;
+    public final ForgeConfigSpec.IntValue brAltarActivateSeconds;
+    public final ForgeConfigSpec.DoubleValue brAltarRange;
+    public final ForgeConfigSpec.IntValue brAltarRespawnHeight;
+
     // ── 等級 / XP ─────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.IntValue xpWin;
     public final ForgeConfigSpec.IntValue xpKill;
@@ -157,6 +174,36 @@ public class PGConfig {
             .defineInRange("spawn_height", 260, 100, 318);
         brAirdropFallSpeed = builder.comment("空投下降速度（格/秒）")
             .defineInRange("fall_speed", 8.0, 1.0, 60.0);
+        builder.pop();
+
+        builder.push("downed");
+        brDownedStyle = builder.comment("倒地姿勢：CRAWL = 趴下且緩速移動（預設）；SIT = 坐下且不能移動")
+            .defineEnum("downed_style", DownedStyle.CRAWL);
+        brBleedSeconds = builder.comment("倒地後幾秒沒被扶起就死亡（有人正在扶時暫停計時）")
+            .defineInRange("bleed_seconds", 180, 5, 1800);
+        brDownedHealth = builder.comment("倒地時的血量，敵人要再打掉這麼多才會死（占位）")
+            .defineInRange("downed_health", 10.0, 1.0, 20.0);
+        brDownedSpeedPenalty = builder.comment("倒地時移動速度減少的比例（0.8 = 減少 80%）（占位）")
+            .defineInRange("speed_penalty", 0.8, 0.0, 1.0);
+        brReviveSeconds = builder.comment("隊友蹲下扶起需要的秒數")
+            .defineInRange("revive_seconds", 10, 1, 60);
+        brReviveRange = builder.comment("扶起距離（格）")
+            .defineInRange("revive_range", 2.0, 1.0, 6.0);
+        brReviveHealthRatio = builder.comment("扶起後的血量比例（占位 50%）")
+            .defineInRange("revive_health_ratio", 0.5, 0.05, 1.0);
+        builder.pop();
+
+        builder.push("revive");
+        brCardGroundSeconds = builder.comment("死者屍體旁掉落的復活牌可以被撿的秒數（revive_card_ground_seconds）")
+            .defineInRange("revive_card_ground_seconds", 300, 10, 3600);
+        brAltarCooldownSeconds = builder.comment("祭壇使用後的冷卻秒數（占位，沿用舊版 90 秒）")
+            .defineInRange("altar_cooldown_seconds", 90, 0, 3600);
+        brAltarActivateSeconds = builder.comment("啟動祭壇需要蹲下或按住右鍵的秒數")
+            .defineInRange("altar_activate_seconds", 10, 1, 60);
+        brAltarRange = builder.comment("啟動祭壇的距離（格）")
+            .defineInRange("altar_range", 3.0, 1.0, 8.0);
+        brAltarRespawnHeight = builder.comment("祭壇復活後重新跳傘的高度（Y）（占位）")
+            .defineInRange("altar_respawn_height", 250, 100, 318);
         builder.pop();
 
         builder.pop(); // battle_royale
