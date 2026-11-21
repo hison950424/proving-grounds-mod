@@ -127,8 +127,8 @@ public class PGConfig {
 
     private PGConfig(ForgeConfigSpec.Builder builder) {
         builder.push("lobby");
-        lobbyCountdownSeconds = builder.comment("開始倒計時秒數（BR 在這段時間分批刷新戰利品）")
-            .defineInRange("countdown_seconds", 30, 5, 300);
+        lobbyCountdownSeconds = builder.comment("登機倒數秒數（BR 在這段時間分批刷新戰利品；最後 10 秒畫面中央顯示數字＋音效）")
+            .defineInRange("countdown_seconds", 10, 5, 300);
         forceStartSeconds = builder.comment("管理員按「強制開始」後，全體提示並倒數的秒數")
             .defineInRange("force_start_seconds", 10, 1, 60);
         minPlayersToStart = builder.comment("最少開始人數（1 = 方便單人測試）")

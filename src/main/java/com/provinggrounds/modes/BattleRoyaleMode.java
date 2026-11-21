@@ -334,9 +334,23 @@ public class BattleRoyaleMode {
         if (phaseTicks > 0) {
             phaseTicks--;
             int sec = phaseTicks / 20;
-            if (phaseTicks % 20 == 0 && (sec == 20 || sec == 10 || (sec <= 5 && sec >= 1))) {
-                broadcast(Component.literal("登機倒數 " + sec + " 秒").withStyle(ChatFormatting.YELLOW));
-                playSoundAll(SoundEvents.NOTE_BLOCK_HAT.value(), 1f);
+            if (phaseTicks % 20 == 0 && sec >= 1) {
+                if (sec <= 10) {
+                    // 最後 10 秒：每秒在畫面中央顯示數字＋音效，最後 3 秒音調變高
+                    for (ServerPlayer p : participantPlayers()) {
+                        p.connection.send(new ClientboundSetTitlesAnimationPacket(0, 22, 4));
+                        p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("即將登機").withStyle(ChatFormatting.WHITE)));
+                        p.connection.send(new ClientboundSetTitleTextPacket(Component.literal(String.valueOf(sec))
+                            .withStyle(sec <= 3 ? ChatFormatting.RED : ChatFormatting.GOLD)));
+                    }
+                    playSoundAll(SoundEvents.NOTE_BLOCK_HAT.value(), sec <= 3 ? 1.6f : 1.0f);
+                } else if (sec % 10 == 0) {
+                    broadcast(Component.literal("登機倒數 " + sec + " 秒").withStyle(ChatFormatting.YELLOW));
+                    playSoundAll(SoundEvents.NOTE_BLOCK_HAT.value(), 1f);
+                }
+            }
+            if (phaseTicks == 0 && (loot == null || loot.isDone())) {
+                playSoundAll(SoundEvents.NOTE_BLOCK_BELL.value(), 1.2f); // 倒數結束：登機鈴聲
             }
             return;
         }
@@ -1706,6 +1720,16 @@ public class BattleRoyaleMode {
 
     private static String mmss(int seconds) {
         return String.format("%d:%02d", seconds / 60, seconds % 60);
+    }
+
+    /** 目前在線的參賽者。 */
+    private List<ServerPlayer> participantPlayers() {
+        List<ServerPlayer> list = new ArrayList<>();
+        for (Participant part : participants.values()) {
+            ServerPlayer p = player(part.id);
+            if (p != null) list.add(p);
+        }
+        return list;
     }
 
     private static void title(ServerPlayer p, Component title, Component subtitle) {
