@@ -25,10 +25,10 @@ import java.util.UUID;
  * 目的: 主選單（只在客戶端使用）。按 M 打開。CS2 / Valorant 深色風格。
  *   首頁：BATTLE ROYALE（大按鈕）、TDM / DOMINATION / GUNFIGHT（Phase 2，先停用）、底部戰績欄。
  *   大廳頁（所有人都看得到，資料由伺服器 LobbyStatePacket 即時同步）：
- *     左欄：地圖、縮圈、一般／競技、分隊方式、隊伍數、自動分隊（只有管理員能改）
+ *     左欄：地圖、縮圈、一般／競技、分隊方式、隊伍數、自動分隊、全部移出隊伍（只有管理員能改）
  *     右欄：各隊名單（✔ = 已準備）。點隊伍標題 = 加入那一隊；
  *           管理員先點玩家名字選取，再點隊伍標題 = 把他移過去，或按「設為觀戰」。
- *     底部：準備／加入遊戲、開始、強制開始／取消倒數、返回。
+ *     底部：準備／加入遊戲、開始（遊戲中管理員看到「結束遊戲」，按兩次才執行）、強制開始／取消倒數、返回。
  *   所有操作都送 LobbyActionPacket，權限由伺服器檢查。
  */
 public class MainMenuScreen extends Screen {
@@ -48,6 +48,9 @@ public class MainMenuScreen extends Screen {
     // 記住上次的畫面與選取（同一次遊戲啟動期間）
     private static View view = View.HOME;
     @Nullable private static UUID selected;
+    /** 「結束遊戲」第一次按下後，這個時間點之前再按一次才會真的結束。 */
+    private static long endConfirmUntil = 0;
+    private boolean wasConfirming;
 
     private int panelW, panelH, left, top;
     private int listX, listY, listW, listH, scroll;
@@ -107,33 +110,35 @@ public class MainMenuScreen extends Screen {
             int i = maps.indexOf(map);
             send(LobbyManager.Action.SET_MAP, maps.get((i + 1) % maps.size()).id());
         });
-        y += 21;
+        y += 20;
         CirclePreset preset = lobby != null ? CirclePreset.values()[lobby.presetOrdinal()] : CirclePreset.STANDARD;
         setting(sx, y, sw, "縮圈：" + preset.displayName, canEdit,
             () -> send(LobbyManager.Action.SET_PRESET, (preset.ordinal() + 1) % CirclePreset.values().length));
-        y += 21;
+        y += 20;
         BattleRoyaleMode.Variant variant = lobby != null ? BattleRoyaleMode.Variant.values()[lobby.variantOrdinal()] : BattleRoyaleMode.Variant.NORMAL;
         setting(sx, y, sw, "模式：" + variant.displayName, canEdit,
             () -> send(LobbyManager.Action.SET_VARIANT, (variant.ordinal() + 1) % BattleRoyaleMode.Variant.values().length));
-        y += 21;
+        y += 20;
         LobbyManager.TeamMode teamMode = lobby != null ? LobbyManager.TeamMode.values()[lobby.teamModeOrdinal()] : LobbyManager.TeamMode.FREE;
         setting(sx, y, sw, "分隊：" + teamMode.displayName, canEdit,
             () -> send(LobbyManager.Action.SET_TEAM_MODE, (teamMode.ordinal() + 1) % LobbyManager.TeamMode.values().length));
-        y += 21;
+        y += 20;
         int teamCount = lobby != null ? lobby.teamCount() : 4;
         setting(sx, y, sw - 44, "隊伍數：" + teamCount, false, () -> {});
         setting(sx + sw - 42, y, 20, "－", canEdit && teamCount > 1, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount - 1));
         setting(sx + sw - 20, y, 20, "＋", canEdit && teamCount < LobbyManager.MAX_TEAMS, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount + 1));
-        y += 21;
-        setting(sx, y, sw, "自動分隊", canEdit, () -> send(LobbyManager.Action.AUTO_BALANCE, 0));
-        y += 27;
+        y += 20;
+        int half = (sw - 2) / 2;
+        setting(sx, y, half, "自動分隊", canEdit, () -> send(LobbyManager.Action.AUTO_BALANCE, 0));
+        setting(sx + sw - half, y, half, "全部移出隊伍", canEdit, () -> send(LobbyManager.Action.CLEAR_TEAMS, 0));
+        y += 24;
 
         // 管理員：選取玩家後的工具
         LobbyStatePacket.Entry sel = find(lobby, selected);
         if (op && sel != null) {
             setting(sx, y, sw, (sel.spectator() ? "取消觀戰：" : "設為觀戰：") + sel.name(), canEdit,
                 () -> send(LobbyManager.Action.SET_SPECTATOR, sel.spectator() ? 0 : 1, sel.id()));
-            y += 21;
+            y += 20;
             setting(sx, y, sw, "取消選取", true, () -> { selected = null; rebuildWidgets(); });
         }
 
@@ -161,10 +166,25 @@ public class MainMenuScreen extends Screen {
             addRenderableWidget(r);
         }
         boolean counting = lobby != null && lobby.countdownSeconds() >= 0;
-        PGButton start = new PGButton(bx + (bw + 6), by, bw, 20, Component.literal("開始"), true, false,
-            () -> send(LobbyManager.Action.START, 0));
-        start.active = canEdit && !counting;
-        addRenderableWidget(start);
+        if (op && lobby != null && !inLobby) {
+            // 遊戲進行中：開始鍵換成「結束遊戲」，要按兩次（3 秒內）才會執行
+            boolean confirming = System.currentTimeMillis() < endConfirmUntil;
+            PGButton end = new PGButton(bx + (bw + 6), by, bw, 20, Component.literal(confirming ? "確定結束？" : "結束遊戲"), true, false, () -> {
+                if (System.currentTimeMillis() < endConfirmUntil) {
+                    endConfirmUntil = 0;
+                    send(LobbyManager.Action.END_GAME, 0);
+                } else {
+                    endConfirmUntil = System.currentTimeMillis() + 3000;
+                }
+                rebuildWidgets();
+            });
+            addRenderableWidget(end);
+        } else {
+            PGButton start = new PGButton(bx + (bw + 6), by, bw, 20, Component.literal("開始"), true, false,
+                () -> send(LobbyManager.Action.START, 0));
+            start.active = canEdit && !counting;
+            addRenderableWidget(start);
+        }
         PGButton force = new PGButton(bx + 2 * (bw + 6), by, bw, 20, Component.literal(counting ? "取消倒數" : "強制開始"), false, false,
             () -> send(counting ? LobbyManager.Action.CANCEL_COUNTDOWN : LobbyManager.Action.FORCE_START, 0));
         force.active = canEdit;
@@ -369,7 +389,11 @@ public class MainMenuScreen extends Screen {
     @Override
     public void tick() {
         // 伺服器資料到了（或更新了）就重建按鈕，讓設定與按鈕狀態正確
-        if (ClientMenuData.version() != seenMenu || ClientLobbyData.version() != seenLobby) rebuildWidgets();
+        boolean confirming = System.currentTimeMillis() < endConfirmUntil;
+        if (ClientMenuData.version() != seenMenu || ClientLobbyData.version() != seenLobby || confirming != wasConfirming) {
+            wasConfirming = confirming; // 確認時間過了，按鈕文字要變回「結束遊戲」
+            rebuildWidgets();
+        }
     }
 
     @Override

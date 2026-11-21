@@ -35,6 +35,39 @@ public class CrateBlockEntity extends RandomizableContainerBlockEntity {
         setChanged();
     }
 
+    /**
+     * 依 loot table 生成內容後：
+     *   1. 合併相同物品（原版生成會把一組拆散到很多格，例如 30 發子彈變成十幾格 1 發）；
+     *   2. 箱子裡每把槍再配一份對應子彈（半組～一組）。
+     */
+    @Override
+    public void unpackLootTable(@javax.annotation.Nullable net.minecraft.world.entity.player.Player player) {
+        boolean generating = lootTable != null && level != null && !level.isClientSide;
+        super.unpackLootTable(player);
+        if (generating) {
+            mergeStacks();
+            com.provinggrounds.compat.AmmoCategories.addAmmoForGuns(this, level.getRandom());
+            mergeStacks();
+            setChanged();
+        }
+    }
+
+    /** 把相同物品（含 NBT）合併成盡量少的格子。 */
+    private void mergeStacks() {
+        for (int i = 0; i < items.size(); i++) {
+            ItemStack a = items.get(i);
+            if (a.isEmpty() || !a.isStackable()) continue;
+            for (int j = i + 1; j < items.size() && a.getCount() < a.getMaxStackSize(); j++) {
+                ItemStack b = items.get(j);
+                if (b.isEmpty() || !ItemStack.isSameItemSameTags(a, b)) continue;
+                int move = Math.min(b.getCount(), a.getMaxStackSize() - a.getCount());
+                a.grow(move);
+                b.shrink(move);
+                if (b.isEmpty()) items.set(j, ItemStack.EMPTY);
+            }
+        }
+    }
+
     @Override
     protected NonNullList<ItemStack> getItems() { return items; }
 

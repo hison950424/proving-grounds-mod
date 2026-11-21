@@ -27,7 +27,8 @@ import java.util.*;
  * 檔案: LobbyManager.java
  * 目的: 大廳流程（伺服器端，單例）。
  *   管理員（OP 等級 2）：選地圖、縮圈方案、一般／競技、分隊方式（玩家自選／管理員分配）、隊伍數量、
- *                       幫玩家換隊、自動分隊、指定誰去觀戰、開始、強制開始（全體提示＋倒數）、取消倒數。
+ *                       幫玩家換隊、自動分隊、全部移出隊伍、指定誰去觀戰、開始、強制開始（全體提示＋倒數）、
+ *                       取消倒數、強制結束進行中的遊戲。
  *   玩家：自選隊伍（自選模式時）、準備／取消準備。
  *   觀戰者：打開選單按「加入遊戲」→ 大廳中立刻變冒險模式回大廳；遊戲中則等這局結束才回來。
  * 觀戰與「本局結束後加入」用玩家存檔標籤記錄（伺服器重開也保留）。
@@ -52,7 +53,9 @@ public final class LobbyManager {
         TOGGLE_READY,       // 準備／取消準備
         SET_SPECTATOR,      // 管理員：target 觀戰（arg 1）或取消觀戰（arg 0）
         JOIN_GAME,          // 觀戰者自己按「加入遊戲」
-        START, FORCE_START, CANCEL_COUNTDOWN // 管理員：開始
+        START, FORCE_START, CANCEL_COUNTDOWN, // 管理員：開始
+        END_GAME,           // 管理員：強制結束進行中的遊戲、全員回大廳
+        CLEAR_TEAMS         // 管理員：所有人移出隊伍（變成未分隊）
     }
 
     public static final String SPECTATOR_TAG = "pg_spectator";
@@ -158,6 +161,11 @@ public final class LobbyManager {
             joinGame(sender, lobby);
             return;
         }
+        if (action == Action.END_GAME) {
+            if (!op) { deny(sender, "只有管理員可以這麼做。"); return; }
+            endGame(sender);
+            return;
+        }
         if (!lobby) {
             deny(sender, "遊戲進行中，大廳設定暫時不能改。");
             return;
@@ -214,6 +222,10 @@ public final class LobbyManager {
             case SET_PLAYER_TEAM -> {
                 if (target == null || arg < 0 || arg > teamCount) return false;
                 TeamManager.get().assignTeam(target, TeamManager.Team.of(arg));
+            }
+            case CLEAR_TEAMS -> {
+                TeamManager.get().clearAssignments();
+                broadcastChat(server, Component.literal("[PG] 管理員已把所有人移出隊伍。").withStyle(ChatFormatting.YELLOW));
             }
             case AUTO_BALANCE -> {
                 TeamManager.get().balance(participants(server), teamCount);
@@ -292,6 +304,18 @@ public final class LobbyManager {
             ProvingGroundsMod.LOGGER.info("Lobby started BR on map {}", m.id);
         }
         return error;
+    }
+
+    /** 管理員強制結束遊戲：停止 BR（清掉箱子與空投）、還原所有參賽者、回大廳。 */
+    private void endGame(ServerPlayer sender) {
+        if (GameManager.get().isInLobby()) { deny(sender, "目前沒有進行中的遊戲。"); return; }
+        MinecraftServer server = sender.server;
+        broadcastChat(server, Component.literal("[PG] 管理員 " + sender.getGameProfile().getName() + " 強制結束了遊戲，全員回到大廳。")
+            .withStyle(ChatFormatting.GOLD));
+        BattleRoyaleMode.get().forceStop(true);
+        GameManager.get().reset();
+        ProvingGroundsMod.LOGGER.info("Game force-ended from menu by {}", sender.getGameProfile().getName());
+        dirty = true;
     }
 
     private void joinGame(ServerPlayer p, boolean lobby) {

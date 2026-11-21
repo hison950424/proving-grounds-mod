@@ -104,6 +104,65 @@ public final class AmmoCategories {
         return lines;
     }
 
+    /**
+     * 箱子生成內容後呼叫：箱子裡每有一把槍，就放一份那把槍用的子彈（半組～一組，依彈藥堆疊上限）。
+     * 子彈種類問 TACZ（經過 GunDataMixin，所以是我們的大類彈藥）。沒裝 TACZ 或查不到就略過。
+     */
+    public static void addAmmoForGuns(net.minecraft.world.Container container, net.minecraft.util.RandomSource random) {
+        net.minecraft.world.item.Item ammoItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new ResourceLocation("tacz", "ammo"));
+        if (ammoItem == null || ammoItem == net.minecraft.world.item.Items.AIR) return;
+        List<ResourceLocation> wanted = new java.util.ArrayList<>();
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            net.minecraft.world.item.ItemStack stack = container.getItem(i);
+            if (stack.isEmpty() || stack.getTag() == null || !stack.getTag().contains("GunId")) continue;
+            ResourceLocation gunId = ResourceLocation.tryParse(stack.getTag().getString("GunId"));
+            ResourceLocation ammoId = gunId != null ? ammoOfGun(gunId) : null;
+            if (ammoId != null) wanted.add(ammoId);
+        }
+        for (ResourceLocation ammoId : wanted) {
+            int max = stackSizeOf(ammoId);
+            int count = Math.max(1, max / 2 + random.nextInt(max - max / 2 + 1));
+            net.minecraft.world.item.ItemStack ammo = new net.minecraft.world.item.ItemStack(ammoItem, count);
+            ammo.getOrCreateTag().putString("AmmoId", ammoId.toString());
+            // 放進隨機一個空格；箱子滿了就不放
+            List<Integer> empty = new java.util.ArrayList<>();
+            for (int i = 0; i < container.getContainerSize(); i++) if (container.getItem(i).isEmpty()) empty.add(i);
+            if (empty.isEmpty()) return;
+            container.setItem(empty.get(random.nextInt(empty.size())), ammo);
+        }
+    }
+
+    /** 這把槍吃的子彈 ID（已套用大類對照）。 */
+    @Nullable
+    private static ResourceLocation ammoOfGun(ResourceLocation gunId) {
+        try {
+            Class<?> api = Class.forName("com.tacz.guns.api.TimelessAPI");
+            Object opt = api.getMethod("getCommonGunIndex", ResourceLocation.class).invoke(null, gunId);
+            if (!(opt instanceof java.util.Optional<?> o) || o.isEmpty()) return null;
+            Object index = o.get();
+            Object data = index.getClass().getMethod("getGunData").invoke(index);
+            Object ammo = data.getClass().getMethod("getAmmoId").invoke(data);
+            return ammo instanceof ResourceLocation rl ? rl : null;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** 子彈的堆疊上限（查不到用 30）。 */
+    private static int stackSizeOf(ResourceLocation ammoId) {
+        try {
+            Class<?> api = Class.forName("com.tacz.guns.api.TimelessAPI");
+            Object opt = api.getMethod("getCommonAmmoIndex", ResourceLocation.class).invoke(null, ammoId);
+            if (opt instanceof java.util.Optional<?> o && o.isPresent()) {
+                Object index = o.get();
+                return Math.max(1, (Integer) index.getClass().getMethod("getStackSize").invoke(index));
+            }
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // 用預設值
+        }
+        return 30;
+    }
+
     /** 模組匯流排：伺服器設定載入／重載（含玩家端收到同步）時重建。 */
     public static void onConfig(ModConfigEvent event) {
         if (event.getConfig().getSpec() == PGConfig.SERVER_SPEC && event.getConfig().getType() == ModConfig.Type.SERVER) {

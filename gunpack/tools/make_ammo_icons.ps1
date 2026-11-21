@@ -4,7 +4,7 @@ $dst="C:\mcdatapack\proving-grounds-mod\gunpack\provinggrounds_ammo\assets\provi
 $cats=@(
  @{id='light';rep='9mm';col='#5BD03F';diag=$false},
  @{id='medium';rep='556x45';col='#F5BF15';diag=$false},
- @{id='heavy';rep='308';col='#18C8C8';diag=$false},
+ @{id='heavy';rep='50bmg';col='#18C8C8';diag=$false},
  @{id='shotgun';rep='12g';col='#4A62FF';diag=$false},
  @{id='heavy_weapon';rep='rpg_rocket';col='#B050F0';diag=$true})
 $B0=16; $B1=22
@@ -53,5 +53,5 @@ $s=8; $bmp=New-Object System.Drawing.Bitmap (32*$s*5+40),(32*$s)
 $g=[System.Drawing.Graphics]::FromImage($bmp); $g.Clear([System.Drawing.Color]::FromArgb(139,139,139))
 $g.InterpolationMode='NearestNeighbor'; $g.PixelOffsetMode='Half'
 $k=0; foreach($c in $cats){ $img=[System.Drawing.Image]::FromFile("$dst\$($c.id).png"); $g.DrawImage($img,$k*(32*$s+8),0,32*$s,32*$s); $img.Dispose(); $k++ }
-$bmp.Save((Join-Path $PSScriptRoot 'ammo_icons_v2.png')); $g.Dispose(); $bmp.Dispose()
+$bmp.Save('C:\Users\assas\AppData\Local\Temp\claude\5caa31878c46b8d7\9446439e-a959-4cf8-8f3f-06a86a881686\scratchpad\ammo_icons_v3.png'); $g.Dispose(); $bmp.Dispose()
 "done"
