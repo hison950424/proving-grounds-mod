@@ -5,3 +5,5 @@ out/
 *.iml
 .idea/
 *.class
+# 外部模組 jar（TACZ 等）只放本機，不上傳
+libs/
