@@ -12,8 +12,8 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 /**
  * 檔案: HUD.java
  * 目的: 遊戲中 overlay（只在客戶端執行）。CS2 / Valorant 深色風格。
- *   左上：存活人數 / 隊伍數（準備階段顯示登機倒數）
- *   右上：小地圖（飛機、進行中），下方是縮圈階段與倒數 / 飛行剩餘 / 結算倒數
+ *   左上：小地圖（飛機、進行中），下方是存活人數 / 隊伍數（準備階段顯示登機倒數）
+ *   右上：縮圈階段與倒數 / 飛行剩餘 / 結算倒數
  *   中上：在圈外時紅字警告與距離
  *   中下：跳傘提示、淘汰提示
  *   右下：擊殺提示（淡出）
@@ -39,9 +39,9 @@ public final class HUD {
         if (s.phase() == ClientBRState.PHASE_NONE) return;
         Font font = mc.font;
 
-        renderTopLeft(g, font, s);
-        int topRightY = renderMinimap(g, font, s, mc, w);
-        renderTopRight(g, font, s, w, topRightY);
+        int topLeftY = renderMinimap(g, font, s, mc);
+        renderTopLeft(g, font, s, topLeftY);
+        renderTopRight(g, font, s, w);
         renderOutsideWarning(g, font, s, mc.player, w);
         renderHint(g, font, s, w, h);
         renderKillFeed(g, font, w, h);
@@ -49,8 +49,8 @@ public final class HUD {
 
     // ── 左上 ────────────────────────────────────────────────────────────────
 
-    private static void renderTopLeft(GuiGraphics g, Font font, BRStatePacket s) {
-        int x = 8, y = 8;
+    private static void renderTopLeft(GuiGraphics g, Font font, BRStatePacket s, int topY) {
+        int x = 8, y = topY;
         if (s.phase() == ClientBRState.PHASE_PREPARING) {
             panel(g, x, y, 120, 34);
             spaced(g, font, "BATTLE ROYALE", x + PAD + 2, y + PAD, ACCENT);
@@ -71,17 +71,17 @@ public final class HUD {
 
     // ── 右上 ────────────────────────────────────────────────────────────────
 
-    // ── 右上：小地圖 ────────────────────────────────────────────────────────
+    // ── 左上：小地圖 ────────────────────────────────────────────────────────
 
     private static final int MINIMAP = 96;          // 小地圖邊長（GUI 像素）
     private static final double MINIMAP_SPAN = 192; // 小地圖顯示的範圍（格）
 
-    /** 遊戲中（飛機、進行中）在右上角畫小地圖，北方朝上、自己在中間。回傳下方可用的 y。 */
-    private static int renderMinimap(GuiGraphics g, Font font, BRStatePacket s, Minecraft mc, int w) {
+    /** 遊戲中（飛機、進行中）在左上角畫小地圖，北方朝上、自己在中間。回傳下方可用的 y。 */
+    private static int renderMinimap(GuiGraphics g, Font font, BRStatePacket s, Minecraft mc) {
         if (s.phase() != ClientBRState.PHASE_PLANE && s.phase() != ClientBRState.PHASE_ACTIVE) return 8;
         net.minecraft.world.entity.Entity cam = mc.getCameraEntity();
         if (cam == null) return 8;
-        int x = w - MINIMAP - 8, y = 8;
+        int x = 8, y = 8;
         g.fill(x - 2, y - 2, x + MINIMAP + 2, y + MINIMAP + 2, BG);
         MapRender.View v = new MapRender.View(x, y, MINIMAP, MINIMAP,
             cam.getX() - MINIMAP_SPAN / 2, cam.getZ() - MINIMAP_SPAN / 2, MINIMAP_SPAN);
@@ -98,7 +98,7 @@ public final class HUD {
         return y + MINIMAP + 6;
     }
 
-    private static void renderTopRight(GuiGraphics g, Font font, BRStatePacket s, int w, int topY) {
+    private static void renderTopRight(GuiGraphics g, Font font, BRStatePacket s, int w) {
         String title, line;
         int lineColor = TEXT;
         switch (s.phase()) {
@@ -125,7 +125,7 @@ public final class HUD {
             default -> { return; }
         }
         int boxW = Math.max(font.width(title), font.width(line)) + PAD * 2 + 4;
-        int x = w - boxW - 8, y = topY;
+        int x = w - boxW - 8, y = 8;
         panel(g, x, y, boxW, 34);
         g.drawString(font, title, x + PAD + 2, y + PAD, ACCENT, false);
         g.drawString(font, line, x + PAD + 2, y + PAD + 13, lineColor, false);
