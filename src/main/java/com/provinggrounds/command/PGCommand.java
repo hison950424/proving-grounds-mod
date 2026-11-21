@@ -36,6 +36,7 @@ import java.util.Locale;
  * 目的: 管理員指令（OP 等級 2 以上）。
  *   /pg reload | reset | status | mode <mode>
  *   /pg map  list | set <id> <x> <z> <radius> [name] | here <id> <radius> [name] | remove <id>
+ *            | render <id> | render cancel   （產生大地圖／小地圖俯視圖）
  *   /pg loot add [map] | remove [map] | list [map] | count [map] | clear <map> confirm
  *   /pg loot import <map>   舊 Datapack 箱子 marker 轉成點位，存檔確認後刪掉 marker
  *   /pg loot markers import <map> | purge <map> confirm | cancel   （分開做：只匯入／只刪除）
@@ -170,7 +171,31 @@ public class PGCommand {
                                 StringArgumentType.getString(ctx, "name")))))))
             .then(Commands.literal("remove")
                 .then(Commands.argument("id", IntegerArgumentType.integer(1))
-                    .executes(ctx -> mapRemove(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id")))));
+                    .executes(ctx -> mapRemove(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id")))))
+            // 產生大地圖／小地圖用的俯視圖
+            .then(Commands.literal("render")
+                .then(Commands.literal("cancel").executes(ctx -> {
+                    if (com.provinggrounds.data.MapRenderJob.cancel()) return 1;
+                    fail(ctx.getSource(), "目前沒有地圖在產生。");
+                    return 0;
+                }))
+                .then(Commands.argument("id", IntegerArgumentType.integer(1))
+                    .executes(ctx -> mapRender(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id")))));
+    }
+
+    private static int mapRender(CommandSourceStack src, int mapId) {
+        if (!GameManager.get().isInLobby() || BattleRoyaleMode.get().isRunning()) {
+            fail(src, "遊戲進行中不能產生地圖，請在大廳時執行。");
+            return 0;
+        }
+        MapRegistry.BRMap m = resolveMap(src, mapId);
+        if (m == null) return 0;
+        String error = com.provinggrounds.data.MapRenderJob.start(src.getServer(), m, src);
+        if (error != null) {
+            fail(src, error);
+            return 0;
+        }
+        return 1;
     }
 
     private static int mapList(CommandSourceStack src) {

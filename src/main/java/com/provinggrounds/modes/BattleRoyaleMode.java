@@ -16,6 +16,7 @@ import com.provinggrounds.modes.br.LootSpawner;
 import com.provinggrounds.modes.br.RespawnKit;
 import com.provinggrounds.network.BRStatePacket;
 import com.provinggrounds.network.KillFeedPacket;
+import com.provinggrounds.network.MapMarkersPacket;
 import com.provinggrounds.network.PGNetwork;
 import com.provinggrounds.registry.PGBlocks;
 import net.minecraft.ChatFormatting;
@@ -232,6 +233,7 @@ public class BattleRoyaleMode {
     public String start(MinecraftServer server, int mapId, CirclePreset preset, Variant variant) {
         if (phase != Phase.IDLE || !GameManager.get().isInLobby()) return "目前已有遊戲進行中。";
         if (com.provinggrounds.data.MarkerScanJob.isRunning()) return "舊箱子 marker 掃描進行中，請等它完成或 /pg loot markers cancel。";
+        if (com.provinggrounds.data.MapRenderJob.isRunning()) return "地圖俯視圖產生中，請等它完成或 /pg map render cancel。";
         MapRegistry.BRMap m = MapRegistry.get(server).getMap(mapId);
         if (m == null) return "找不到地圖 #" + mapId + "，請先用 /pg map set 登記。";
 
@@ -257,6 +259,8 @@ public class BattleRoyaleMode {
 
         for (ServerPlayer p : players) join(p);
         TeamManager.get().syncVanillaTeams(server, players);
+        spotted.clear();
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) sendMapImage(p); // 大地圖／小地圖俯視圖
         startTeamCount = countAliveTeams();
 
         AirdropManager.cleanupAll(level); // 清掉上一局（例如當機）殘留的空投
@@ -312,6 +316,7 @@ public class BattleRoyaleMode {
         }
 
         if (phase != Phase.IDLE && tickCount % 5 == 0) syncClients(server);
+        if ((phase == Phase.PLANE || phase == Phase.ACTIVE) && tickCount % 5 == 2) syncMarkers(server); // 地圖標記
     }
 
     private void tickPreparing() {
@@ -909,10 +914,12 @@ public class BattleRoyaleMode {
                 startTeamCount = countAliveTeams();
             }
             p.sendSystemMessage(Component.literal("已加入即將開始的 BR。").withStyle(ChatFormatting.GREEN));
+            sendMapImage(p);
         } else if (phase != Phase.IDLE) {
             if (!sameGame) markForRestore(p);
             p.setGameMode(GameType.SPECTATOR);
             p.sendSystemMessage(Component.literal("BR 進行中，你目前是觀察者。").withStyle(ChatFormatting.GRAY));
+            sendMapImage(p);
         } else if (!tag.isEmpty()) {
             restore(p);
         }
@@ -1515,6 +1522,94 @@ public class BattleRoyaleMode {
                 cx, cz, r, nx, nz, nr, (short) alivePlayers, aliveTeams, self, movement ? jump : 0f,
                 progressKind, progress, timerKind, (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, timer)),
                 cards, crawling));
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 地圖（大地圖／小地圖）
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /** 敵人最後被看到的位置。 */
+    private record Spot(float x, float z, float yaw, int tick) {}
+    /** 每一隊（teamKey）看到的敵人：敵人 UUID → 最後看到的位置。 */
+    private final Map<String, Map<UUID, Spot>> spotted = new HashMap<>();
+    private static final double SPOT_RANGE = 96;
+    private static final double SPOT_COS = Math.cos(Math.toRadians(55)); // 視野半角 55°
+    private static final int SPOT_KEEP_TICKS = 60;                       // 看不到後標記保留 3 秒
+
+    /** 把這局地圖的俯視圖送給一位玩家（沒產生過就不送，客戶端只畫格線與標記）。 */
+    private void sendMapImage(ServerPlayer p) {
+        if (map == null || level == null) return;
+        com.provinggrounds.data.MapImageStore.MapImage img = com.provinggrounds.data.MapImageStore.get(level.getServer(), map.id);
+        if (img != null) com.provinggrounds.network.MapImagePacket.sendTo(p, img);
+        else PGNetwork.sendTo(p, new com.provinggrounds.network.MapImagePacket(map.id, 0, 0, 0, 0, 1, 0, 1, new byte[0])); // 沒有俯視圖：清掉上一張
+    }
+
+    /** 更新「隊友視野內的敵人」：在 96 格內、在視野角度內、中間沒有方塊擋住。 */
+    private void updateSpotting() {
+        List<ServerPlayer> alive = new ArrayList<>();
+        for (Participant part : participants.values()) {
+            if (!part.alive) continue;
+            ServerPlayer sp = player(part.id);
+            if (sp != null && !sp.isSpectator()) alive.add(sp);
+        }
+        for (ServerPlayer watcher : alive) {
+            String key = TeamManager.get().teamKey(watcher.getUUID());
+            Vec3 eye = watcher.getEyePosition();
+            Vec3 look = watcher.getLookAngle();
+            for (ServerPlayer target : alive) {
+                if (target == watcher || TeamManager.get().isSameTeam(watcher, target)) continue;
+                Vec3 to = target.position().add(0, target.getBbHeight() * 0.6, 0).subtract(eye);
+                double dist = to.length();
+                if (dist > SPOT_RANGE || dist < 0.01) continue;
+                if (to.scale(1 / dist).dot(look) < SPOT_COS) continue;
+                if (!watcher.hasLineOfSight(target)) continue;
+                spotted.computeIfAbsent(key, k -> new HashMap<>())
+                    .put(target.getUUID(), new Spot((float) target.getX(), (float) target.getZ(), target.getYRot(), tickCount));
+            }
+        }
+        // 清掉過期的
+        for (Map<UUID, Spot> m : spotted.values()) m.values().removeIf(s -> tickCount - s.tick() > SPOT_KEEP_TICKS);
+    }
+
+    /** 每 5 tick 送地圖標記給每位玩家。 */
+    private void syncMarkers(MinecraftServer server) {
+        updateSpotting();
+        List<MapMarkersPacket.Marker> drops = new ArrayList<>();
+        if (airdrops != null) {
+            for (AirdropManager.MapPoint d : airdrops.mapPoints()) {
+                drops.add(new MapMarkersPacket.Marker(d.falling() ? MapMarkersPacket.AIRDROP_FALLING : MapMarkersPacket.AIRDROP,
+                    d.x() + 0.5f, d.z() + 0.5f, 0, 0xFFD040, "", 0));
+            }
+        }
+        for (ServerPlayer viewer : server.getPlayerList().getPlayers()) {
+            List<MapMarkersPacket.Marker> list = new ArrayList<>(drops);
+            Participant self = participants.get(viewer.getUUID());
+            for (Participant part : participants.values()) {
+                if (!part.alive || part.id.equals(viewer.getUUID())) continue;
+                ServerPlayer sp = player(part.id);
+                if (sp == null) continue;
+                boolean mate = self != null && TeamManager.get().isSameTeam(self.id, part.id);
+                if (self == null) {
+                    // 觀戰者（不是參賽者）：看得到所有參賽者
+                    list.add(new MapMarkersPacket.Marker(part.downed ? MapMarkersPacket.TEAMMATE_DOWNED : MapMarkersPacket.PLAYER,
+                        (float) sp.getX(), (float) sp.getZ(), sp.getYRot(), colorOf(part.id), part.name, 0));
+                } else if (mate) {
+                    list.add(new MapMarkersPacket.Marker(part.downed ? MapMarkersPacket.TEAMMATE_DOWNED : MapMarkersPacket.TEAMMATE,
+                        (float) sp.getX(), (float) sp.getZ(), sp.getYRot(), colorOf(part.id), part.name, 0));
+                }
+            }
+            if (self != null) {
+                Map<UUID, Spot> seen = spotted.get(TeamManager.get().teamKey(self.id));
+                if (seen != null) {
+                    for (Map.Entry<UUID, Spot> e : seen.entrySet()) {
+                        Spot s = e.getValue();
+                        list.add(new MapMarkersPacket.Marker(MapMarkersPacket.ENEMY, s.x(), s.z(), s.yaw(), 0xE04848, "",
+                            tickCount - s.tick()));
+                    }
+                }
+            }
+            PGNetwork.sendTo(viewer, new MapMarkersPacket(list));
         }
     }
 

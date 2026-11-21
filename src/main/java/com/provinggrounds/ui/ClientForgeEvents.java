@@ -38,8 +38,15 @@ public final class ClientForgeEvents {
         Minecraft mc = Minecraft.getInstance();
         while (ClientModEvents.OPEN_MENU.consumeClick()) {
             if (mc.player == null || mc.screen != null) continue;
-            PGNetwork.sendToServer(new MenuRequestPacket());
-            mc.setScreen(new MainMenuScreen());
+            byte phase = ClientBRState.get().phase();
+            if (phase == ClientBRState.PHASE_PLANE || phase == ClientBRState.PHASE_ACTIVE) {
+                // 遊戲中：M 開大地圖（大地圖左上有「選單」按鈕）
+                mc.setScreen(new BigMapScreen());
+            } else {
+                // 大廳（含開局前的準備倒數、結算）：M 開主選單
+                PGNetwork.sendToServer(new MenuRequestPacket());
+                mc.setScreen(new MainMenuScreen());
+            }
         }
         updateCrawlPoses(mc);
     }
@@ -92,6 +99,7 @@ public final class ClientForgeEvents {
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientMenuData.clear();
         com.provinggrounds.client.ClientLobbyData.clear();
+        com.provinggrounds.client.ClientMapData.clear();
         ClientBRState.clear();
         FORCED_CRAWL.clear();
     }

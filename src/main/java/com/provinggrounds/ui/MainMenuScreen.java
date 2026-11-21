@@ -64,6 +64,11 @@ public class MainMenuScreen extends Screen {
         super(Component.literal("Proving Grounds"));
     }
 
+    /** 從大地圖的「選單」按鈕打開時，直接顯示大廳頁（結束遊戲、加入遊戲在這裡）。 */
+    public static void openLobbyView() {
+        view = View.LOBBY;
+    }
+
     @Override
     protected void init() {
         panelW = Math.min(420, width - 16);

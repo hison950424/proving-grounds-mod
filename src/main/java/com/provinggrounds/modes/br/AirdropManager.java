@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.List;
 
 /**
  * 檔案: AirdropManager.java
@@ -78,6 +79,19 @@ public class AirdropManager {
     }
 
     public boolean isFalling() { return falling != null; }
+
+    /** 地圖標記用：已落地的空投箱位置（falling = false）與正在掉的空投落點（falling = true）。 */
+    public record MapPoint(int x, int z, boolean falling) {}
+
+    public List<MapPoint> mapPoints() {
+        List<MapPoint> list = new ArrayList<>();
+        for (BlockPos pos : AirdropLedger.get(level.getServer()).entries()) {
+            if (falling != null && pos.equals(falling.target)) continue;
+            list.add(new MapPoint(pos.getX(), pos.getZ(), false));
+        }
+        if (falling != null) list.add(new MapPoint(falling.x, falling.z, true));
+        return list;
+    }
 
     // ═════════════════════════════════════════════════════════════════════════
     // 時間窗

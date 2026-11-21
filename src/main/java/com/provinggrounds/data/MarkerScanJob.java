@@ -102,6 +102,7 @@ public final class MarkerScanJob {
     @Nullable
     public static String start(MinecraftServer server, MapRegistry.BRMap map, Mode mode, CommandSourceStack source) {
         if (current != null) return "已經有一個 marker 掃描在進行中，請等它完成（或 /pg loot markers cancel）。";
+        if (MapRenderJob.isRunning()) return "地圖俯視圖產生中，請等它完成。";
         current = new MarkerScanJob(server.overworld(), map, mode, source);
         current.say(String.format("開始%s地圖 #%d 的舊箱子 marker，共 %d 批區塊，請稍候…",
             switch (mode) { case IMPORT -> "匯入"; case PURGE -> "刪除"; case MIGRATE -> "轉換（匯入後刪除）"; }, map.id, current.totalBatches), ChatFormatting.YELLOW);
