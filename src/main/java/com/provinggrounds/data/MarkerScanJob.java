@@ -25,6 +25,8 @@ import java.util.List;
  * 目的: 處理舊 Datapack 留下的箱子 marker（tag = loot_marker，不含空投 crate_airdrop）。
  *   IMPORT：把 marker 的位置登記成新系統的箱子點位（只取位置，不管舊的箱子種類）。
  *   PURGE ：刪除 marker。
+ *   MIGRATE：/pg loot import 用。先全部匯入並存檔，確認點位真的登記了，再刪掉那些 marker
+ *            （沒登記成功的 marker 會留著）。
  * 實體只有在區塊載入後才找得到，所以把地圖範圍切成一批批區塊：
  *   加載入票 → 等實體載入完成 → 掃描 → 移除載入票 → 下一批。
  * 載入票不會寫進存檔，伺服器中途關閉也不會留下常駐載入的區塊。
@@ -32,7 +34,7 @@ import java.util.List;
  */
 public final class MarkerScanJob {
 
-    public enum Mode { IMPORT, PURGE }
+    public enum Mode { IMPORT, PURGE, MIGRATE }
 
     public static final String MARKER_TAG  = "loot_marker";
     public static final String AIRDROP_TAG = "crate_airdrop";
@@ -51,11 +53,14 @@ public final class MarkerScanJob {
     private final Mode mode;
     private final CommandSourceStack source;
     private final Deque<List<ChunkPos>> batches = new ArrayDeque<>();
+    private final List<List<ChunkPos>> allBatches = new ArrayList<>();
     private final int totalBatches;
 
     @Nullable private List<ChunkPos> active;
     private int waited;
     private int found, imported, duplicate, outside, removed, timeouts;
+    private int kept;              // MIGRATE 第二階段：位置沒有對應點位、所以沒刪的 marker
+    private boolean deleting;      // MIGRATE 是否已進入第二階段（刪除）
 
     private MarkerScanJob(ServerLevel level, MapRegistry.BRMap map, Mode mode, CommandSourceStack source) {
         this.level = level;
@@ -76,6 +81,7 @@ public final class MarkerScanJob {
                 if (!batch.isEmpty()) batches.add(batch);
             }
         }
+        allBatches.addAll(batches);
         totalBatches = batches.size();
     }
 
@@ -96,7 +102,7 @@ public final class MarkerScanJob {
         if (current != null) return "已經有一個 marker 掃描在進行中，請等它完成（或 /pg loot markers cancel）。";
         current = new MarkerScanJob(server.overworld(), map, mode, source);
         current.say(String.format("開始%s地圖 #%d 的舊箱子 marker，共 %d 批區塊，請稍候…",
-            mode == Mode.IMPORT ? "匯入" : "刪除", map.id, current.totalBatches), ChatFormatting.YELLOW);
+            switch (mode) { case IMPORT -> "匯入"; case PURGE -> "刪除"; case MIGRATE -> "轉換（匯入後刪除）"; }, map.id, current.totalBatches), ChatFormatting.YELLOW);
         return null;
     }
 
@@ -123,10 +129,7 @@ public final class MarkerScanJob {
     /** 完成時回傳 true。 */
     private boolean tick() {
         if (active == null) {
-            if (batches.isEmpty()) {
-                finish();
-                return true;
-            }
+            if (batches.isEmpty()) return finish();
             active = batches.poll();
             waited = 0;
             for (ChunkPos c : active) level.getChunkSource().addRegionTicket(TICKET, c, TICKET_DISTANCE, c);
@@ -146,7 +149,9 @@ public final class MarkerScanJob {
 
         int done = totalBatches - batches.size();
         if (done % 10 == 0 && !batches.isEmpty()) {
-            say(String.format("進度 %d / %d 批，目前找到 %d 個 marker。", done, totalBatches, found), ChatFormatting.GRAY);
+            say(deleting
+                ? String.format("刪除進度 %d / %d 批，已刪除 %d 個 marker。", done, totalBatches, removed)
+                : String.format("進度 %d / %d 批，目前找到 %d 個 marker。", done, totalBatches, found), ChatFormatting.GRAY);
         }
         return false;
     }
@@ -163,9 +168,16 @@ public final class MarkerScanJob {
 
         MapRegistry registry = MapRegistry.get(level.getServer());
         for (Entity e : markers) {
-            found++;
             boolean inside = map.contains(e.getX(), e.getZ());
-            if (mode == Mode.IMPORT) {
+            if (deleting) {
+                // MIGRATE 第二階段：只刪「位置已確認登記成點位」的 marker
+                if (!inside) continue;
+                if (map.lootPoints.contains(BlockPos.containing(e.position()))) { e.discard(); removed++; }
+                else kept++;
+                continue;
+            }
+            found++;
+            if (mode == Mode.IMPORT || mode == Mode.MIGRATE) {
                 if (!inside) { outside++; continue; }
                 if (registry.addPoint(map, BlockPos.containing(e.position()))) imported++; else duplicate++;
             } else {
@@ -182,17 +194,37 @@ public final class MarkerScanJob {
         active = null;
     }
 
-    private void finish() {
+    /** 一個階段跑完。整個工作結束回傳 true；MIGRATE 進入第二階段回傳 false。 */
+    private boolean finish() {
+        if (mode == Mode.MIGRATE && !deleting) {
+            // 先存檔，確保點位寫進硬碟之後才刪 marker（中途當機也不會兩邊都沒有）
+            level.getServer().overworld().getDataStorage().save();
+            say("匯入完成並已存檔：" + summary(), ChatFormatting.GREEN);
+            if (imported + duplicate == 0) {
+                say("沒有任何點位可確認，不刪除 marker。", ChatFormatting.YELLOW);
+                ProvingGroundsMod.LOGGER.info("Marker MIGRATE on map {}: nothing imported, {}", map.id, summary());
+                return true;
+            }
+            say("開始刪除已確認登記的 marker…", ChatFormatting.YELLOW);
+            deleting = true;
+            batches.addAll(allBatches);
+            return false;
+        }
         say("完成！" + summary(), ChatFormatting.GREEN);
         if (timeouts > 0) {
             say(String.format("注意：有 %d 批區塊等太久沒載完，裡面的 marker 可能漏掉，可以再執行一次（重複的點位不會重複登記）。",
                 timeouts), ChatFormatting.RED);
         }
         ProvingGroundsMod.LOGGER.info("Marker {} on map {}: {}", mode, map.id, summary());
+        return true;
     }
 
     private String summary() {
-        String base = mode == Mode.IMPORT
+        if (deleting) {
+            return String.format("已刪除 %d 個 marker%s。地圖 #%d 共有 %d 個點位。", removed,
+                kept > 0 ? "，" + kept + " 個沒有對應點位所以保留" : "", map.id, map.lootPoints.size());
+        }
+        String base = mode != Mode.PURGE
             ? String.format("找到 %d 個，新增點位 %d 個，已存在 %d 個，地圖範圍外 %d 個（未匯入）。地圖 #%d 現在共有 %d 個點位。",
                 found, imported, duplicate, outside, map.id, map.lootPoints.size())
             : String.format("找到 %d 個，刪除 %d 個，地圖範圍外 %d 個（未刪除）。", found, removed, outside);

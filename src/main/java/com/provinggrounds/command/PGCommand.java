@@ -37,7 +37,8 @@ import java.util.Locale;
  *   /pg reload | reset | status | mode <mode>
  *   /pg map  list | set <id> <x> <z> <radius> [name] | here <id> <radius> [name] | remove <id>
  *   /pg loot add [map] | remove [map] | list [map] | count [map] | clear <map> confirm
- *   /pg loot markers import <map> | purge <map> confirm | cancel   （舊 Datapack 箱子 marker）
+ *   /pg loot import <map>   舊 Datapack 箱子 marker 轉成點位，存檔確認後刪掉 marker
+ *   /pg loot markers import <map> | purge <map> confirm | cancel   （分開做：只匯入／只刪除）
  *   /pg team join <players> <team> | leave <players> | list | clear
  *   /pg br   start <map> [fast|standard|slow] [normal|competitive] | stop
  *   /pg stats [player]
@@ -237,6 +238,10 @@ public class PGCommand {
                     })
                     .then(Commands.literal("confirm")
                         .executes(ctx -> lootClear(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "map"))))))
+            // 一步完成：舊 marker 轉成點位 → 存檔 → 刪掉已確認的 marker
+            .then(Commands.literal("import")
+                .then(Commands.argument("map", IntegerArgumentType.integer(1))
+                    .executes(ctx -> markerJob(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "map"), MarkerScanJob.Mode.MIGRATE))))
             // 舊 Datapack 的箱子 marker：匯入成點位 / 刪除 / 取消
             .then(Commands.literal("markers")
                 .then(Commands.literal("import")

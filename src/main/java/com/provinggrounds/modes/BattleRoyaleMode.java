@@ -43,6 +43,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
@@ -280,6 +283,7 @@ public class BattleRoyaleMode {
         p.setGameMode(GameType.SURVIVAL);
         p.getInventory().clearContent();
         p.removeAllEffects();
+        applyMaxHealth(p);
         p.setHealth(p.getMaxHealth());
         p.getFoodData().setFoodLevel(20);
         p.getFoodData().setSaturation(5f);
@@ -697,7 +701,7 @@ public class BattleRoyaleMode {
         clearDowned(dp, d);
         d.downedBy = null;
         damagers.remove(d.id);
-        dp.setHealth((float) Math.max(1.0, dp.getMaxHealth() * PGConfig.SERVER.brReviveHealthRatio.get()));
+        dp.setHealth((float) Math.min(PGConfig.SERVER.brReviveHealth.get(), dp.getMaxHealth()));
         String helperName = helper.getGameProfile().getName();
         title(dp, Component.literal("已被扶起").withStyle(ChatFormatting.GREEN),
             Component.literal(helperName + " 把你扶起來了").withStyle(ChatFormatting.WHITE));
@@ -1184,6 +1188,7 @@ public class BattleRoyaleMode {
         v.setGameMode(GameType.SURVIVAL);
         v.getInventory().clearContent();
         v.removeAllEffects();
+        applyMaxHealth(v);
         healFull(v);
         v.getFoodData().setSaturation(5f);
         RespawnKit.give(v);
@@ -1391,6 +1396,7 @@ public class BattleRoyaleMode {
         BRMovement.remove(p);
         p.getInventory().clearContent();
         p.removeAllEffects();
+        removeMaxHealth(p);
         healFull(p);
         p.setGameMode(mode);
         ServerLevel overworld = p.server.overworld();
@@ -1522,6 +1528,27 @@ public class BattleRoyaleMode {
     private int colorOf(UUID id) {
         Integer c = TeamManager.get().getTeamOrSolo(id).color.getColor();
         return c != null ? c : 0xFFFFFF;
+    }
+
+    /** BR 最大血量用的屬性修改（固定 UUID，方便移除；會跟著玩家存檔，斷線重連仍保留）。 */
+    private static final UUID MAX_HEALTH_MOD = UUID.fromString("5d0b7f3e-2c41-4b8e-9a63-7f1e0c2d4b10");
+
+    /** 把最大血量調成設定值（不管原本基礎值是多少）。 */
+    private static void applyMaxHealth(ServerPlayer p) {
+        AttributeInstance attr = p.getAttribute(Attributes.MAX_HEALTH);
+        if (attr == null) return;
+        attr.removeModifier(MAX_HEALTH_MOD);
+        double extra = PGConfig.SERVER.brMaxHealth.get() - attr.getValue();
+        if (extra != 0) {
+            attr.addPermanentModifier(new AttributeModifier(MAX_HEALTH_MOD, "pg_br_max_health", extra, AttributeModifier.Operation.ADDITION));
+        }
+    }
+
+    /** 移除 BR 最大血量修改，恢復原本的最大血量。 */
+    private static void removeMaxHealth(ServerPlayer p) {
+        AttributeInstance attr = p.getAttribute(Attributes.MAX_HEALTH);
+        if (attr != null) attr.removeModifier(MAX_HEALTH_MOD);
+        if (p.getHealth() > p.getMaxHealth()) p.setHealth(p.getMaxHealth());
     }
 
     private static void healFull(LivingEntity e) {
