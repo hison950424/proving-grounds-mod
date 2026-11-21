@@ -11,6 +11,7 @@ import com.provinggrounds.config.PGConfig;
 import com.provinggrounds.core.GameManager;
 import com.provinggrounds.core.TeamManager;
 import com.provinggrounds.data.MapRegistry;
+import com.provinggrounds.data.MarkerScanJob;
 import com.provinggrounds.data.PlayerDataManager;
 import com.provinggrounds.modes.BattleRoyaleMode;
 import com.provinggrounds.modes.br.CirclePreset;
@@ -36,6 +37,7 @@ import java.util.Locale;
  *   /pg reload | reset | status | mode <mode>
  *   /pg map  list | set <id> <x> <z> <radius> [name] | here <id> <radius> [name] | remove <id>
  *   /pg loot add [map] | remove [map] | list [map] | count [map] | clear <map> confirm
+ *   /pg loot markers import <map> | purge <map> confirm | cancel   （舊 Datapack 箱子 marker）
  *   /pg team join <players> <team> | leave <players> | list | clear
  *   /pg br   start <map> [fast|standard|slow] [normal|competitive] | stop
  *   /pg stats [player]
@@ -234,7 +236,40 @@ public class PGCommand {
                         return 0;
                     })
                     .then(Commands.literal("confirm")
-                        .executes(ctx -> lootClear(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "map"))))));
+                        .executes(ctx -> lootClear(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "map"))))))
+            // 舊 Datapack 的箱子 marker：匯入成點位 / 刪除 / 取消
+            .then(Commands.literal("markers")
+                .then(Commands.literal("import")
+                    .then(Commands.argument("map", IntegerArgumentType.integer(1))
+                        .executes(ctx -> markerJob(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "map"), MarkerScanJob.Mode.IMPORT))))
+                .then(Commands.literal("purge")
+                    .then(Commands.argument("map", IntegerArgumentType.integer(1))
+                        .executes(ctx -> {
+                            fail(ctx.getSource(), "這會刪除該地圖範圍內所有舊箱子 marker（無法復原）。建議先 import。確定的話請在最後加上 confirm。");
+                            return 0;
+                        })
+                        .then(Commands.literal("confirm")
+                            .executes(ctx -> markerJob(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "map"), MarkerScanJob.Mode.PURGE)))))
+                .then(Commands.literal("cancel").executes(ctx -> {
+                    if (MarkerScanJob.cancel()) return 1;
+                    fail(ctx.getSource(), "目前沒有 marker 掃描在進行。");
+                    return 0;
+                })));
+    }
+
+    private static int markerJob(CommandSourceStack src, int mapId, MarkerScanJob.Mode mode) {
+        if (!GameManager.get().isInLobby() || BattleRoyaleMode.get().isRunning()) {
+            fail(src, "遊戲進行中不能掃描 marker，請在大廳時執行。");
+            return 0;
+        }
+        MapRegistry.BRMap m = resolveMap(src, mapId);
+        if (m == null) return 0;
+        String error = MarkerScanJob.start(src.getServer(), m, mode, src);
+        if (error != null) {
+            fail(src, error);
+            return 0;
+        }
+        return 1;
     }
 
     /** 指定編號就用那張；沒指定就用執行者所在位置的地圖。 */

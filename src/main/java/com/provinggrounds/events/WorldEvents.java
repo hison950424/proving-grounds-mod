@@ -2,6 +2,7 @@ package com.provinggrounds.events;
 
 import com.provinggrounds.block.AltarBlockEntity;
 import com.provinggrounds.core.GameManager;
+import com.provinggrounds.data.MarkerScanJob;
 import com.provinggrounds.data.PlayerDataManager;
 import com.provinggrounds.modes.BattleRoyaleMode;
 import net.minecraft.server.MinecraftServer;
@@ -32,6 +33,7 @@ public class WorldEvents {
         // 伺服器關閉：還原線上玩家並重置（箱子留給下一局開局清理）
         BattleRoyaleMode.get().forceStop(false);
         GameManager.get().reset();
+        MarkerScanJob.reset();
     }
 
     @SubscribeEvent
@@ -44,6 +46,7 @@ public class WorldEvents {
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+        MarkerScanJob.tickCurrent(); // 舊箱子 marker 匯入／刪除（只在大廳啟動）
         if (GameManager.get().isInLobby()) return;
 
         switch (GameManager.get().getMode()) {

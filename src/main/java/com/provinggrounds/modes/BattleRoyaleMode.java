@@ -228,6 +228,7 @@ public class BattleRoyaleMode {
     @Nullable
     public String start(MinecraftServer server, int mapId, CirclePreset preset, Variant variant) {
         if (phase != Phase.IDLE || !GameManager.get().isInLobby()) return "目前已有遊戲進行中。";
+        if (com.provinggrounds.data.MarkerScanJob.isRunning()) return "舊箱子 marker 掃描進行中，請等它完成或 /pg loot markers cancel。";
         MapRegistry.BRMap m = MapRegistry.get(server).getMap(mapId);
         if (m == null) return "找不到地圖 #" + mapId + "，請先用 /pg map set 登記。";
 

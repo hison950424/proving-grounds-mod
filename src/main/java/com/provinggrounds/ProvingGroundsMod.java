@@ -4,6 +4,7 @@ import com.provinggrounds.command.PGCommand;
 import com.provinggrounds.config.PGConfig;
 import com.provinggrounds.core.GameManager;
 import com.provinggrounds.compat.GunCompat;
+import com.provinggrounds.events.ArmorEvents;
 import com.provinggrounds.events.BREvents;
 import com.provinggrounds.events.DownedEvents;
 import com.provinggrounds.events.PlayerEvents;
@@ -44,6 +45,7 @@ public class ProvingGroundsMod {
         MinecraftForge.EVENT_BUS.register(new BREvents());
         MinecraftForge.EVENT_BUS.register(new BRMovement());
         MinecraftForge.EVENT_BUS.register(new DownedEvents());
+        MinecraftForge.EVENT_BUS.register(new ArmorEvents()); // 防彈
 
         LOGGER.info("Proving Grounds initializing...");
     }

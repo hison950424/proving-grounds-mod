@@ -99,6 +99,16 @@ public class PGConfig {
     // ── GK ──────────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.IntValue gkRoundTimeSeconds;
 
+    // ── 防彈（所有模式通用） ───────────────────────────────────────────────────
+    public final ForgeConfigSpec.BooleanValue bulletproofEnabled;
+    public final ForgeConfigSpec.DoubleValue bulletproofLeather;
+    public final ForgeConfigSpec.DoubleValue bulletproofChainmail;
+    public final ForgeConfigSpec.DoubleValue bulletproofIron;
+    public final ForgeConfigSpec.DoubleValue bulletproofGold;
+    public final ForgeConfigSpec.DoubleValue bulletproofDiamond;
+    public final ForgeConfigSpec.DoubleValue bulletproofNetherite;
+    public final ForgeConfigSpec.DoubleValue bulletproofTurtle;
+
     private PGConfig(ForgeConfigSpec.Builder builder) {
         builder.push("lobby");
         lobbyCountdownSeconds = builder.comment("開始倒計時秒數（BR 在這段時間分批刷新戰利品）")
@@ -232,6 +242,20 @@ public class PGConfig {
 
         builder.push("gk");
         gkRoundTimeSeconds = builder.comment("GK 每回合時間（秒）").defineInRange("round_time_seconds", 120, 30, 600);
+        builder.pop();
+
+        builder.comment("防彈：被 TACZ 子彈打中時，依身上原版防具額外減傷。",
+                "數值是「穿全套」的減傷比例，每件占 1/4（例：只穿鐵胸甲 = 20% ÷ 4 = 5%）。",
+                "這是額外的減傷，原版護甲值本來就會擋掉子彈的非穿甲部分。")
+            .push("bulletproof");
+        bulletproofEnabled = builder.comment("是否啟用防彈").define("enabled", true);
+        bulletproofLeather = builder.comment("皮革全套減傷").defineInRange("leather", 0.10, 0.0, 0.95);
+        bulletproofChainmail = builder.comment("鎖鏈全套減傷（占位）").defineInRange("chainmail", 0.15, 0.0, 0.95);
+        bulletproofIron = builder.comment("鐵全套減傷").defineInRange("iron", 0.20, 0.0, 0.95);
+        bulletproofGold = builder.comment("金全套減傷（占位）").defineInRange("gold", 0.15, 0.0, 0.95);
+        bulletproofDiamond = builder.comment("鑽石全套減傷").defineInRange("diamond", 0.30, 0.0, 0.95);
+        bulletproofNetherite = builder.comment("獄髓全套減傷").defineInRange("netherite", 0.40, 0.0, 0.95);
+        bulletproofTurtle = builder.comment("海龜殼（只有頭盔）全套減傷（占位）").defineInRange("turtle", 0.10, 0.0, 0.95);
         builder.pop();
     }
 
