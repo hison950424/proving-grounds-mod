@@ -270,6 +270,9 @@ public class BattleRoyaleMode {
         startTeamCount = countAliveTeams();
 
         AirdropManager.cleanupAll(level); // 清掉上一局（例如當機）殘留的空投
+        // 上一局（含大廳）被子彈或爆炸打破的原版玻璃全部修回去
+        int glass = com.provinggrounds.data.GlassLedger.get(server).restoreAll(level);
+        if (glass > 0) broadcast(Component.literal("已修復上一局被打破的玻璃 " + glass + " 塊。").withStyle(ChatFormatting.GRAY));
         airdrops = new AirdropManager(level);
         loot = new LootSpawner(level, m, LootSpawner.Mode.SPAWN);
         phase = Phase.PREPARING;

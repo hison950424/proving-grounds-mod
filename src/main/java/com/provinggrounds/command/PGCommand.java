@@ -35,6 +35,7 @@ import java.util.Locale;
  * 檔案: PGCommand.java
  * 目的: 管理員指令（OP 等級 2 以上）。
  *   /pg reload | reset | status | mode <mode>
+ *   /pg glass [restore]   被打破的原版玻璃（數量／立刻修復；每局開始自動修）
  *   /pg map  list | set <id> <x> <z> <radius> [name] | here <id> <radius> [name] | remove <id>
  *            | render <id> | render cancel   （產生大地圖／小地圖俯視圖）
  *   /pg loot add [map] | remove [map] | list [map] | count [map] | clear <map> confirm
@@ -56,6 +57,19 @@ public class PGCommand {
                 .then(Commands.literal("reload").executes(ctx -> reload(ctx.getSource())))
                 .then(Commands.literal("reset").executes(ctx -> reset(ctx.getSource())))
                 .then(Commands.literal("status").executes(ctx -> status(ctx.getSource())))
+                // 被打破的玻璃：查看數量／立刻修復（平常每局開始會自動修）
+                .then(Commands.literal("glass")
+                    .executes(ctx -> {
+                        int n = com.provinggrounds.data.GlassLedger.get(ctx.getSource().getServer()).size();
+                        ok(ctx.getSource(), "目前記錄了 " + n + " 塊被打破的原版玻璃，下一局開始時會修回去。", false);
+                        return n;
+                    })
+                    .then(Commands.literal("restore").executes(ctx -> {
+                        int n = com.provinggrounds.data.GlassLedger.get(ctx.getSource().getServer())
+                            .restoreAll(ctx.getSource().getServer().overworld());
+                        ok(ctx.getSource(), "已修復 " + n + " 塊玻璃。", true);
+                        return n;
+                    })))
                 // 彈藥分類檢查
                 .then(Commands.literal("ammo").executes(ctx -> {
                     for (String line : com.provinggrounds.compat.AmmoCategories.report()) ok(ctx.getSource(), line, false);

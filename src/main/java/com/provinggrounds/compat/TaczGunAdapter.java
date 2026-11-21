@@ -97,6 +97,40 @@ public class TaczGunAdapter implements GunAdapter {
         }
     }
 
+    /**
+     * 掛 AmmoHitBlockEvent（伺服器端，子彈打到方塊）。用最高優先度，
+     * 才能在 TACZ 自己打破玻璃（同一個事件的另一個監聽者）之前記下方塊原本的狀態。
+     */
+    @Override
+    public boolean registerBlockHitListener(BlockHitListener listener) {
+        String className = "com.tacz.guns.api.event.server.AmmoHitBlockEvent";
+        try {
+            Class<?> raw = Class.forName(className);
+            if (!Event.class.isAssignableFrom(raw)) return false;
+            Method getLevel = raw.getMethod("getLevel");
+            Method getState = raw.getMethod("getState");
+            Method getHit = raw.getMethod("getHitResult");
+            @SuppressWarnings("unchecked")
+            Class<Event> type = (Class<Event>) raw;
+            MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, false, type, event -> {
+                try {
+                    if (getLevel.invoke(event) instanceof net.minecraft.world.level.Level level
+                            && getState.invoke(event) instanceof net.minecraft.world.level.block.state.BlockState state
+                            && getHit.invoke(event) instanceof net.minecraft.world.phys.BlockHitResult hit) {
+                        listener.onBlockHit(level, hit.getBlockPos(), state);
+                    }
+                } catch (ReflectiveOperationException | RuntimeException ignored) {
+                    // 取不到資料就不記錄
+                }
+            });
+            ProvingGroundsMod.LOGGER.info("TACZ adapter: block hit listener hooked.");
+            return true;
+        } catch (ClassNotFoundException | NoSuchMethodException e) {
+            ProvingGroundsMod.LOGGER.warn("TACZ adapter: cannot hook {} ({}); broken glass will not be restored.", className, e.toString());
+            return false;
+        }
+    }
+
     /** 找「回傳 LivingEntity、沒有參數」的方法（TACZ 1.1.x 是 getShooter）。 */
     private static Method findShooterGetter(Class<?> type) {
         try {

@@ -21,6 +21,7 @@ public final class GunCompat {
                 ProvingGroundsMod.LOGGER.info("Gun adapter enabled: {}", adapter.name());
             }
             adapter.registerHitListener(ArmorEvents::recordHit); // 防彈：記錄爆頭
+            adapter.registerBlockHitListener(com.provinggrounds.events.GlassEvents::onBulletHit); // 記錄被子彈打破的玻璃
 
         } else {
             ProvingGroundsMod.LOGGER.info("No supported gun mod loaded; gun adapter disabled.");

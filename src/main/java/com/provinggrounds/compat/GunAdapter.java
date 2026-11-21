@@ -32,4 +32,16 @@ public interface GunAdapter {
      * @return 是否成功掛上
      */
     boolean registerHitListener(HitListener listener);
+
+    /** 子彈打到方塊通知（伺服器端，在槍械模組處理之前，例如打破玻璃之前）。 */
+    @FunctionalInterface
+    interface BlockHitListener {
+        void onBlockHit(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState state);
+    }
+
+    /**
+     * 註冊子彈打到方塊的通知（記錄被打破的玻璃，每局開始時修回去）。
+     * @return 是否成功掛上
+     */
+    boolean registerBlockHitListener(BlockHitListener listener);
 }

@@ -49,6 +49,7 @@ public class ProvingGroundsMod {
         MinecraftForge.EVENT_BUS.register(new DownedEvents());
         MinecraftForge.EVENT_BUS.register(new ArmorEvents()); // 防彈
         MinecraftForge.EVENT_BUS.register(new com.provinggrounds.events.BulletHitEvents()); // 中彈不擊退
+        MinecraftForge.EVENT_BUS.register(new com.provinggrounds.events.GlassEvents()); // 記錄被炸破的玻璃
 
         LOGGER.info("Proving Grounds initializing...");
     }
