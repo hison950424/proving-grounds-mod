@@ -7,6 +7,7 @@ import com.provinggrounds.core.GameManager;
 import com.provinggrounds.core.TeamManager;
 import com.provinggrounds.data.MapRegistry;
 import com.provinggrounds.data.PlayerDataManager;
+import com.provinggrounds.modes.br.AirdropManager;
 import com.provinggrounds.modes.br.BRMovement;
 import com.provinggrounds.modes.br.Circle;
 import com.provinggrounds.modes.br.CirclePreset;
@@ -53,7 +54,8 @@ import java.util.*;
  * 競技模式：死亡後只能觀看同隊存活隊友的視角，整隊淘汰後才變成自由觀察者。
  *
  * 參賽者原本的遊戲模式記在玩家的 persistent data（pg_br），伺服器崩潰後玩家重新登入也能還原。
- * 倒地、復活牌、祭壇（Phase 1b）與空投（Phase 1c）尚未實作。
+ * 空投（Phase 1c）由 AirdropManager 處理：第 2 階段縮圈結束時開窗。
+ * 倒地、復活牌、祭壇（Phase 1b）尚未實作。
  */
 public class BattleRoyaleMode {
 
@@ -94,6 +96,7 @@ public class BattleRoyaleMode {
     @Nullable private ServerLevel level;
     @Nullable private Circle circle;
     @Nullable private LootSpawner loot;
+    @Nullable private AirdropManager airdrops;
     private long gameId;
     private int phaseTicks;
     private int tickCount;
@@ -164,6 +167,8 @@ public class BattleRoyaleMode {
         TeamManager.get().syncVanillaTeams(server, players);
         startTeamCount = countAliveTeams();
 
+        AirdropManager.cleanupAll(level); // 清掉上一局（例如當機）殘留的空投
+        airdrops = new AirdropManager(level);
         loot = new LootSpawner(level, m, LootSpawner.Mode.SPAWN);
         phase = Phase.PREPARING;
         phaseTicks = PGConfig.SERVER.lobbyCountdownSeconds.get() * 20;
@@ -376,6 +381,10 @@ public class BattleRoyaleMode {
                 playSoundAll(SoundEvents.NOTE_BLOCK_BELL.value(), 0.6f);
             }
             case SHRINK_ENDED -> {
+                // 第 2 階段縮圈結束 → 開啟空投時間窗（到最後一階段縮圈結束）
+                if (airdrops != null && circle.completedStages() == 2) {
+                    airdrops.openWindow(circle.totalStages() - 2, preset.intervalSeconds());
+                }
                 if (circle.finished()) {
                     broadcast(Component.literal("最終圈已成形。").withStyle(ChatFormatting.RED));
                 } else {
@@ -385,6 +394,7 @@ public class BattleRoyaleMode {
             }
             default -> {}
         }
+        if (airdrops != null) airdrops.tick(circle);
 
         if (tickCount % 20 != 0) return;
         PGConfig c = PGConfig.SERVER;
@@ -611,6 +621,8 @@ public class BattleRoyaleMode {
         playSoundAll(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1f);
 
         for (Participant part : participants.values()) discardCarrier(part);
+        AirdropManager.cleanupAll(level);
+        airdrops = null;
         GameManager.get().endGame();
         loot = new LootSpawner(level, map, LootSpawner.Mode.CLEAR);
         phase = Phase.ENDING;
@@ -623,6 +635,14 @@ public class BattleRoyaleMode {
         if (phaseTicks > 0) { phaseTicks--; return; }
         if (loot != null && !loot.isDone()) return;
         finish();
+    }
+
+    /** 管理員測試用：立刻投下一個空投。成功回傳 null，失敗回傳原因。 */
+    @Nullable
+    public String forceAirdrop() {
+        if (phase != Phase.ACTIVE || circle == null || airdrops == null) return "只能在 BR 進行中（飛機起飛後）使用。";
+        if (!airdrops.forceDrop(circle)) return "已經有一個空投正在掉落。";
+        return null;
     }
 
     /** 正常結束：還原所有玩家並回大廳。 */
@@ -645,6 +665,8 @@ public class BattleRoyaleMode {
         if (cleanLoot && level != null && map != null) {
             new LootSpawner(level, map, LootSpawner.Mode.CLEAR).runToCompletion();
         }
+        // 空投一律清掉（數量很少，同步處理不會卡），也順便解除強制載入的區塊
+        if (level != null) AirdropManager.cleanupAll(level);
         clearState();
         if (server != null) restoreAllOnline(server);
         PGNetwork.sendToAll(BRStatePacket.none());
@@ -657,6 +679,7 @@ public class BattleRoyaleMode {
         damagers.clear();
         circle = null;
         loot = null;
+        airdrops = null;
         map = null;
         gameId = 0;
     }

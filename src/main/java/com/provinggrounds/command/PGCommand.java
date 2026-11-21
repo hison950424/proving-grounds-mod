@@ -403,6 +403,16 @@ public class PGCommand {
                 GameManager.get().reset();
                 ok(ctx.getSource(), "BR 已強制結束，玩家已還原。", true);
                 return 1;
+            }))
+            .then(Commands.literal("airdrop").executes(ctx -> {
+                // 測試用：不等時間窗，立刻在當前圈內投下一個空投
+                String error = BattleRoyaleMode.get().forceAirdrop();
+                if (error != null) {
+                    fail(ctx.getSource(), error);
+                    return 0;
+                }
+                ok(ctx.getSource(), "已投下一個空投。", true);
+                return 1;
             }));
     }
 

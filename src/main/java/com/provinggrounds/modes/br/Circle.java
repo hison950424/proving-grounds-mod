@@ -91,6 +91,8 @@ public class Circle {
     }
 
     public boolean finished()     { return stageIndex >= ratios.length; }
+    /** 已經縮完的階段數。 */
+    public int completedStages()  { return stageIndex; }
     public boolean isShrinking()  { return shrinking; }
     public int totalStages()      { return ratios.length; }
     /** 顯示用階段編號（1 起算），全部縮完後停在最後一階段。 */

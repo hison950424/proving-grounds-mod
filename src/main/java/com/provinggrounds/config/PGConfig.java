@@ -56,6 +56,13 @@ public class PGConfig {
     public final ForgeConfigSpec.IntValue lootWeightHigh;
     public final ForgeConfigSpec.IntValue lootPointsPerTick;
 
+    // BR 空投
+    public final ForgeConfigSpec.DoubleValue brAirdropTwoChance;
+    public final ForgeConfigSpec.IntValue brAirdropMinGapSeconds;
+    public final ForgeConfigSpec.DoubleValue brAirdropRadiusFactor;
+    public final ForgeConfigSpec.IntValue brAirdropHeight;
+    public final ForgeConfigSpec.DoubleValue brAirdropFallSpeed;
+
     // ── 等級 / XP ─────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.IntValue xpWin;
     public final ForgeConfigSpec.IntValue xpKill;
@@ -137,6 +144,19 @@ public class PGConfig {
             .defineInRange("weight_high", 10, 0, 1000);
         lootPointsPerTick = builder.comment("清理/刷新時每 tick 處理的點位數（避免卡頓）")
             .defineInRange("points_per_tick", 50, 1, 1000);
+        builder.pop();
+
+        builder.push("airdrop");
+        brAirdropTwoChance = builder.comment("本局掉 2 個空投的機率（其餘掉 1 個）（占位 50%）")
+            .defineInRange("two_chance", 0.5, 0.0, 1.0);
+        brAirdropMinGapSeconds = builder.comment("兩個空投之間至少間隔幾秒（占位）")
+            .defineInRange("min_gap_seconds", 30, 0, 600);
+        brAirdropRadiusFactor = builder.comment("落點範圍：當前圈半徑的幾倍以內（占位 0.7）")
+            .defineInRange("radius_factor", 0.7, 0.0, 1.0);
+        brAirdropHeight = builder.comment("空投開始掉落的高度（Y）")
+            .defineInRange("spawn_height", 260, 100, 318);
+        brAirdropFallSpeed = builder.comment("空投下降速度（格/秒）")
+            .defineInRange("fall_speed", 8.0, 1.0, 60.0);
         builder.pop();
 
         builder.pop(); // battle_royale
