@@ -106,6 +106,10 @@ public class PGConfig {
     public final ForgeConfigSpec.BooleanValue ammoEnabled;
     public final ForgeConfigSpec.ConfigValue<List<? extends String>> ammoLight, ammoMedium, ammoHeavy, ammoShotgun, ammoHeavyWeapon;
 
+    // ── 中彈效果（所有模式通用） ─────────────────────────────────────────────────
+    public final ForgeConfigSpec.BooleanValue bulletKnockback;
+    public final ForgeConfigSpec.BooleanValue bulletHurtShake;
+
     // ── 防彈（所有模式通用） ───────────────────────────────────────────────────
     public final ForgeConfigSpec.BooleanValue bulletproofEnabled;
     public final ForgeConfigSpec.BooleanValue bulletproofHeadBodySplit;
@@ -150,10 +154,10 @@ public class PGConfig {
             .defineList("slow_ratios", List.of(0.70, 0.45, 0.25, 0.10, 0.01), PGConfig::isRatio);
         brSlowInterval = builder.comment("慢速方案：階段間隔（秒）")
             .defineInRange("slow_interval_seconds", 90, 5, 600);
-        brDamageBase = builder.comment("圈外傷害基礎值（HP/秒，1 HP = 半顆心）")
-            .defineInRange("damage_base", 0.5, 0.0, 100.0);
+        brDamageBase = builder.comment("圈外傷害基礎值（HP/秒）。BR 最大血量 100：預設第 1~4 階段每秒 2、5、8、11")
+            .defineInRange("damage_base", 2.0, 0.0, 100.0);
         brDamagePerStage = builder.comment("圈外傷害每階段增加量（HP/秒）。傷害 = 基礎 + 每階段 × 階段索引(0 起算)")
-            .defineInRange("damage_per_stage", 1.5, 0.0, 100.0);
+            .defineInRange("damage_per_stage", 3.0, 0.0, 100.0);
         builder.pop();
 
         builder.push("plane");
@@ -276,6 +280,13 @@ public class PGConfig {
         bulletproofDiamond = builder.comment("鑽石全套減傷").defineInRange("diamond", 0.30, 0.0, 0.95);
         bulletproofNetherite = builder.comment("獄髓全套減傷").defineInRange("netherite", 0.40, 0.0, 0.95);
         bulletproofTurtle = builder.comment("海龜殼（只有頭盔）全套減傷（占位）").defineInRange("turtle", 0.10, 0.0, 0.95);
+        builder.pop();
+
+        builder.comment("中彈效果：被 TACZ 子彈打中時的擊退與畫面抖動。").push("combat");
+        bulletKnockback = builder.comment("被子彈打中會不會被擊退（false = 完全不擊退）")
+            .define("bullet_knockback", false);
+        bulletHurtShake = builder.comment("被子彈打中畫面會不會晃動（false = 不晃；玩家端在登入後才會讀到這個設定）")
+            .define("bullet_hurt_shake", false);
         builder.pop();
 
         builder.comment("彈藥分類：把各槍械包的子彈歸成 5 大類，槍改吃對應的大類彈藥。",

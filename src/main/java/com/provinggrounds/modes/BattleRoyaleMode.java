@@ -596,10 +596,10 @@ public class BattleRoyaleMode {
         // 倒地時身上的隊友復活牌掉回地上
         dropHeldCards(victim, part, safePos(victim, part));
 
-        Component msg = attacker != null
-            ? Component.literal(part.name + " 被 " + attacker.getGameProfile().getName() + " 擊倒")
-            : Component.literal(part.name + " 倒地了");
-        broadcast(msg.copy().withStyle(ChatFormatting.GRAY));
+        // 擊倒訊息只顯示在右上角擊殺資訊，不發到聊天室
+        PGNetwork.sendToAll(new KillFeedPacket(
+            attacker != null ? attacker.getGameProfile().getName() : "", attacker != null ? colorOf(attacker.getUUID()) : 0xFFFFFF,
+            part.name, colorOf(victim.getUUID()), true));
         title(victim, Component.literal("你倒地了").withStyle(ChatFormatting.RED),
             Component.literal("等待隊友扶起（" + bleedSecondsLeft(victim) + " 秒）").withStyle(ChatFormatting.GRAY));
         level.playSound(null, victim.blockPosition(), SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1f, 0.6f);
@@ -778,16 +778,12 @@ public class BattleRoyaleMode {
             }
         }
 
-        Component deathMsg = switch (cause) {
-            case DAMAGE -> source != null ? source.getLocalizedDeathMessage(victim) : Component.literal(part.name + " 死亡");
-            case BLEED -> Component.literal(part.name + " 流血過多死亡");
-            case TEAM_WIPE -> Component.literal(part.name + " 的隊友全數倒地，" + part.name + " 陣亡");
-            case LOGOUT -> Component.literal(part.name + " 已離線，視為淘汰");
-        };
-        broadcast(deathMsg.copy().withStyle(ChatFormatting.GRAY));
+        // 淘汰訊息只顯示在右上角擊殺資訊，不發到聊天室；伺服器 log 仍保留一行方便查詢
+        ProvingGroundsMod.LOGGER.info("BR eliminated: {} by {} ({})", part.name,
+            killer != null ? killer.getGameProfile().getName() : "-", cause);
         PGNetwork.sendToAll(new KillFeedPacket(
             killer != null ? killer.getGameProfile().getName() : "", killer != null ? colorOf(killer.getUUID()) : 0xFFFFFF,
-            part.name, colorOf(victim.getUUID())));
+            part.name, colorOf(victim.getUUID()), false));
 
         // 屍體位置：掉進虛空時用最後站穩的位置
         Vec3 corpse = safePos(victim, part);

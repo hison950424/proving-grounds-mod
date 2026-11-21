@@ -208,7 +208,10 @@ public final class HUD {
                 ? Math.max(0f, (ClientBRState.KILL_SHOW_MS - age) / 1000f) : 1f;
             if (alpha <= 0.05f) continue;
             KillFeedPacket d = k.data();
-            String sep = d.killer().isEmpty() ? "☠ " : "  ▸  ";
+            // 淘汰：「擊殺者 ▸ 被殺者」（非玩家致死：「☠ 被殺者」）；擊倒：「擊倒者 擊倒 被擊倒者」（非玩家：「倒地 被擊倒者」）
+            String sep = d.knock()
+                ? (d.killer().isEmpty() ? "倒地 " : " 擊倒 ")
+                : (d.killer().isEmpty() ? "☠ " : "  ▸  ");
             int wKiller = font.width(d.killer());
             int wSep = font.width(sep);
             int wVictim = font.width(d.victim());

@@ -71,6 +71,26 @@ public final class ClientForgeEvents {
         }
     }
 
+    /**
+     * 中彈不晃畫面：原版受傷時用 hurtTime 讓鏡頭歪一下。每一幀畫面前檢查，
+     * 如果最近一次受傷是 TACZ 子彈造成的，就把 hurtTime 歸零（設定 [combat] bullet_hurt_shake = false 時）。
+     */
+    @SubscribeEvent
+    public static void onRenderTick(TickEvent.RenderTickEvent event) {
+        if (event.phase != TickEvent.Phase.START) return;
+        net.minecraft.client.player.LocalPlayer p = Minecraft.getInstance().player;
+        if (p == null || p.hurtTime <= 0) return;
+        net.minecraft.world.damagesource.DamageSource src = p.getLastDamageSource();
+        if (src == null || !src.is(com.provinggrounds.events.BulletHitEvents.BULLETS)) return;
+        boolean shake;
+        try {
+            shake = com.provinggrounds.config.PGConfig.SERVER.bulletHurtShake.get();
+        } catch (IllegalStateException e) {
+            shake = false; // 設定還沒從伺服器同步過來：用預設（不晃）
+        }
+        if (!shake) p.hurtTime = 0;
+    }
+
     /** 我們強制趴下的玩家（之後要還原）。 */
     private static final Set<UUID> FORCED_CRAWL = new HashSet<>();
 
