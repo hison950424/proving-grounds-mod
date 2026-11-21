@@ -66,13 +66,14 @@ public class PGConfig {
     // BR 倒地 / 扶起
     public enum DownedStyle { CRAWL, SIT }
     public final ForgeConfigSpec.EnumValue<DownedStyle> brDownedStyle;
-    public final ForgeConfigSpec.IntValue brBleedSeconds;
+    public final ForgeConfigSpec.DoubleValue brBleedPerSecond;
     public final ForgeConfigSpec.DoubleValue brDownedHealth;
     public final ForgeConfigSpec.DoubleValue brDownedSpeedPenalty;
     public final ForgeConfigSpec.IntValue brReviveSeconds;
     public final ForgeConfigSpec.DoubleValue brReviveRange;
     public final ForgeConfigSpec.DoubleValue brReviveHealth;
     public final ForgeConfigSpec.DoubleValue brMaxHealth;
+    public final ForgeConfigSpec.BooleanValue brNaturalRegen;
 
     // BR 復活牌 / 祭壇
     public final ForgeConfigSpec.IntValue brCardGroundSeconds;
@@ -191,15 +192,17 @@ public class PGConfig {
         builder.push("health");
         brMaxHealth = builder.comment("BR 中玩家的最大血量（原版是 20）。開局、祭壇復活都會補滿到這個值；回大廳恢復原本血量。")
             .defineInRange("max_health", 100.0, 1.0, 1024.0);
+        brNaturalRegen = builder.comment("BR 中是否自然回血。BR 不使用飢餓度（飽食度固定、飢餓條隱藏），回血只靠補血道具時設 false")
+            .define("natural_regen", false);
         builder.pop();
 
         builder.push("downed");
         brDownedStyle = builder.comment("倒地姿勢：CRAWL = 趴下且緩速移動（預設）；SIT = 坐下且不能移動")
             .defineEnum("downed_style", DownedStyle.CRAWL);
-        brBleedSeconds = builder.comment("倒地後幾秒沒被扶起就死亡（有人正在扶時暫停計時）")
-            .defineInRange("bleed_seconds", 180, 5, 1800);
-        brDownedHealth = builder.comment("倒地時的血量，敵人要再打掉這麼多才會死（占位）")
-            .defineInRange("downed_health", 10.0, 1.0, 1024.0);
+        brBleedPerSecond = builder.comment("倒地後每秒流失的血量，扣到 0 就死亡（有人正在扶時暫停）。倒地 100 血、每秒 1 血 = 100 秒")
+            .defineInRange("bleed_per_second", 1.0, 0.05, 100.0);
+        brDownedHealth = builder.comment("倒地時的血量（超過最大血量時以最大血量為準）。會隨時間流血，敵人也可以直接打掉")
+            .defineInRange("downed_health", 100.0, 1.0, 1024.0);
         brDownedSpeedPenalty = builder.comment("倒地時移動速度減少的比例（0.8 = 減少 80%）（占位）")
             .defineInRange("speed_penalty", 0.8, 0.0, 1.0);
         brReviveSeconds = builder.comment("隊友蹲下扶起需要的秒數")

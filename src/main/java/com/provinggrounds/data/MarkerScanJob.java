@@ -23,6 +23,8 @@ import java.util.List;
 /**
  * 檔案: MarkerScanJob.java
  * 目的: 處理舊 Datapack 留下的箱子 marker（tag = loot_marker，不含空投 crate_airdrop）。
+ *   舊 marker 的標籤：loot_marker + crate_general/medical/attach/high + map_1~map_5。
+ *   屬於哪張地圖以 map_N 標籤為準；沒有地圖標籤的才用「位置在不在地圖圓圈內」判斷。
  *   IMPORT：把 marker 的位置登記成新系統的箱子點位（只取位置，不管舊的箱子種類）。
  *   PURGE ：刪除 marker。
  *   MIGRATE：/pg loot import 用。先全部匯入並存檔，確認點位真的登記了，再刪掉那些 marker
@@ -168,7 +170,10 @@ public final class MarkerScanJob {
 
         MapRegistry registry = MapRegistry.get(level.getServer());
         for (Entity e : markers) {
-            boolean inside = map.contains(e.getX(), e.getZ());
+            // 舊 Datapack 的 marker 帶有 map_1 ~ map_5 標籤，以標籤為準；沒有地圖標籤的才看位置在不在圓圈裡
+            int tagged = mapTagOf(e);
+            if (tagged > 0 && tagged != map.id) continue; // 別張地圖的
+            boolean inside = tagged == map.id || map.contains(e.getX(), e.getZ());
             if (deleting) {
                 // MIGRATE 第二階段：只刪「位置已確認登記成點位」的 marker
                 if (!inside) continue;
@@ -186,6 +191,16 @@ public final class MarkerScanJob {
                 removed++;
             }
         }
+    }
+
+    /** marker 上的 map_N 標籤；沒有就回傳 0。 */
+    private static int mapTagOf(Entity e) {
+        for (String t : e.getTags()) {
+            if (t.startsWith("map_")) {
+                try { return Integer.parseInt(t.substring(4)); } catch (NumberFormatException ignored) { }
+            }
+        }
+        return 0;
     }
 
     private void releaseActive() {

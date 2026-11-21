@@ -10,6 +10,9 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.client.gui.overlay.ForgeGui;
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -22,6 +25,7 @@ import java.util.UUID;
  * 檔案: ClientForgeEvents.java
  * 目的: 客戶端遊戲中事件（只在客戶端載入）：
  *       按下主選單鍵 → 向伺服器要資料並打開主選單；離開伺服器時清掉快取。
+ *       BR 中：原版愛心換成數字血條、隱藏飢餓條。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
 public final class ClientForgeEvents {
@@ -38,6 +42,26 @@ public final class ClientForgeEvents {
             mc.setScreen(new MainMenuScreen());
         }
         updateCrawlPoses(mc);
+    }
+
+    /**
+     * BR 進行中（自己不是觀察者）時：
+     *   愛心 → 改畫數字血條（同一個位置），並把左側高度往上推，讓護甲條畫在血條上方而不是重疊。
+     *   飢餓條 → 不畫（BR 不使用飢餓度）。
+     */
+    @SubscribeEvent
+    public static void onRenderOverlay(RenderGuiOverlayEvent.Pre event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.player.isSpectator() || !ClientBRState.active()) return;
+        if (event.getOverlay() == VanillaGuiOverlay.FOOD_LEVEL.type()) {
+            event.setCanceled(true);
+        } else if (event.getOverlay() == VanillaGuiOverlay.PLAYER_HEALTH.type()) {
+            event.setCanceled(true);
+            if (mc.gui instanceof ForgeGui gui && gui.shouldDrawSurvivalElements()) {
+                HUD.renderHealthBar(event.getGuiGraphics(), mc.font, mc.player, event.getWindow().getGuiScaledWidth(), event.getWindow().getGuiScaledHeight(), gui.leftHeight);
+                gui.leftHeight += 10;
+            }
+        }
     }
 
     /** 我們強制趴下的玩家（之後要還原）。 */

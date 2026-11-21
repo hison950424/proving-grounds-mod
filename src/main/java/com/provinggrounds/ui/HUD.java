@@ -201,6 +201,35 @@ public final class HUD {
 
     // ── 繪圖小工具 ──────────────────────────────────────────────────────────
 
+    // ── 血條（取代原版愛心，由 ClientForgeEvents 呼叫）
+
+    private static final int HP_BG   = 0xC0101018;
+    private static final int HP_HIGH = 0xFF4CC864; // 綠
+    private static final int HP_MID  = 0xFFE8C040; // 黃
+    private static final int HP_LOW  = 0xFFE04848; // 紅
+
+    /**
+     * 在原版愛心的位置（快捷欄左上方）畫數字血條：寬 81、高 9，中間顯示「目前 / 最大」。
+     * @param leftHeight 原版左側元素目前的高度（離畫面底部的距離）
+     */
+    public static void renderHealthBar(GuiGraphics g, Font font, LocalPlayer player, int w, int h, int leftHeight) {
+        int x = w / 2 - 91, y = h - leftHeight, bw = 81, bh = 9;
+        float max = Math.max(1f, player.getMaxHealth());
+        float hp = Math.max(0f, Math.min(player.getHealth(), max));
+        float ratio = hp / max;
+        int color = ratio > 0.5f ? HP_HIGH : ratio > 0.25f ? HP_MID : HP_LOW;
+        if (ClientBRState.get().selfState() == ClientBRState.SELF_DOWNED) color = HP_LOW;
+
+        g.fill(x - 1, y - 1, x + bw + 1, y + bh + 1, HP_BG);
+        g.fill(x, y, x + Math.round(bw * ratio), y + bh, color);
+        if (player.getAbsorptionAmount() > 0) { // 吸收血量：上緣一條金線
+            float abs = Math.min(1f, player.getAbsorptionAmount() / max);
+            g.fill(x, y, x + Math.round(bw * abs), y + 1, ACCENT);
+        }
+        String text = (int) Math.ceil(hp) + " / " + (int) Math.ceil(max);
+        g.drawString(font, text, x + (bw - font.width(text)) / 2, y + 1, TEXT, true);
+    }
+
     /** 深色面板 + 左側金黃強調條。 */
     private static void panel(GuiGraphics g, int x, int y, int w, int h) {
         g.fill(x, y, x + w, y + h, BG);

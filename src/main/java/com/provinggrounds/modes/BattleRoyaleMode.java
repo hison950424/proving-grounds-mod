@@ -67,7 +67,7 @@ import java.util.*;
  *     → ENDING（宣布勝者、分批清理戰利品）→ 還原所有玩家，回大廳。
  *
  * 倒地（Phase 1b）：受到致死傷害時，若同隊還有站著的隊友就倒地（孤狼、隊伍最後一人、
- *   虛空／指令致死直接死亡）。倒地趴下緩速、不能做任何動作；bleed_seconds 內沒被扶起就死亡。
+ *   虛空／指令致死直接死亡）。倒地趴下緩速、不能做任何動作；倒地後每秒流血（bleed_per_second），血扣到 0 就死亡。
  *   同隊站著的隊友靠近蹲下 revive_seconds 秒即扶起，扶的期間流血暫停。全隊都倒地 → 全部死亡。
  * 復活牌：死亡時在屍體位置掉落（孤狼、競技模式已用過祭壇的人沒有）。只有同隊撿得到，撿起後
  *   存在撿的人身上（不佔背包）。第一次掉落的牌 revive_card_ground_seconds 秒內沒人撿、或掉進
@@ -305,8 +305,8 @@ public class BattleRoyaleMode {
 
         switch (phase) {
             case PREPARING -> tickPreparing();
-            case PLANE -> { tickPlane(); tickDropping(); tickRevival(); checkWin(); }
-            case ACTIVE -> { tickDropping(); tickCircle(); tickRevival(); tickSpectators(); checkWin(); }
+            case PLANE -> { tickPlane(); tickDropping(); tickRevival(); tickFood(); checkWin(); }
+            case ACTIVE -> { tickFood(); tickDropping(); tickCircle(); tickRevival(); tickSpectators(); checkWin(); }
             case ENDING -> tickEnding();
             default -> {}
         }
@@ -568,7 +568,7 @@ public class BattleRoyaleMode {
         ServerPlayer attacker = creditFrom(victim, source);
 
         part.downed = true;
-        part.bleedTicks = c.brBleedSeconds.get() * 20;
+        part.bleedTicks = 20;
         part.reviveTicks = 0;
         part.reviver = null;
         part.downedBy = attacker != null ? attacker.getUUID() : null;
@@ -596,7 +596,7 @@ public class BattleRoyaleMode {
             : Component.literal(part.name + " 倒地了");
         broadcast(msg.copy().withStyle(ChatFormatting.GRAY));
         title(victim, Component.literal("你倒地了").withStyle(ChatFormatting.RED),
-            Component.literal("等待隊友扶起（" + c.brBleedSeconds.get() + " 秒）").withStyle(ChatFormatting.GRAY));
+            Component.literal("等待隊友扶起（" + bleedSecondsLeft(victim) + " 秒）").withStyle(ChatFormatting.GRAY));
         level.playSound(null, victim.blockPosition(), SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1f, 0.6f);
 
         resolveTeams();
@@ -634,6 +634,21 @@ public class BattleRoyaleMode {
         if (seat != null) seat.discard();
     }
 
+    /**
+     * BR 不用飢餓度：每 tick 把飽食度固定住。
+     * 關閉自然回血時固定在 17（低於 18 就不會自然回血，高於 6 仍可衝刺），開啟時固定在 20。
+     */
+    private void tickFood() {
+        int food = PGConfig.SERVER.brNaturalRegen.get() ? 20 : 17;
+        for (Participant part : participants.values()) {
+            if (!part.alive) continue;
+            ServerPlayer p = player(part.id);
+            if (p == null) continue;
+            p.getFoodData().setFoodLevel(food);
+            p.getFoodData().setSaturation(0f);
+        }
+    }
+
     private void tickDowned() {
         PGConfig c = PGConfig.SERVER;
         int reviveTotal = c.brReviveSeconds.get() * 20;
@@ -665,9 +680,21 @@ public class BattleRoyaleMode {
             } else {
                 d.reviver = null;
                 d.reviveTicks = 0;
-                if (--d.bleedTicks <= 0) eliminate(dp, d, null, Cause.BLEED);
+                // 流血：每秒扣血，扣到 0 就死亡
+                if (--d.bleedTicks <= 0) {
+                    d.bleedTicks = 20;
+                    float hp = dp.getHealth() - c.brBleedPerSecond.get().floatValue();
+                    if (hp <= 0) eliminate(dp, d, null, Cause.BLEED);
+                    else dp.setHealth(hp);
+                }
             }
         }
+    }
+
+    /** 倒地剩下的秒數（目前血量 ÷ 每秒流血量）。 */
+    private static int bleedSecondsLeft(ServerPlayer p) {
+        double perSec = PGConfig.SERVER.brBleedPerSecond.get();
+        return (int) Math.ceil(p.getHealth() / perSec);
     }
 
     /** 找扶起者：同隊、站著、在地面、蹲下、在範圍內、這 tick 沒在扶別人。優先沿用正在扶的人。 */
@@ -1465,7 +1492,7 @@ public class BattleRoyaleMode {
                 if (part.alive && part.downed) {
                     self = ClientBRState.SELF_DOWNED;
                     timerKind = ClientBRState.TIMER_BLEED;
-                    timer = (part.bleedTicks + 19) / 20;
+                    timer = bleedSecondsLeft(p);
                 } else if (!part.alive) {
                     Card card = groundCards.get(part.id);
                     if (part.finalDead) {
