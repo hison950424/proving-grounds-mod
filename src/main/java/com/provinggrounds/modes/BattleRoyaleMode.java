@@ -33,7 +33,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -543,7 +543,9 @@ public class BattleRoyaleMode {
 
     /** 同隊還有至少 1 位站著的隊友才會倒地；孤狼、虛空、/kill 直接死亡。 */
     private boolean canBeDowned(Participant part, DamageSource source) {
-        if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return false; // 虛空、/kill
+        // 只認虛空與 /kill。不能用「無視無敵」標籤判斷：TACZ 的 bullet_void 子彈也在那個標籤裡，
+        // 會讓被槍打死的人全部跳過倒地直接死亡。
+        if (source.is(DamageTypes.FELL_OUT_OF_WORLD) || source.is(DamageTypes.GENERIC_KILL)) return false;
         if (TeamManager.get().getTeamOrSolo(part.id) == TeamManager.Team.SOLO) return false;
         for (Participant other : participants.values()) {
             if (other == part || !other.alive || other.downed) continue;
