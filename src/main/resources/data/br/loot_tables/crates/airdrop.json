@@ -2,11 +2,51 @@
   "type": "minecraft:chest",
   "pools": [
     {
-      "rolls": { "min": 6, "max": 14 },
+      "rolls": { "min": 5, "max": 12 },
       "entries": [
         { "type": "minecraft:loot_table", "name": "br:pools/high", "weight": 70 },
         { "type": "minecraft:loot_table", "name": "br:pools/medical", "weight": 10 },
         { "type": "minecraft:loot_table", "name": "br:pools/attach", "weight": 20 }
+      ]
+    },
+    {
+      "rolls": { "min": 3, "max": 4 },
+      "entries": [
+        {
+          "type": "minecraft:item", "name": "tacz:ammo", "weight": 10,
+          "functions": [
+            { "function": "minecraft:set_nbt", "tag": "{AmmoId:\"provinggrounds:light\"}" },
+            { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 15, "max": 30 } }
+          ]
+        },
+        {
+          "type": "minecraft:item", "name": "tacz:ammo", "weight": 30,
+          "functions": [
+            { "function": "minecraft:set_nbt", "tag": "{AmmoId:\"provinggrounds:medium\"}" },
+            { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 15, "max": 30 } }
+          ]
+        },
+        {
+          "type": "minecraft:item", "name": "tacz:ammo", "weight": 10,
+          "functions": [
+            { "function": "minecraft:set_nbt", "tag": "{AmmoId:\"provinggrounds:shotgun\"}" },
+            { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 6, "max": 12 } }
+          ]
+        },
+        {
+          "type": "minecraft:item", "name": "tacz:ammo", "weight": 40,
+          "functions": [
+            { "function": "minecraft:set_nbt", "tag": "{AmmoId:\"provinggrounds:heavy\"}" },
+            { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 5, "max": 10 } }
+          ]
+        },
+        {
+          "type": "minecraft:item", "name": "tacz:ammo", "weight": 10,
+          "functions": [
+            { "function": "minecraft:set_nbt", "tag": "{AmmoId:\"provinggrounds:heavy_weapon\"}" },
+            { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } }
+          ]
+        }
       ]
     }
   ]
