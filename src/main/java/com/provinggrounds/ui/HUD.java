@@ -12,11 +12,10 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 /**
  * 檔案: HUD.java
  * 目的: 遊戲中 overlay（只在客戶端執行）。CS2 / Valorant 深色風格。
- *   左上：小地圖（飛機、進行中），下方是存活人數 / 隊伍數（準備階段顯示登機倒數）
- *   右上：縮圈階段與倒數 / 飛行剩餘 / 結算倒數
+ *   左上：小地圖（飛機、進行中），下方是縮圈階段與倒數 / 飛行剩餘 / 結算倒數（準備階段顯示登機倒數）
+ *   右上：存活人數 / 隊伍數 / 復活牌，下方是擊殺資訊（最新的在最上面，淡出）
  *   中上：在圈外時紅字警告與距離
  *   中下：跳傘提示、淘汰提示
- *   右下：擊殺提示（淡出）
  */
 public final class HUD {
 
@@ -39,26 +38,23 @@ public final class HUD {
         if (s.phase() == ClientBRState.PHASE_NONE) return;
         Font font = mc.font;
 
-        int topLeftY = renderMinimap(g, font, s, mc);
-        renderTopLeft(g, font, s, topLeftY);
-        renderTopRight(g, font, s, w);
+        int minimapBottom = renderMinimap(g, font, s, mc);
+        renderZone(g, font, s, minimapBottom);
+        int aliveBottom = renderAlive(g, font, s, w);
+        renderKillFeed(g, font, w, aliveBottom);
         renderOutsideWarning(g, font, s, mc.player, w);
         renderHint(g, font, s, w, h);
-        renderKillFeed(g, font, w, h);
     }
 
-    // ── 左上 ────────────────────────────────────────────────────────────────
+    // ── 右上：存活人數 ──────────────────────────────────────────────────────
 
-    private static void renderTopLeft(GuiGraphics g, Font font, BRStatePacket s, int topY) {
-        int x = 8, y = topY;
-        if (s.phase() == ClientBRState.PHASE_PREPARING) {
-            panel(g, x, y, 120, 34);
-            spaced(g, font, "BATTLE ROYALE", x + PAD + 2, y + PAD, ACCENT);
-            g.drawString(font, "登機倒數 " + s.seconds() + " 秒", x + PAD + 2, y + PAD + 13, TEXT, false);
-            return;
-        }
+    /** 右上角：存活人數 / 隊伍數 / 身上的復活牌。回傳下方可用的 y（擊殺資訊接在下面）。 */
+    private static int renderAlive(GuiGraphics g, Font font, BRStatePacket s, int w) {
+        if (s.phase() == ClientBRState.PHASE_PREPARING) return 8;
         boolean cards = s.cardsHeld() > 0;
-        panel(g, x, y, 96, cards ? 47 : 34);
+        int boxW = 96, boxH = cards ? 47 : 34;
+        int x = w - boxW - 8, y = 8;
+        panel(g, x, y, boxW, boxH);
         g.drawString(font, "存活", x + PAD + 2, y + PAD, TEXT_DIM, false);
         g.drawString(font, String.valueOf(s.alivePlayers()), x + PAD + 30, y + PAD, TEXT, false);
         g.drawString(font, "隊伍", x + PAD + 2, y + PAD + 13, TEXT_DIM, false);
@@ -67,9 +63,8 @@ public final class HUD {
             g.drawString(font, "復活牌", x + PAD + 2, y + PAD + 26, TEXT_DIM, false);
             g.drawString(font, "×" + s.cardsHeld(), x + PAD + 42, y + PAD + 26, ACCENT, false);
         }
+        return y + boxH + 4;
     }
-
-    // ── 右上 ────────────────────────────────────────────────────────────────
 
     // ── 左上：小地圖 ────────────────────────────────────────────────────────
 
@@ -98,10 +93,15 @@ public final class HUD {
         return y + MINIMAP + 6;
     }
 
-    private static void renderTopRight(GuiGraphics g, Font font, BRStatePacket s, int w) {
+    /** 左上、小地圖下方：縮圈時間（準備階段顯示登機倒數）。 */
+    private static void renderZone(GuiGraphics g, Font font, BRStatePacket s, int topY) {
         String title, line;
         int lineColor = TEXT;
         switch (s.phase()) {
+            case ClientBRState.PHASE_PREPARING -> {
+                title = "BATTLE ROYALE";
+                line = "登機倒數 " + s.seconds() + " 秒";
+            }
             case ClientBRState.PHASE_PLANE -> {
                 title = "飛行中";
                 line = "剩 " + s.seconds() + " 秒";
@@ -124,8 +124,8 @@ public final class HUD {
             }
             default -> { return; }
         }
-        int boxW = Math.max(font.width(title), font.width(line)) + PAD * 2 + 4;
-        int x = w - boxW - 8, y = 8;
+        int boxW = Math.max(MINIMAP, Math.max(font.width(title), font.width(line)) + PAD * 2 + 4);
+        int x = 8, y = topY;
         panel(g, x, y, boxW, 34);
         g.drawString(font, title, x + PAD + 2, y + PAD, ACCENT, false);
         g.drawString(font, line, x + PAD + 2, y + PAD + 13, lineColor, false);
@@ -196,12 +196,12 @@ public final class HUD {
         g.fill(barX, barY, barX + (int) (barW * p), barY + 3, ACCENT);
     }
 
-    // ── 右下：擊殺提示 ──────────────────────────────────────────────────────
+    // ── 右上、存活人數下方：擊殺資訊（最新的在最上面） ──────────────────────
 
-    private static void renderKillFeed(GuiGraphics g, Font font, int w, int h) {
+    private static void renderKillFeed(GuiGraphics g, Font font, int w, int topY) {
         ClientBRState.KillEntry[] kills = ClientBRState.kills();
         long now = System.currentTimeMillis();
-        int y = h - 60;
+        int y = topY;
         for (ClientBRState.KillEntry k : kills) {
             long age = now - k.timeMs();
             float alpha = age > ClientBRState.KILL_SHOW_MS - 1000
@@ -223,7 +223,7 @@ public final class HUD {
             g.drawString(font, sep, tx, y + 3, withAlpha(TEXT_DIM, alpha), false);
             tx += wSep;
             g.drawString(font, d.victim(), tx, y + 3, withAlpha(0xFF000000 | d.victimColor(), alpha), false);
-            y -= 16;
+            y += 16;
         }
     }
 
