@@ -16,7 +16,7 @@ import org.joml.Matrix4f;
 /**
  * 檔案: CircleRenderer.java
  * 目的: 在世界中畫出縮圈牆（只在客戶端執行）。
- *       目前圈 = 半透明藍牆；下一圈 = 較淡的白色矮牆。
+ *       顏色跟大地圖／小地圖一致：目前圈 = 半透明白牆；下一圈 = 較淡的淺藍矮牆。
  *       只畫攝影機附近 160 格內的牆面，避免大地圖時拖慢效能。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
@@ -48,11 +48,11 @@ public final class CircleRenderer {
 
         BufferBuilder buf = Tesselator.getInstance().getBuilder();
         buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        // 目前圈：#4070C0 藍色，透明度約 30%
-        ring(buf, m, s.cx(), s.cz(), s.radius(), cam, cam.y - 48, cam.y + 96, 0x40, 0x70, 0xC0, 0x4C);
-        // 下一圈：白色，透明度約 15%，矮一點
+        // 目前圈：白色（同地圖的白色實線），透明度約 30%
+        ring(buf, m, s.cx(), s.cz(), s.radius(), cam, cam.y - 48, cam.y + 96, 0xFF, 0xFF, 0xFF, 0x4C);
+        // 下一圈：淺藍 #60C0FF（同地圖的淺藍虛線），透明度約 15%，矮一點
         if (s.nextRadius() > 0) {
-            ring(buf, m, s.nextCx(), s.nextCz(), s.nextRadius(), cam, cam.y - 8, cam.y + 8, 0xFF, 0xFF, 0xFF, 0x26);
+            ring(buf, m, s.nextCx(), s.nextCz(), s.nextRadius(), cam, cam.y - 8, cam.y + 8, 0x60, 0xC0, 0xFF, 0x26);
         }
         BufferUploader.drawWithShader(buf.end());
 
