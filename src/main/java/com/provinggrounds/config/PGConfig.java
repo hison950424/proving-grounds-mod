@@ -196,8 +196,8 @@ public class PGConfig {
             .defineInRange("auto_chute_height", 50.0, 5.0, 300.0);
         glideMaxSpeed = builder.comment("鞘翅滑翔的最高移動速度（格/秒，含上下與水平）")
             .defineInRange("glide_max_speed", 10.0, 1.0, 100.0);
-        glidePitchUpMax = builder.comment("鞘翅滑翔時視角最多能往上抬幾度（0 = 不能抬到水平以上，90 = 原版可抬到正上方）")
-            .defineInRange("glide_pitch_up_max", 85.0, 0.0, 90.0);
+        glidePitchUpMax = builder.comment("鞘翅滑翔時視角從「正下方」最多能往上抬幾度（85 = 最高只到水平線下 5 度，不能拉高；90 = 可抬到水平；180 = 原版可抬到正上方）")
+            .defineInRange("glide_pitch_up_max", 85.0, 0.0, 180.0);
         chuteSink = builder.comment("開傘後的下降速度（格/秒）")
             .defineInRange("chute_sink", 5.0, 0.5, 50.0);
         chuteHorizontal = builder.comment("開傘後用移動鍵操控的最大水平速度（格/秒）")
