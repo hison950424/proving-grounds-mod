@@ -16,10 +16,11 @@ import net.minecraftforge.fml.common.Mod;
 /**
  * 檔案: ClientSkydive.java
  * 目的: 跳傘的客戶端部分（只在客戶端執行）。
- *   1. 按下跳躍鍵（預設空白鍵）的瞬間送 SkydiveKeyPacket：飛機上 → 跳出、鞘翅滑翔中 → 開傘（伺服器判斷）。
- *   2. 鞘翅滑翔用原版行為，只加兩個限制：最高速度 glide_max_speed（預設 10 格/秒）、
- *      視角從正下方最多往上抬 glide_pitch_up_max 度（預設 85，也就是最高只到水平線下 5 度）。離地 auto_chute_height 格時伺服器會自動開傘。
- *   3. 開傘後：固定下降速度，水平用移動鍵操控（上限 chute_horizontal）。開傘後不能回到鞘翅。
+ *   1. 按下跳躍鍵（預設空白鍵）的瞬間送 SkydiveKeyPacket（伺服器判斷）：飛機上 → 跳出、鞘翅滑翔 → 開傘、
+ *      開傘 → 自由落體、自由落體 → 開傘（後兩者可以反覆切換）。
+ *   2. 鞘翅滑翔用原版行為，只限制視角從正下方最多往上抬 glide_pitch_up_max 度（預設 85，也就是最高只到水平線下 5 度）。
+ *      離地 auto_chute_height 格時伺服器會自動開傘。自由落體完全是原版掉落。
+ *   3. 開傘中：固定下降速度，水平用移動鍵操控（上限 chute_horizontal）。開傘後就回不到鞘翅。
  *   玩家移動由客戶端決定，所以開傘的速度在客戶端每 tick 設定；數值來自伺服器設定（登入時同步）。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
@@ -40,20 +41,17 @@ public final class ClientSkydive {
         while (mc.options.keyJump.consumeClick()) pressed = true; // 一律消耗掉，避免累積到下次跳傘才觸發
         if (!pressed || mc.player == null || mc.screen != null) return;
         byte self = ClientBRState.get().selfState();
-        if (self == ClientBRState.SELF_PLANE || self == ClientBRState.SELF_FREEFALL) {
+        if (self == ClientBRState.SELF_PLANE || self == ClientBRState.SELF_GLIDE
+                || self == ClientBRState.SELF_FREEFALL || self == ClientBRState.SELF_CHUTE) {
             PGNetwork.sendToServer(new SkydiveKeyPacket());
         }
     }
 
-    /**
-     * 鞘翅滑翔中：速度不超過 glide_max_speed（含上下與水平），視角從正下方最多往上抬 glide_pitch_up_max 度。
-     * 移動前（START）與移動後（END）都限制一次：原版滑翔每 tick 會先加速再移動，只限制一次會稍微超速。
-     */
+    /** 鞘翅滑翔中：視角從正下方最多往上抬 glide_pitch_up_max 度（鞘翅本身的速度、操作都不改）。 */
     private static void limitGlide(LocalPlayer p) {
-        if (!p.isFallFlying() || ClientBRState.get().selfState() != ClientBRState.SELF_FREEFALL) return;
-        double maxSpeed = 10, pitchUp = 85;
+        if (!p.isFallFlying() || ClientBRState.get().selfState() != ClientBRState.SELF_GLIDE) return;
+        double pitchUp = 85;
         try {
-            maxSpeed = PGConfig.SERVER.glideMaxSpeed.get();
             pitchUp = PGConfig.SERVER.glidePitchUpMax.get();
         } catch (IllegalStateException ignored) {
             // 設定還沒同步過來：用預設值
@@ -62,9 +60,6 @@ public final class ClientSkydive {
         float minPitch = (float) (90 - pitchUp);
         if (p.getXRot() < minPitch) p.setXRot(minPitch);
         if (p.xRotO < minPitch) p.xRotO = minPitch;
-        net.minecraft.world.phys.Vec3 v = p.getDeltaMovement();
-        double max = maxSpeed / 20.0, len = v.length();
-        if (len > max) p.setDeltaMovement(v.scale(max / len));
     }
 
     /** 開傘中：固定下降速度，移動鍵控制水平（前後 = forwardImpulse，左右 = leftImpulse）。 */
@@ -75,7 +70,7 @@ public final class ClientSkydive {
         if (event.phase != TickEvent.Phase.START) return;
         if (ClientBRState.get().selfState() != ClientBRState.SELF_CHUTE) return;
         if (p.onGround() || p.isInWater()) return;
-        double sink = 5, horiz = 8;
+        double sink = 5, horiz = 12;
         try {
             sink = PGConfig.SERVER.chuteSink.get();
             horiz = PGConfig.SERVER.chuteHorizontal.get();

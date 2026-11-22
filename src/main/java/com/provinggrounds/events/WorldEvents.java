@@ -56,6 +56,7 @@ public class WorldEvents {
         com.provinggrounds.data.MapRenderJob.tickCurrent(); // 產生地圖俯視圖（只在大廳啟動）
         com.provinggrounds.core.LobbyManager.get().tick(event.getServer()); // 大廳：同步選單、強制開始倒數
         com.provinggrounds.core.ProneManager.tick(event.getServer()); // 趴下：自動解除、同步名單
+        if (event.getServer().getTickCount() % 20 == 0) keepLobbyFed(event.getServer());
         if (GameManager.get().isInLobby()) return;
 
         switch (GameManager.get().getMode()) {
@@ -64,6 +65,19 @@ public class WorldEvents {
             case DOM           -> tickDOM();
             case GK            -> tickGK();
             default            -> {}
+        }
+    }
+
+    /**
+     * 大廳沒有飽食度機制：不在 BR 對局中的玩家每秒補滿飢餓度，可以一直跑（飢餓條在客戶端也不畫）。
+     * BR 參賽者由 BattleRoyaleMode.tickFood 處理（固定飢餓度、不自然回血）。
+     */
+    private static void keepLobbyFed(net.minecraft.server.MinecraftServer server) {
+        BattleRoyaleMode br = BattleRoyaleMode.get();
+        for (net.minecraft.server.level.ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (br.isAliveParticipant(p.getUUID())) continue;
+            p.getFoodData().setFoodLevel(20);
+            p.getFoodData().setSaturation(5f);
         }
     }
 

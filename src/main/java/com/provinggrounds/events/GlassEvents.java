@@ -11,7 +11,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /**
  * 檔案: GlassEvents.java
- * 目的: 記錄被打破的原版玻璃（每局開始時由 GlassLedger 修回去）。
+ * 目的: 記錄被打破的玻璃（原版與模組，每局開始時由 GlassLedger 修回去）。
  *   子彈打破：由槍械適配層（GunCompat）呼叫 onBulletHit。
  *   爆炸波及：ExplosionEvent.Detonate 在方塊被炸掉之前觸發，這時記下受影響的玻璃。
  */
@@ -28,7 +28,7 @@ public class GlassEvents {
         GlassLedger ledger = GlassLedger.get(level.getServer());
         for (BlockPos pos : event.getAffectedBlocks()) {
             BlockState state = level.getBlockState(pos);
-            if (GlassLedger.isVanillaGlass(state)) ledger.record(level, pos, state);
+            if (GlassLedger.isGlass(state)) ledger.record(level, pos, state);
         }
     }
 }

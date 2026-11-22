@@ -15,6 +15,14 @@ public final class BRDowned {
 
     private BRDowned() {}
 
+    /** 不能開槍、近戰、換彈：倒地中，或在飛機上。兩端都能呼叫（客戶端只知道自己的狀態）。 */
+    public static boolean cannotAct(Entity e) {
+        if (isDowned(e)) return true;
+        if (!(e instanceof Player p)) return false;
+        if (p.level().isClientSide) return p.isLocalPlayer() && ClientBRState.get().selfState() == ClientBRState.SELF_PLANE;
+        return BattleRoyaleMode.get().isOnPlane(p.getUUID());
+    }
+
     public static boolean isDowned(Entity e) {
         if (!(e instanceof Player p)) return false;
         if (p.level().isClientSide) {

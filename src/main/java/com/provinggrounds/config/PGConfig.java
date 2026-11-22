@@ -47,7 +47,7 @@ public class PGConfig {
     public final ForgeConfigSpec.IntValue brPlaneHeight;
     public final ForgeConfigSpec.DoubleValue brPlaneSpeed;
     // 跳傘（計畫書 B1）
-    public final ForgeConfigSpec.DoubleValue skydiveAutoChuteHeight, chuteSink, chuteHorizontal, glideMaxSpeed, glidePitchUpMax;
+    public final ForgeConfigSpec.DoubleValue skydiveAutoChuteHeight, chuteSink, chuteHorizontal, glidePitchUpMax;
     public final ForgeConfigSpec.BooleanValue hotbarRulesEnabled;
     public final ForgeConfigSpec.DoubleValue wheelHoldSeconds;
     public final ForgeConfigSpec.IntValue brFirstWaitExtraSeconds;
@@ -60,7 +60,7 @@ public class PGConfig {
     public final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> respawnKitItems;
 
     // ── BR：移動 ──────────────────────────────────────────────────────────────
-    public final ForgeConfigSpec.DoubleValue brSpeedMultiplier;
+    public final ForgeConfigSpec.DoubleValue brSpeedMultiplier, brMeleeSpeedMultiplier;
     public final ForgeConfigSpec.DoubleValue brJumpHeight;
 
     // ── BR：戰利品 ────────────────────────────────────────────────────────────
@@ -191,17 +191,15 @@ public class PGConfig {
             .defineInRange("speed", 25.0, 5.0, 100.0);
         builder.pop();
 
-        builder.comment("跳傘：空白鍵跳出飛機後直接用原版鞘翅滑翔；按空白鍵或離地夠近時開傘，開傘後不能回到鞘翅。").push("skydive");
+        builder.comment("跳傘：空白鍵跳出飛機後用原版鞘翅滑翔；按空白鍵或離地夠近時開傘。開傘後按空白鍵自由落體、再按開傘，可以反覆切換（回不到鞘翅）。").push("skydive");
         skydiveAutoChuteHeight = builder.comment("離地面幾格時自動開傘")
             .defineInRange("auto_chute_height", 50.0, 5.0, 300.0);
-        glideMaxSpeed = builder.comment("鞘翅滑翔的最高移動速度（格/秒，含上下與水平）")
-            .defineInRange("glide_max_speed", 10.0, 1.0, 100.0);
         glidePitchUpMax = builder.comment("鞘翅滑翔時視角從「正下方」最多能往上抬幾度（85 = 最高只到水平線下 5 度，不能拉高；90 = 可抬到水平；180 = 原版可抬到正上方）")
             .defineInRange("glide_pitch_up_max", 85.0, 0.0, 180.0);
         chuteSink = builder.comment("開傘後的下降速度（格/秒）")
             .defineInRange("chute_sink", 5.0, 0.5, 50.0);
         chuteHorizontal = builder.comment("開傘後用移動鍵操控的最大水平速度（格/秒）")
-            .defineInRange("chute_horizontal", 8.0, 0.0, 50.0);
+            .defineInRange("chute_horizontal", 12.0, 0.0, 50.0);
         builder.pop();
 
         builder.comment("快捷欄規則：第 1、2 格大型槍，第 3 格手槍，第 4 格補品，第 5 格投擲物（只對 BR 進行中的參賽者生效）。").push("hotbar");
@@ -236,7 +234,9 @@ public class PGConfig {
 
         builder.push("movement");
         brSpeedMultiplier = builder.comment("BR 內移動速度倍率（走路與疾跑都套用；速度藥水照原版相乘）")
-            .defineInRange("speed_multiplier", 0.8625, 0.1, 2.0); // 0.75 × 1.15（整體移動速度提高 15%）
+            .defineInRange("speed_multiplier", 0.8, 0.1, 2.0);
+        brMeleeSpeedMultiplier = builder.comment("BR 內手上拿著近戰武器（lrtactical 近戰）時的移動速度倍率（1.0 = 原版速度）")
+            .defineInRange("melee_speed_multiplier", 1.0, 0.1, 2.0);
         brJumpHeight = builder.comment("BR 內無藥水時的跳躍高度（格）。原版約 1.25；跳躍藥水依同比例縮小")
             .defineInRange("jump_height", 1.10, 0.5, 3.0);
         builder.pop();

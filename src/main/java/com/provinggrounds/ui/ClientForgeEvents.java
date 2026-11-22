@@ -108,8 +108,9 @@ public final class ClientForgeEvents {
     /**
      * 任何時候（大廳、BR、觀戰）：
      *   經驗值條與等級數字 → 不畫。
-     *   愛心 → 改畫數字血條（同一個位置，依實際最大血量比例），並把左側高度往上推，讓護甲條畫在血條上方而不是重疊。
-     * 只有 BR 進行中：飢餓條 → 不畫（BR 不使用飢餓度），其他時候維持原版。
+     *   愛心 → 改畫數字血條（同一個位置，依實際最大血量比例）。
+     *   飢餓條 → 不畫（大廳與 BR 都不使用飢餓度，伺服器一直保持吃飽，可以一直跑）。
+     *   護甲條 → 從左邊（血條上方）移到右邊原本飢餓條的位置。
      */
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiOverlayEvent.Pre event) {
@@ -117,14 +118,33 @@ public final class ClientForgeEvents {
         if (mc.player == null) return;
         if (event.getOverlay() == VanillaGuiOverlay.EXPERIENCE_BAR.type()) {
             event.setCanceled(true);
+        } else if (event.getOverlay() == VanillaGuiOverlay.ARMOR_LEVEL.type()) {
+            event.setCanceled(true); // 改在飢餓條的位置畫（見下面 FOOD_LEVEL）
         } else if (event.getOverlay() == VanillaGuiOverlay.FOOD_LEVEL.type()) {
-            if (ClientBRState.active() && !mc.player.isSpectator()) event.setCanceled(true);
+            event.setCanceled(true);
+            if (mc.gui instanceof ForgeGui gui && gui.shouldDrawSurvivalElements() && mc.player.getArmorValue() > 0) {
+                renderArmorRight(event.getGuiGraphics(), mc.player.getArmorValue(),
+                    event.getWindow().getGuiScaledWidth(), event.getWindow().getGuiScaledHeight(), gui.rightHeight);
+                gui.rightHeight += 10;
+            }
         } else if (event.getOverlay() == VanillaGuiOverlay.PLAYER_HEALTH.type()) {
             event.setCanceled(true);
             if (mc.gui instanceof ForgeGui gui && gui.shouldDrawSurvivalElements()) {
                 HUD.renderHealthBar(event.getGuiGraphics(), mc.font, mc.player, event.getWindow().getGuiScaledWidth(), event.getWindow().getGuiScaledHeight(), gui.leftHeight);
                 gui.leftHeight += 10;
             }
+        }
+    }
+
+    private static final net.minecraft.resources.ResourceLocation ICONS = new net.minecraft.resources.ResourceLocation("textures/gui/icons.png");
+
+    /** 護甲條畫在右邊（原本飢餓條的位置），跟飢餓條一樣由右往左排；圖示用原版的護甲圖示。 */
+    private static void renderArmorRight(net.minecraft.client.gui.GuiGraphics g, int armor, int width, int height, int rightHeight) {
+        int right = width / 2 + 91, y = height - rightHeight;
+        for (int i = 0; i < 10; i++) {
+            int x = right - i * 8 - 9;
+            int u = i * 2 + 1 < armor ? 34 : (i * 2 + 1 == armor ? 25 : 16); // 滿、半格、空
+            g.blit(ICONS, x, y, u, 9, 9, 9);
         }
     }
 

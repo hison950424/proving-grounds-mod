@@ -22,7 +22,7 @@ import java.util.*;
 
 /**
  * 檔案: GlassLedger.java
- * 目的: 被打破的原版玻璃記錄簿（存於 world/data/provinggrounds_glass.dat），每局開始時全部修回去。
+ * 目的: 被打破的玻璃（原版與模組）記錄簿（存於 world/data/provinggrounds_glass.dat），每局開始時全部修回去。
  *   記錄時機：子彈打到玻璃（TACZ 的 AmmoHitBlockEvent，在 TACZ 打破玻璃之前）、
  *             爆炸波及玻璃（ExplosionEvent.Detonate，在方塊被炸掉之前）。
  *   只記「原版」的玻璃類方塊：玻璃、染色玻璃、玻璃片、鐵柵欄，以及其他會被子彈打破的原版方塊
@@ -66,17 +66,20 @@ public class GlassLedger extends SavedData {
         return tag;
     }
 
-    /** 這個方塊是不是「會被打破、要記錄」的原版玻璃類方塊。 */
-    public static boolean isVanillaGlass(BlockState state) {
-        if (!"minecraft".equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()).getNamespace())) return false;
+    /**
+     * 這個方塊是不是「會被打破、要記錄」的玻璃類方塊（原版與模組都算，例如 connectedglass 的玻璃）。
+     * 判斷：玻璃類別（含子類別）、玻璃片、鐵柵欄、敲擊音色是「高帽鼓」（原版玻璃的特徵），或方塊 ID 含 glass。
+     */
+    public static boolean isGlass(BlockState state) {
         Block b = state.getBlock();
+        if (BuiltInRegistries.BLOCK.getKey(b).getPath().contains("glass")) return true;
         return b instanceof AbstractGlassBlock || b instanceof StainedGlassPaneBlock || b instanceof IronBarsBlock
             || state.instrument() == NoteBlockInstrument.HAT;
     }
 
     /** 記錄一塊即將被打破的玻璃（同一位置只記第一次的狀態）。 */
     public void record(ServerLevel level, BlockPos pos, BlockState state) {
-        if (level != level.getServer().overworld() || !isVanillaGlass(state)) return;
+        if (level != level.getServer().overworld() || !isGlass(state)) return;
         if (broken.putIfAbsent(pos.asLong(), state) == null) setDirty();
     }
 

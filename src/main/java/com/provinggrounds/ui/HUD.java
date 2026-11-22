@@ -68,7 +68,7 @@ public final class HUD {
 
     // ── 左上：小地圖 ────────────────────────────────────────────────────────
 
-    private static final int MINIMAP = 96;          // 小地圖邊長（GUI 像素）
+    private static final int MINIMAP = 72;          // 小地圖邊長（GUI 像素；原本 96，縮小 25%）
     private static final double MINIMAP_SPAN = 192; // 小地圖顯示的範圍（格）
 
     /** 遊戲中（飛機、進行中）在左上角畫小地圖，北方朝上、自己在中間。回傳下方可用的 y。 */
@@ -154,6 +154,7 @@ public final class HUD {
     private static void renderHint(GuiGraphics g, Font font, BRStatePacket s, int w, int h) {
         String hint = switch (s.selfState()) {
             case ClientBRState.SELF_PLANE -> Tr.t("hud.hint.plane", jumpKey());
+            case ClientBRState.SELF_GLIDE -> Tr.t("hud.hint.glide", jumpKey());
             case ClientBRState.SELF_FREEFALL -> Tr.t("hud.hint.freefall", jumpKey());
             case ClientBRState.SELF_CHUTE -> Tr.t("hud.hint.chute", jumpKey());
             case ClientBRState.SELF_DOWNED -> Tr.t("hud.hint.downed", mmss(s.timerSeconds()));

@@ -15,7 +15,7 @@ public final class ClientBRState {
 
     public static final byte PHASE_NONE = 0, PHASE_PREPARING = 1, PHASE_PLANE = 2, PHASE_ACTIVE = 3, PHASE_ENDING = 4;
     public static final byte SELF_NONE = 0, SELF_PLANE = 1, SELF_FREEFALL = 2, SELF_CHUTE = 3, SELF_ALIVE = 4, SELF_DEAD = 5,
-        SELF_DOWNED = 6;
+        SELF_DOWNED = 6, SELF_GLIDE = 7; // FREEFALL = 收傘後的自由落體、GLIDE = 鞘翅滑翔
     public static final byte PROGRESS_NONE = 0, PROGRESS_REVIVING = 1, PROGRESS_BEING_REVIVED = 2, PROGRESS_ALTAR = 3;
     public static final byte TIMER_NONE = 0, TIMER_BLEED = 1, TIMER_CARD_GROUND = 2, TIMER_CARD_HELD = 3, TIMER_FINAL = 4;
 

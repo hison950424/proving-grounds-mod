@@ -19,7 +19,8 @@ import java.util.UUID;
  * 檔案: BRMovement.java
  * 目的: BR 移動規則。
  *       速度：移動速度屬性的暫時性修改（transient，不寫進玩家存檔，崩潰重啟後自動消失）。
- *             MULTIPLY_TOTAL 與速度藥水、疾跑加成相乘 → 走路與疾跑都是原版的 75%。
+ *             MULTIPLY_TOTAL 與速度藥水、疾跑加成相乘 → 走路與疾跑都是原版的 speed_multiplier（預設 80%）；
+ *             手上拿近戰武器時改用 melee_speed_multiplier（預設 100%）。
  *       跳躍：玩家移動由客戶端決定，所以在客戶端的跳躍事件修正起跳垂直速度，
  *             讓高度 = 原高度 × (jump_height ÷ 原版無藥水高度)，跳躍藥水依同比例縮小；
  *             並抵銷疾跑跳多出來的水平前衝。
@@ -43,9 +44,27 @@ public final class BRMovement {
         AttributeInstance attr = player.getAttribute(Attributes.MOVEMENT_SPEED);
         if (attr == null) return;
         attr.removeModifier(SPEED_ID);
-        double mult = PGConfig.SERVER.brSpeedMultiplier.get();
-        attr.addTransientModifier(new AttributeModifier(SPEED_ID, "pg_br_speed", mult - 1.0,
+        attr.addTransientModifier(new AttributeModifier(SPEED_ID, "pg_br_speed", targetMultiplier(player) - 1.0,
             AttributeModifier.Operation.MULTIPLY_TOTAL));
+    }
+
+    /**
+     * 每 tick 呼叫：手上拿近戰武器時速度是原版的 100%（設定 melee_speed_multiplier），
+     * 其他時候是 speed_multiplier。只有數值變了才重新套用，平常不做事。
+     */
+    public static void refresh(ServerPlayer player) {
+        AttributeInstance attr = player.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (attr == null) return;
+        AttributeModifier cur = attr.getModifier(SPEED_ID);
+        if (cur == null) return; // 還沒套用 BR 速度（例如飛機上之前）
+        double want = targetMultiplier(player) - 1.0;
+        if (Math.abs(cur.getAmount() - want) > 1e-6) apply(player);
+    }
+
+    private static double targetMultiplier(ServerPlayer player) {
+        PGConfig c = PGConfig.SERVER;
+        boolean melee = player.getMainHandItem().is(com.provinggrounds.compat.GunCompat.MELEE);
+        return melee ? c.brMeleeSpeedMultiplier.get() : c.brSpeedMultiplier.get();
     }
 
     /** 移除所有 BR 速度修改（包含倒地緩速）。 */

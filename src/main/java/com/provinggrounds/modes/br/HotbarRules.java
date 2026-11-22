@@ -54,7 +54,7 @@ public final class HotbarRules {
     public static final int LARGE_A = 0, LARGE_B = 1, PISTOL = 2, HEAL = 3, THROW = 4;
     public static final int OFFHAND = 40;
 
-    public enum Kind { LARGE, PISTOL, HEALING, THROWABLE, BACKPACK, OTHER }
+    public enum Kind { LARGE, PISTOL, MELEE, HEALING, THROWABLE, BACKPACK, OTHER }
 
     public static final String MSG_LARGE = "無法拿取兩把以上的大型槍（可用替換的方式拿取）";
     public static final String MSG_PISTOL = "無法拿取兩把以上的手槍（可用替換的方式拿取）";
@@ -76,6 +76,7 @@ public final class HotbarRules {
         GunClass g = GunCompat.classify(s);
         if (g == GunClass.LARGE) return Kind.LARGE;
         if (g == GunClass.PISTOL) return Kind.PISTOL;
+        if (s.is(GunCompat.MELEE)) return Kind.MELEE; // lrtactical 近戰武器：可放第 3 格（手槍格）
         if (s.is(HEALING)) return Kind.HEALING;
         if (s.is(THROWABLE)) return Kind.THROWABLE;
         return Kind.OTHER;
@@ -114,7 +115,7 @@ public final class HotbarRules {
         if (k == Kind.BACKPACK) return false; // 背包只能在背包欄
         return switch (slot) {
             case LARGE_A, LARGE_B -> k == Kind.LARGE;
-            case PISTOL -> k == Kind.PISTOL;
+            case PISTOL -> k == Kind.PISTOL || k == Kind.MELEE;
             case HEAL -> k == Kind.HEALING;
             case THROW -> k == Kind.THROWABLE;
             default -> k != Kind.LARGE && k != Kind.PISTOL && (slot < 9 || slot > 35 || backpackUsable(p, slot));
@@ -148,6 +149,10 @@ public final class HotbarRules {
                 putEmpty(inv, stack, PISTOL);
                 fail = MSG_PISTOL;
             }
+            case MELEE -> {
+                // 近戰武器：第 3 格空著就放第 3 格，否則當一般物品放第 6～9 格或背包
+                if (!putEmpty(inv, stack, PISTOL)) insertOther(p, inv, stack);
+            }
             case HEALING, THROWABLE -> {
                 int target = kind(stack) == Kind.HEALING ? HEAL : THROW;
                 merge(inv, stack, target);
@@ -160,15 +165,34 @@ public final class HotbarRules {
                 Backpack.equipIfBetter(p, stack); // 更高級就換上，舊的掉在腳邊
                 fail = MSG_BACKPACK_HAVE;
             }
-            case OTHER -> {
-                for (int i = 5; i <= 8 && !stack.isEmpty(); i++) merge(inv, stack, i);
-                for (int i = 9; i <= 35 && !stack.isEmpty(); i++) if (backpackUsable(p, i)) merge(inv, stack, i);
-                for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i);
-                for (int i = 9; i <= 35 && !stack.isEmpty(); i++) if (backpackUsable(p, i)) putEmpty(inv, stack, i);
-            }
+            case OTHER -> insertOther(p, inv, stack);
         }
         int moved = before - stack.getCount();
         return new Result(moved, moved == 0 ? fail : null);
+    }
+
+    /** 一般物品：先疊到第 6～9 格與背包同種物品上，再放第 6～9 格空格，最後放背包空格。 */
+    private static void insertOther(ServerPlayer p, Inventory inv, ItemStack stack) {
+        for (int i = 5; i <= 8 && !stack.isEmpty(); i++) merge(inv, stack, i);
+        for (int i = 9; i <= 35 && !stack.isEmpty(); i++) if (backpackUsable(p, i)) merge(inv, stack, i);
+        for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i);
+        for (int i = 9; i <= 35 && !stack.isEmpty(); i++) if (backpackUsable(p, i)) putEmpty(inv, stack, i);
+    }
+
+    /**
+     * 清空玩家身上物品，但保留一把近戰武器放到第 3 格（開局加入時、登機時呼叫）。
+     * 玩家可以在大廳先拿好近戰武器帶進對局。
+     */
+    public static void clearKeepMelee(ServerPlayer p) {
+        Inventory inv = p.getInventory();
+        ItemStack melee = ItemStack.EMPTY;
+        for (int i = 0; i < inv.getContainerSize() && melee.isEmpty(); i++) {
+            if (inv.getItem(i).is(GunCompat.MELEE)) melee = inv.getItem(i).copyWithCount(1);
+        }
+        if (melee.isEmpty() && p.containerMenu.getCarried().is(GunCompat.MELEE)) melee = p.containerMenu.getCarried().copyWithCount(1);
+        inv.clearContent();
+        p.containerMenu.setCarried(ItemStack.EMPTY);
+        if (!melee.isEmpty()) inv.setItem(PISTOL, melee);
     }
 
     /** 背包 → 快捷欄（物品欄畫面裡 Shift 點背包的物品）：只放專用格或第 6～9 格，不再放回背包。 */
@@ -180,6 +204,7 @@ public final class HotbarRules {
             case THROWABLE -> { merge(inv, stack, THROW); putEmpty(inv, stack, THROW); }
             case LARGE -> { if (!putEmpty(inv, stack, LARGE_A)) putEmpty(inv, stack, LARGE_B); }
             case PISTOL -> putEmpty(inv, stack, PISTOL);
+            case MELEE -> { if (!putEmpty(inv, stack, PISTOL)) { for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i); } }
             case BACKPACK -> Backpack.equipIfBetter(p, stack);
             case OTHER -> {
                 for (int i = 5; i <= 8 && !stack.isEmpty(); i++) merge(inv, stack, i);
