@@ -18,8 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 檔案: Backpack.java
  * 目的: 背包系統（計畫書 B3）。
  *   - 每個玩家有一格「背包欄」（InventoryMenuMixin 加在物品欄畫面、副手格的正上方），只接受 BackpackItem。
- *   - 主背包 27 格（Inventory 9～35）依背包等級解鎖：先解鎖最下列前 5 欄，再中間列、最上列（5／10／15 格）；
- *     設定值大於 15 時再依序解鎖後 4 欄。沒有背包時全鎖。
+ *   - 主背包 27 格（3 列 × 9 欄，Inventory 9～35）依背包等級一列一列解鎖：一級開最下列、二級加中間列、
+ *     三級加最上列，每列開左邊 backpack_columns 欄（預設 7，也就是 7／14／21 格）。沒有背包時全鎖。
  *   - 鎖定只在 BR 進行中的參賽者身上生效（跟快捷欄規則一樣），大廳與創造模式不受影響。
  *   - 鎖定格不能放、不能拿（SlotMixin 改 Slot.mayPlace／mayPickup，伺服器與客戶端都檢查）；
  *     容量變小時，鎖定格裡的物品由 HotbarRules.normalize 搬到開放的格子，放不下掉在腳邊。
@@ -96,19 +96,18 @@ public final class Backpack {
         return level(container(p).getItem(0));
     }
 
-    /** 等級對應的開放格數。 */
-    public static int slotsFor(int level) {
+    /** 每列開放的欄數（設定 backpack_columns；還沒載入時用預設 7）。 */
+    public static int columns() {
         try {
-            PGConfig c = PGConfig.SERVER;
-            return switch (level) {
-                case 1 -> c.backpackLevel1Slots.get();
-                case 2 -> c.backpackLevel2Slots.get();
-                case 3 -> c.backpackLevel3Slots.get();
-                default -> 0;
-            };
+            return PGConfig.SERVER.backpackColumns.get();
         } catch (IllegalStateException e) {
-            return level * 5;
+            return 7;
         }
+    }
+
+    /** 等級對應的開放格數（等級 × 每列欄數）。 */
+    public static int slotsFor(int level) {
+        return Math.max(0, Math.min(3, level)) * columns();
     }
 
     private static boolean rulesActive(Player p) {
@@ -119,14 +118,9 @@ public final class Backpack {
     /** 主背包第 slot 格（Inventory 9～35）是否鎖定。 */
     public static boolean locked(Player p, int slot) {
         if (slot < 9 || slot > 35 || !rulesActive(p)) return false;
-        return order(slot) >= slotsFor(level(p));
-    }
-
-    /** 解鎖順序：最下列前 5 欄 → 中間列前 5 欄 → 最上列前 5 欄 → 再依同樣的列順序開後 4 欄。 */
-    private static int order(int slot) {
         int row = (slot - 9) / 9, col = (slot - 9) % 9; // row 0 = 最上列
-        int fromBottom = 2 - row;
-        return col < 5 ? fromBottom * 5 + col : 15 + fromBottom * 4 + (col - 5);
+        int fromBottom = 2 - row;                        // 0 = 最下列
+        return fromBottom >= level(p) || col >= columns();
     }
 
     // ── 裝上、清除 ───────────────────────────────────────────────────────────

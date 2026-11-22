@@ -53,7 +53,7 @@ public class PGConfig {
     public final ForgeConfigSpec.IntValue brFirstWaitExtraSeconds;
     public final ForgeConfigSpec.BooleanValue uiWalkAllowed;
     public final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> pistolGuns;
-    public final ForgeConfigSpec.IntValue backpackLevel1Slots, backpackLevel2Slots, backpackLevel3Slots;
+    public final ForgeConfigSpec.IntValue backpackColumns;
     public final ForgeConfigSpec.DoubleValue mvpKill, mvpAssist, mvpDamagePerPoint, mvpRevive, mvpAltar, mvpWinBonus;
     public final ForgeConfigSpec.DoubleValue adminTextDeleteRange, adminSpawnViewRange;
     public final ForgeConfigSpec.IntValue adminTextUndoMax;
@@ -161,9 +161,9 @@ public class PGConfig {
         brCircleWarnSeconds = builder.comment("縮圈開始前幾秒發出預警")
             .defineInRange("circle_warn_seconds", 30, 5, 120);
         brCircleMaxSpeedFactor = builder.comment(
-                "縮圈速度上限 = BR 疾跑速度 × 此倍率（預設 0.8 = 疾跑的 80%，約 3.4 格/秒）。1.0 以下圈都追不上全速疾跑的玩家",
+                "縮圈速度上限 = BR 疾跑速度 × 此倍率（預設 0.6957，約 3.37 格/秒，跟移動速度提高 15% 之前一樣）。1.0 以下圈都追不上全速疾跑的玩家",
                 "（BR 疾跑速度 = 原版 5.612 格/秒 × speed_multiplier）")
-            .defineInRange("max_speed_factor", 0.8, 0.1, 1.0);
+            .defineInRange("max_speed_factor", 0.6957, 0.1, 1.0); // 0.8 ÷ 1.15：移動速度 +15% 時縮圈速度不變
         brStandardRatios = builder.comment("標準方案：各階段半徑 ÷ 地圖半徑（沿用舊 Datapack 800→460→240→100→10）")
             .defineList("standard_ratios", List.of(0.58, 0.30, 0.125, 0.01), PGConfig::isRatio);
         brStandardInterval = builder.comment("標準方案：階段間隔（秒）")
@@ -213,10 +213,9 @@ public class PGConfig {
             .defineListAllowEmpty("pistol_guns", java.util.List.of("tacz:db_short"), o -> o instanceof String);
         builder.pop();
 
-        builder.comment("背包：裝在物品欄背包欄的背包等級決定主背包開放幾格（沒有背包 = 全鎖，只對 BR 參賽者生效）。").push("backpack");
-        backpackLevel1Slots = builder.comment("一級背包開放的格數").defineInRange("backpack_level1_slots", 5, 0, 27);
-        backpackLevel2Slots = builder.comment("二級背包開放的格數").defineInRange("backpack_level2_slots", 10, 0, 27);
-        backpackLevel3Slots = builder.comment("三級背包開放的格數").defineInRange("backpack_level3_slots", 15, 0, 27);
+        builder.comment("背包：一級開主背包最下列、二級加中間列、三級加最上列（沒有背包 = 全鎖，只對 BR 參賽者生效）。").push("backpack");
+        backpackColumns = builder.comment("每一列從左邊開放幾格（9 = 整列）。預設 7：一級 7 格、二級 14 格、三級 21 格")
+            .defineInRange("backpack_columns", 7, 1, 9);
         builder.pop();
 
         builder.comment("本場數據：MVP 分數 = 擊殺×kill ＋ 助攻×assist ＋ 傷害÷damage_per_point ＋ 扶起×revive ＋ 祭壇復活×altar ＋（獲勝 ＋ win_bonus）").push("result");
@@ -237,7 +236,7 @@ public class PGConfig {
 
         builder.push("movement");
         brSpeedMultiplier = builder.comment("BR 內移動速度倍率（走路與疾跑都套用；速度藥水照原版相乘）")
-            .defineInRange("speed_multiplier", 0.75, 0.1, 2.0);
+            .defineInRange("speed_multiplier", 0.8625, 0.1, 2.0); // 0.75 × 1.15（整體移動速度提高 15%）
         brJumpHeight = builder.comment("BR 內無藥水時的跳躍高度（格）。原版約 1.25；跳躍藥水依同比例縮小")
             .defineInRange("jump_height", 1.10, 0.5, 3.0);
         builder.pop();
