@@ -113,7 +113,7 @@ public final class DamageIndicator {
         double t = Math.min(tx, ty);
         int px = (int) Math.round(cx + sx * t), py = (int) Math.round(cy + sy * t);
         int a = Math.max(0, Math.min(255, Math.round(alpha * 240))); // 最不透明約 94%（原本 78%）
-        final int size = 30, depth = 30, steps = 8; // 沿著邊緣的寬度 30（原本 40 的 75%）、從邊緣往內的長度 30（原本 24 的 125%）
+        final int size = 50, depth = 18, steps = 8; // 紅色細長方形：沿著邊緣長 50（原本 40 的 125%）、從邊緣往內 18 像素漸淡（原本 24 的 75%）
         boolean horizontalEdge = ty <= tx; // 碰到上下邊
         for (int i = 0; i < steps; i++) {
             int stripA = a * (steps - i) / steps;
