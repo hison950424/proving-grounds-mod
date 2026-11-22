@@ -1477,6 +1477,7 @@ public class BattleRoyaleMode {
             ServerPlayer p = player(r.id());
             if (p != null) p.sendSystemMessage(ownResultLine(r));
         }
+        com.provinggrounds.modes.br.StatsBoard.afterMatch(participants.keySet());
     }
 
     /** 聊天欄精簡版：亮點（跟畫面、/pg result 用同一份計算）。 */

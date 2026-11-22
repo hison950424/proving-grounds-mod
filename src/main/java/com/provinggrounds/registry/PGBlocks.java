@@ -54,6 +54,15 @@ public final class PGBlocks {
     public static final RegistryObject<BlockEntityType<AltarBlockEntity>> ALTAR_BE =
         BLOCK_ENTITIES.register("altar", () -> BlockEntityType.Builder.of(AltarBlockEntity::new, ALTAR.get()).build(null));
 
+    /** 數據看板（計畫書 B5）：只有 OP 或創造模式能擺放、破壞。 */
+    public static final RegistryObject<Block> STATS_BOARD = BLOCKS.register("stats_board", () -> new com.provinggrounds.block.StatsBoardBlock(
+        BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(1.5f, 3600000f).sound(SoundType.WOOD)));
+    public static final RegistryObject<Item> STATS_BOARD_ITEM = ITEMS.register("stats_board",
+        () -> new BlockItem(STATS_BOARD.get(), new Item.Properties()));
+    @SuppressWarnings("ConstantConditions")
+    public static final RegistryObject<BlockEntityType<com.provinggrounds.block.StatsBoardBlockEntity>> STATS_BOARD_BE =
+        BLOCK_ENTITIES.register("stats_board", () -> BlockEntityType.Builder.of(com.provinggrounds.block.StatsBoardBlockEntity::new, STATS_BOARD.get()).build(null));
+
     /** 復活牌（只會以掉落物形式存在；撿起後轉成玩家身上的資料，不進背包）。 */
     public static final RegistryObject<Item> REVIVE_CARD = ITEMS.register("revive_card",
         () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
@@ -89,6 +98,7 @@ public final class PGBlocks {
             event.accept(CRATE_HIGH);
             event.accept(CRATE_AIRDROP);
             event.accept(ALTAR_ITEM);
+            event.accept(STATS_BOARD_ITEM);
         }
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(BACKPACK_1);

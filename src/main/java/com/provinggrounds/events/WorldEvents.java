@@ -44,6 +44,7 @@ public class WorldEvents {
     public void onServerStopped(ServerStoppedEvent event) {
         PlayerDataManager.get().detach();
         AltarBlockEntity.LOADED.clear(); // 單人模式換世界時不留舊座標
+        com.provinggrounds.modes.br.StatsBoard.clear();
     }
 
     /** 每 tick 鉤子。遊戲模式邏輯在這裡分派（結算 END 狀態也要繼續 tick，才能清理與還原）。 */

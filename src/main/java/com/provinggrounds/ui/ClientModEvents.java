@@ -44,6 +44,11 @@ public final class ClientModEvents {
     }
 
     @SubscribeEvent
+    public static void onRegisterRenderers(net.minecraftforge.client.event.EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(com.provinggrounds.registry.PGBlocks.STATS_BOARD_BE.get(), StatsBoardRenderer::new);
+    }
+
+    @SubscribeEvent
     public static void onRegisterKeys(RegisterKeyMappingsEvent event) {
         event.register(OPEN_MENU);
         event.register(PRONE);

@@ -71,6 +71,8 @@ public class PlayerDataManager {
         if (after > before) {
             player.sendSystemMessage(Component.literal("▲ 升級！等級 " + before + " → " + after)
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+            com.provinggrounds.modes.br.StatsBoard.sendPersonal(player);
+            com.provinggrounds.modes.br.StatsBoard.onStatsChanged();
         }
         return gained;
     }

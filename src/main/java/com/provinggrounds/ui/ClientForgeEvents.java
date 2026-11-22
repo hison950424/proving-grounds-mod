@@ -180,6 +180,7 @@ public final class ClientForgeEvents {
         com.provinggrounds.client.ClientMapData.clear();
         ClientBRState.clear();
         com.provinggrounds.client.ClientProneData.clear();
+        ClientStatsBoard.clear();
         FORCED_CRAWL.clear();
     }
 }
