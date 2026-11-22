@@ -2,7 +2,7 @@
   "type": "minecraft:chest",
   "pools": [
     {
-      "rolls": { "min": 5, "max": 12 },
+      "rolls": { "min": 2, "max": 5 },
       "entries": [
         { "type": "minecraft:loot_table", "name": "br:pools/general", "weight": 40 },
         { "type": "minecraft:loot_table", "name": "br:pools/medical", "weight": 35 },
@@ -10,34 +10,34 @@
       ]
     },
     {
-      "rolls": { "min": 2, "max": 3 },
+      "rolls": { "min": 1, "max": 2 },
       "entries": [
         {
           "type": "minecraft:item", "name": "tacz:ammo", "weight": 35,
           "functions": [
             { "function": "minecraft:set_nbt", "tag": "{AmmoId:\"provinggrounds:light\"}" },
-            { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 15, "max": 30 } }
+            { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 15, "max": 60 } }
           ]
         },
         {
           "type": "minecraft:item", "name": "tacz:ammo", "weight": 40,
           "functions": [
             { "function": "minecraft:set_nbt", "tag": "{AmmoId:\"provinggrounds:medium\"}" },
-            { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 15, "max": 30 } }
+            { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 12, "max": 48 } }
           ]
         },
         {
           "type": "minecraft:item", "name": "tacz:ammo", "weight": 10,
           "functions": [
             { "function": "minecraft:set_nbt", "tag": "{AmmoId:\"provinggrounds:shotgun\"}" },
-            { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 6, "max": 12 } }
+            { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 3, "max": 12 } }
           ]
         },
         {
           "type": "minecraft:item", "name": "tacz:ammo", "weight": 15,
           "functions": [
             { "function": "minecraft:set_nbt", "tag": "{AmmoId:\"provinggrounds:heavy\"}" },
-            { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 5, "max": 10 } }
+            { "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 6, "max": 24 } }
           ]
         }
       ]

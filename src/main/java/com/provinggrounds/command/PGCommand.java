@@ -279,6 +279,13 @@ public class PGCommand {
                 .executes(ctx -> lootList(ctx.getSource(), null))
                 .then(Commands.argument("map", IntegerArgumentType.integer(1))
                     .executes(ctx -> lootList(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "map")))))
+            // 模擬開 N 個箱子，統計內容（調整 loot table 用，不用進遊戲開箱）
+            .then(Commands.literal("simulate")
+                .then(Commands.argument("tier", StringArgumentType.word())
+                    .suggests((ctx, b) -> { for (String s : new String[] { "low", "mid", "high", "airdrop" }) b.suggest(s); return b.buildFuture(); })
+                    .then(Commands.argument("count", IntegerArgumentType.integer(1, 10000))
+                        .executes(ctx -> com.provinggrounds.modes.br.LootSimulator.run(ctx.getSource(),
+                            StringArgumentType.getString(ctx, "tier"), IntegerArgumentType.getInteger(ctx, "count"))))))
             .then(Commands.literal("count")
                 .executes(ctx -> lootCount(ctx.getSource(), null))
                 .then(Commands.argument("map", IntegerArgumentType.integer(1))
