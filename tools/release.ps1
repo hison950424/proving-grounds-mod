@@ -6,15 +6,18 @@
 #   3. 建置（gradlew build），失敗就停止
 #   4. 替換本機模組：tools\release.local.json 列出的每個 mods 資料夾，舊的 provinggrounds-*.jar 移到同層的 mods-backup
 #      （mods-backup 只保留最近 3 個版本，更舊的自動刪除），再放入新 jar。檔案被鎖住（伺服器／遊戲執行中）就停止，請關閉後重跑
+#   4b. 打包客戶端模組包：Prism 實例（release.local.json 的 clientInstance）打包成桌面上的
+#      「<packName>-<版本>.mrpack」，並刪除桌面上同名的其他版本 .mrpack（-SkipPack 時略過）
 #   5. 提交 gradle.properties 與 CHANGELOG.md、建立標籤 v<版本>、推送分支與標籤
 #   6. gh release create（測試版標成 pre-release，附上 jar 與這次的更新說明）；-SkipGitHub 時略過
 #   7. 回報版本號、jar 路徑、替換的資料夾、Release 網址
 # 安全：不用 --force、不改寫歷史、標籤或 Release 已存在就停止；腳本中沒有任何密碼或權杖。
-# 用法: powershell -ExecutionPolicy Bypass -File tools\release.ps1 -Level small -NotesFile <說明.md> [-SkipGitHub]
+# 用法: powershell -ExecutionPolicy Bypass -File tools\release.ps1 -Level small -NotesFile <說明.md> [-SkipGitHub] [-SkipPack]
 param(
     [ValidateSet('big', 'small', 'none')][string]$Level = 'small',
     [string]$NotesFile,
-    [switch]$SkipGitHub
+    [switch]$SkipGitHub,
+    [switch]$SkipPack
 )
 
 $ErrorActionPreference = 'Stop'
@@ -117,6 +120,69 @@ foreach ($dir in $modsDirs) {
     }
 }
 
+# ── 4b. 打包客戶端模組包（.mrpack）到桌面，刪除桌面上其他版本 ───────────────────
+# 格式：Modrinth 模組包（zip）＝ modrinth.index.json ＋ overrides/（匯入時原樣複製到實例的 minecraft 資料夾）。
+# 所有模組都放在 overrides/mods，不依賴線上下載；內容 = 實例的 minecraft 資料夾，但排除不該給別人的東西
+# （舊版備份 mods-backup、tacz_backup、紀錄、存檔、截圖等）。zip 內路徑一律用「/」（PS 5.1 內建壓縮會寫成「\」，Prism 匯入會壞）。
+$packFile = $null
+if (-not $SkipPack) {
+    $cfgAll = Get-Content $localCfg -Raw | ConvertFrom-Json
+    if (-not $cfgAll.clientInstance) { Stop-Release "$localCfg 缺少 clientInstance（Prism 客戶端實例資料夾），或加 -SkipPack 略過打包" }
+    $instance = [Environment]::ExpandEnvironmentVariables($cfgAll.clientInstance)
+    $mcDir = Join-Path $instance 'minecraft'
+    if (-not (Test-Path $mcDir)) { Stop-Release "找不到客戶端實例：$mcDir" }
+    $packName = if ($cfgAll.packName) { $cfgAll.packName } else { Split-Path -Leaf $instance }
+    $forge = '47.4.8'
+    $mmc = Join-Path $instance 'mmc-pack.json'
+    if (Test-Path $mmc) {
+        $f = (Get-Content $mmc -Raw | ConvertFrom-Json).components | Where-Object { $_.uid -eq 'net.minecraftforge' }
+        if ($f) { $forge = $f.version }
+    }
+    $desktop = [Environment]::GetFolderPath('Desktop')
+    $packFile = Join-Path $desktop "$packName-$version.mrpack"
+    $exclude = @('mods-backup', 'tacz_backup', 'logs', 'crash-reports', 'saves', 'screenshots', 'servers.dat_old',
+                 'coremods', 'texturepacks', 'server-resource-packs', '.fabric', 'downloads')
+    Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+    $tmp = "$packFile.tmp"
+    if (Test-Path $tmp) { Remove-Item -LiteralPath $tmp -Force }
+    try {
+        $zip = [System.IO.Compression.ZipFile]::Open($tmp, [System.IO.Compression.ZipArchiveMode]::Create)
+        try {
+            $index = [ordered]@{
+                formatVersion = 1; game = 'minecraft'; versionId = $version; name = $packName
+                summary = "Proving Grounds 客戶端（模組 v$version）"
+                files = @(); dependencies = [ordered]@{ minecraft = '1.20.1'; forge = $forge }
+            }
+            $entry = $zip.CreateEntry('modrinth.index.json')
+            $w = New-Object System.IO.StreamWriter($entry.Open(), $enc)
+            try { $w.Write(($index | ConvertTo-Json -Depth 5)) } finally { $w.Dispose() }
+            $count = 0
+            foreach ($top in Get-ChildItem -LiteralPath $mcDir -Force) {
+                if ($exclude -contains $top.Name) { continue }
+                $files = if ($top.PSIsContainer) { Get-ChildItem -LiteralPath $top.FullName -Recurse -File -Force } else { @($top) }
+                foreach ($file in $files) {
+                    $rel = $file.FullName.Substring($mcDir.Length + 1).Replace('\', '/')
+                    [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $file.FullName, "overrides/$rel",
+                        [System.IO.Compression.CompressionLevel]::Optimal)
+                    $count++
+                }
+            }
+        } finally { $zip.Dispose() }
+        Move-Item -LiteralPath $tmp $packFile -Force
+    } catch {
+        if (Test-Path $tmp) { Remove-Item -LiteralPath $tmp -Force }
+        Stop-Release "打包 .mrpack 失敗：$($_.Exception.Message)（可加 -SkipPack 略過）"
+    }
+    # 桌面上這個模組包的其他版本（含舊的不帶版本號的檔案）刪除；其他名稱的 .mrpack 不碰
+    foreach ($old in Get-ChildItem -LiteralPath $desktop -Filter '*.mrpack' -File) {
+        if ($old.FullName -ne $packFile -and $old.Name.StartsWith($packName)) {
+            Remove-Item -LiteralPath $old.FullName -Force
+            Write-Host "已刪除桌面上的舊模組包：$($old.Name)"
+        }
+    }
+    Write-Host ("模組包：{0}（{1} 個檔案，{2:N0} MB）" -f $packFile, $count, ((Get-Item $packFile).Length / 1MB))
+}
+
 # ── 5. 提交、標籤、推送 ────────────────────────────────────────────────────
 Invoke-Git add gradle.properties CHANGELOG.md
 $msgFile = Join-Path $env:TEMP "pg_release_$version.txt"
@@ -139,4 +205,5 @@ if (-not $SkipGitHub) {
 Write-Host "完成：$tag" -ForegroundColor Green
 Write-Host "jar：$jar"
 foreach ($d in $replaced) { Write-Host "已替換：$d（舊版在 mods-backup）" }
+if ($packFile) { Write-Host "客戶端模組包：$packFile" }
 Write-Host "Release：$url"
