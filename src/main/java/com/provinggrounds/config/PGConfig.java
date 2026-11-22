@@ -49,6 +49,8 @@ public class PGConfig {
     // 跳傘（計畫書 B1）
     public final ForgeConfigSpec.DoubleValue skydivePitchMin, skydivePitchMax, freefallMaxSink, freefallMinSink, freefallMaxHorizontal;
     public final ForgeConfigSpec.DoubleValue chuteSink, chuteHorizontal, skydiveToggleCooldown;
+    public final ForgeConfigSpec.BooleanValue hotbarRulesEnabled;
+    public final ForgeConfigSpec.DoubleValue wheelHoldSeconds;
 
     // ── BR：移動 ──────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.DoubleValue brSpeedMultiplier;
@@ -195,6 +197,13 @@ public class PGConfig {
             .defineInRange("chute_horizontal", 8.0, 0.0, 50.0);
         skydiveToggleCooldown = builder.comment("開傘、收傘切換的冷卻（秒）")
             .defineInRange("toggle_cooldown", 0.5, 0.0, 5.0);
+        builder.pop();
+
+        builder.comment("快捷欄規則：第 1、2 格大型槍，第 3 格手槍，第 4 格補品，第 5 格投擲物（只對 BR 進行中的參賽者生效）。").push("hotbar");
+        hotbarRulesEnabled = builder.comment("是否啟用快捷欄規則")
+            .define("hotbar_rules_enabled", true);
+        wheelHoldSeconds = builder.comment("長按快捷欄 4、5 開啟補品／投擲物輪盤的門檻（秒），短按維持原版選格")
+            .defineInRange("wheel_hold_seconds", 0.25, 0.05, 2.0);
         builder.pop();
 
         builder.push("movement");

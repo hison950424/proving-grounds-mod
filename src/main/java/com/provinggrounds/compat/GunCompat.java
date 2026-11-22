@@ -12,11 +12,19 @@ import net.minecraftforge.fml.ModList;
  */
 public final class GunCompat {
 
+    private static GunAdapter active;
+
     private GunCompat() {}
+
+    /** 物品的槍械分類；沒有槍械模組時一律 NONE。 */
+    public static GunClass classify(net.minecraft.world.item.ItemStack stack) {
+        return active == null ? GunClass.NONE : active.classify(stack);
+    }
 
     public static void init() {
         if (ModList.get().isLoaded("tacz")) {
             GunAdapter adapter = new TaczGunAdapter();
+            active = adapter;
             if (adapter.registerBlocker(BRDowned::isDowned)) {
                 ProvingGroundsMod.LOGGER.info("Gun adapter enabled: {}", adapter.name());
             }

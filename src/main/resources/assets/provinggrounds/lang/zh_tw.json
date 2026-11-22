@@ -72,6 +72,8 @@
   "provinggrounds.hud.return_in": "%s 秒後返回大廳",
   "provinggrounds.hud.outside": "圈外！距安全區 %s 格",
   "provinggrounds.hud.north": "北",
+  "provinggrounds.wheel.healing": "補品",
+  "provinggrounds.wheel.throwable": "投擲物",
   "provinggrounds.hud.hint.plane": "按%s跳傘",
   "provinggrounds.hud.hint.freefall": "自由落體｜按%s開傘",
   "provinggrounds.hud.hint.chute": "已開傘｜按%s收傘",

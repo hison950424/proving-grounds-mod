@@ -40,6 +40,7 @@ public final class ClientModEvents {
     @SubscribeEvent
     public static void onRegisterOverlays(RegisterGuiOverlaysEvent event) {
         event.registerAboveAll("br_hud", HUD.OVERLAY);
+        event.registerAboveAll("item_wheel", ClientWheel.OVERLAY);
     }
 
     @SubscribeEvent

@@ -44,4 +44,7 @@ public interface GunAdapter {
      * @return 是否成功掛上
      */
     boolean registerBlockHitListener(BlockHitListener listener);
+
+    /** 判斷物品是不是槍、是手槍還是大型槍（兩端都可呼叫）。 */
+    default GunClass classify(net.minecraft.world.item.ItemStack stack) { return GunClass.NONE; }
 }

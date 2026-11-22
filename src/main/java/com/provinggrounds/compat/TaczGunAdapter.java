@@ -131,6 +131,34 @@ public class TaczGunAdapter implements GunAdapter {
         }
     }
 
+    private final java.util.Map<net.minecraft.resources.ResourceLocation, GunClass> classCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * 槍的分類：物品 NBT 有 GunId 就是 TACZ 槍，再查 TACZ 槍械資料的類型（type 為 "pistol" 是手槍，其他都算大型槍）。
+     * 結果依 GunId 快取（槍械包重載時類型不會變）。
+     */
+    @Override
+    public GunClass classify(net.minecraft.world.item.ItemStack stack) {
+        if (stack.isEmpty() || stack.getTag() == null || !stack.getTag().contains("GunId", 8)) return GunClass.NONE;
+        net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.tryParse(stack.getTag().getString("GunId"));
+        if (id == null) return GunClass.NONE;
+        return classCache.computeIfAbsent(id, TaczGunAdapter::lookupClass);
+    }
+
+    private static GunClass lookupClass(net.minecraft.resources.ResourceLocation gunId) {
+        try {
+            Class<?> api = Class.forName("com.tacz.guns.api.TimelessAPI");
+            Object opt = api.getMethod("getCommonGunIndex", net.minecraft.resources.ResourceLocation.class).invoke(null, gunId);
+            if (opt instanceof java.util.Optional<?> o && o.isPresent()) {
+                Object type = o.get().getClass().getMethod("getType").invoke(o.get());
+                return "pistol".equals(type) ? GunClass.PISTOL : GunClass.LARGE;
+            }
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // 查不到類型就當大型槍
+        }
+        return GunClass.LARGE;
+    }
+
     /** 找「回傳 LivingEntity、沒有參數」的方法（TACZ 1.1.x 是 getShooter）。 */
     private static Method findShooterGetter(Class<?> type) {
         try {

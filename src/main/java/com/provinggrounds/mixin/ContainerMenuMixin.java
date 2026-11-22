@@ -1,0 +1,44 @@
+package com.provinggrounds.mixin;
+
+import com.provinggrounds.modes.br.HotbarRules;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+/**
+ * 檔案: ContainerMenuMixin.java
+ * 目的: 快捷欄規則的點擊檢查（計畫書 B2）。所有容器畫面（含自己的物品欄）的點擊都經過 AbstractContainerMenu.clicked，
+ *       包含滑鼠點擊、Shift 快速移動、拖曳分堆、數字鍵交換、F 鍵換到副手、雙擊收集。
+ *       只在伺服器端、規則生效的玩家身上作用；客戶端畫面上先看到的結果會被伺服器更正回來。
+ *   為什麼用 Mixin：Forge 沒有「容器點擊」的事件可以取消。
+ *   方法名稱同時寫開發環境名稱（clicked）與 SRG 名稱（m_150399_），不需要 refmap。
+ */
+@Mixin(AbstractContainerMenu.class)
+public abstract class ContainerMenuMixin {
+
+    private static final ThreadLocal<HotbarRules.Snapshot> provinggrounds$snapshot = new ThreadLocal<>();
+
+    @Inject(method = { "clicked", "m_150399_" }, at = @At("HEAD"), cancellable = true, remap = false)
+    private void provinggrounds$beforeClick(int slotId, int button, ClickType type, Player player, CallbackInfo ci) {
+        provinggrounds$snapshot.remove();
+        if (!(player instanceof ServerPlayer sp) || !HotbarRules.active(sp)) return;
+        HotbarRules.Snapshot[] out = new HotbarRules.Snapshot[1];
+        if (HotbarRules.beforeClick((AbstractContainerMenu) (Object) this, slotId, type, sp, out)) {
+            ci.cancel();
+            return;
+        }
+        provinggrounds$snapshot.set(out[0]);
+    }
+
+    @Inject(method = { "clicked", "m_150399_" }, at = @At("RETURN"), remap = false)
+    private void provinggrounds$afterClick(int slotId, int button, ClickType type, Player player, CallbackInfo ci) {
+        HotbarRules.Snapshot snap = provinggrounds$snapshot.get();
+        provinggrounds$snapshot.remove();
+        if (snap != null && player instanceof ServerPlayer sp) HotbarRules.afterClick((AbstractContainerMenu) (Object) this, sp, snap);
+    }
+}

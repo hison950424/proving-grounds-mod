@@ -132,6 +132,19 @@ public final class AmmoCategories {
         }
     }
 
+    /** 一份這把槍用的子彈（半組～一組）；不是槍或查不到時回傳空物品。 */
+    public static net.minecraft.world.item.ItemStack ammoFor(net.minecraft.world.item.ItemStack gun, net.minecraft.util.RandomSource random) {
+        net.minecraft.world.item.Item ammoItem = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new ResourceLocation("tacz", "ammo"));
+        if (ammoItem == null || ammoItem == net.minecraft.world.item.Items.AIR || gun.getTag() == null) return net.minecraft.world.item.ItemStack.EMPTY;
+        ResourceLocation gunId = ResourceLocation.tryParse(gun.getTag().getString("GunId"));
+        ResourceLocation ammoId = gunId != null ? ammoOfGun(gunId) : null;
+        if (ammoId == null) return net.minecraft.world.item.ItemStack.EMPTY;
+        int max = stackSizeOf(ammoId);
+        net.minecraft.world.item.ItemStack ammo = new net.minecraft.world.item.ItemStack(ammoItem, Math.max(1, max / 2 + random.nextInt(max - max / 2 + 1)));
+        ammo.getOrCreateTag().putString("AmmoId", ammoId.toString());
+        return ammo;
+    }
+
     /** 這把槍吃的子彈 ID（已套用大類對照）。 */
     @Nullable
     private static ResourceLocation ammoOfGun(ResourceLocation gunId) {
