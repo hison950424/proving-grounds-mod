@@ -899,6 +899,30 @@ public class BattleRoyaleMode {
         }
     }
 
+    /**
+     * 登機倒數期間參賽者按「取消準備」：退出這一局並還原。
+     * 剩下的線上參賽者少於最少開始人數時，整局取消、全員回大廳（計畫書 A6）。
+     */
+    public void withdraw(ServerPlayer p) {
+        if (phase != Phase.PREPARING) return;
+        Participant part = participants.remove(p.getUUID());
+        if (part == null) return;
+        restore(p);
+        broadcast(Component.literal(part.name + " 取消準備，退出本局。").withStyle(ChatFormatting.YELLOW));
+        List<ServerPlayer> remaining = participantPlayers();
+        int min = PGConfig.SERVER.minPlayersToStart.get();
+        if (remaining.size() < min) {
+            broadcast(Component.literal(String.format("剩下 %d 人，少於最少開始人數 %d 人，取消開局。", remaining.size(), min))
+                .withStyle(ChatFormatting.RED));
+            forceStop(false);
+            GameManager.get().reset();
+            return;
+        }
+        GameManager.get().removePlayer(p);
+        if (level != null) TeamManager.get().syncVanillaTeams(level.getServer(), remaining);
+        startTeamCount = countAliveTeams();
+    }
+
     /** 參賽者離線：PREPARING 期間直接移出；遊戲中視為淘汰（物品掉在原地，沒有復活牌）。 */
     public void onLogout(ServerPlayer p) {
         Participant part = participants.get(p.getUUID());

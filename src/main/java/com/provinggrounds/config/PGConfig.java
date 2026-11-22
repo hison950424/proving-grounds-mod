@@ -116,6 +116,7 @@ public class PGConfig {
     public final ForgeConfigSpec.DoubleValue proneCooldownSeconds;
 
     // ── 防彈（所有模式通用） ───────────────────────────────────────────────────
+    public final ForgeConfigSpec.DoubleValue armorDurabilityMultiplier;
     public final ForgeConfigSpec.BooleanValue bulletproofEnabled;
     public final ForgeConfigSpec.BooleanValue bulletproofHeadBodySplit;
     public final ForgeConfigSpec.DoubleValue bulletproofLeather;
@@ -278,6 +279,8 @@ public class PGConfig {
                 "原版護甲值本來就會再擋一次一般部分（TACZ 原本的行為）。")
             .push("bulletproof");
         bulletproofEnabled = builder.comment("是否啟用防彈").define("enabled", true);
+        armorDurabilityMultiplier = builder.comment("所有防具的最大耐久度倍率（2.0 = 原版兩倍，例如鐵頭盔 165 → 330）。登入時同步到客戶端")
+            .defineInRange("armor_durability_multiplier", 2.0, 0.1, 10.0);
         bulletproofHeadBodySplit = builder.comment("爆頭只看頭盔、身體只看其他三件；false = 不分部位，四件各占 1/4")
             .define("head_body_split", true);
         bulletproofLeather = builder.comment("皮革全套減傷").defineInRange("leather", 0.10, 0.0, 0.95);

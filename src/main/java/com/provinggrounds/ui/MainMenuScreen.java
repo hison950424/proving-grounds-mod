@@ -1,5 +1,6 @@
 package com.provinggrounds.ui;
 
+import com.provinggrounds.client.ClientBRState;
 import com.provinggrounds.client.ClientLobbyData;
 import com.provinggrounds.client.ClientMenuData;
 import com.provinggrounds.core.LobbyManager;
@@ -23,12 +24,12 @@ import java.util.UUID;
 /**
  * 檔案: MainMenuScreen.java
  * 目的: 主選單（只在客戶端使用）。按 M 打開。CS2 / Valorant 深色風格。
- *   首頁：BATTLE ROYALE（大按鈕）、TDM / DOMINATION / GUNFIGHT（Phase 2，先停用）、底部戰績欄。
+ *   首頁：大逃殺（大按鈕）、團隊死鬥／據點爭奪／槍戰對決（即將推出，先停用）、底部戰績欄。
  *   大廳頁（所有人都看得到，資料由伺服器 LobbyStatePacket 即時同步）：
  *     左欄：地圖、縮圈、一般／競技、分隊方式、隊伍數、自動分隊、全部移出隊伍（只有管理員能改）
  *     右欄：各隊名單（✔ = 已準備）。點隊伍標題 = 加入那一隊；
- *           管理員先點玩家名字選取，再點隊伍標題 = 把他移過去，或按「設為觀戰」。
- *     底部：準備／加入遊戲、開始（遊戲中管理員看到「結束遊戲」，按兩次才執行）、強制開始／取消倒數、返回。
+ *           管理員把玩家名字拖到另一隊（含孤狼、未分隊、觀戰）即可換隊；或先點名字選取、再點隊伍標題。
+ *     底部：準備（登機倒數中可「取消準備」退出本局）／加入遊戲、開始（遊戲中管理員看到「結束遊戲」，按兩次才執行）、強制開始／取消倒數、返回。
  *   所有操作都送 LobbyActionPacket，權限由伺服器檢查。
  */
 public class MainMenuScreen extends Screen {
@@ -138,12 +139,9 @@ public class MainMenuScreen extends Screen {
         setting(sx + sw - half, y, half, Tr.t("lobby.clear_teams"), canEdit, () -> send(LobbyManager.Action.CLEAR_TEAMS, 0));
         y += 24;
 
-        // 管理員：選取玩家後的工具
+        // 管理員：選取玩家後可以取消選取（移動玩家改用拖移或「點玩家 → 點隊伍標題」）
         LobbyStatePacket.Entry sel = find(lobby, selected);
         if (op && sel != null) {
-            setting(sx, y, sw, Tr.t(sel.spectator() ? "lobby.unspectate" : "lobby.spectate", sel.name()), canEdit,
-                () -> send(LobbyManager.Action.SET_SPECTATOR, sel.spectator() ? 0 : 1, sel.id()));
-            y += 20;
             setting(sx, y, sw, Tr.t("lobby.deselect"), true, () -> { selected = null; rebuildWidgets(); });
         }
 
@@ -164,10 +162,12 @@ public class MainMenuScreen extends Screen {
             join.active = !me.joinPending();
             addRenderableWidget(join);
         } else {
-            boolean ready = me != null && me.ready();
+            // 登機倒數期間（已開局、還沒上飛機）也能按「取消準備」退出這一局
+            boolean preparing = ClientBRState.get().phase() == ClientBRState.PHASE_PREPARING;
+            boolean ready = me != null && (me.ready() || preparing);
             PGButton r = new PGButton(bx, by, bw, 20, Tr.c(ready ? "lobby.unready" : "lobby.ready"), !ready, false,
                 () -> send(LobbyManager.Action.TOGGLE_READY, 0));
-            r.active = inLobby && me != null;
+            r.active = (inLobby || preparing) && me != null;
             addRenderableWidget(r);
         }
         boolean counting = lobby != null && lobby.countdownSeconds() >= 0;
@@ -233,27 +233,93 @@ public class MainMenuScreen extends Screen {
 
     // ── 點擊名單 ────────────────────────────────────────────────────────────
 
+    // 管理員拖移玩家：按下玩家名字時記下，滑鼠移動超過 3 像素才算拖移，放開時看落在哪一隊
+    @Nullable private UUID dragId;
+    @Nullable private String dragName;
+    private double dragStartX, dragStartY;
+    private boolean dragging;
+
+    @Nullable
+    private Row rowAt(double mx, double my) {
+        if (mx < listX || mx >= listX + listW || my < listY || my >= listY + listH) return null;
+        int i = scroll + (int) ((my - listY) / ROW_H);
+        return i >= 0 && i < rows.size() ? rows.get(i) : null;
+    }
+
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (view == View.LOBBY && button == 0 && mx >= listX && mx < listX + listW && my >= listY && my < listY + listH) {
-            int i = scroll + (int) ((my - listY) / ROW_H);
-            if (i >= 0 && i < rows.size()) {
-                onRowClicked(rows.get(i));
+        if (view == View.LOBBY && button == 0) {
+            Row row = rowAt(mx, my);
+            if (row != null) {
+                MenuDataPacket menu = ClientMenuData.get();
+                if (row.entry() != null && menu != null && menu.isOp()) {
+                    // 先不動作：放開時才決定是「點擊選取」還是「拖移換隊」
+                    dragId = row.entry().id();
+                    dragName = row.entry().name();
+                    dragStartX = mx;
+                    dragStartY = my;
+                    dragging = false;
+                } else {
+                    onRowClicked(row);
+                }
                 return true;
             }
         }
         return super.mouseClicked(mx, my, button);
     }
 
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (dragId != null && button == 0) {
+            if (!dragging && Math.hypot(mx - dragStartX, my - dragStartY) > 3) dragging = true;
+            return true;
+        }
+        return super.mouseDragged(mx, my, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        if (dragId != null && button == 0) {
+            UUID id = dragId;
+            boolean wasDragging = dragging;
+            dragId = null;
+            dragging = false;
+            if (wasDragging) {
+                Row target = rowAt(mx, my);
+                if (target != null) moveSelected(id, target.team());
+                else PGButton.playDeny();
+            } else {
+                // 沒有拖移 = 點擊：選取／取消選取
+                PGButton.playClick(1.0f);
+                selected = id.equals(selected) ? null : id;
+                rebuildWidgets();
+            }
+            return true;
+        }
+        return super.mouseReleased(mx, my, button);
+    }
+
+    /** 管理員把玩家移到某一隊：1.. 隊伍、0 孤狼、-1 未分隊、-2 觀戰。 */
+    private void moveSelected(UUID id, int team) {
+        LobbyStatePacket.Entry e = find(ClientLobbyData.get(), id);
+        if (e == null) { PGButton.playDeny(); return; }
+        if (team == -2) {
+            if (e.spectator()) { PGButton.playDeny(); return; }
+            send(LobbyManager.Action.SET_SPECTATOR, 1, id);
+        } else {
+            if (!e.spectator() && e.team() == team) { PGButton.playDeny(); return; } // 已經在這一隊
+            send(LobbyManager.Action.SET_PLAYER_TEAM, team, id);
+        }
+        PGButton.playClick(1.0f);
+        selected = null;
+        rebuildWidgets();
+    }
+
     private void onRowClicked(Row row) {
         MenuDataPacket menu = ClientMenuData.get();
         boolean op = menu != null && menu.isOp();
         if (row.entry() != null) {
-            if (!op) { PGButton.playDeny(); return; }
-            // 管理員：點玩家 = 選取／取消選取
-            PGButton.playClick(1.0f);
-            selected = row.entry().id().equals(selected) ? null : row.entry().id();
-            rebuildWidgets();
+            PGButton.playDeny(); // 一般玩家不能選取別人（管理員的點擊在 mouseReleased 處理）
             return;
         }
         // 點隊伍標題
@@ -261,18 +327,12 @@ public class MainMenuScreen extends Screen {
         LobbyStatePacket.Entry sel = find(lobby, selected);
         LobbyStatePacket.Entry me = self(lobby);
         boolean free = lobby != null && LobbyManager.TeamMode.values()[lobby.teamModeOrdinal()] == LobbyManager.TeamMode.FREE;
-        if (row.team() == -2) {
-            if (op && sel != null && !sel.spectator()) {
-                PGButton.playClick(1.0f);
-                send(LobbyManager.Action.SET_SPECTATOR, 1, sel.id());
-            } else {
-                PGButton.playDeny();
-            }
+        if (op && sel != null) {
+            moveSelected(sel.id(), row.team()); // 管理員：先點玩家、再點隊伍標題（拖移的替代方式）
+        } else if (row.team() == -2) {
+            PGButton.playDeny();
         } else if (row.team() >= 0) {
-            if (op && sel != null) {
-                PGButton.playClick(1.0f);
-                send(LobbyManager.Action.SET_PLAYER_TEAM, row.team(), sel.id());
-            } else if ((free || op) && me != null && !me.spectator() && lobby.inLobby()) {
+            if ((free || op) && me != null && !me.spectator() && lobby.inLobby()) {
                 PGButton.playClick(1.0f);
                 send(LobbyManager.Action.JOIN_TEAM, row.team());
             } else {
@@ -392,9 +452,27 @@ public class MainMenuScreen extends Screen {
             g.drawString(font, more, listX + listW - font.width(more) - 3, listY + listH - 9, TEXT_DIM, false);
         }
 
-        // 名單下方提示
+        // 拖移中：標出要放進的那一隊，名字跟著游標
+        if (dragging && dragName != null) {
+            Row target = rowAt(mouseX, mouseY);
+            if (target != null) {
+                for (int i = 0; i < visible && scroll + i < rows.size(); i++) {
+                    if (rows.get(scroll + i).team() == target.team()) {
+                        int ry = listY + i * ROW_H;
+                        g.fill(listX, ry, listX + listW, ry + ROW_H, 0x30E8D060);
+                    }
+                }
+            }
+            g.pose().pushPose();
+            g.pose().translate(0, 0, 200);
+            g.fill(mouseX + 6, mouseY - 2, mouseX + 10 + font.width(dragName), mouseY + 10, 0xE0161C28);
+            g.drawString(font, dragName, mouseX + 8, mouseY, ACCENT, false);
+            g.pose().popPose();
+        }
+
+        // 名單下方提示（靠右，在名單正下方）
         String hint = lobbyHint(lobby, menu);
-        if (hint != null) g.drawString(font, hint, left + 12, top + panelH - 42, WARN, false);
+        if (hint != null) g.drawString(font, hint, left + panelW - 12 - font.width(hint), top + panelH - 42, WARN, false);
     }
 
     @Nullable

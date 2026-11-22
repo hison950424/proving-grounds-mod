@@ -4,7 +4,8 @@
   "package": "com.provinggrounds.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "GunDataMixin"
+    "GunDataMixin",
+    "ItemStackMixin"
   ],
   "injectors": {
     "defaultRequire": 0

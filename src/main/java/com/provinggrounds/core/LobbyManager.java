@@ -166,6 +166,12 @@ public final class LobbyManager {
             endGame(sender);
             return;
         }
+        // 登機倒數期間按「取消準備」：退出這一局（人數不足時整局取消，回到大廳）
+        if (action == Action.TOGGLE_READY && !lobby && BattleRoyaleMode.get().getPhase() == BattleRoyaleMode.Phase.PREPARING) {
+            BattleRoyaleMode.get().withdraw(sender);
+            dirty = true;
+            return;
+        }
         if (!lobby) {
             deny(sender, "遊戲進行中，大廳設定暫時不能改。");
             return;
@@ -220,8 +226,11 @@ public final class LobbyManager {
                 }
             }
             case SET_PLAYER_TEAM -> {
-                if (target == null || arg < 0 || arg > teamCount) return false;
-                TeamManager.get().assignTeam(target, TeamManager.Team.of(arg));
+                // arg：1.. 隊伍、0 孤狼、-1 未分隊。觀戰者被拖到隊伍裡 → 先結束觀戰再分隊
+                if (target == null || arg < -1 || arg > teamCount) return false;
+                if (isSpectator(target)) leaveSpectate(target);
+                if (arg == -1) TeamManager.get().unassign(target);
+                else TeamManager.get().assignTeam(target, TeamManager.Team.of(arg));
             }
             case CLEAR_TEAMS -> {
                 TeamManager.get().clearAssignments();
