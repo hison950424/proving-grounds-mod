@@ -627,6 +627,8 @@ public class BattleRoyaleMode {
             ServerPlayer p = player(part.id);
             if (p == null || !circle.isOutside(p.getX(), p.getZ())) continue;
             p.hurt(p.damageSources().outOfBorder(), damage);
+            // 原版受傷後會把伺服器的移動速度強制送回客戶端（hurtMarked），每秒扣血一次就像被推一下：圈外傷害不送
+            p.hurtMarked = false;
         }
     }
 

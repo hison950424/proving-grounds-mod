@@ -151,6 +151,7 @@ public final class ClientForgeEvents {
     /**
      * 中彈不晃畫面：原版受傷時用 hurtTime 讓鏡頭歪一下。每一幀畫面前檢查，
      * 如果最近一次受傷是 TACZ 子彈造成的，就把 hurtTime 歸零（設定 [combat] bullet_hurt_shake = false 時）。
+     * 圈外傷害（原版「世界邊界外」傷害類型）一律不晃，避免每秒扣血都像被擊退。
      */
     @SubscribeEvent
     public static void onRenderTick(TickEvent.RenderTickEvent event) {
@@ -158,7 +159,9 @@ public final class ClientForgeEvents {
         net.minecraft.client.player.LocalPlayer p = Minecraft.getInstance().player;
         if (p == null || p.hurtTime <= 0) return;
         net.minecraft.world.damagesource.DamageSource src = p.getLastDamageSource();
-        if (src == null || !src.is(com.provinggrounds.events.BulletHitEvents.BULLETS)) return;
+        if (src == null) return;
+        if (src.is(net.minecraft.world.damagesource.DamageTypes.OUTSIDE_BORDER)) { p.hurtTime = 0; return; }
+        if (!src.is(com.provinggrounds.events.BulletHitEvents.BULLETS)) return;
         boolean shake;
         try {
             shake = com.provinggrounds.config.PGConfig.SERVER.bulletHurtShake.get();

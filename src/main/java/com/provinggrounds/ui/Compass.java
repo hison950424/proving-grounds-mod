@@ -62,7 +62,7 @@ public final class Compass {
         } catch (IllegalStateException ignored) {
             // 設定還沒載入：用預設值
         }
-        // 畫面太窄（或 GUI 縮放很大）時自動縮小，避免蓋到左上的小地圖（右邊緣約 x = 92）與右上的存活人數
+        // 畫面太窄（或 GUI 縮放很大）時自動縮小，避免蓋到左上的小地圖（右邊緣約 x = 76）與右上的存活人數
         double maxScale = (width - 2 * 96.0) / (BAR_W + 8);
         if (maxScale < scale) scale = Math.max(0.4, maxScale);
         Entity cam = mc.getCameraEntity() != null ? mc.getCameraEntity() : mc.player;

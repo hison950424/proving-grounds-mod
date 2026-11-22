@@ -637,7 +637,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 60,
+          "weight": 90,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -648,7 +648,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 60,
+          "weight": 90,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -659,7 +659,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 50,
+          "weight": 75,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -670,7 +670,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 40,
+          "weight": 60,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -681,7 +681,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 60,
+          "weight": 90,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -692,7 +692,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 55,
+          "weight": 83,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -703,7 +703,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 55,
+          "weight": 83,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -714,7 +714,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 55,
+          "weight": 83,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -725,7 +725,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 55,
+          "weight": 83,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -736,7 +736,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 50,
+          "weight": 75,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -747,7 +747,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 50,
+          "weight": 75,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -758,7 +758,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 45,
+          "weight": 68,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -769,7 +769,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 40,
+          "weight": 60,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -780,7 +780,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 35,
+          "weight": 53,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -791,7 +791,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 50,
+          "weight": 75,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -802,7 +802,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 45,
+          "weight": 68,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -813,7 +813,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 55,
+          "weight": 83,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -824,7 +824,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 55,
+          "weight": 83,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -835,7 +835,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 50,
+          "weight": 75,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -846,7 +846,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 50,
+          "weight": 75,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -857,7 +857,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 45,
+          "weight": 68,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -868,7 +868,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 55,
+          "weight": 83,
           "functions": [
             {
               "function": "minecraft:set_nbt",
@@ -879,7 +879,7 @@
         {
           "type": "minecraft:item",
           "name": "tacz:attachment",
-          "weight": 50,
+          "weight": 75,
           "functions": [
             {
               "function": "minecraft:set_nbt",

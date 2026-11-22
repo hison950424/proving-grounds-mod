@@ -48,12 +48,19 @@ public final class HUD {
 
     // ── 右上：存活人數 ──────────────────────────────────────────────────────
 
-    /** 右上角：存活人數 / 隊伍數 / 身上的復活牌。回傳下方可用的 y（擊殺資訊接在下面）。 */
+    /** 存活與隊伍指示器的縮放（原本的 65%，也就是縮小 35%）。 */
+    private static final float ALIVE_SCALE = 0.65f;
+
+    /** 右上角（貼齊）：存活人數 / 隊伍數 / 身上的復活牌。回傳下方可用的 y（擊殺資訊接在下面）。 */
     private static int renderAlive(GuiGraphics g, Font font, BRStatePacket s, int w) {
         if (s.phase() == ClientBRState.PHASE_PREPARING) return 8;
         boolean cards = s.cardsHeld() > 0;
         int boxW = 96, boxH = cards ? 47 : 34;
-        int x = w - boxW - 8, y = 8;
+        // 以右上角為原點縮小，畫在 (-boxW, 0) ～ (0, boxH)，整塊貼齊螢幕右上角
+        g.pose().pushPose();
+        g.pose().translate(w, 0, 0);
+        g.pose().scale(ALIVE_SCALE, ALIVE_SCALE, 1);
+        int x = -boxW, y = 0;
         panel(g, x, y, boxW, boxH);
         g.drawString(font, Tr.t("hud.alive"), x + PAD + 2, y + PAD, TEXT_DIM, false);
         g.drawString(font, String.valueOf(s.alivePlayers()), x + PAD + 30, y + PAD, TEXT, false);
@@ -63,7 +70,8 @@ public final class HUD {
             g.drawString(font, Tr.t("hud.cards"), x + PAD + 2, y + PAD + 26, TEXT_DIM, false);
             g.drawString(font, "×" + s.cardsHeld(), x + PAD + 42, y + PAD + 26, ACCENT, false);
         }
-        return y + boxH + 4;
+        g.pose().popPose();
+        return Math.round(boxH * ALIVE_SCALE) + 4;
     }
 
     // ── 左上：小地圖 ────────────────────────────────────────────────────────
@@ -76,7 +84,7 @@ public final class HUD {
         if (s.phase() != ClientBRState.PHASE_PLANE && s.phase() != ClientBRState.PHASE_ACTIVE) return 8;
         net.minecraft.world.entity.Entity cam = mc.getCameraEntity();
         if (cam == null) return 8;
-        int x = 8, y = 8;
+        int x = 2, y = 2; // 外框 2 像素：整塊貼齊螢幕左上角
         g.fill(x - 2, y - 2, x + MINIMAP + 2, y + MINIMAP + 2, BG);
         MapRender.View v = new MapRender.View(x, y, MINIMAP, MINIMAP,
             cam.getX() - MINIMAP_SPAN / 2, cam.getZ() - MINIMAP_SPAN / 2, MINIMAP_SPAN);
@@ -126,7 +134,7 @@ public final class HUD {
             default -> { return; }
         }
         int boxW = Math.max(MINIMAP, Math.max(font.width(title), font.width(line)) + PAD * 2 + 4);
-        int x = 8, y = topY;
+        int x = 0, y = topY; // 跟小地圖一樣貼齊左邊
         panel(g, x, y, boxW, 34);
         g.drawString(font, title, x + PAD + 2, y + PAD, ACCENT, false);
         g.drawString(font, line, x + PAD + 2, y + PAD + 13, lineColor, false);
