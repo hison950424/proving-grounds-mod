@@ -97,7 +97,42 @@ public class PGCommand {
                     .executes(ctx -> stats(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                     .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> stats(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))
+
+                // 管理員工具物品（B6～B10）
+                .then(Commands.literal("give").requires(OP)
+                    .then(Commands.literal("tool")
+                        .then(Commands.argument("name", StringArgumentType.word())
+                            .suggests((ctx, b) -> {
+                                for (var t : com.provinggrounds.item.AdminToolItem.Tool.values()) b.suggest(t.id);
+                                b.suggest("all");
+                                return b.buildFuture();
+                            })
+                            .executes(ctx -> giveTool(ctx.getSource(), StringArgumentType.getString(ctx, "name"))))))
+                // 復原最近一次刪除的浮空文字（與 B10 物品共用同一段程式）
+                .then(Commands.literal("text").requires(OP)
+                    .then(Commands.literal("undo").executes(ctx -> {
+                        Component msg = com.provinggrounds.admin.FloatText.undo(ctx.getSource().getServer());
+                        ctx.getSource().sendSuccess(() -> msg, true);
+                        return 1;
+                    })))
         );
+    }
+
+    private static int giveTool(CommandSourceStack src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        var p = src.getPlayerOrException();
+        int given = 0;
+        for (var t : com.provinggrounds.item.AdminToolItem.Tool.values()) {
+            if (!name.equals("all") && !name.equals(t.id)) continue;
+            var stack = new net.minecraft.world.item.ItemStack(com.provinggrounds.registry.PGBlocks.ADMIN_TOOLS.get(t).get());
+            if (!p.getInventory().add(stack)) p.drop(stack, false);
+            given++;
+        }
+        if (given == 0) {
+            fail(src, "沒有這個工具：" + name + "（可用：float_text、text_eraser、spawn_placer、spawn_viewer、text_undo、all）");
+            return 0;
+        }
+        ok(src, "已給予 " + given + " 個管理工具。", false);
+        return given;
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -368,20 +403,10 @@ public class PGCommand {
     }
 
     private static int lootAdd(CommandSourceStack src, @Nullable Integer mapId) {
-        MapRegistry.BRMap m = resolveMap(src, mapId);
-        if (m == null) return 0;
-        BlockPos pos = BlockPos.containing(src.getPosition());
-        if (!m.contains(pos.getX() + 0.5, pos.getZ() + 0.5)) {
-            fail(src, String.format("這個位置在地圖 #%d 範圍外（中心 %.0f, %.0f，半徑 %.0f）。", m.id, m.centerX, m.centerZ, m.radius));
-            return 0;
-        }
-        if (MapRegistry.get(src.getServer()).addPoint(m, pos)) {
-            ok(src, String.format("已在地圖 #%d 新增點位 (%d, %d, %d)，共 %d 個。",
-                m.id, pos.getX(), pos.getY(), pos.getZ(), m.lootPoints.size()), false);
-            return 1;
-        }
-        fail(src, "這個位置已經是點位了。");
-        return 0;
+        // 與箱子生成點放置物品（B8）共用同一段程式
+        Component msg = com.provinggrounds.admin.AdminTools.addLootPoint(src.getServer(), BlockPos.containing(src.getPosition()), mapId);
+        src.sendSuccess(() -> msg, false);
+        return msg.getStyle().getColor() == net.minecraft.network.chat.TextColor.fromLegacyFormat(ChatFormatting.GREEN) ? 1 : 0;
     }
 
     private static int lootRemove(CommandSourceStack src, @Nullable Integer mapId) {

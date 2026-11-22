@@ -53,6 +53,8 @@ public class PGConfig {
     public final ForgeConfigSpec.DoubleValue wheelHoldSeconds;
     public final ForgeConfigSpec.IntValue backpackLevel1Slots, backpackLevel2Slots, backpackLevel3Slots;
     public final ForgeConfigSpec.DoubleValue mvpKill, mvpAssist, mvpDamagePerPoint, mvpRevive, mvpAltar, mvpWinBonus;
+    public final ForgeConfigSpec.DoubleValue adminTextDeleteRange, adminSpawnViewRange;
+    public final ForgeConfigSpec.IntValue adminTextUndoMax;
 
     // ── BR：移動 ──────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.DoubleValue brSpeedMultiplier;
@@ -338,6 +340,12 @@ public class PGConfig {
         bulletproofDiamond = builder.comment("鑽石全套減傷").defineInRange("diamond", 0.30, 0.0, 0.95);
         bulletproofNetherite = builder.comment("獄髓全套減傷").defineInRange("netherite", 0.40, 0.0, 0.95);
         bulletproofTurtle = builder.comment("海龜殼（只有頭盔）全套減傷（占位）").defineInRange("turtle", 0.10, 0.0, 0.95);
+        builder.pop();
+
+        builder.comment("管理員工具物品（浮空文字、箱子生成點）").push("admin_tools");
+        adminTextDeleteRange = builder.comment("清除浮空文字：找最近一個的範圍（格）").defineInRange("text_delete_range", 16.0, 1.0, 256.0);
+        adminTextUndoMax = builder.comment("復原刪除文字：最多保留幾筆刪除紀錄").defineInRange("text_undo_max", 10, 1, 100);
+        adminSpawnViewRange = builder.comment("顯示箱子生成點：只畫玩家周圍幾格內的點").defineInRange("spawn_view_range", 64.0, 8.0, 512.0);
         builder.pop();
 
         builder.comment("中彈效果：被 TACZ 子彈打中時的擊退與畫面抖動。").push("combat");

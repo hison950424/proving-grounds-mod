@@ -17,7 +17,7 @@ import java.util.Optional;
 public final class PGNetwork {
 
     /** 封包格式改變時要加 1，舊版客戶端連線時會直接顯示版本不符（7 = 跳傘改版）。 */
-    private static final String VERSION = "11";
+    private static final String VERSION = "12";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ProvingGroundsMod.MOD_ID, "main"),
@@ -57,6 +57,11 @@ public final class PGNetwork {
             StatsPersonalPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, StatsLeaderboardPacket.class, StatsLeaderboardPacket::encode, StatsLeaderboardPacket::decode,
             StatsLeaderboardPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, SpawnPointsPacket.class, SpawnPointsPacket::encode, SpawnPointsPacket::decode,
+            SpawnPointsPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        // 雙向：伺服器叫客戶端開輸入畫面、客戶端送回文字
+        CHANNEL.registerMessage(id++, FloatTextPacket.class, FloatTextPacket::encode, FloatTextPacket::decode,
+            FloatTextPacket::handle, Optional.empty());
     }
 
     /** 客戶端 → 伺服器。 */

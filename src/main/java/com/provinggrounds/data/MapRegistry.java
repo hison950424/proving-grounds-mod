@@ -93,7 +93,7 @@ public class MapRegistry extends SavedData {
 
     public boolean addPoint(BRMap map, BlockPos pos) {
         boolean added = map.lootPoints.add(pos.immutable());
-        if (added) setDirty();
+        if (added) { setDirty(); com.provinggrounds.admin.SpawnPointView.changed(); }
         return added;
     }
 
@@ -106,14 +106,14 @@ public class MapRegistry extends SavedData {
             double d = p.distSqr(pos);
             if (d <= bestSq) { bestSq = d; best = p; }
         }
-        if (best != null) { map.lootPoints.remove(best); setDirty(); }
+        if (best != null) { map.lootPoints.remove(best); setDirty(); com.provinggrounds.admin.SpawnPointView.changed(); }
         return best;
     }
 
     public int clearPoints(BRMap map) {
         int n = map.lootPoints.size();
         map.lootPoints.clear();
-        if (n > 0) setDirty();
+        if (n > 0) { setDirty(); com.provinggrounds.admin.SpawnPointView.changed(); }
         return n;
     }
 

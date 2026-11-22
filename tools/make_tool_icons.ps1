@@ -1,0 +1,108 @@
+﻿# 檔案: make_tool_icons.ps1
+# 目的: 產生五個管理員工具物品的 16x16 貼圖（計畫書 B6～B10）：深色圓角底、金黃色 #E8D060 單色圖示。
+# 用法: powershell -ExecutionPolicy Bypass -File tools\make_tool_icons.ps1
+Add-Type -AssemblyName System.Drawing
+$out = Join-Path (Split-Path -Parent $PSScriptRoot) 'src\main\resources\assets\provinggrounds\textures\item'
+New-Item -ItemType Directory -Force $out | Out-Null
+
+# 圖示（# = 金黃，. = 透明，底色另外畫）；每張 14x14，放在 16x16 底的中間
+$icons = [ordered]@{
+    float_text = @(       # 文字牌加筆
+        '..............',
+        '.##########...',
+        '.#........#...',
+        '.#.######.#...',
+        '.#........#...',
+        '.#.####...#.#.',
+        '.#.......#.#..',
+        '.#######.##...',
+        '........##....',
+        '.......##.....',
+        '......##......',
+        '.....#........',
+        '..............',
+        '..............')
+    text_eraser = @(      # 叉號
+        '..............',
+        '.##........##.',
+        '.###......###.',
+        '..###....###..',
+        '...###..###...',
+        '....######....',
+        '.....####.....',
+        '.....####.....',
+        '....######....',
+        '...###..###...',
+        '..###....###..',
+        '.###......###.',
+        '.##........##.',
+        '..............')
+    spawn_placer = @(     # 箱子加加號
+        '..........##..',
+        '..........##..',
+        '........######',
+        '........######',
+        '..........##..',
+        '.########.##..',
+        '.#......#.....',
+        '.########.....',
+        '.#......#.....',
+        '.#..##..#.....',
+        '.#......#.....',
+        '.########.....',
+        '..............',
+        '..............')
+    spawn_viewer = @(     # 眼睛
+        '..............',
+        '..............',
+        '..............',
+        '....######....',
+        '..##......##..',
+        '.#....##....#.',
+        '#....####....#',
+        '#....####....#',
+        '.#....##....#.',
+        '..##......##..',
+        '....######....',
+        '..............',
+        '..............',
+        '..............')
+    text_undo = @(        # 倒轉的圓弧箭頭
+        '..............',
+        '...#..........',
+        '..##..........',
+        '.#########....',
+        '..##......#...',
+        '...#.......#..',
+        '...........#..',
+        '...........#..',
+        '...........#..',
+        '..........#...',
+        '..#......#....',
+        '...######.....',
+        '..............',
+        '..............')
+}
+$gold = [System.Drawing.ColorTranslator]::FromHtml('#E8D060')
+$bg = [System.Drawing.ColorTranslator]::FromHtml('#1E2430')
+$edge = [System.Drawing.ColorTranslator]::FromHtml('#3A4458')
+foreach ($name in $icons.Keys) {
+    $bmp = New-Object System.Drawing.Bitmap 16, 16, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    for ($y = 0; $y -lt 16; $y++) {
+        for ($x = 0; $x -lt 16; $x++) {
+            $corner = ($x -eq 0 -or $x -eq 15) -and ($y -eq 0 -or $y -eq 15)
+            if ($corner) { continue }
+            $border = $x -eq 0 -or $x -eq 15 -or $y -eq 0 -or $y -eq 15
+            $bmp.SetPixel($x, $y, $(if ($border) { $edge } else { $bg }))
+        }
+    }
+    $rows = $icons[$name]
+    for ($y = 0; $y -lt 14; $y++) {
+        for ($x = 0; $x -lt 14; $x++) {
+            if ([string]$rows[$y][$x] -eq '#') { $bmp.SetPixel($x + 1, $y + 1, $gold) }
+        }
+    }
+    $bmp.Save((Join-Path $out "$name.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+    $bmp.Dispose()
+    Write-Host "OK: $name.png"
+}

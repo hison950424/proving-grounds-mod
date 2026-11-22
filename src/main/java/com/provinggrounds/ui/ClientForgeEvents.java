@@ -181,6 +181,7 @@ public final class ClientForgeEvents {
         ClientBRState.clear();
         com.provinggrounds.client.ClientProneData.clear();
         ClientStatsBoard.clear();
+        SpawnPointRenderer.clear();
         FORCED_CRAWL.clear();
     }
 }

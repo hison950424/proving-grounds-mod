@@ -75,6 +75,23 @@ public final class PGBlocks {
     public static final RegistryObject<Item> BACKPACK_3 = ITEMS.register("backpack_3",
         () -> new com.provinggrounds.item.BackpackItem(3, new Item.Properties().rarity(Rarity.EPIC)));
 
+    /** 管理員工具物品（計畫書 B6～B10），放在專屬的創造模式分頁「PG 管理工具」。 */
+    public static final java.util.Map<com.provinggrounds.item.AdminToolItem.Tool, RegistryObject<Item>> ADMIN_TOOLS = new java.util.EnumMap<>(com.provinggrounds.item.AdminToolItem.Tool.class);
+    static {
+        for (com.provinggrounds.item.AdminToolItem.Tool t : com.provinggrounds.item.AdminToolItem.Tool.values()) {
+            ADMIN_TOOLS.put(t, ITEMS.register(t.id, () -> new com.provinggrounds.item.AdminToolItem(t)));
+        }
+    }
+
+    public static final DeferredRegister<net.minecraft.world.item.CreativeModeTab> TABS =
+        DeferredRegister.create(net.minecraft.core.registries.Registries.CREATIVE_MODE_TAB, ProvingGroundsMod.MOD_ID);
+    public static final RegistryObject<net.minecraft.world.item.CreativeModeTab> ADMIN_TAB = TABS.register("admin_tools",
+        () -> net.minecraft.world.item.CreativeModeTab.builder()
+            .title(net.minecraft.network.chat.Component.literal("PG 管理工具"))
+            .icon(() -> new net.minecraft.world.item.ItemStack(ADMIN_TOOLS.get(com.provinggrounds.item.AdminToolItem.Tool.FLOAT_TEXT).get()))
+            .displayItems((params, out) -> ADMIN_TOOLS.values().forEach(r -> out.accept(r.get())))
+            .build());
+
     private PGBlocks() {}
 
     private static RegistryObject<Block> crate(String name, MapColor color, SoundType sound) {
@@ -88,6 +105,7 @@ public final class PGBlocks {
         BLOCKS.register(modBus);
         ITEMS.register(modBus);
         BLOCK_ENTITIES.register(modBus);
+        TABS.register(modBus);
         modBus.addListener(PGBlocks::addToCreativeTab);
     }
 
