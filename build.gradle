@@ -61,8 +61,11 @@ dependencies {
 
     // 測試環境載入槍械模組（只在執行時用；我們的程式透過反射接 TACZ，編譯不需要它）。
     // fg.deobf 會把正式版 jar 轉成開發環境的名稱，直接丟進 run/mods 會開不起來。
-    runtimeOnly fg.deobf('blank:tacz-1.20.1:1.1.8-hotfix')
-    runtimeOnly fg.deobf('blank:lrtactical-1.20.1:0.4.3')
+    // 加上 -PnoGunMods 可以不載入槍械模組，測試「移除 TACZ 與 lrtactical 後仍能啟動」（計畫書 C）
+    if (!project.hasProperty('noGunMods')) {
+        runtimeOnly fg.deobf('blank:tacz-1.20.1:1.1.8-hotfix')
+        runtimeOnly fg.deobf('blank:lrtactical-1.20.1:0.4.3')
+    }
 
     // Mixin 註解（Forge 執行時已內建 Mixin，只有編譯時需要）
     compileOnly 'org.spongepowered:mixin:0.8.5'
@@ -90,3 +93,30 @@ jar {
         ])
     }
 }
+
+// ── 計畫書 C：強制隔離槍械模組 ─────────────────────────────────────────────
+// com.tacz 與 com.lrtactical 的 import 只能出現在 compat/ 底下（槍械適配層），其他地方一律透過 GunAdapter／GunCompat。
+// 違反時建置失敗，並列出檔案與行號。
+tasks.register('checkGunModIsolation') {
+    group = 'verification'
+    description = '檢查 com.tacz / com.lrtactical 的 import 只出現在 compat/ 底下'
+    def srcDir = file('src/main/java')
+    inputs.dir(srcDir)
+    doLast {
+        def violations = []
+        def pattern = ~/^\s*import\s+(static\s+)?com\.(tacz|lrtactical)\./
+        srcDir.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+            if (!f.name.endsWith('.java')) return
+            def rel = srcDir.toPath().relativize(f.toPath()).toString().replace(File.separator, '/')
+            if (rel.startsWith('com/provinggrounds/compat/')) return
+            f.readLines('UTF-8').eachWithIndex { line, i ->
+                if (line =~ pattern) violations << "${rel}:${i + 1}: ${line.trim()}"
+            }
+        }
+        if (!violations.isEmpty()) {
+            throw new GradleException("槍械模組的 import 只能放在 compat/ 底下：\n  " + violations.join('\n  '))
+        }
+    }
+}
+tasks.named('check') { dependsOn 'checkGunModIsolation' }
+tasks.named('compileJava') { dependsOn 'checkGunModIsolation' }

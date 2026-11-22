@@ -14,6 +14,21 @@ public final class GunCompat {
 
     private static GunAdapter active;
 
+    /**
+     * 子彈造成的傷害類型（資料驅動：data/provinggrounds/tags/damage_type/bullets.json，目前包含 #tacz:bullets）。
+     * 日後換成自製槍械時只改這個標籤檔。
+     */
+    public static final net.minecraft.tags.TagKey<net.minecraft.world.damagesource.DamageType> BULLET_DAMAGE =
+        net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,
+            new net.minecraft.resources.ResourceLocation(ProvingGroundsMod.MOD_ID, "bullets"));
+
+    /** 物品分類標籤（資料驅動，data/provinggrounds/tags/items/）：彈藥、配件、近戰。 */
+    public static final net.minecraft.tags.TagKey<net.minecraft.world.item.Item> AMMO = itemTag("ammo"), ATTACHMENT = itemTag("attachment"), MELEE = itemTag("melee");
+
+    private static net.minecraft.tags.TagKey<net.minecraft.world.item.Item> itemTag(String name) {
+        return net.minecraft.tags.ItemTags.create(new net.minecraft.resources.ResourceLocation(ProvingGroundsMod.MOD_ID, name));
+    }
+
     private GunCompat() {}
 
     /** 物品的槍械分類；沒有槍械模組時一律 NONE。 */

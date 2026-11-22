@@ -55,6 +55,7 @@ public class PGConfig {
     public final ForgeConfigSpec.DoubleValue mvpKill, mvpAssist, mvpDamagePerPoint, mvpRevive, mvpAltar, mvpWinBonus;
     public final ForgeConfigSpec.DoubleValue adminTextDeleteRange, adminSpawnViewRange;
     public final ForgeConfigSpec.IntValue adminTextUndoMax;
+    public final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> respawnKitItems;
 
     // ── BR：移動 ──────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.DoubleValue brSpeedMultiplier;
@@ -223,6 +224,13 @@ public class PGConfig {
         mvpRevive = builder.defineInRange("mvp_revive", 2.0, 0.0, 100.0);
         mvpAltar = builder.defineInRange("mvp_altar", 3.0, 0.0, 100.0);
         mvpWinBonus = builder.defineInRange("mvp_win_bonus", 5.0, 0.0, 100.0);
+        builder.pop();
+
+        builder.comment("祭壇復活落地後發的物品（皮革全套之外）。格式同 /give：物品ID{NBT} 數量。槍會自動附一份它用的子彈。",
+            "物品依快捷欄規則放置（手槍第 3 格、補品第 4 格）。日後換成自製物品時只改這裡。").push("respawn_kit");
+        respawnKitItems = builder.defineListAllowEmpty("items",
+            java.util.List.of("tacz:modern_kinetic_gun{GunId:\"tacz:p320\",GunFireMode:\"SEMI\"} 1", "lrtactical:consumable{ConsumableId:\"lrtactical:ai2\"} 2"),
+            o -> o instanceof String);
         builder.pop();
 
         builder.push("movement");

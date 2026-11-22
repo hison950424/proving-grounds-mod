@@ -84,13 +84,13 @@ public final class LootSimulator {
 
     private static String kindOf(ItemStack s) {
         if (s.isEmpty()) return "其他";
-        String id = BuiltInRegistries.ITEM.getKey(s.getItem()).toString();
-        if (id.equals("tacz:ammo")) return "彈藥";
-        if (id.equals("tacz:modern_kinetic_gun")) return "槍";
-        if (id.equals("tacz:attachment")) return "配件";
-        if (id.equals("lrtactical:consumable")) return "醫療";
-        if (id.equals("lrtactical:throwable")) return "投擲物";
-        if (id.equals("lrtactical:melee")) return "近戰";
+        // 分類全部來自槍械適配層與物品標籤，不寫死第三方物品 ID（計畫書 C）
+        if (s.is(com.provinggrounds.compat.GunCompat.AMMO)) return "彈藥";
+        if (com.provinggrounds.compat.GunCompat.classify(s) != com.provinggrounds.compat.GunClass.NONE) return "槍";
+        if (s.is(com.provinggrounds.compat.GunCompat.ATTACHMENT)) return "配件";
+        if (s.is(HotbarRules.HEALING)) return "醫療";
+        if (s.is(HotbarRules.THROWABLE)) return "投擲物";
+        if (s.is(com.provinggrounds.compat.GunCompat.MELEE)) return "近戰";
         if (s.getItem() instanceof ArmorItem) return "防具";
         if (s.getItem() instanceof com.provinggrounds.item.BackpackItem) return "背包";
         return "其他";

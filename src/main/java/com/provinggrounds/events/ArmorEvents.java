@@ -42,7 +42,7 @@ import java.util.Map;
 public class ArmorEvents {
 
     private static final TagKey<DamageType> BULLETS =
-        TagKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("tacz", "bullets"));
+        com.provinggrounds.compat.GunCompat.BULLET_DAMAGE;
 
     private static final EquipmentSlot[] BODY_SLOTS = { EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET };
     private static final EquipmentSlot[] ALL_SLOTS  = { EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET };

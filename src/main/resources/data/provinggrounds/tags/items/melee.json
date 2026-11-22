@@ -1,0 +1,6 @@
+{
+  "replace": false,
+  "values": [
+    { "id": "lrtactical:melee", "required": false }
+  ]
+}

@@ -23,7 +23,7 @@ import java.util.Map;
 public class BulletHitEvents {
 
     public static final TagKey<DamageType> BULLETS =
-        TagKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("tacz", "bullets"));
+        com.provinggrounds.compat.GunCompat.BULLET_DAMAGE;
 
     /** 實體 id → 最後被子彈打中的遊戲時間。 */
     private final Map<Integer, Long> lastBulletHit = new HashMap<>();
