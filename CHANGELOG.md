@@ -2,6 +2,17 @@
 
 版本號規則與舊編號對照見 [docs/VERSIONS.md](docs/VERSIONS.md)。最新的在最上面。
 
+## 0.10.0（2026-11-22）
+
+### 計畫書 C：移植準備（為日後移除 TACZ／lrtactical、升級版本做準備）
+- 新文件 docs/PORTING.md：列出所有用到 TACZ／lrtactical 的地方、所有 Forge 專屬功能，以及日後怎麼改。
+- 建置時自動檢查：TACZ／lrtactical 的程式只能放在 compat/ 資料夾，放錯地方建置會失敗。
+- 祭壇復活的基礎裝備（P320 手槍、兩個 AI-2）改寫在設定檔 [battle_royale.respawn_kit].items，日後換成自製物品只要改設定。
+- 子彈傷害、戰利品模擬的分類改成用標籤判斷，不再寫死物品 ID。
+- 已實測：開發環境拿掉 TACZ 與 lrtactical 後，伺服器仍能正常啟動（槍相關功能自動停用，箱子會是空的）。
+- 遊戲內行為沒有改變。
+- 版本選擇：大版本（設定檔結構改變：新增 [battle_royale.respawn_kit] 區段）。
+
 ## 0.9.0（2026-11-22）
 
 ### B6～B10 管理員工具物品
