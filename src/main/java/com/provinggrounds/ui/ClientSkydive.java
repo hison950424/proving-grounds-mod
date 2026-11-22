@@ -18,7 +18,7 @@ import net.minecraftforge.fml.common.Mod;
  * 目的: 跳傘的客戶端部分（只在客戶端執行）。
  *   1. 按下跳躍鍵（預設空白鍵）的瞬間送 SkydiveKeyPacket（伺服器判斷）：飛機上 → 跳出、鞘翅滑翔 → 開傘、
  *      開傘 → 自由落體、自由落體 → 開傘（後兩者可以反覆切換）。
- *   2. 鞘翅滑翔用原版行為，只限制視角從正下方最多往上抬 glide_pitch_up_max 度（預設 85，也就是最高只到水平線下 5 度）。
+ *   2. 鞘翅滑翔用原版行為，只限制視角從正下方最多往上抬 glide_pitch_up_max 度（預設 75，也就是最高只到水平線下 15 度）。
  *      離地 auto_chute_height 格時伺服器會自動開傘。自由落體完全是原版掉落。
  *   3. 開傘中：固定下降速度，水平用移動鍵操控（上限 chute_horizontal）。開傘後就回不到鞘翅。
  *   玩家移動由客戶端決定，所以開傘的速度在客戶端每 tick 設定；數值來自伺服器設定（登入時同步）。
@@ -50,7 +50,7 @@ public final class ClientSkydive {
     /** 鞘翅滑翔中：視角從正下方最多往上抬 glide_pitch_up_max 度（鞘翅本身的速度、操作都不改）。 */
     private static void limitGlide(LocalPlayer p) {
         if (!p.isFallFlying() || ClientBRState.get().selfState() != ClientBRState.SELF_GLIDE) return;
-        double pitchUp = 85;
+        double pitchUp = 75;
         try {
             pitchUp = PGConfig.SERVER.glidePitchUpMax.get();
         } catch (IllegalStateException ignored) {

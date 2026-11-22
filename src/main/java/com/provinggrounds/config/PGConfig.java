@@ -195,8 +195,8 @@ public class PGConfig {
         builder.comment("跳傘：空白鍵跳出飛機後用原版鞘翅滑翔；按空白鍵或離地夠近時開傘。開傘後按空白鍵自由落體、再按開傘，可以反覆切換（回不到鞘翅）。").push("skydive");
         skydiveAutoChuteHeight = builder.comment("離地面幾格時自動開傘")
             .defineInRange("auto_chute_height", 50.0, 5.0, 300.0);
-        glidePitchUpMax = builder.comment("鞘翅滑翔時視角從「正下方」最多能往上抬幾度（85 = 最高只到水平線下 5 度，不能拉高；90 = 可抬到水平；180 = 原版可抬到正上方）")
-            .defineInRange("glide_pitch_up_max", 85.0, 0.0, 180.0);
+        glidePitchUpMax = builder.comment("鞘翅滑翔時視角從「正下方」最多能往上抬幾度（75 = 最高只到水平線下 15 度，不能拉高；90 = 可抬到水平；180 = 原版可抬到正上方）")
+            .defineInRange("glide_pitch_up_max", 75.0, 0.0, 180.0);
         chuteSink = builder.comment("開傘後的下降速度（格/秒）")
             .defineInRange("chute_sink", 5.0, 0.5, 50.0);
         chuteHorizontal = builder.comment("開傘後用移動鍵操控的最大水平速度（格/秒）")

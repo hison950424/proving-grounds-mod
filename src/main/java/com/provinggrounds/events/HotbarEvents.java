@@ -50,7 +50,8 @@ public final class HotbarEvents {
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer p)) return;
-        if (p.tickCount % 10 != 0 || !HotbarRules.active(p)) return;
-        HotbarRules.normalize(p);
+        if (!HotbarRules.active(p)) { HotbarRules.forgetRefill(p.getUUID()); return; }
+        HotbarRules.autoRefill(p); // 每 tick：第 4、5 格用完自動補（要即時）
+        if (p.tickCount % 10 == 0) HotbarRules.normalize(p);
     }
 }

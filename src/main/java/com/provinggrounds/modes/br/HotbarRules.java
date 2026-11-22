@@ -376,6 +376,7 @@ public final class HotbarRules {
     /** 玩家登出：清掉記錄。 */
     public static void forget(UUID id) {
         pickupOrigin.remove(id);
+        lastSpecial.remove(id);
         lastMessage.remove(id);
     }
 
@@ -396,6 +397,51 @@ public final class HotbarRules {
             }
         }
         if (dropped) message(p, MSG_DROPPED);
+    }
+
+    // ── 自動補位（第 4、5 格）───────────────────────────────────────────────
+
+    /** 每位玩家上一 tick 第 4、5 格的物品（比較用）。 */
+    private static final Map<UUID, ItemStack[]> lastSpecial = new HashMap<>();
+
+    /**
+     * 第 4 格（補品）、第 5 格（投擲物）拿在手上用完變空時，從背包或第 6～9 格找「一模一樣的物品」
+     * （同物品、同 NBT，例如同一種急救包）補進去，玩家不用自己去翻背包。
+     * 只在「那一格正拿在手上」時才補：用掉一定是拿在手上；在物品欄裡把它拖走時通常沒有拿著那一格，
+     * 這樣不會出現「剛拖走又自己跑回來」的情況。
+     */
+    public static void autoRefill(ServerPlayer p) {
+        Inventory inv = p.getInventory();
+        ItemStack[] last = lastSpecial.computeIfAbsent(p.getUUID(), k -> new ItemStack[] { ItemStack.EMPTY, ItemStack.EMPTY });
+        for (int k = 0; k < 2; k++) {
+            int slot = k == 0 ? HEAL : THROW;
+            ItemStack now = inv.getItem(slot);
+            ItemStack before = last[k];
+            if (now.isEmpty() && !before.isEmpty() && inv.selected == slot) {
+                int from = findSame(p, before, slot);
+                if (from >= 0) {
+                    inv.setItem(slot, inv.getItem(from));
+                    inv.setItem(from, ItemStack.EMPTY);
+                    now = inv.getItem(slot);
+                }
+            }
+            last[k] = now.isEmpty() ? ItemStack.EMPTY : now.copyWithCount(1);
+        }
+    }
+
+    /** 在第 6～9 格與可用的背包格找跟 sample 一樣的物品（同物品同 NBT）；找不到回傳 -1。 */
+    private static int findSame(ServerPlayer p, ItemStack sample, int target) {
+        Inventory inv = p.getInventory();
+        for (int i = 5; i <= 35; i++) {
+            if (i == target || (i >= 9 && !backpackUsable(p, i))) continue;
+            ItemStack s = inv.getItem(i);
+            if (!s.isEmpty() && ItemStack.isSameItemSameTags(s, sample)) return i;
+        }
+        return -1;
+    }
+
+    public static void forgetRefill(UUID id) {
+        lastSpecial.remove(id);
     }
 
     /** 掉在腳邊。不用 player.drop()：那會觸發丟棄事件（倒地時會被放回背包而無限循環）。 */
