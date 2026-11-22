@@ -5,7 +5,7 @@
 #      -NotesFile 的內容加進 CHANGELOG.md（若該版本的段落已經存在就不重複加）
 #   3. 建置（gradlew build），失敗就停止
 #   4. 替換本機模組：tools\release.local.json 列出的每個 mods 資料夾，舊的 provinggrounds-*.jar 移到同層的 mods-backup
-#      （不刪除、不自動清理），再放入新 jar。檔案被鎖住（伺服器／遊戲執行中）就停止，請關閉後重跑
+#      （mods-backup 只保留最近 3 個版本，更舊的自動刪除），再放入新 jar。檔案被鎖住（伺服器／遊戲執行中）就停止，請關閉後重跑
 #   5. 提交 gradle.properties 與 CHANGELOG.md、建立標籤 v<版本>、推送分支與標籤
 #   6. gh release create（測試版標成 pre-release，附上 jar 與這次的更新說明）；-SkipGitHub 時略過
 #   7. 回報版本號、jar 路徑、替換的資料夾、Release 網址
@@ -22,6 +22,20 @@ $root = Split-Path -Parent $PSScriptRoot
 $enc = New-Object System.Text.UTF8Encoding $false
 function Stop-Release([string]$msg) { Write-Host "停止：$msg" -ForegroundColor Red; exit 1 }
 function Invoke-Git { & git -C $root @args; if ($LASTEXITCODE -ne 0) { Stop-Release "git $($args -join ' ') 失敗" } }
+
+# mods-backup 只保留最近 $BackupKeep 個版本的 provinggrounds-*.jar，其餘刪除，避免檔案越堆越大。
+# 依檔案修改時間（建置時間）排序，不看檔名的版本號：舊命名的 1.0.x 其實比 0.x 早，用版本號排會排錯。
+# 只動本模組的 jar，資料夾裡的其他檔案不碰。
+$BackupKeep = 3
+function Limit-Backups([string]$backupDir, [int]$Keep) {
+    $jars = @(Get-ChildItem $backupDir -Filter 'provinggrounds-*.jar' -File | Sort-Object LastWriteTime -Descending)
+    $removed = @()
+    foreach ($j in $jars | Select-Object -Skip $Keep) {
+        Remove-Item -LiteralPath $j.FullName -Force -ErrorAction Stop
+        $removed += $j.Name
+    }
+    return $removed
+}
 
 # ── 1. 檢查 ────────────────────────────────────────────────────────────────
 $dirty = & git -C $root status --porcelain | Where-Object { $_ -notmatch '(gradle\.properties|CHANGELOG\.md)$' }
@@ -95,6 +109,7 @@ foreach ($dir in $modsDirs) {
             if (Test-Path $dest) { $dest = Join-Path $backup ("{0}_{1}{2}" -f $old.BaseName, (Get-Date -Format 'yyyyMMddHHmmss'), $old.Extension) }
             Move-Item $old.FullName $dest -ErrorAction Stop
         }
+        foreach ($r in (Limit-Backups $backup $BackupKeep)) { Write-Host "已刪除較舊的備份：$r" }
         Copy-Item -Force $jar (Join-Path $dir $name) -ErrorAction Stop
         $replaced += $dir
     } catch {
