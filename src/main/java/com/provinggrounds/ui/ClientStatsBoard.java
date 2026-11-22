@@ -39,18 +39,21 @@ public final class ClientStatsBoard {
     private static boolean showRanking;
     private static Sort sort = Sort.WINS;
     @Nullable private static List<StatsLeaderboardPacket.Entry> sortedCache;
+    private static int version; // 資料或顯示狀態一變就加 1，StatsBoardRenderer 用來決定要不要重組文字
 
     private ClientStatsBoard() {}
 
-    public static void setPersonal(StatsPersonalPacket p) { personal = p; }
+    public static void setPersonal(StatsPersonalPacket p) { personal = p; version++; }
 
     public static void setLeaderboard(List<StatsLeaderboardPacket.Entry> list) {
         leaderboard = list;
         sortedCache = null;
+        version++;
     }
 
     /** 右鍵看板：切換畫面；蹲下＋右鍵：排行畫面切換排序（在個人畫面時先切到排行）。 */
     public static void onClick(boolean sneak) {
+        version++;
         if (sneak && showRanking) {
             sort = Sort.values()[(sort.ordinal() + 1) % Sort.values().length];
             sortedCache = null;
@@ -67,6 +70,7 @@ public final class ClientStatsBoard {
     }
 
     @Nullable public static StatsPersonalPacket personal() { return personal; }
+    public static int version() { return version; }
     public static boolean showRanking() { return showRanking; }
     public static Sort sort() { return sort; }
 
@@ -80,6 +84,7 @@ public final class ClientStatsBoard {
     }
 
     public static void clear() {
+        version++;
         personal = null;
         leaderboard = List.of();
         sortedCache = null;

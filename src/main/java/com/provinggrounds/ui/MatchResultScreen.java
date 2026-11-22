@@ -30,6 +30,8 @@ public class MatchResultScreen extends Screen {
 
     private final MatchResult result;
     private final boolean closeWithGame; // 結算時開的：BR 狀態回到「無」就自動關
+    private final List<MatchResult.Highlight> highlights; // 開畫面時算一次，不用每幀重算
+    private final List<MatchResult.Row> sortedRows;
     private int scroll;
     private int left, top, w, h, tableTop, visibleRows;
 
@@ -37,6 +39,8 @@ public class MatchResultScreen extends Screen {
         super(Component.literal("本場數據"));
         this.result = result;
         this.closeWithGame = closeWithGame;
+        this.highlights = result.highlights();
+        this.sortedRows = result.sortedRows();
     }
 
     /** 收到結算資料：保存起來，open = true 時開啟畫面（開著其他畫面時不搶，改提示用 /pg result）。 */
@@ -89,7 +93,7 @@ public class MatchResultScreen extends Screen {
         g.drawCenteredString(f, Component.literal("本場時間 " + MatchResult.mmss(result.durationSeconds())), width / 2, top + 31, TEXT_DIM);
 
         // 中間：亮點卡片（每列 4 張）
-        List<MatchResult.Highlight> hl = result.highlights();
+        List<MatchResult.Highlight> hl = highlights;
         int cols = 4, gap = 4, cardW = (w - 16 - gap * (cols - 1)) / cols, cardH = 30;
         int cardsTop = top + 44;
         for (int i = 0; i < hl.size(); i++) {
@@ -109,7 +113,7 @@ public class MatchResultScreen extends Screen {
         for (int i = 0; i < head.length; i++) g.drawString(f, head[i], colX[i], tableTop, TEXT_DIM, false);
         g.fill(left + 6, tableTop + 10, left + w - 6, tableTop + 11, BORDER);
 
-        List<MatchResult.Row> rows = result.sortedRows();
+        List<MatchResult.Row> rows = sortedRows;
         visibleRows = Math.max(1, (top + h - 26 - (tableTop + 13)) / ROW_H);
         scroll = Math.min(scroll, Math.max(0, rows.size() - visibleRows));
         UUID self = Minecraft.getInstance().player != null ? Minecraft.getInstance().player.getUUID() : null;

@@ -39,6 +39,10 @@ public class StatsBoardRenderer implements BlockEntityRenderer<StatsBoardBlockEn
     }
 
     private final Font font;
+    // 文字只在資料或顯示狀態改變時重組（所有看板共用；每幀只畫，不重新排版）
+    private int cachedVersion = -1;
+    private List<Line> cachedLines = List.of();
+    private int cachedWidth;
 
     public StatsBoardRenderer(BlockEntityRendererProvider.Context ctx) {
         this.font = ctx.getFont();
@@ -56,9 +60,15 @@ public class StatsBoardRenderer implements BlockEntityRenderer<StatsBoardBlockEn
         Vec3 cam = mc.gameRenderer.getMainCamera().getPosition();
         if (cam.distanceToSqr(Vec3.atCenterOf(be.getBlockPos())) > MAX_DIST * MAX_DIST) return;
 
-        List<Line> lines = ClientStatsBoard.showRanking() ? ranking(mc) : personal();
-        int width = 0;
-        for (Line l : lines) width = Math.max(width, lineWidth(l));
+        if (cachedVersion != ClientStatsBoard.version()) {
+            cachedLines = ClientStatsBoard.showRanking() ? ranking(mc) : personal();
+            int w = 0;
+            for (Line l : cachedLines) w = Math.max(w, lineWidth(l));
+            cachedWidth = w;
+            cachedVersion = ClientStatsBoard.version();
+        }
+        List<Line> lines = cachedLines;
+        int width = cachedWidth;
 
         pose.pushPose();
         pose.translate(0.5, 1.4 + lines.size() * LINE_H * SCALE, 0.5);
