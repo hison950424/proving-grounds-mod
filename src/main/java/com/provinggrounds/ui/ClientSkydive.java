@@ -31,6 +31,11 @@ public final class ClientSkydive {
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
+        // 坐上飛機時原版會在快捷欄上方顯示「按下 蹲下 離開」，但飛機上要按空白鍵跳、不能蹲下離開：
+        // 搭機期間每 tick 清掉那一行（我們自己的「按 空白鍵 跳傘」提示是 HUD 另外畫的，不受影響）
+        if (mc.player != null && mc.player.isPassenger() && ClientBRState.get().selfState() == ClientBRState.SELF_PLANE) {
+            mc.gui.setOverlayMessage(net.minecraft.network.chat.Component.empty(), false);
+        }
         boolean pressed = false;
         while (mc.options.keyJump.consumeClick()) pressed = true; // 一律消耗掉，避免累積到下次跳傘才觸發
         if (!pressed || mc.player == null || mc.screen != null) return;
