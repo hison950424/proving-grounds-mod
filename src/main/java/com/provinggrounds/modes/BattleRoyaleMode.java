@@ -14,6 +14,7 @@ import com.provinggrounds.modes.br.Circle;
 import com.provinggrounds.modes.br.CirclePreset;
 import com.provinggrounds.modes.br.LootSpawner;
 import com.provinggrounds.modes.br.RespawnKit;
+import com.provinggrounds.modes.br.SkydiveWings;
 import com.provinggrounds.network.BRStatePacket;
 import com.provinggrounds.network.KillFeedPacket;
 import com.provinggrounds.network.MapMarkersPacket;
@@ -101,7 +102,8 @@ public class BattleRoyaleMode {
         final String name;
         PlayerState state = PlayerState.GROUND;
         boolean alive = true;
-        boolean sneakReleased = false;
+        int lastSkydiveToggle = -1000;   // 上次切換開傘／收傘的 tick（0.5 秒冷卻）
+        boolean kitOnLanding = false;    // 祭壇復活：落地後才發基礎裝備
         int groundTicks = 0;
         @Nullable Entity carrier;
         @Nullable Vec3 lastSafe;
@@ -152,7 +154,6 @@ public class BattleRoyaleMode {
     public static final String RESTORE_TAG = "pg_br";
     public static final String CARD_TAG = "pg_card_victim";
     private static final int ENDING_SECONDS = 10;
-    private static final int CHUTE_DURATION_TICKS = 20 * 600;
     /** 復活牌所在區塊的載入票（不存檔，伺服器重啟自動消失）。 */
     private static final TicketType<ChunkPos> CARD_TICKET =
         TicketType.create("provinggrounds_card", Comparator.comparingLong(ChunkPos::toLong));
@@ -405,7 +406,7 @@ public class BattleRoyaleMode {
             title(p, Component.literal("已登機").withStyle(ChatFormatting.GOLD), Component.empty());
         }
         phase = Phase.PLANE;
-        broadcast(Component.literal("飛機起飛！任何時候按 Shift 跳出，飛到尾端會自動跳出。").withStyle(ChatFormatting.AQUA));
+        broadcast(Component.literal("飛機起飛！任何時候按空白鍵跳出，飛到尾端會自動跳出。").withStyle(ChatFormatting.AQUA));
     }
 
     private void tickPlane() {
@@ -423,7 +424,6 @@ public class BattleRoyaleMode {
             }
             boolean stillRiding = part.carrier != null && p.getVehicle() == part.carrier;
             if (!stillRiding || end) {
-                if (stillRiding) p.stopRiding();
                 jump(p, part);
             } else {
                 anyoneOnPlane = true;
@@ -433,11 +433,41 @@ public class BattleRoyaleMode {
     }
 
     private void jump(ServerPlayer p, Participant part) {
+        part.state = PlayerState.FREEFALL; // 先改狀態再下機：飛機座位在 PLANE 狀態時會擋住下機
         discardCarrier(part);
-        part.state = PlayerState.FREEFALL;
-        part.sneakReleased = false;
+        if (p.getVehicle() != null) p.stopRiding();
         part.groundTicks = 0;
+        part.lastSkydiveToggle = tickCount;
         p.fallDistance = 0;
+        SkydiveWings.equip(p); // 穿上翼裝（自由落體姿勢與速度由客戶端 ClientSkydive 控制）
+    }
+
+    /**
+     * 玩家按下空白鍵（客戶端偵測後送 SkydiveKeyPacket）：飛機上 → 跳出；自由落體 → 開傘；開傘中 → 收傘。
+     * 開傘、收傘切換有冷卻（skydive_toggle_cooldown，預設 0.5 秒）。所有判斷在伺服器。
+     */
+    public void onSkydiveKey(ServerPlayer p) {
+        Participant part = participants.get(p.getUUID());
+        if (part == null || !part.alive || part.downed || !inPlay()) return;
+        int cooldown = (int) Math.round(PGConfig.SERVER.skydiveToggleCooldown.get() * 20);
+        switch (part.state) {
+            case PLANE -> jump(p, part);
+            case FREEFALL, CHUTE -> {
+                if (tickCount - part.lastSkydiveToggle < cooldown) return;
+                part.lastSkydiveToggle = tickCount;
+                boolean open = part.state == PlayerState.FREEFALL;
+                part.state = open ? PlayerState.CHUTE : PlayerState.FREEFALL;
+                level.playSound(null, p.blockPosition(), open ? SoundEvents.ARMOR_EQUIP_ELYTRA : SoundEvents.ARMOR_EQUIP_LEATHER,
+                    SoundSource.PLAYERS, 1f, open ? 1f : 1.3f);
+            }
+            default -> {}
+        }
+    }
+
+    /** 這個載具是不是這位玩家的飛機座位（按 Shift 不能下飛機，要按空白鍵跳）。 */
+    public boolean isPlaneSeat(ServerPlayer p, Entity vehicle) {
+        Participant part = participants.get(p.getUUID());
+        return part != null && part.state == PlayerState.PLANE && part.carrier != null && part.carrier == vehicle;
     }
 
     private void discardCarrier(Participant part) {
@@ -458,22 +488,13 @@ public class BattleRoyaleMode {
             ServerPlayer p = player(part.id);
             if (p == null) continue;
 
-            if (part.state == PlayerState.FREEFALL) {
-                boolean sneak = p.isShiftKeyDown();
-                if (!sneak) {
-                    part.sneakReleased = true; // 剛跳機時還按著 Shift，要先放開再按才開傘
-                } else if (part.sneakReleased) {
-                    part.state = PlayerState.CHUTE;
-                    p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, CHUTE_DURATION_TICKS, 0, false, false, false));
-                    level.playSound(null, p.blockPosition(), SoundEvents.ARMOR_EQUIP_ELYTRA, SoundSource.PLAYERS, 1f, 1f);
-                }
-            }
-
+            p.fallDistance = 0;
             if (p.onGround() || p.isInWater() || (p.isPassenger() && part.seat == null) || p.getAbilities().flying) {
                 if (++part.groundTicks >= 10) { // 落地後留 10 tick 緩衝，確保摔落傷害已被取消
                     part.state = PlayerState.GROUND;
-                    p.removeEffect(MobEffects.SLOW_FALLING);
                     p.fallDistance = 0;
+                    SkydiveWings.removeAll(p); // 落地：移除翼裝
+                    if (part.kitOnLanding) { part.kitOnLanding = false; RespawnKit.give(p); } // 祭壇復活：落地才發裝備
                 }
             } else {
                 part.groundTicks = 0;
@@ -578,6 +599,7 @@ public class BattleRoyaleMode {
         // 只認虛空與 /kill。不能用「無視無敵」標籤判斷：TACZ 的 bullet_void 子彈也在那個標籤裡，
         // 會讓被槍打死的人全部跳過倒地直接死亡。
         if (source.is(DamageTypes.FELL_OUT_OF_WORLD) || source.is(DamageTypes.GENERIC_KILL)) return false;
+        if (part.state != PlayerState.GROUND) return false; // 空中（飛機、自由落體、開傘）沒有倒地
         if (TeamManager.get().getTeamOrSolo(part.id) == TeamManager.Team.SOLO) return false;
         for (Participant other : participants.values()) {
             if (other == part || !other.alive || other.downed) continue;
@@ -813,6 +835,7 @@ public class BattleRoyaleMode {
         dropHeldCards(victim, part, corpse);
 
         // 掉落全部物品，然後變成觀察者
+        SkydiveWings.removeAll(victim);
         victim.getInventory().dropAll();
         discardCarrier(part);
         victim.stopRiding();
@@ -940,6 +963,7 @@ public class BattleRoyaleMode {
 
     /** 玩家登入：倒數期間加入參賽；遊戲中變觀察者；沒有遊戲但有還原標記就還原。 */
     public void onLogin(ServerPlayer p) {
+        if (!isAirborne(p.getUUID())) SkydiveWings.removeAll(p); // 不在跳傘中卻有翼裝（例如跳傘時斷線）就清掉
         CompoundTag tag = p.getPersistentData().getCompound(RESTORE_TAG);
         boolean sameGame = tag.contains("game") && tag.getLong("game") == gameId && phase != Phase.IDLE;
 
@@ -1256,7 +1280,7 @@ public class BattleRoyaleMode {
         vp.finalDead = false;
         vp.downed = false;
         vp.state = PlayerState.FREEFALL;
-        vp.sneakReleased = false;
+        vp.lastSkydiveToggle = tickCount;
         vp.groundTicks = 0;
         resetAltar(vp);
         if (variant == Variant.COMPETITIVE) vp.usedAltar = true;
@@ -1269,7 +1293,8 @@ public class BattleRoyaleMode {
         applyMaxHealth(v);
         healFull(v);
         v.getFoodData().setSaturation(5f);
-        RespawnKit.give(v);
+        vp.kitOnLanding = true; // 基礎裝備落地後才發
+        SkydiveWings.equip(v);
         double y = Math.min(PGConfig.SERVER.brAltarRespawnHeight.get(), level.getMaxBuildHeight() - 2);
         v.teleportTo(level, altarPos.getX() + 0.5, y, altarPos.getZ() + 0.5, v.getYRot(), 0);
         v.fallDistance = 0;
@@ -1469,6 +1494,7 @@ public class BattleRoyaleMode {
         com.provinggrounds.core.ProneManager.clear(p);
 
         p.stopRiding();
+        SkydiveWings.removeAll(p);
         p.setForcedPose(null);
         if (p.getCamera() != p) p.setCamera(p);
         BRMovement.remove(p);
@@ -1517,11 +1543,13 @@ public class BattleRoyaleMode {
         }
         int alivePlayers = 0;
         List<UUID> crawling = new ArrayList<>();
+        List<UUID> diving = new ArrayList<>();
         boolean crawlStyle = PGConfig.SERVER.brDownedStyle.get() == PGConfig.DownedStyle.CRAWL;
         for (Participant part : participants.values()) {
             if (!part.alive) continue;
             alivePlayers++;
             if (part.downed && crawlStyle) crawling.add(part.id);
+            if (part.state == PlayerState.FREEFALL) diving.add(part.id);
         }
         short aliveTeams = (short) countAliveTeams();
         float jump = PGConfig.SERVER.brJumpHeight.get().floatValue();
@@ -1563,7 +1591,7 @@ public class BattleRoyaleMode {
             PGNetwork.sendTo(p, new BRStatePacket(phaseId, seconds, shrinking, stage, total,
                 cx, cz, r, nx, nz, nr, (short) alivePlayers, aliveTeams, self, movement ? jump : 0f,
                 progressKind, progress, timerKind, (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, timer)),
-                cards, crawling));
+                cards, crawling, diving));
         }
     }
 

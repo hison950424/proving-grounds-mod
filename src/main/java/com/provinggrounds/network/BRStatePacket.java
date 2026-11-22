@@ -31,12 +31,13 @@ public record BRStatePacket(
     byte timerKind,       // 倒數種類：0 無, 1 流血, 2 復活牌在地上, 3 復活牌已被撿起, 4 已確定死亡
     short timerSeconds,
     byte cardsHeld,       // 身上持有的復活牌數
-    List<UUID> crawling   // 正在趴地的倒地玩家（客戶端強制趴下姿勢用）
+    List<UUID> crawling,  // 正在趴地的倒地玩家（客戶端強制趴下姿勢用）
+    List<UUID> diving     // 自由落體中的玩家（客戶端畫頭朝下姿勢用）
 ) {
 
     public static BRStatePacket none() {
         return new BRStatePacket((byte) 0, 0, false, (byte) 0, (byte) 0, 0, 0, -1, 0, 0, -1,
-            (short) 0, (short) 0, (byte) 0, 0f, (byte) 0, 0f, (byte) 0, (short) 0, (byte) 0, List.of());
+            (short) 0, (short) 0, (byte) 0, 0f, (byte) 0, 0f, (byte) 0, (short) 0, (byte) 0, List.of(), List.of());
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -58,6 +59,8 @@ public record BRStatePacket(
         buf.writeByte(cardsHeld);
         buf.writeVarInt(crawling.size());
         for (UUID id : crawling) buf.writeUUID(id);
+        buf.writeVarInt(diving.size());
+        for (UUID id : diving) buf.writeUUID(id);
     }
 
     public static BRStatePacket decode(FriendlyByteBuf buf) {
@@ -78,8 +81,11 @@ public record BRStatePacket(
         int n = Math.min(buf.readVarInt(), 256);
         List<UUID> crawling = new ArrayList<>(n);
         for (int i = 0; i < n; i++) crawling.add(buf.readUUID());
+        int dn = Math.min(buf.readVarInt(), 256);
+        List<UUID> diving = new ArrayList<>(dn);
+        for (int i = 0; i < dn; i++) diving.add(buf.readUUID());
         return new BRStatePacket(phase, seconds, shrinking, stage, total, cx, cz, r, nx, nz, nr,
-            alive, teams, self, jump, progressKind, progress, timerKind, timer, cards, crawling);
+            alive, teams, self, jump, progressKind, progress, timerKind, timer, cards, crawling, diving);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {

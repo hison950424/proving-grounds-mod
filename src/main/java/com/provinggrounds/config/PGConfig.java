@@ -46,6 +46,9 @@ public class PGConfig {
     // ── BR：飛機與跳傘 ─────────────────────────────────────────────────────────
     public final ForgeConfigSpec.IntValue brPlaneHeight;
     public final ForgeConfigSpec.DoubleValue brPlaneSpeed;
+    // 跳傘（計畫書 B1）
+    public final ForgeConfigSpec.DoubleValue skydivePitchMin, skydivePitchMax, freefallMaxSink, freefallMinSink, freefallMaxHorizontal;
+    public final ForgeConfigSpec.DoubleValue chuteSink, chuteHorizontal, skydiveToggleCooldown;
 
     // ── BR：移動 ──────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.DoubleValue brSpeedMultiplier;
@@ -173,6 +176,25 @@ public class PGConfig {
             .defineInRange("height", 220, 100, 310);
         brPlaneSpeed = builder.comment("飛機速度（格/秒）")
             .defineInRange("speed", 25.0, 5.0, 100.0);
+        builder.pop();
+
+        builder.comment("跳傘：空白鍵跳出飛機、開傘、收傘。自由落體的速度依俯角（往下看的角度）線性變化。").push("skydive");
+        skydivePitchMin = builder.comment("自由落體時視角最多能抬到的俯角（度，0 = 水平，不能抬到水平以上）")
+            .defineInRange("skydive_pitch_min", 0.0, 0.0, 90.0);
+        skydivePitchMax = builder.comment("自由落體時視角最低的俯角（度，90 = 正下方）")
+            .defineInRange("skydive_pitch_max", 90.0, 0.0, 90.0);
+        freefallMaxSink = builder.comment("自由落體最大下沉速度（格/秒，頭朝正下方時）")
+            .defineInRange("freefall_max_sink", 30.0, 1.0, 100.0);
+        freefallMinSink = builder.comment("自由落體最低下沉速度（格/秒，抬到水平時仍保證下沉，不能滑翔）")
+            .defineInRange("freefall_min_sink", 10.0, 1.0, 100.0);
+        freefallMaxHorizontal = builder.comment("自由落體最大水平速度（格/秒，抬到水平時）")
+            .defineInRange("freefall_max_horizontal", 15.0, 0.0, 100.0);
+        chuteSink = builder.comment("開傘後的下降速度（格/秒）")
+            .defineInRange("chute_sink", 5.0, 0.5, 50.0);
+        chuteHorizontal = builder.comment("開傘後用移動鍵操控的最大水平速度（格/秒）")
+            .defineInRange("chute_horizontal", 8.0, 0.0, 50.0);
+        skydiveToggleCooldown = builder.comment("開傘、收傘切換的冷卻（秒）")
+            .defineInRange("toggle_cooldown", 0.5, 0.0, 5.0);
         builder.pop();
 
         builder.push("movement");

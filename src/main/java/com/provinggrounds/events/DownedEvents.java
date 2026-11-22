@@ -109,5 +109,6 @@ public class DownedEvents {
     public void onMount(EntityMountEvent event) {
         if (!event.isDismounting() || !(event.getEntityMounting() instanceof ServerPlayer p)) return;
         if (BattleRoyaleMode.get().isDownedSeat(p, event.getEntityBeingMounted())) event.setCanceled(true);
+        if (BattleRoyaleMode.get().isPlaneSeat(p, event.getEntityBeingMounted())) event.setCanceled(true); // 飛機上按 Shift 不能下機，要按空白鍵跳
     }
 }

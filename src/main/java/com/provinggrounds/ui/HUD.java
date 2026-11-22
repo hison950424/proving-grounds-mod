@@ -153,9 +153,9 @@ public final class HUD {
 
     private static void renderHint(GuiGraphics g, Font font, BRStatePacket s, int w, int h) {
         String hint = switch (s.selfState()) {
-            case ClientBRState.SELF_PLANE -> Tr.t("hud.hint.plane");
-            case ClientBRState.SELF_FREEFALL -> Tr.t("hud.hint.freefall");
-            case ClientBRState.SELF_CHUTE -> Tr.t("hud.hint.chute");
+            case ClientBRState.SELF_PLANE -> Tr.t("hud.hint.plane", jumpKey());
+            case ClientBRState.SELF_FREEFALL -> Tr.t("hud.hint.freefall", jumpKey());
+            case ClientBRState.SELF_CHUTE -> Tr.t("hud.hint.chute", jumpKey());
             case ClientBRState.SELF_DOWNED -> Tr.t("hud.hint.downed", mmss(s.timerSeconds()));
             case ClientBRState.SELF_DEAD -> switch (s.timerKind()) {
                 case ClientBRState.TIMER_CARD_GROUND -> s.timerSeconds() >= 0
@@ -272,6 +272,11 @@ public final class HUD {
         int a = (int) (((argb >>> 24) & 0xFF) * Math.max(0f, Math.min(1f, alpha)));
         a = Math.max(a, 5); // 字型繪製時 alpha < 4 會被當成不透明，保留下限
         return (a << 24) | (argb & 0xFFFFFF);
+    }
+
+    /** 跳躍鍵的名稱（玩家改過按鍵時跟著變，預設「空白鍵」）。 */
+    private static String jumpKey() {
+        return " " + Minecraft.getInstance().options.keyJump.getTranslatedKeyMessage().getString() + " ";
     }
 
     private static String mmss(int seconds) {
