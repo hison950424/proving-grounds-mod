@@ -20,10 +20,13 @@ import java.util.UUID;
  *       以 Forge SavedData 存成 world/data/provinggrounds_players.dat，伺服器崩潰後可讀回。
  *       等級門檻：累計 XP 達 base 升 Lv2，之後每級多 step（Lv N 門檻 = base + step × (N−2)）。
  *       XP 只增不減。「積分」系統尚未定案，這裡不實作。
+ *       另外依模式分開存統計（ModeStats，計畫書 B5），以模式 ID 為鍵，目前只有 BR（"br"）。
+ *       舊存檔沒有分模式資料：第一次載入時把原本的總數字（擊殺、死亡、助攻、勝場）搬進 BR 的 ModeStats。
  */
 public class PlayerDataManager {
 
     public static final String FILE = "provinggrounds_players";
+    public static final String MODE_BR = "br";
 
     private static final PlayerDataManager INSTANCE = new PlayerDataManager();
     public static PlayerDataManager get() { return INSTANCE; }
@@ -72,6 +75,27 @@ public class PlayerDataManager {
         return gained;
     }
 
+    /** 一場結束後把本場統計累加進該模式的 ModeStats（離線玩家也算）。 */
+    public void addMatch(UUID id, String name, String mode, boolean won, int kills, int deaths, int assists, float damage, int aliveTicks) {
+        PlayerStats s = getStats(id);
+        if (s.lastName.isEmpty()) s.lastName = name;
+        ModeStats m = s.mode(mode);
+        m.games++;
+        if (won) m.wins++;
+        m.kills += kills;
+        m.deaths += deaths;
+        m.assists += assists;
+        m.damage += damage;
+        m.bestKills = Math.max(m.bestKills, kills);
+        m.aliveTicks += aliveTicks;
+        markDirty();
+    }
+
+    /** 所有玩家的資料（排行榜用，唯讀）。 */
+    public Map<UUID, PlayerStats> all() {
+        return storage == null ? Map.of() : java.util.Collections.unmodifiableMap(storage.stats);
+    }
+
     public PlayerStats getStats(ServerPlayer player) { return getStats(player.getUUID()); }
 
     public PlayerStats getStats(UUID id) {
@@ -111,6 +135,9 @@ public class PlayerDataManager {
         public int wins = 0;
         public long xp = 0;
         public String lastName = "";
+        public final Map<String, ModeStats> modes = new HashMap<>();
+
+        public ModeStats mode(String id) { return modes.computeIfAbsent(id, k -> new ModeStats()); }
 
         public int getLevel() { return levelFor(xp); }
 
@@ -118,7 +145,7 @@ public class PlayerDataManager {
             return deaths == 0 ? kills : (double) kills / deaths;
         }
 
-        CompoundTag save() {
+        public CompoundTag save() {
             CompoundTag t = new CompoundTag();
             t.putInt("kills", kills);
             t.putInt("deaths", deaths);
@@ -126,10 +153,13 @@ public class PlayerDataManager {
             t.putInt("wins", wins);
             t.putLong("xp", xp);
             t.putString("name", lastName);
+            CompoundTag m = new CompoundTag();
+            modes.forEach((id, ms) -> m.put(id, ms.save()));
+            t.put("modes", m);
             return t;
         }
 
-        static PlayerStats load(CompoundTag t) {
+        public static PlayerStats load(CompoundTag t) {
             PlayerStats s = new PlayerStats();
             s.kills = t.getInt("kills");
             s.deaths = t.getInt("deaths");
@@ -137,6 +167,17 @@ public class PlayerDataManager {
             s.wins = t.getInt("wins");
             s.xp = t.getLong("xp");
             s.lastName = t.getString("name");
+            if (t.contains("modes", 10)) {
+                CompoundTag m = t.getCompound("modes");
+                for (String id : m.getAllKeys()) s.modes.put(id, ModeStats.load(m.getCompound(id)));
+            } else {
+                // 舊存檔遷移：原本的總數字視為大逃殺的數據（場數、傷害、存活時間舊版沒有記錄，從 0 開始）
+                ModeStats br = s.mode(MODE_BR);
+                br.kills = s.kills;
+                br.deaths = s.deaths;
+                br.assists = s.assists;
+                br.wins = s.wins;
+            }
             return s;
         }
 
@@ -144,6 +185,43 @@ public class PlayerDataManager {
         public String toString() {
             return String.format("K=%d D=%d A=%d W=%d KD=%.2f XP=%d Lv=%d",
                 kills, deaths, assists, wins, getKD(), xp, getLevel());
+        }
+    }
+
+    /** 一個模式的累計統計（計畫書 B5）。 */
+    public static class ModeStats {
+        public int games, wins, kills, deaths, assists, bestKills;
+        public double damage;
+        public long aliveTicks;
+
+        public double getKD() { return deaths == 0 ? kills : (double) kills / deaths; }
+
+        public double winRate() { return games == 0 ? 0 : (double) wins / games; }
+
+        CompoundTag save() {
+            CompoundTag t = new CompoundTag();
+            t.putInt("games", games);
+            t.putInt("wins", wins);
+            t.putInt("kills", kills);
+            t.putInt("deaths", deaths);
+            t.putInt("assists", assists);
+            t.putInt("best_kills", bestKills);
+            t.putDouble("damage", damage);
+            t.putLong("alive_ticks", aliveTicks);
+            return t;
+        }
+
+        static ModeStats load(CompoundTag t) {
+            ModeStats m = new ModeStats();
+            m.games = t.getInt("games");
+            m.wins = t.getInt("wins");
+            m.kills = t.getInt("kills");
+            m.deaths = t.getInt("deaths");
+            m.assists = t.getInt("assists");
+            m.bestKills = t.getInt("best_kills");
+            m.damage = t.getDouble("damage");
+            m.aliveTicks = t.getLong("alive_ticks");
+            return m;
         }
     }
 

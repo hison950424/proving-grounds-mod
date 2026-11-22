@@ -128,6 +128,9 @@ public class BattleRoyaleMode {
         @Nullable BlockPos altarUsePos;
         int lastAltarUse = -1000;
 
+        // 本場統計（B4）
+        final com.provinggrounds.modes.br.MatchStats stats = new com.provinggrounds.modes.br.MatchStats();
+
         // 這一 tick 的讀條（給 HUD）
         byte progressKind;
         float progress;
@@ -402,10 +405,12 @@ public class BattleRoyaleMode {
             p.startRiding(carrier, true);
             part.carrier = carrier;
             part.state = PlayerState.PLANE;
+            part.stats.startAlive(tickCount); // 存活時間從飛機起飛算起
             BRMovement.apply(p);
             // 操作提示只由客戶端 HUD（快捷欄上方）顯示，這裡只給標題，避免同一句話出現兩次
             title(p, Component.literal("已登機").withStyle(ChatFormatting.GOLD), Component.empty());
         }
+        matchStartTick = tickCount;
         phase = Phase.PLANE;
         broadcast(Component.literal("飛機起飛！任何時候按空白鍵跳出，飛到尾端會自動跳出。").withStyle(ChatFormatting.AQUA));
     }
@@ -572,6 +577,8 @@ public class BattleRoyaleMode {
         if (!isAliveParticipant(victim.getUUID()) || !isParticipant(attacker.getUUID())) return;
         if (TeamManager.get().isSameTeam(attacker, victim)) return;
         damagers.computeIfAbsent(victim.getUUID(), k -> new HashSet<>()).add(attacker.getUUID());
+        Participant ap = participants.get(attacker.getUUID());
+        if (ap != null) ap.stats.damage += Math.min(amount, victim.getHealth()); // 本場傷害：只算實際扣掉的血
     }
 
     /**
@@ -619,6 +626,7 @@ public class BattleRoyaleMode {
 
         part.downed = true;
         part.bleedTicks = 20;
+        part.stats.downs++;
         part.reviveTicks = 0;
         part.reviver = null;
         part.downedBy = attacker != null ? attacker.getUUID() : null;
@@ -779,6 +787,8 @@ public class BattleRoyaleMode {
         d.downedBy = null;
         damagers.remove(d.id);
         dp.setHealth((float) Math.min(PGConfig.SERVER.brReviveHealth.get(), dp.getMaxHealth()));
+        Participant hp = participants.get(helper.getUUID());
+        if (hp != null) hp.stats.revives++;
         String helperName = helper.getGameProfile().getName();
         title(dp, Component.literal("已被扶起").withStyle(ChatFormatting.GREEN),
             Component.literal(helperName + " 把你扶起來了").withStyle(ChatFormatting.WHITE));
@@ -804,9 +814,14 @@ public class BattleRoyaleMode {
         }
 
         data.addDeath(victim);
+        part.stats.deaths++;
+        part.stats.stopAlive(tickCount);
+        part.stats.lastDeathTick = tickCount;
         if (killer != null && !TeamManager.get().isSameTeam(killer, victim)) {
             data.addKill(killer);
             int xp = data.addXp(killer, c.xpKill.get(), competitive);
+            Participant kp = participants.get(killer.getUUID());
+            if (kp != null) { kp.stats.kills++; kp.stats.xp += xp; }
             killer.displayClientMessage(Component.literal("擊殺 " + part.name + "  +" + xp + " 經驗")
                 .withStyle(ChatFormatting.GOLD), true);
         }
@@ -818,6 +833,8 @@ public class BattleRoyaleMode {
                 if (assister == null) continue;
                 data.addAssist(assister);
                 int xp = data.addXp(assister, c.xpAssist.get(), competitive);
+                Participant asp = participants.get(id);
+                if (asp != null) { asp.stats.assists++; asp.stats.xp += xp; }
                 assister.displayClientMessage(Component.literal("助攻 " + part.name + "  +" + xp + " 經驗")
                     .withStyle(ChatFormatting.YELLOW), true);
             }
@@ -1260,6 +1277,7 @@ public class BattleRoyaleMode {
             }
         }
         if (revived.isEmpty()) return;
+        part.stats.altarRevives += revived.size();
 
         altar.startCooldown(PGConfig.SERVER.brAltarCooldownSeconds.get() * 20);
         level.playSound(null, pos, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.5f, 1.2f);
@@ -1287,6 +1305,7 @@ public class BattleRoyaleMode {
         resetAltar(vp);
         if (variant == Variant.COMPETITIVE) vp.usedAltar = true;
         damagers.remove(vp.id);
+        vp.stats.startAlive(tickCount);
 
         if (v.getCamera() != v) v.setCamera(v);
         v.setGameMode(GameType.ADVENTURE);
@@ -1376,6 +1395,7 @@ public class BattleRoyaleMode {
                 if (p == null) continue;
                 data.addWin(p);
                 int xp = data.addXp(p, PGConfig.SERVER.xpWin.get(), competitive);
+                part.stats.xp += xp;
                 p.sendSystemMessage(Component.literal("勝利！+" + xp + " 經驗").withStyle(ChatFormatting.GOLD));
                 TeamManager.Team t = TeamManager.get().getTeamOrSolo(part.id);
                 if (t != TeamManager.Team.SOLO) teamLabel = t.displayName;
@@ -1387,6 +1407,7 @@ public class BattleRoyaleMode {
             : Component.literal((teamLabel != null ? teamLabel + " " : "") + String.join("、", winnerNames) + " 獲勝！")
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
         broadcast(headline);
+        publishResult(winnerKey != null && startTeamCount > 1 ? winnerKey : null, teamLabel, winnerNames);
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
             title(p, winnerNames.isEmpty() ? Component.literal("本局結束") : Component.literal("大吉大利，今晚吃雞").withStyle(ChatFormatting.GOLD),
                 headline);
@@ -1401,6 +1422,82 @@ public class BattleRoyaleMode {
         phase = Phase.ENDING;
         phaseTicks = ENDING_SECONDS * 20;
         ProvingGroundsMod.LOGGER.info("BR ended: winners={}", winnerNames);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 本場數據（B4）
+    // ═════════════════════════════════════════════════════════════════════════
+
+    @Nullable private com.provinggrounds.modes.br.MatchResult lastResult;
+    private int matchStartTick;
+
+    /** 最近一場的數據（/pg result 用）；還沒打過時為 null。 */
+    @Nullable public com.provinggrounds.modes.br.MatchResult lastResult() { return lastResult; }
+
+    /**
+     * 結算：整理每位參與者的本場統計（含中途離線的人）、算名次，累加進玩家的 BR 總數據，
+     * 送「本場數據」畫面給所有線上玩家，並在聊天欄輸出精簡版。
+     */
+    private void publishResult(@Nullable String winnerKey, @Nullable String teamLabel, List<String> winnerNames) {
+        PGConfig c = PGConfig.SERVER;
+        TeamManager tm = TeamManager.get();
+        // 名次：獲勝隊第 1；其他隊依「最後一位隊員被淘汰的時間」越晚越前面
+        Map<String, Integer> teamLast = new HashMap<>();
+        for (Participant part : participants.values()) {
+            part.stats.stopAlive(tickCount);
+            String key = tm.teamKey(part.id);
+            int t = part.alive ? Integer.MAX_VALUE : part.stats.lastDeathTick;
+            teamLast.merge(key, t, Math::max);
+        }
+        if (winnerKey != null) teamLast.put(winnerKey, Integer.MAX_VALUE);
+        List<Integer> order = new ArrayList<>(new java.util.TreeSet<>(teamLast.values()));
+        java.util.Collections.reverse(order);
+
+        List<com.provinggrounds.modes.br.MatchResult.Row> rows = new ArrayList<>();
+        PlayerDataManager data = PlayerDataManager.get();
+        for (Participant part : participants.values()) {
+            String key = tm.teamKey(part.id);
+            boolean winner = winnerKey != null && key.equals(winnerKey);
+            int place = winner ? 1 : order.indexOf(teamLast.get(key)) + 1;
+            TeamManager.Team team = tm.getTeamOrSolo(part.id);
+            var s = part.stats;
+            rows.add(new com.provinggrounds.modes.br.MatchResult.Row(part.id, part.name,
+                team == TeamManager.Team.SOLO ? "孤狼" : team.displayName, colorOf(part.id), place, winner, player(part.id) == null,
+                s.kills, s.assists, Math.round(s.damage), s.aliveTicks / 20, s.revives, s.altarRevives, s.xp));
+            data.addMatch(part.id, part.name, PlayerDataManager.MODE_BR, winner, s.kills, s.deaths, s.assists, s.damage, s.aliveTicks);
+        }
+        var weights = new com.provinggrounds.modes.br.MatchResult.Weights(c.mvpKill.get().floatValue(), c.mvpAssist.get().floatValue(),
+            c.mvpDamagePerPoint.get().floatValue(), c.mvpRevive.get().floatValue(), c.mvpAltar.get().floatValue(), c.mvpWinBonus.get().floatValue());
+        String label = winnerNames.isEmpty() ? "本局結束" : (teamLabel != null ? teamLabel + " 獲勝" : String.join("、", winnerNames) + " 獲勝");
+        lastResult = new com.provinggrounds.modes.br.MatchResult(label, List.copyOf(winnerNames), Math.max(0, (tickCount - matchStartTick) / 20), weights, rows);
+
+        PGNetwork.sendToAll(new com.provinggrounds.network.MatchResultPacket(lastResult, true));
+        for (Component line : resultChatLines(lastResult)) broadcast(line);
+        for (var r : rows) {
+            ServerPlayer p = player(r.id());
+            if (p != null) p.sendSystemMessage(ownResultLine(r));
+        }
+    }
+
+    /** 聊天欄精簡版：亮點（跟畫面、/pg result 用同一份計算）。 */
+    public static List<Component> resultChatLines(com.provinggrounds.modes.br.MatchResult r) {
+        List<Component> out = new ArrayList<>();
+        out.add(Component.literal("── 本場數據（" + com.provinggrounds.modes.br.MatchResult.mmss(r.durationSeconds()) + "）──").withStyle(ChatFormatting.GOLD));
+        StringBuilder sb = new StringBuilder();
+        for (var h : r.highlights()) {
+            if (h.names().equals("無") && !h.title().startsWith("最高")) continue; // 次要項目沒人時不佔版面
+            if (sb.length() > 0) sb.append("｜");
+            sb.append(h.title()).append("：").append(h.names());
+            if (!h.value().isEmpty()) sb.append("（").append(h.value()).append("）");
+        }
+        out.add(Component.literal(sb.toString()).withStyle(ChatFormatting.YELLOW));
+        return out;
+    }
+
+    public static Component ownResultLine(com.provinggrounds.modes.br.MatchResult.Row r) {
+        return Component.literal(String.format("你的成績：第 %d 名｜擊殺 %d｜助攻 %d｜傷害 %d｜存活 %s｜XP +%d（輸入 /pg result 重看）",
+            r.place(), r.kills(), r.assists(), r.damage(), com.provinggrounds.modes.br.MatchResult.mmss(r.aliveSeconds()), r.xp()))
+            .withStyle(ChatFormatting.AQUA);
     }
 
     /** 解除所有倒地、座椅、飛機載具，移除所有復活牌。 */

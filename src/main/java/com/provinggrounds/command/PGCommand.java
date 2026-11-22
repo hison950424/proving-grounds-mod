@@ -48,17 +48,19 @@ import java.util.Locale;
 public class PGCommand {
 
     private static final String PREFIX = "[PG] ";
+    private static final java.util.function.Predicate<CommandSourceStack> OP = src -> src.hasPermission(2);
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
             Commands.literal("pg")
-                .requires(src -> src.hasPermission(2))
+                // 每個管理指令各自要求 OP（權限 2）；只有 /pg result（重看本場數據）所有玩家都能用
+                .then(Commands.literal("result").executes(ctx -> result(ctx.getSource())))
 
-                .then(Commands.literal("reload").executes(ctx -> reload(ctx.getSource())))
-                .then(Commands.literal("reset").executes(ctx -> reset(ctx.getSource())))
-                .then(Commands.literal("status").executes(ctx -> status(ctx.getSource())))
+                .then(Commands.literal("reload").requires(OP).executes(ctx -> reload(ctx.getSource())))
+                .then(Commands.literal("reset").requires(OP).executes(ctx -> reset(ctx.getSource())))
+                .then(Commands.literal("status").requires(OP).executes(ctx -> status(ctx.getSource())))
                 // 被打破的玻璃：查看數量／立刻修復（平常每局開始會自動修）
-                .then(Commands.literal("glass")
+                .then(Commands.literal("glass").requires(OP)
                     .executes(ctx -> {
                         int n = com.provinggrounds.data.GlassLedger.get(ctx.getSource().getServer()).size();
                         ok(ctx.getSource(), "目前記錄了 " + n + " 塊被打破的原版玻璃，下一局開始時會修回去。", false);
@@ -71,12 +73,12 @@ public class PGCommand {
                         return n;
                     })))
                 // 彈藥分類檢查
-                .then(Commands.literal("ammo").executes(ctx -> {
+                .then(Commands.literal("ammo").requires(OP).executes(ctx -> {
                     for (String line : com.provinggrounds.compat.AmmoCategories.report()) ok(ctx.getSource(), line, false);
                     return 1;
                 }))
 
-                .then(Commands.literal("mode")
+                .then(Commands.literal("mode").requires(OP)
                     .then(Commands.argument("mode", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
                             for (GameManager.GameMode m : GameManager.GameMode.values()) {
@@ -86,12 +88,12 @@ public class PGCommand {
                         })
                         .executes(ctx -> setMode(ctx.getSource(), StringArgumentType.getString(ctx, "mode")))))
 
-                .then(mapCommands())
-                .then(lootCommands())
-                .then(teamCommands())
-                .then(brCommands())
+                .then(mapCommands().requires(OP))
+                .then(lootCommands().requires(OP))
+                .then(teamCommands().requires(OP))
+                .then(brCommands().requires(OP))
 
-                .then(Commands.literal("stats")
+                .then(Commands.literal("stats").requires(OP)
                     .executes(ctx -> stats(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                     .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> stats(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))
@@ -112,6 +114,20 @@ public class PGCommand {
             fail(src, "重載失敗：" + e.getMessage());
             ProvingGroundsMod.LOGGER.error("Config reload failed", e);
         }
+        return 1;
+    }
+
+    /** /pg result：把最近一場的數據再送給自己（重新開啟本場數據畫面，並在聊天欄顯示精簡版）。 */
+    private static int result(CommandSourceStack src) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        var r = BattleRoyaleMode.get().lastResult();
+        if (r == null) {
+            fail(src, "伺服器重啟後還沒有打完任何一場。");
+            return 0;
+        }
+        var p = src.getPlayerOrException();
+        com.provinggrounds.network.PGNetwork.sendTo(p, new com.provinggrounds.network.MatchResultPacket(r, true));
+        for (Component line : BattleRoyaleMode.resultChatLines(r)) p.sendSystemMessage(line);
+        for (var row : r.rows()) if (row.id().equals(p.getUUID())) p.sendSystemMessage(BattleRoyaleMode.ownResultLine(row));
         return 1;
     }
 
@@ -199,7 +215,7 @@ public class PGCommand {
                     .executes(ctx -> mapRemove(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id")))))
             // 產生大地圖／小地圖用的俯視圖
             .then(Commands.literal("render")
-                .then(Commands.literal("cancel").executes(ctx -> {
+                .then(Commands.literal("cancel").requires(OP).executes(ctx -> {
                     if (com.provinggrounds.data.MapRenderJob.cancel()) return 1;
                     fail(ctx.getSource(), "目前沒有地圖在產生。");
                     return 0;
@@ -307,10 +323,10 @@ public class PGCommand {
                     .executes(ctx -> markerJob(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "map"), MarkerScanJob.Mode.MIGRATE))))
             // 舊 Datapack 的箱子 marker：匯入成點位 / 刪除 / 取消
             .then(Commands.literal("markers")
-                .then(Commands.literal("import")
+                .then(Commands.literal("import").requires(OP)
                     .then(Commands.argument("map", IntegerArgumentType.integer(1))
                         .executes(ctx -> markerJob(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "map"), MarkerScanJob.Mode.IMPORT))))
-                .then(Commands.literal("purge")
+                .then(Commands.literal("purge").requires(OP)
                     .then(Commands.argument("map", IntegerArgumentType.integer(1))
                         .executes(ctx -> {
                             fail(ctx.getSource(), "這會刪除該地圖範圍內所有舊箱子 marker（無法復原）。建議先 import。確定的話請在最後加上 confirm。");
@@ -318,7 +334,7 @@ public class PGCommand {
                         })
                         .then(Commands.literal("confirm")
                             .executes(ctx -> markerJob(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "map"), MarkerScanJob.Mode.PURGE)))))
-                .then(Commands.literal("cancel").executes(ctx -> {
+                .then(Commands.literal("cancel").requires(OP).executes(ctx -> {
                     if (MarkerScanJob.cancel()) return 1;
                     fail(ctx.getSource(), "目前沒有 marker 掃描在進行。");
                     return 0;

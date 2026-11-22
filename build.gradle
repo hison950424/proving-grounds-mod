@@ -66,6 +66,14 @@ dependencies {
 
     // Mixin 註解（Forge 執行時已內建 Mixin，只有編譯時需要）
     compileOnly 'org.spongepowered:mixin:0.8.5'
+
+    // 單元測試（例如玩家資料舊存檔遷移，計畫書 B5）
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 jar {

@@ -52,6 +52,7 @@ public class PGConfig {
     public final ForgeConfigSpec.BooleanValue hotbarRulesEnabled;
     public final ForgeConfigSpec.DoubleValue wheelHoldSeconds;
     public final ForgeConfigSpec.IntValue backpackLevel1Slots, backpackLevel2Slots, backpackLevel3Slots;
+    public final ForgeConfigSpec.DoubleValue mvpKill, mvpAssist, mvpDamagePerPoint, mvpRevive, mvpAltar, mvpWinBonus;
 
     // ── BR：移動 ──────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.DoubleValue brSpeedMultiplier;
@@ -211,6 +212,15 @@ public class PGConfig {
         backpackLevel1Slots = builder.comment("一級背包開放的格數").defineInRange("backpack_level1_slots", 5, 0, 27);
         backpackLevel2Slots = builder.comment("二級背包開放的格數").defineInRange("backpack_level2_slots", 10, 0, 27);
         backpackLevel3Slots = builder.comment("三級背包開放的格數").defineInRange("backpack_level3_slots", 15, 0, 27);
+        builder.pop();
+
+        builder.comment("本場數據：MVP 分數 = 擊殺×kill ＋ 助攻×assist ＋ 傷害÷damage_per_point ＋ 扶起×revive ＋ 祭壇復活×altar ＋（獲勝 ＋ win_bonus）").push("result");
+        mvpKill = builder.defineInRange("mvp_kill", 3.0, 0.0, 100.0);
+        mvpAssist = builder.defineInRange("mvp_assist", 1.5, 0.0, 100.0);
+        mvpDamagePerPoint = builder.comment("每多少傷害算 1 分").defineInRange("mvp_damage_per_point", 100.0, 1.0, 100000.0);
+        mvpRevive = builder.defineInRange("mvp_revive", 2.0, 0.0, 100.0);
+        mvpAltar = builder.defineInRange("mvp_altar", 3.0, 0.0, 100.0);
+        mvpWinBonus = builder.defineInRange("mvp_win_bonus", 5.0, 0.0, 100.0);
         builder.pop();
 
         builder.push("movement");
