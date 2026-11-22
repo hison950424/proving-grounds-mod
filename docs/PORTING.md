@@ -17,7 +17,7 @@
 
 | 位置 | 用到什麼 | 日後改法 |
 |---|---|---|
-| `compat/TaczGunAdapter.java` | 用反射掛 TACZ 事件（開槍、近戰、換彈、命中、子彈打方塊）、`TimelessAPI` 查槍的類型 | 新增一個 `GunAdapter` 實作（例如 `OwnGunAdapter`），在 `GunCompat.init()` 改選它 |
+| `compat/TaczGunAdapter.java` | 用反射掛 TACZ 事件（開槍、近戰、換彈、命中、子彈打方塊）、`TimelessAPI` 查槍的類型、`IAttachment`／`IGun#allowAttachment` 判斷配件相容（配件相容指示器用） | 新增一個 `GunAdapter` 實作（例如 `OwnGunAdapter`），在 `GunCompat.init()` 改選它 |
 | `compat/GunCompat.java` | 依 `ModList.isLoaded("tacz")` 選適配層 | 加上自製槍械的判斷 |
 | `compat/AmmoCategories.java` | `tacz:ammo` 物品、`AmmoId` NBT、`TimelessAPI` 查子彈 | 改成自製子彈；介面 `ammoFor()`、`addAmmoForGuns()` 保留 |
 | `mixin/GunDataMixin.java` | 目標類別 `com.tacz...GunData`（改槍吃的子彈） | 自製槍械不需要，直接刪除並從 `provinggrounds.mixins.json` 移除 |
@@ -175,6 +175,7 @@
 
 ## 3. 規則（新功能也要遵守）
 
+0. **箱子不刷近戰武器：** Gradle 任務 `checkNoMeleeLoot` 掛在 `processResources` 與 `check` 上，戰利品表（pools/、crates/）出現 `tags/items/melee.json` 的物品時建置失敗。
 1. **隔離槍械模組：** `com.tacz` 與 `com.lrtactical` 的 import 只能出現在 `compat/` 底下。
    - Gradle 任務 `checkGunModIsolation` 掛在 `compileJava` 與 `check` 上，違反時建置失敗並列出檔案與行號。
 2. **不寫死物品 ID：** 第三方物品 ID 只能放在設定、戰利品表、標籤這些資料檔裡，不寫死在程式。

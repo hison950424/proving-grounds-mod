@@ -120,3 +120,32 @@ tasks.register('checkGunModIsolation') {
 }
 tasks.named('check') { dependsOn 'checkGunModIsolation' }
 tasks.named('compileJava') { dependsOn 'checkGunModIsolation' }
+
+// ── 第三份計畫書 C：箱子不再刷近戰武器 ───────────────────────────────────────
+// 戰利品表（data/br/loot_tables 的 pools/ 與 crates/）不可以出現 tags/items/melee.json 裡的物品，
+// 否則建置失敗並列出檔案。玩家開局自帶的近戰武器不受影響（那是程式保留的，不是箱子刷的）。
+tasks.register('checkNoMeleeLoot') {
+    group = 'verification'
+    description = '檢查戰利品表沒有近戰武器（tags/items/melee.json 的物品）'
+    def resDir = file('src/main/resources/data')
+    def tagFile = file('src/main/resources/data/provinggrounds/tags/items/melee.json')
+    inputs.dir(resDir)
+    doLast {
+        def ids = new groovy.json.JsonSlurper().parse(tagFile).values.collect { it instanceof Map ? it.id : it }
+            .findAll { !it.startsWith('#') }
+        def violations = []
+        ['pools', 'crates'].each { sub ->
+            def dir = file("src/main/resources/data/br/loot_tables/${sub}")
+            if (!dir.exists()) return
+            dir.eachFileMatch(~/.*\.json/) { f ->
+                def text = f.getText('UTF-8')
+                ids.each { id -> if (text.contains("\"${id}\"")) violations << "${sub}/${f.name}：${id}" }
+            }
+        }
+        if (!violations.isEmpty()) {
+            throw new GradleException("戰利品表不可以有近戰武器（玩家開局自帶）：\n  " + violations.join('\n  '))
+        }
+    }
+}
+tasks.named('check') { dependsOn 'checkNoMeleeLoot' }
+tasks.named('processResources') { dependsOn 'checkNoMeleeLoot' }

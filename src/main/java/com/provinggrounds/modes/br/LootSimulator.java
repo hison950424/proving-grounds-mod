@@ -73,6 +73,10 @@ public final class LootSimulator {
         StringBuilder sb = new StringBuilder("  平均每箱：");
         kinds.forEach((k, v) -> sb.append(String.format("%s %.2f  ", k, v / (double) count)));
         say(src, sb.toString().trim(), ChatFormatting.WHITE);
+        // 箱子不再刷近戰武器（玩家開局自帶）：正常應為 0，不是 0 就是戰利品表又被加回去了
+        int melee = kinds.get("近戰");
+        say(src, "  近戰武器：" + melee + " 件" + (melee == 0 ? "（正常）" : "（不應該出現，請檢查戰利品表）"),
+            melee == 0 ? ChatFormatting.GREEN : ChatFormatting.RED);
         if (ammo.isEmpty()) say(src, "  彈藥 pool：沒有抽到任何彈藥", ChatFormatting.GRAY);
         ammo.forEach((cat, a) -> say(src, String.format("  %s：平均每箱 %.2f 組、每組 %d～%d 發、平均 %.1f 發",
             ammoName(cat), a[0] / (double) count, a[2], a[3], a[1] / (double) a[0]), ChatFormatting.AQUA));

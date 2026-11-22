@@ -164,6 +164,68 @@ public class TaczGunAdapter implements GunAdapter {
         return GunClass.LARGE;
     }
 
+    // ── 配件（第三份計畫書 D）─────────────────────────────────────────────────
+    // 用 TACZ 自己的相容資料：IAttachment.getIAttachmentOrNull 判斷是不是配件，IGun#allowAttachment(槍, 配件) 判斷能不能裝。
+    // 用反射呼叫（不在編譯期依賴 TACZ）；方法只查一次。結果依「槍 ID｜配件 ID」快取，最多 1024 筆。
+
+    private static Method getIAttachment, getAttachmentId, getIGun, allowAttachment, getGunId;
+    private static boolean attachmentApiReady, attachmentApiFailed;
+
+    private static synchronized boolean attachmentApi() {
+        if (attachmentApiReady) return true;
+        if (attachmentApiFailed) return false;
+        try {
+            Class<?> att = Class.forName("com.tacz.guns.api.item.IAttachment");
+            Class<?> gun = Class.forName("com.tacz.guns.api.item.IGun");
+            Class<?> stack = net.minecraft.world.item.ItemStack.class;
+            getIAttachment = att.getMethod("getIAttachmentOrNull", stack);
+            getAttachmentId = att.getMethod("getAttachmentId", stack);
+            getIGun = gun.getMethod("getIGunOrNull", stack);
+            allowAttachment = gun.getMethod("allowAttachment", stack, stack);
+            getGunId = gun.getMethod("getGunId", stack);
+            attachmentApiReady = true;
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            attachmentApiFailed = true;
+            com.provinggrounds.ProvingGroundsMod.LOGGER.warn("TACZ adapter: attachment API not found ({}); attachment highlight disabled.", e.toString());
+            return false;
+        }
+    }
+
+    private final java.util.Map<String, Boolean> attachCache = java.util.Collections.synchronizedMap(
+        new java.util.LinkedHashMap<>(256, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(java.util.Map.Entry<String, Boolean> e) { return size() > 1024; }
+        });
+
+    @Override
+    public boolean isAttachment(net.minecraft.world.item.ItemStack stack) {
+        if (stack.isEmpty() || !attachmentApi()) return false;
+        try {
+            return getIAttachment.invoke(null, stack) != null;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean canAttach(net.minecraft.world.item.ItemStack gunStack, net.minecraft.world.item.ItemStack attachment) {
+        if (gunStack.isEmpty() || attachment.isEmpty() || !attachmentApi()) return false;
+        try {
+            Object iGun = getIGun.invoke(null, gunStack);
+            Object iAtt = getIAttachment.invoke(null, attachment);
+            if (iGun == null || iAtt == null) return false;
+            String key = getGunId.invoke(iGun, gunStack) + "|" + getAttachmentId.invoke(iAtt, attachment);
+            Boolean cached = attachCache.get(key);
+            if (cached != null) return cached;
+            boolean ok = Boolean.TRUE.equals(allowAttachment.invoke(iGun, gunStack, attachment));
+            attachCache.put(key, ok);
+            return ok;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return false;
+        }
+    }
+
     /** 找「回傳 LivingEntity、沒有參數」的方法（TACZ 1.1.x 是 getShooter）。 */
     private static Method findShooterGetter(Class<?> type) {
         try {

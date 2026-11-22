@@ -31,6 +31,16 @@ public final class GunCompat {
 
     private GunCompat() {}
 
+    /** 是不是槍械配件；沒有槍械模組時一律 false。 */
+    public static boolean isAttachment(net.minecraft.world.item.ItemStack stack) {
+        return active != null && active.isAttachment(stack);
+    }
+
+    /** 這把槍能不能裝這個配件；沒有槍械模組時一律 false。 */
+    public static boolean canAttach(net.minecraft.world.item.ItemStack gun, net.minecraft.world.item.ItemStack attachment) {
+        return active != null && active.canAttach(gun, attachment);
+    }
+
     /** 物品的槍械分類；沒有槍械模組時一律 NONE。 */
     public static GunClass classify(net.minecraft.world.item.ItemStack stack) {
         return active == null ? GunClass.NONE : active.classify(stack);

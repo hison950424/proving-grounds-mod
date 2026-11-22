@@ -48,11 +48,11 @@ public final class CircleRenderer {
 
         BufferBuilder buf = Tesselator.getInstance().getBuilder();
         buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        // 目前圈：白色（同地圖的白色實線），透明度約 30%
-        ring(buf, m, s.cx(), s.cz(), s.radius(), cam, cam.y - 48, cam.y + 96, 0xFF, 0xFF, 0xFF, 0x4C);
-        // 下一圈：淺藍 #60C0FF（同地圖的淺藍虛線），透明度約 15%，矮一點
+        // 目前圈：白色（同地圖的白色實線），不透明度 circle_wall_opacity（預設 15%）
+        ring(buf, m, s.cx(), s.cz(), s.radius(), cam, cam.y - 48, cam.y + 96, 0xFF, 0xFF, 0xFF, alpha(true));
+        // 下一圈：淺藍 #60C0FF（同地圖的淺藍虛線），不透明度 circle_next_opacity（預設 7.5%），矮一點
         if (s.nextRadius() > 0) {
-            ring(buf, m, s.nextCx(), s.nextCz(), s.nextRadius(), cam, cam.y - 8, cam.y + 8, 0x60, 0xC0, 0xFF, 0x26);
+            ring(buf, m, s.nextCx(), s.nextCz(), s.nextRadius(), cam, cam.y - 8, cam.y + 8, 0x60, 0xC0, 0xFF, alpha(false));
         }
         BufferUploader.drawWithShader(buf.end());
 
@@ -60,6 +60,18 @@ public final class CircleRenderer {
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
         pose.popPose();
+    }
+
+    /** 牆的不透明度（0～255），來自客戶端設定；改設定檔後立刻生效（Forge 會重新讀取）。 */
+    private static int alpha(boolean current) {
+        double v;
+        try {
+            v = current ? com.provinggrounds.config.PGClientConfig.CLIENT.circleWallOpacity.get()
+                        : com.provinggrounds.config.PGClientConfig.CLIENT.circleNextOpacity.get();
+        } catch (IllegalStateException e) {
+            v = current ? 0.15 : 0.075;
+        }
+        return (int) Math.round(Math.max(0, Math.min(1, v)) * 255);
     }
 
     private static void ring(BufferBuilder buf, Matrix4f m, double cx, double cz, double r, Vec3 cam,

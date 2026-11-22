@@ -41,6 +41,8 @@ public final class ClientModEvents {
     public static void onRegisterOverlays(RegisterGuiOverlaysEvent event) {
         event.registerAboveAll("br_hud", HUD.OVERLAY);
         event.registerAboveAll("item_wheel", ClientWheel.OVERLAY);
+        event.registerAboveAll("compass", Compass.OVERLAY);
+        event.registerAboveAll("damage_indicator", DamageIndicator.OVERLAY);
     }
 
     @SubscribeEvent

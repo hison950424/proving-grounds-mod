@@ -26,6 +26,15 @@ public final class PGClientConfig {
 
     public final ForgeConfigSpec.BooleanValue uiWalkEnabled;
     public final ForgeConfigSpec.ConfigValue<List<? extends String>> uiWalkExcludedScreens;
+    public final ForgeConfigSpec.DoubleValue circleWallOpacity, circleNextOpacity;
+    public final ForgeConfigSpec.BooleanValue compassEnabled;
+    public final ForgeConfigSpec.DoubleValue compassScale;
+    public final ForgeConfigSpec.IntValue compassYOffset;
+    public final ForgeConfigSpec.BooleanValue compatHighlightEnabled;
+    public final ForgeConfigSpec.ConfigValue<String> compatHighlightColor;
+    public final ForgeConfigSpec.DoubleValue compatHighlightOpacity;
+    public final ForgeConfigSpec.BooleanValue damageIndicatorEnabled;
+    public final ForgeConfigSpec.DoubleValue damageIndicatorSeconds;
 
     private PGClientConfig(ForgeConfigSpec.Builder builder) {
         builder.push("ui_walk");
@@ -35,6 +44,30 @@ public final class PGClientConfig {
                 "不接管移動鍵的畫面類別名稱（可寫完整名稱或只寫類別名稱）。",
                 "有輸入框正在輸入、按鍵設定、聊天、死亡、載入、斷線畫面本來就不會接管。")
             .defineListAllowEmpty(List.of("ui_walk_excluded_screens"), List::of, o -> o instanceof String);
+        builder.pop();
+
+        builder.comment("遊戲畫面中的縮圈牆（不影響小地圖、大地圖上畫的圈）").push("circle");
+        circleWallOpacity = builder.comment("目前圈的牆（白色）不透明度，0.15 = 15%")
+            .defineInRange("circle_wall_opacity", 0.15, 0.0, 1.0);
+        circleNextOpacity = builder.comment("下一圈的環（淺藍色）不透明度，0.075 = 7.5%")
+            .defineInRange("circle_next_opacity", 0.075, 0.0, 1.0);
+        builder.pop();
+
+        builder.comment("大逃殺指北針（畫面上方中央的方位條，只在對局中顯示）").push("compass");
+        compassEnabled = builder.comment("是否顯示指北針").define("compass_enabled", true);
+        compassScale = builder.comment("大小倍率（1.0 = 預設大小）").defineInRange("compass_scale", 1.0, 0.5, 3.0);
+        compassYOffset = builder.comment("往下移幾格（GUI 像素；和其他畫面元件重疊時可以調）").defineInRange("compass_y_offset", 0, 0, 200);
+        builder.pop();
+
+        builder.comment("配件相容指示器：滑鼠停在槍上時標出能裝的配件，停在配件上時標出能裝它的槍").push("compat_highlight");
+        compatHighlightEnabled = builder.comment("是否啟用").define("compat_highlight_enabled", true);
+        compatHighlightColor = builder.comment("顏色（#RRGGBB，預設亮橘黃 #FFB300）").define("compat_highlight_color", "#FFB300");
+        compatHighlightOpacity = builder.comment("不透明度（0.4 = 40%）").defineInRange("compat_highlight_opacity", 0.4, 0.05, 1.0);
+        builder.pop();
+
+        builder.comment("受擊方向指示器：受傷時在螢幕邊緣對應攻擊方向的位置顯示紅色方塊（上 = 前方、下 = 後方）").push("damage_indicator");
+        damageIndicatorEnabled = builder.comment("是否啟用").define("damage_indicator_enabled", true);
+        damageIndicatorSeconds = builder.comment("顯示幾秒後淡出").defineInRange("damage_indicator_seconds", 1.5, 0.3, 10.0);
         builder.pop();
     }
 }

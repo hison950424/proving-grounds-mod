@@ -47,4 +47,10 @@ public interface GunAdapter {
 
     /** 判斷物品是不是槍、是手槍還是大型槍（兩端都可呼叫）。 */
     default GunClass classify(net.minecraft.world.item.ItemStack stack) { return GunClass.NONE; }
+
+    /** 這個物品是不是槍械配件（瞄具、槍口、握把、槍托、雷射、擴充彈匣…；子彈不算）。兩端都可呼叫。 */
+    default boolean isAttachment(net.minecraft.world.item.ItemStack stack) { return false; }
+
+    /** 這把槍能不能裝這個配件（只看能不能裝，不管槍上是不是已經裝了同類型）。兩端都可呼叫。 */
+    default boolean canAttach(net.minecraft.world.item.ItemStack gun, net.minecraft.world.item.ItemStack attachment) { return false; }
 }
