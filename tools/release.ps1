@@ -29,8 +29,11 @@ if ($dirty) { Stop-Release "工作目錄有未提交的變更：`n$($dirty -join
 $branch = (& git -C $root rev-parse --abbrev-ref HEAD).Trim()
 if ($branch -eq 'main') { Stop-Release '目前在 main 分支，請在 feature 分支上發佈' }
 if (-not $SkipGitHub) {
-    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { Stop-Release '找不到 gh（GitHub CLI）。安裝並登入後再跑，或加 -SkipGitHub 只做本機與推送' }
-    & gh auth status *> $null
+    # 剛安裝的程式在已開啟的視窗裡可能還不在 PATH，找不到時改用預設安裝位置
+    $script:gh = (Get-Command gh -ErrorAction SilentlyContinue).Source
+    if (-not $script:gh -and (Test-Path 'C:\Program Files\GitHub CLI\gh.exe')) { $script:gh = 'C:\Program Files\GitHub CLI\gh.exe' }
+    if (-not $script:gh) { Stop-Release '找不到 gh（GitHub CLI）。安裝並登入後再跑，或加 -SkipGitHub 只做本機與推送' }
+    & $script:gh auth status *> $null
     if ($LASTEXITCODE -ne 0) { Stop-Release 'gh 尚未登入（gh auth login）' }
 }
 # Java 在 Windows 上不會鎖住 jar，執行中也換得掉，所以要主動檢查伺服器／Prism 客戶端是否正在執行
@@ -113,7 +116,7 @@ $url = '（略過：-SkipGitHub）'
 if (-not $SkipGitHub) {
     $notesTmp = Join-Path $env:TEMP "pg_notes_$version.md"
     [System.IO.File]::WriteAllText($notesTmp, $releaseNotes, $enc)
-    $url = (& gh release create $tag $jar --repo hison950424/proving-grounds-mod --prerelease --title $version --notes-file $notesTmp --verify-tag) | Select-Object -Last 1
+    $url = (& $script:gh release create $tag $jar --repo hison950424/proving-grounds-mod --prerelease --title $version --notes-file $notesTmp --verify-tag) | Select-Object -Last 1
     if ($LASTEXITCODE -ne 0) { Stop-Release "gh release create 失敗（標籤 $tag 已推送，可修正後手動建立 Release）" }
 }
 
