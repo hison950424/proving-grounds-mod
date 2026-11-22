@@ -204,4 +204,15 @@ public final class ClientForgeEvents {
         SpawnPointRenderer.clear();
         FORCED_CRAWL.clear();
     }
+
+    /** 客戶端指令 /pgwalk：說明開著介面時會不會接管移動鍵、不接管的原因（只顯示給自己）。 */
+    @SubscribeEvent
+    public static void onClientCommands(net.minecraftforge.client.event.RegisterClientCommandsEvent event) {
+        event.getDispatcher().register(net.minecraft.commands.Commands.literal("pgwalk").executes(ctx -> {
+            for (String line : UiWalk.diagnose()) {
+                ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(line), false);
+            }
+            return 1;
+        }));
+    }
 }

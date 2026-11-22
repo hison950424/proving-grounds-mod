@@ -141,8 +141,9 @@ public class PGConfig {
 
     private PGConfig(ForgeConfigSpec.Builder builder) {
         builder.push("lobby");
-        uiWalkAllowed = builder.comment("是否允許玩家開著介面（物品欄、箱子、地圖…）時用移動鍵走動。關閉時所有玩家都不能（不管各自的客戶端設定）")
-            .define("ui_walk_allowed", false);
+        uiWalkAllowed = builder.comment("是否允許玩家開著介面（物品欄、箱子、地圖…）時用移動鍵走動（預設允許）。設成 false 是緊急關閉：所有玩家都不能（不管各自的客戶端設定）。",
+                "（原本的鍵 ui_walk_allowed 預設關閉、已停用；改名是為了讓舊設定檔自動換成新的預設值）")
+            .define("ui_walk_allowed_v2", true);
         lobbyCountdownSeconds = builder.comment("登機倒數秒數（BR 在這段時間分批刷新戰利品；最後 10 秒畫面中央顯示數字＋音效）")
             .defineInRange("countdown_seconds", 10, 5, 300);
         forceStartSeconds = builder.comment("管理員按「強制開始」後，全體提示並倒數的秒數")
