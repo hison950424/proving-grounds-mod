@@ -18,11 +18,21 @@ import net.minecraft.world.phys.BlockHitResult;
  * 檔案: CrateBlock.java
  * 目的: BR 戰利品箱方塊（木＝低階、鐵＝中階、金＝高階、空投）。
  *       四種外觀共用同一個方塊實體類型，階級由放置時設定的 loot table 決定。
+ *       open 狀態：有玩家打開時為 true（蓋子打開的貼圖），全部關閉後回到 false，同原版木桶。
  */
 public class CrateBlock extends BaseEntityBlock {
 
+    public static final net.minecraft.world.level.block.state.properties.BooleanProperty OPEN =
+        net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN;
+
     public CrateBlock(Properties props) {
         super(props);
+        registerDefaultState(stateDefinition.any().setValue(OPEN, false));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder) {
+        builder.add(OPEN);
     }
 
     @Override

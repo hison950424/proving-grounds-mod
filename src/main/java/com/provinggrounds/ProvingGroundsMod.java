@@ -45,6 +45,7 @@ public class ProvingGroundsMod {
         PGBlocks.register(modBus);
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, PGConfig.SERVER_SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, com.provinggrounds.config.PGClientConfig.SPEC); // 客戶端設定（介面中走動）
         modBus.addListener(AmmoCategories::onConfig); // 彈藥分類對照表
 
         MinecraftForge.EVENT_BUS.register(this);

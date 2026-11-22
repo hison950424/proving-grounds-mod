@@ -1,0 +1,4 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": { "top": "provinggrounds:block/crate_iron_top_open", "bottom": "provinggrounds:block/crate_iron_bottom", "side": "provinggrounds:block/crate_iron_side" }
+}

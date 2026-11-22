@@ -1,5 +1,6 @@
 {
   "variants": {
-    "": { "model": "provinggrounds:block/crate_low" }
+    "open=false": { "model": "provinggrounds:block/crate_low" },
+    "open=true": { "model": "provinggrounds:block/crate_low_open" }
   }
 }

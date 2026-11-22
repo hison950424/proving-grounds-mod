@@ -28,6 +28,34 @@ public class CrateBlockEntity extends RandomizableContainerBlockEntity {
         super(PGBlocks.CRATE_BE.get(), pos, state);
     }
 
+    // ── 開啟狀態（蓋子貼圖）：目前有幾個玩家開著這個箱子 ──────────────────────
+    private int openers;
+
+    @Override
+    public void startOpen(net.minecraft.world.entity.player.Player player) {
+        if (player.isSpectator()) return;
+        if (openers++ == 0) setOpen(true);
+    }
+
+    @Override
+    public void stopOpen(net.minecraft.world.entity.player.Player player) {
+        if (player.isSpectator()) return;
+        if (--openers <= 0) {
+            openers = 0;
+            setOpen(false);
+            if (level != null) level.playSound(null, worldPosition, net.minecraft.sounds.SoundEvents.BARREL_CLOSE,
+                net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.0f);
+        }
+    }
+
+    private void setOpen(boolean open) {
+        if (level == null || level.isClientSide) return;
+        BlockState state = getBlockState();
+        if (state.hasProperty(CrateBlock.OPEN) && state.getValue(CrateBlock.OPEN) != open) {
+            level.setBlock(worldPosition, state.setValue(CrateBlock.OPEN, open), net.minecraft.world.level.block.Block.UPDATE_ALL);
+        }
+    }
+
     /** 清空內容且不觸發 loot table 生成（每場開始/結束清理用）。 */
     public void wipe() {
         setLootTable(null, 0L);
