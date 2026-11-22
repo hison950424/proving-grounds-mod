@@ -23,7 +23,8 @@ public final class HotbarEvents {
 
     private HotbarEvents() {}
 
-    @SubscribeEvent(priority = EventPriority.HIGH)
+    // 優先度要比 BREvents.onPickup（HIGH，處理復活牌與倒地）低：被它取消的撿取不會再進來，復活牌不會被放進背包
+    @SubscribeEvent(priority = EventPriority.NORMAL)
     public static void onPickup(EntityItemPickupEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer p) || !HotbarRules.active(p)) return;
         event.setCanceled(true);
@@ -39,6 +40,11 @@ public final class HotbarEvents {
             event.setCanceled(true);
             HotbarRules.message(p, "這個物品不能換到副手／這一格");
         }
+    }
+
+    @SubscribeEvent
+    public static void onLogout(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) {
+        HotbarRules.forget(event.getEntity().getUUID());
     }
 
     @SubscribeEvent

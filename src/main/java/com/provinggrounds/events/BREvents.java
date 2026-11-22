@@ -42,6 +42,15 @@ public class BREvents {
         if (BattleRoyaleMode.get().isDropping(p.getUUID())) event.setCanceled(true);
     }
 
+    /** 鞘翅滑翔撞牆的傷害（原版 fly_into_wall）：跳傘中不受傷。 */
+    @SubscribeEvent
+    public void onElytraCrash(net.minecraftforge.event.entity.living.LivingAttackEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer p)) return;
+        if (event.getSource().is(net.minecraft.world.damagesource.DamageTypes.FLY_INTO_WALL) && BattleRoyaleMode.get().isDropping(p.getUUID())) {
+            event.setCanceled(true);
+        }
+    }
+
     /**
      * 撿取：復活牌一律不進背包（同隊吸走、敵隊吸不到）；倒地中不能撿任何東西。
      * 這個事件在背包檢查之前觸發，所以背包滿也能吸取復活牌。

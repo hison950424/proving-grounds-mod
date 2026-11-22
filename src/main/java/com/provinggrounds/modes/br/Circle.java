@@ -27,6 +27,11 @@ public class Circle {
     private int ticksLeft;
     private int shrinkTotal = 1;
 
+    /** 開場第一次縮圈前多等一段時間（設定 first_wait_extra_seconds）。只在建立後、開始倒數前呼叫。 */
+    public void addInitialWait(int ticks) {
+        if (ticks > 0) ticksLeft += ticks;
+    }
+
     public Circle(double centerX, double centerZ, double mapRadius, double[] ratios,
                   int intervalSeconds, double maxEdgeSpeedPerSecond, RandomSource random) {
         this.cx = centerX;

@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "minecraft:block/stone_bricks",
+    "base": "minecraft:block/cobblestone",
+    "stone": "minecraft:block/stone_bricks",
+    "top": "minecraft:block/chiseled_stone_bricks"
+  },
+  "elements": [
+    {
+      "from": [1, 0, 1], "to": [15, 2, 15],
+      "faces": {
+        "down":  { "texture": "#base", "cullface": "down" },
+        "up":    { "texture": "#base" },
+        "north": { "texture": "#base", "uv": [1, 14, 15, 16] },
+        "south": { "texture": "#base", "uv": [1, 14, 15, 16] },
+        "west":  { "texture": "#base", "uv": [1, 14, 15, 16] },
+        "east":  { "texture": "#base", "uv": [1, 14, 15, 16] }
+      }
+    },
+    {
+      "from": [3, 2, 6], "to": [13, 14, 10],
+      "faces": {
+        "up":    { "texture": "#stone", "uv": [3, 6, 13, 10] },
+        "north": { "texture": "#top", "uv": [3, 2, 13, 14] },
+        "south": { "texture": "#top", "uv": [3, 2, 13, 14] },
+        "west":  { "texture": "#stone", "uv": [6, 2, 10, 14] },
+        "east":  { "texture": "#stone", "uv": [6, 2, 10, 14] }
+      }
+    }
+  ]
+}

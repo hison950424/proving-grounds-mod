@@ -58,9 +58,19 @@ public final class UiWalk {
         };
     }
 
+    /** 伺服器是否允許開著介面移動（伺服器設定 [lobby] ui_walk_allowed，會同步到客戶端；還沒同步時不允許）。 */
+    private static boolean serverAllows() {
+        try {
+            return com.provinggrounds.config.PGConfig.SERVER.uiWalkAllowed.get();
+        } catch (IllegalStateException e) {
+            return false;
+        }
+    }
+
     private static boolean shouldWalk(Screen screen) {
         try {
             if (!PGClientConfig.CLIENT.uiWalkEnabled.get()) return false;
+            if (!serverAllows()) return false; // 伺服器設定 ui_walk_allowed 關閉時，所有玩家都不能在介面中移動
             List<? extends String> excluded = PGClientConfig.CLIENT.uiWalkExcludedScreens.get();
             String full = screen.getClass().getName(), simple = screen.getClass().getSimpleName();
             if (excluded.contains(full) || excluded.contains(simple)) return false;

@@ -31,9 +31,12 @@ public class AdminToolItem extends Item {
     public enum Tool {
         FLOAT_TEXT("float_text", "右鍵：輸入文字，在你的位置建立浮空文字（支援 & 色碼，最多 100 字）"),
         TEXT_ERASER("text_eraser", "右鍵：刪除離你最近的一個浮空文字"),
-        SPAWN_PLACER("spawn_placer", "右鍵：在你的位置新增箱子生成點（刪除請用 /pg loot remove）"),
+        SPAWN_PLACER("spawn_placer", "右鍵：在你的位置新增箱子生成點"),
         SPAWN_VIEWER("spawn_viewer", "右鍵：顯示／隱藏所有箱子生成點（只有你看得到）"),
-        TEXT_UNDO("text_undo", "右鍵：復原最近一次刪除的浮空文字（再按一次復原前一筆）");
+        TEXT_UNDO("text_undo", "右鍵：復原最近一次刪除的浮空文字（再按一次復原前一筆）"),
+        SPAWN_REMOVER("spawn_remover", "右鍵：刪除離你最近的一個箱子生成點（16 格內），被刪的位置會閃紅框"),
+        CRATE_CONVERTER("crate_converter", "右鍵：選擇地圖，把舊資料包的箱子標記轉換成箱子生成點"),
+        MAP_PAINTER("map_painter", "右鍵：選擇地圖，重新繪製大地圖／小地圖的圖片");
 
         public final String id;
         final String hint;
@@ -65,6 +68,8 @@ public class AdminToolItem extends Item {
             case SPAWN_PLACER -> p.sendSystemMessage(AdminTools.addLootPoint(p.server, BlockPos.containing(p.position()), null));
             case SPAWN_VIEWER -> p.sendSystemMessage(SpawnPointView.toggle(p));
             case TEXT_UNDO -> p.sendSystemMessage(FloatText.undo(p.server));
+            case SPAWN_REMOVER -> p.sendSystemMessage(AdminTools.removeNearestLootPoint(p));
+            case CRATE_CONVERTER, MAP_PAINTER -> AdminTools.openMapPicker(p, tool);
         }
         p.getCooldowns().addCooldown(this, 5); // 避免連點
         return InteractionResultHolder.success(stack);

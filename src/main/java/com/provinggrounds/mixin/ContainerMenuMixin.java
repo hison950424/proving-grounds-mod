@@ -39,6 +39,6 @@ public abstract class ContainerMenuMixin {
     private void provinggrounds$afterClick(int slotId, int button, ClickType type, Player player, CallbackInfo ci) {
         HotbarRules.Snapshot snap = provinggrounds$snapshot.get();
         provinggrounds$snapshot.remove();
-        if (snap != null && player instanceof ServerPlayer sp) HotbarRules.afterClick((AbstractContainerMenu) (Object) this, sp, snap);
+        if (snap != null && player instanceof ServerPlayer sp) HotbarRules.afterClick((AbstractContainerMenu) (Object) this, slotId, sp, snap);
     }
 }

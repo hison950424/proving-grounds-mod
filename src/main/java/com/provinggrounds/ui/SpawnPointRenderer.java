@@ -40,13 +40,26 @@ public final class SpawnPointRenderer {
 
     public static void clear() {
         set(false, List.of());
+        flashPos = null;
+    }
+
+    // 剛被刪除的生成點：閃紅框 3 秒（不管有沒有開顯示）
+    private static volatile BlockPos flashPos;
+    private static volatile long flashUntil;
+
+    public static void flash(BlockPos pos) {
+        flashPos = pos;
+        flashUntil = System.currentTimeMillis() + 3000;
     }
 
     @SubscribeEvent
     public static void onRender(RenderLevelStageEvent event) {
-        if (!show || event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
-        List<BlockPos> list = points;
-        if (list.isEmpty()) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+        BlockPos fp = flashPos;
+        long now = System.currentTimeMillis();
+        if (fp != null && now > flashUntil) { flashPos = null; fp = null; }
+        List<BlockPos> list = show ? points : List.of();
+        if (list.isEmpty() && fp == null) return;
         Vec3 cam = event.getCamera().getPosition();
         double range;
         try {
@@ -58,7 +71,8 @@ public final class SpawnPointRenderer {
 
         List<BlockPos> near = new java.util.ArrayList<>();
         for (BlockPos p : list) if (p.distToCenterSqr(cam) <= rangeSq) near.add(p);
-        if (near.isEmpty()) return;
+        boolean blink = fp != null && (now / 250) % 2 == 0; // 每 0.25 秒閃一次
+        if (near.isEmpty() && !blink) return;
 
         PoseStack pose = event.getPoseStack();
         pose.pushPose();
@@ -72,7 +86,11 @@ public final class SpawnPointRenderer {
         BufferBuilder b = Tesselator.getInstance().getBuilder();
         b.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
         for (BlockPos p : near) {
-            box(b, m, p.getX() + 0.05f, p.getY() + 0.05f, p.getZ() + 0.05f, p.getX() + 0.95f, p.getY() + 0.95f, p.getZ() + 0.95f);
+            box(b, m, p.getX() + 0.05f, p.getY() + 0.05f, p.getZ() + 0.05f, p.getX() + 0.95f, p.getY() + 0.95f, p.getZ() + 0.95f, YELLOW);
+        }
+        if (blink) {
+            // 刪除的點：紅色、稍微大一圈的方框
+            box(b, m, fp.getX() - 0.1f, fp.getY() - 0.1f, fp.getZ() - 0.1f, fp.getX() + 1.1f, fp.getY() + 1.1f, fp.getZ() + 1.1f, RED);
         }
         Tesselator.getInstance().end();
         RenderSystem.enableDepthTest();
@@ -80,8 +98,11 @@ public final class SpawnPointRenderer {
         pose.popPose();
     }
 
-    private static void box(BufferBuilder b, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1) {
-        float r = 0.91f, g = 0.82f, bl = 0.38f, a = 0.9f; // #E8D060
+    private static final float[] YELLOW = { 0.91f, 0.82f, 0.38f, 0.9f }; // #E8D060
+    private static final float[] RED = { 1f, 0.2f, 0.2f, 1f };
+
+    private static void box(BufferBuilder b, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1, float[] col) {
+        float r = col[0], g = col[1], bl = col[2], a = col[3];
         float[][] c = { { x0, y0, z0 }, { x1, y0, z0 }, { x1, y0, z1 }, { x0, y0, z1 }, { x0, y1, z0 }, { x1, y1, z0 }, { x1, y1, z1 }, { x0, y1, z1 } };
         int[][] edges = { { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 }, { 4, 5 }, { 5, 6 }, { 6, 7 }, { 7, 4 }, { 0, 4 }, { 1, 5 }, { 2, 6 }, { 3, 7 } };
         for (int[] e : edges) {

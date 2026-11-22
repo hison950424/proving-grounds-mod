@@ -11,12 +11,11 @@ import net.minecraft.world.item.enchantment.Enchantments;
 
 /**
  * 檔案: SkydiveWings.java
- * 目的: 跳傘翼裝（計畫書 B1）。跳出飛機時穿在胸甲欄，落地、淘汰、還原時移除。
+ * 目的: 跳傘用的鞘翅。跳出飛機時穿在胸甲欄，開傘、落地、淘汰、還原時移除。
  *   用原版鞘翅物品做外觀（原版只替「原版鞘翅」畫翅膀），加上：
  *     - 標籤 pg_skydive：辨識用，任何地方發現都會被清掉，不會殘留
  *     - 綁定詛咒：生存／冒險模式無法從裝備欄取下
- *     - 耐久設成快壞（剩 1）：原版鞘翅滑翔的條件是耐久 > 1，所以按空白鍵不會觸發原版滑翔，
- *       速度完全由我們的公式（ClientSkydive）決定
+ *     - 可以正常滑翔：跳出飛機時伺服器直接讓玩家進入原版鞘翅滑翔；開傘時就把它拿掉，不能再回到滑翔
  *     - 不可破壞：不會因為耐久真的壞掉
  */
 public final class SkydiveWings {
@@ -28,12 +27,11 @@ public final class SkydiveWings {
     public static ItemStack create() {
         ItemStack s = new ItemStack(Items.ELYTRA);
         s.enchant(Enchantments.BINDING_CURSE, 1);
-        s.setDamageValue(s.getMaxDamage() - 1);
         CompoundTag tag = s.getOrCreateTag();
         tag.putBoolean(TAG, true);
         tag.putBoolean("Unbreakable", true);
         tag.putInt("HideFlags", 127);
-        s.setHoverName(Component.literal("跳傘翼裝").withStyle(ChatFormatting.AQUA));
+        s.setHoverName(Component.literal("跳傘鞘翅").withStyle(ChatFormatting.AQUA));
         return s;
     }
 

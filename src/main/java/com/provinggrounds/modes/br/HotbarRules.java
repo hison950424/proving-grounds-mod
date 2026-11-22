@@ -290,13 +290,27 @@ public final class HotbarRules {
         }
     }
 
-    /** 點擊後呼叫：違規變多就整個還原。 */
-    public static void afterClick(AbstractContainerMenu menu, ServerPlayer p, Snapshot snap) {
+    /**
+     * 每位玩家「游標上的物品是從哪一格拿起來的」（menu 的 containerId 與格子編號）。
+     * 放錯格子被還原時，物品直接放回這一格，而不是留在游標上。
+     */
+    private static final Map<UUID, int[]> pickupOrigin = new HashMap<>();
+
+    /** 點擊後呼叫：違規變多就整個還原，並把游標上的物品放回拿起來的那一格。 */
+    public static void afterClick(AbstractContainerMenu menu, int slotId, ServerPlayer p, Snapshot snap) {
         if (Backpack.level(p) != snap.backpackLevel) {
             normalize(p); // 換了背包：容量變了，鎖定格裡的物品搬走或掉落（不還原）
             return;
         }
-        if (violations(p) <= snap.violations) return;
+        if (violations(p) <= snap.violations) {
+            // 合法的點擊：記下游標上的物品是從哪一格拿起來的
+            if (snap.carried.isEmpty() && !menu.getCarried().isEmpty() && slotId >= 0 && slotId < menu.slots.size()) {
+                pickupOrigin.put(p.getUUID(), new int[] { menu.containerId, slotId });
+            } else if (menu.getCarried().isEmpty()) {
+                pickupOrigin.remove(p.getUUID());
+            }
+            return;
+        }
         String why = MSG_SPECIAL_SLOT;
         Inventory inv = p.getInventory();
         for (int i = 0; i <= OFFHAND; i++) {
@@ -308,7 +322,36 @@ public final class HotbarRules {
             }
         }
         snap.restore(menu, p);
+        returnCarried(menu, p);
         message(p, why);
+    }
+
+    /**
+     * 還原後游標上還拿著東西（例如拿起槍、放到錯的格子）：放回拿起來的那一格；
+     * 那一格已經被佔走或不知道從哪拿的，就照規則放到合法的格子；都不行才留在游標上。
+     */
+    private static void returnCarried(AbstractContainerMenu menu, ServerPlayer p) {
+        ItemStack carried = menu.getCarried();
+        if (carried.isEmpty()) return;
+        int[] origin = pickupOrigin.remove(p.getUUID());
+        if (origin != null && origin[0] == menu.containerId && origin[1] < menu.slots.size()) {
+            Slot slot = menu.slots.get(origin[1]);
+            boolean legal = !(slot.container instanceof Inventory) || allowedAt(p, slot.getContainerSlot(), carried);
+            if (!slot.hasItem() && legal && slot.mayPlace(carried)) {
+                slot.set(carried.copy());
+                menu.setCarried(ItemStack.EMPTY);
+                return;
+            }
+        }
+        ItemStack work = carried.copy();
+        insert(p, work);
+        menu.setCarried(work);
+    }
+
+    /** 玩家登出：清掉記錄。 */
+    public static void forget(UUID id) {
+        pickupOrigin.remove(id);
+        lastMessage.remove(id);
     }
 
     // ── 3. 定期整理 ─────────────────────────────────────────────────────────

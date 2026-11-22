@@ -156,6 +156,7 @@
 | `ContainerMenuMixin` | `AbstractContainerMenu.clicked` | 快捷欄規則的點擊檢查；Forge 沒有可取消的容器點擊事件 |
 | `InventoryMenuMixin` | `InventoryMenu` 建構子 | 加背包欄；Forge 沒有替原版物品欄加格子的事件，而且計畫書要求不依賴 Curios |
 | `SlotMixin` | `Slot.mayPlace` / `mayPickup` | 背包鎖格；所有畫面的主背包格都經過這裡 |
+| `PlayerPoseMixin` | `Player.updatePlayerPose` | 趴下／倒地強制趴下姿勢；TACZ 的匍匐功能每 tick 會清掉本地玩家的強制姿勢，沒有事件能在它之後、原版決定姿勢之前介入 |
 
 所有 Mixin 都沒有 refmap。注入點同時寫開發名稱與 SRG 名稱（`remap = false`），並設 `defaultRequire = 0`。換版本時要重新核對 SRG 名稱，或改用新載入器的對應方式。
 

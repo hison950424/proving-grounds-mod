@@ -54,6 +54,13 @@ public final class PGBlocks {
     public static final RegistryObject<BlockEntityType<AltarBlockEntity>> ALTAR_BE =
         BLOCK_ENTITIES.register("altar", () -> BlockEntityType.Builder.of(AltarBlockEntity::new, ALTAR.get()).build(null));
 
+    /** 墓碑：BR 淘汰時收納身上所有物品，一局結束清除（不掉落、一般玩家不能破壞）。 */
+    public static final RegistryObject<Block> TOMBSTONE = BLOCKS.register("tombstone", () -> new com.provinggrounds.block.TombstoneBlock(
+        BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(-1.0f, 3600000f).sound(SoundType.STONE).noOcclusion()));
+    @SuppressWarnings("ConstantConditions")
+    public static final RegistryObject<BlockEntityType<com.provinggrounds.block.TombstoneBlockEntity>> TOMBSTONE_BE =
+        BLOCK_ENTITIES.register("tombstone", () -> BlockEntityType.Builder.of(com.provinggrounds.block.TombstoneBlockEntity::new, TOMBSTONE.get()).build(null));
+
     /** 數據看板（計畫書 B5）：只有 OP 或創造模式能擺放、破壞。 */
     public static final RegistryObject<Block> STATS_BOARD = BLOCKS.register("stats_board", () -> new com.provinggrounds.block.StatsBoardBlock(
         BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(1.5f, 3600000f).sound(SoundType.WOOD)));
@@ -89,7 +96,14 @@ public final class PGBlocks {
         () -> net.minecraft.world.item.CreativeModeTab.builder()
             .title(net.minecraft.network.chat.Component.literal("PG 管理工具"))
             .icon(() -> new net.minecraft.world.item.ItemStack(ADMIN_TOOLS.get(com.provinggrounds.item.AdminToolItem.Tool.FLOAT_TEXT).get()))
-            .displayItems((params, out) -> ADMIN_TOOLS.values().forEach(r -> out.accept(r.get())))
+            .displayItems((params, out) -> {
+                // 管理員會用到的全部放這裡（看板、箱子、祭壇、背包、工具），不用到各個原版分頁找
+                ADMIN_TOOLS.values().forEach(r -> out.accept(r.get()));
+                out.accept(STATS_BOARD_ITEM.get());
+                out.accept(CRATE_LOW.get()); out.accept(CRATE_MID.get()); out.accept(CRATE_HIGH.get()); out.accept(CRATE_AIRDROP.get());
+                out.accept(ALTAR_ITEM.get());
+                out.accept(BACKPACK_1.get()); out.accept(BACKPACK_2.get()); out.accept(BACKPACK_3.get());
+            })
             .build());
 
     private PGBlocks() {}

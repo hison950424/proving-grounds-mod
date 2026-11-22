@@ -47,10 +47,12 @@ public class PGConfig {
     public final ForgeConfigSpec.IntValue brPlaneHeight;
     public final ForgeConfigSpec.DoubleValue brPlaneSpeed;
     // 跳傘（計畫書 B1）
-    public final ForgeConfigSpec.DoubleValue skydivePitchMin, skydivePitchMax, freefallMaxSink, freefallMinSink, freefallMaxHorizontal;
-    public final ForgeConfigSpec.DoubleValue chuteSink, chuteHorizontal, skydiveToggleCooldown;
+    public final ForgeConfigSpec.DoubleValue skydiveAutoChuteHeight, chuteSink, chuteHorizontal;
     public final ForgeConfigSpec.BooleanValue hotbarRulesEnabled;
     public final ForgeConfigSpec.DoubleValue wheelHoldSeconds;
+    public final ForgeConfigSpec.IntValue brFirstWaitExtraSeconds;
+    public final ForgeConfigSpec.BooleanValue uiWalkAllowed;
+    public final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> pistolGuns;
     public final ForgeConfigSpec.IntValue backpackLevel1Slots, backpackLevel2Slots, backpackLevel3Slots;
     public final ForgeConfigSpec.DoubleValue mvpKill, mvpAssist, mvpDamagePerPoint, mvpRevive, mvpAltar, mvpWinBonus;
     public final ForgeConfigSpec.DoubleValue adminTextDeleteRange, adminSpawnViewRange;
@@ -139,6 +141,8 @@ public class PGConfig {
 
     private PGConfig(ForgeConfigSpec.Builder builder) {
         builder.push("lobby");
+        uiWalkAllowed = builder.comment("是否允許玩家開著介面（物品欄、箱子、地圖…）時用移動鍵走動。關閉時所有玩家都不能（不管各自的客戶端設定）")
+            .define("ui_walk_allowed", false);
         lobbyCountdownSeconds = builder.comment("登機倒數秒數（BR 在這段時間分批刷新戰利品；最後 10 秒畫面中央顯示數字＋音效）")
             .defineInRange("countdown_seconds", 10, 5, 300);
         forceStartSeconds = builder.comment("管理員按「強制開始」後，全體提示並倒數的秒數")
@@ -172,10 +176,12 @@ public class PGConfig {
             .defineList("slow_ratios", List.of(0.70, 0.45, 0.25, 0.10, 0.01), PGConfig::isRatio);
         brSlowInterval = builder.comment("慢速方案：階段間隔（秒）")
             .defineInRange("slow_interval_seconds", 90, 5, 600);
-        brDamageBase = builder.comment("圈外傷害基礎值（HP/秒）。BR 最大血量 100：預設第 1~4 階段每秒 2、5、8、11")
-            .defineInRange("damage_base", 2.0, 0.0, 100.0);
+        brFirstWaitExtraSeconds = builder.comment("所有方案：開場第一次縮圈前額外多等幾秒（在階段間隔之外）")
+            .defineInRange("first_wait_extra_seconds", 60, 0, 600);
+        brDamageBase = builder.comment("圈外傷害基礎值（HP/秒）。BR 最大血量 100：預設第 1~4 階段每秒 1、2.5、4、5.5")
+            .defineInRange("damage_base", 1.0, 0.0, 100.0);
         brDamagePerStage = builder.comment("圈外傷害每階段增加量（HP/秒）。傷害 = 基礎 + 每階段 × 階段索引(0 起算)")
-            .defineInRange("damage_per_stage", 3.0, 0.0, 100.0);
+            .defineInRange("damage_per_stage", 1.5, 0.0, 100.0);
         builder.pop();
 
         builder.push("plane");
@@ -185,23 +191,13 @@ public class PGConfig {
             .defineInRange("speed", 25.0, 5.0, 100.0);
         builder.pop();
 
-        builder.comment("跳傘：空白鍵跳出飛機、開傘、收傘。自由落體的速度依俯角（往下看的角度）線性變化。").push("skydive");
-        skydivePitchMin = builder.comment("自由落體時視角最多能抬到的俯角（度，0 = 水平，不能抬到水平以上）")
-            .defineInRange("skydive_pitch_min", 0.0, 0.0, 90.0);
-        skydivePitchMax = builder.comment("自由落體時視角最低的俯角（度，90 = 正下方）")
-            .defineInRange("skydive_pitch_max", 90.0, 0.0, 90.0);
-        freefallMaxSink = builder.comment("自由落體最大下沉速度（格/秒，頭朝正下方時）")
-            .defineInRange("freefall_max_sink", 30.0, 1.0, 100.0);
-        freefallMinSink = builder.comment("自由落體最低下沉速度（格/秒，抬到水平時仍保證下沉，不能滑翔）")
-            .defineInRange("freefall_min_sink", 10.0, 1.0, 100.0);
-        freefallMaxHorizontal = builder.comment("自由落體最大水平速度（格/秒，抬到水平時）")
-            .defineInRange("freefall_max_horizontal", 15.0, 0.0, 100.0);
+        builder.comment("跳傘：空白鍵跳出飛機後直接用原版鞘翅滑翔；按空白鍵或離地夠近時開傘，開傘後不能回到鞘翅。").push("skydive");
+        skydiveAutoChuteHeight = builder.comment("離地面幾格時自動開傘")
+            .defineInRange("auto_chute_height", 50.0, 5.0, 300.0);
         chuteSink = builder.comment("開傘後的下降速度（格/秒）")
             .defineInRange("chute_sink", 5.0, 0.5, 50.0);
         chuteHorizontal = builder.comment("開傘後用移動鍵操控的最大水平速度（格/秒）")
             .defineInRange("chute_horizontal", 8.0, 0.0, 50.0);
-        skydiveToggleCooldown = builder.comment("開傘、收傘切換的冷卻（秒）")
-            .defineInRange("toggle_cooldown", 0.5, 0.0, 5.0);
         builder.pop();
 
         builder.comment("快捷欄規則：第 1、2 格大型槍，第 3 格手槍，第 4 格補品，第 5 格投擲物（只對 BR 進行中的參賽者生效）。").push("hotbar");
@@ -209,6 +205,8 @@ public class PGConfig {
             .define("hotbar_rules_enabled", true);
         wheelHoldSeconds = builder.comment("長按快捷欄 4、5 開啟補品／投擲物輪盤的門檻（秒），短按維持原版選格")
             .defineInRange("wheel_hold_seconds", 0.25, 0.05, 2.0);
+        pistolGuns = builder.comment("額外視為手槍（放第 3 格）的槍械 ID。槍械包把它分類成其他類型、但實際上是短槍時加在這裡")
+            .defineListAllowEmpty("pistol_guns", java.util.List.of("tacz:db_short"), o -> o instanceof String);
         builder.pop();
 
         builder.comment("背包：裝在物品欄背包欄的背包等級決定主背包開放幾格（沒有背包 = 全鎖，只對 BR 參賽者生效）。").push("backpack");

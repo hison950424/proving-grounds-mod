@@ -28,7 +28,7 @@ public final class PGClientConfig {
     private PGClientConfig(ForgeConfigSpec.Builder builder) {
         builder.push("ui_walk");
         uiWalkEnabled = builder.comment("開著任何介面（物品欄、箱子、地圖、選單…）時仍可用前後左右移動鍵走動")
-            .define("ui_walk_enabled", true);
+            .define("ui_walk_enabled", false);
         uiWalkExcludedScreens = builder.comment(
                 "不接管移動鍵的畫面類別名稱（可寫完整名稱或只寫類別名稱）。",
                 "有輸入框正在輸入、按鍵設定、聊天、死亡、載入、斷線畫面本來就不會接管。")

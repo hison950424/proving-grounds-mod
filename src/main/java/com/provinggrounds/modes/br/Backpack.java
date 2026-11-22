@@ -62,6 +62,7 @@ public final class Backpack {
         if (p == null) return;
         if (stack.isEmpty()) p.getPersistentData().remove(DATA_TAG);
         else p.getPersistentData().put(DATA_TAG, stack.save(new CompoundTag()));
+        com.provinggrounds.network.PGNetwork.sendTo(p, new com.provinggrounds.network.BackpackSyncPacket(stack.copy())); // 開著箱子時也立刻更新客戶端
     }
 
     /** 登入：從玩家資料讀回背包欄。 */

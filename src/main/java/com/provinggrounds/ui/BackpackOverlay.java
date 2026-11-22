@@ -20,7 +20,7 @@ import net.minecraftforge.fml.common.Mod;
  * 檔案: BackpackOverlay.java
  * 目的: 背包系統的畫面（計畫書 B3，只在客戶端）：
  *   - 物品欄畫面：在副手格上方畫出「背包」欄的格子框；空的時候顯示淡淡的背包圖示。
- *   - 所有容器畫面：主背包鎖定的格子蓋上灰色遮罩。
+ *   - 所有容器畫面（BR 參賽中）：主背包鎖定的格子蓋上灰色遮罩與鎖頭；快捷欄第 1～5 格空著時顯示該格的用途圖示。
  *   真正的限制在伺服器（SlotMixin、HotbarRules），這裡只負責顯示。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
@@ -55,11 +55,29 @@ public final class BackpackOverlay {
         GuiGraphics g = event.getGuiGraphics();
         g.pose().pushPose();
         g.pose().translate(0, 0, 300); // 蓋在物品圖示上面
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         for (Slot s : screen.getMenu().slots) {
-            if (s.container instanceof Inventory && Backpack.locked(mc.player, s.getContainerSlot())) {
+            if (!(s.container instanceof Inventory)) continue;
+            int idx = s.getContainerSlot();
+            if (Backpack.locked(mc.player, idx)) {
+                // 鎖定格：灰色遮罩＋鎖頭
                 g.fill(s.x, s.y, s.x + 16, s.y + 16, 0xC0303030);
+                g.blit(ICON_LOCKED, s.x, s.y, 0, 0, 16, 16, 16, 16);
+            } else if (idx >= 0 && idx < SLOT_ICONS.length && !s.hasItem()) {
+                // 快捷欄第 1～5 格（專用格）空著時：顯示這格放什麼
+                g.blit(SLOT_ICONS[idx], s.x, s.y, 0, 0, 16, 16, 16, 16);
             }
         }
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
         g.pose().popPose();
     }
+
+    private static net.minecraft.resources.ResourceLocation gui(String name) {
+        return new net.minecraft.resources.ResourceLocation(ProvingGroundsMod.MOD_ID, "textures/gui/" + name + ".png");
+    }
+
+    /** 快捷欄第 1～5 格的提示圖示（tools/make_slot_icons.ps1 產生）：大型槍、大型槍、手槍、補品、投擲物。 */
+    private static final net.minecraft.resources.ResourceLocation[] SLOT_ICONS = {
+        gui("slot_large"), gui("slot_large"), gui("slot_pistol"), gui("slot_healing"), gui("slot_throwable") };
+    private static final net.minecraft.resources.ResourceLocation ICON_LOCKED = gui("slot_locked");
 }

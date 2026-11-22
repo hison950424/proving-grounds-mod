@@ -128,7 +128,7 @@ public class PGCommand {
             given++;
         }
         if (given == 0) {
-            fail(src, "沒有這個工具：" + name + "（可用：float_text、text_eraser、spawn_placer、spawn_viewer、text_undo、all）");
+            fail(src, "沒有這個工具：" + name + "（可用：float_text、text_eraser、spawn_placer、spawn_viewer、text_undo、spawn_remover、crate_converter、map_painter、all）");
             return 0;
         }
         ok(src, "已給予 " + given + " 個管理工具。", false);
