@@ -112,8 +112,8 @@ public final class DamageIndicator {
         double ty = sy == 0 ? Double.MAX_VALUE : (cy - 2) / Math.abs(sy);
         double t = Math.min(tx, ty);
         int px = (int) Math.round(cx + sx * t), py = (int) Math.round(cy + sy * t);
-        int a = Math.max(0, Math.min(255, Math.round(alpha * 200)));
-        final int size = 40, depth = 24, steps = 8; // 方塊長 40、從邊緣往內 24 像素漸淡
+        int a = Math.max(0, Math.min(255, Math.round(alpha * 240))); // 最不透明約 94%（原本 78%）
+        final int size = 50, depth = 18, steps = 8; // 方塊長 50（原本 40 的 125%）、從邊緣往內 18 像素漸淡（原本 24 的 75%）
         boolean horizontalEdge = ty <= tx; // 碰到上下邊
         for (int i = 0; i < steps; i++) {
             int stripA = a * (steps - i) / steps;

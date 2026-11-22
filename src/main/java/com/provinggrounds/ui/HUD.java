@@ -90,7 +90,7 @@ public final class HUD {
             cam.getX() - MINIMAP_SPAN / 2, cam.getZ() - MINIMAP_SPAN / 2, MINIMAP_SPAN);
         g.enableScissor(x, y, x + MINIMAP, y + MINIMAP);
         MapRender.drawTerrain(g, v);
-        if (s.nextRadius() > 0) MapRender.drawCircle(g, v, s.nextCx(), s.nextCz(), s.nextRadius(), MapRender.NEXT_ZONE, 1, true);
+        if (s.nextRadius() >= 0) MapRender.drawCircle(g, v, s.nextCx(), s.nextCz(), s.nextRadius(), MapRender.NEXT_ZONE, 1, true);
         MapRender.drawCircle(g, v, s.cx(), s.cz(), s.radius(), MapRender.ZONE, 1, false);
         MapRender.drawMarkers(g, font, v, false);
         if (s.selfState() != ClientBRState.SELF_DEAD && s.selfState() != ClientBRState.SELF_NONE) {
@@ -143,7 +143,7 @@ public final class HUD {
     // ── 中上：圈外警告 ──────────────────────────────────────────────────────
 
     private static void renderOutsideWarning(GuiGraphics g, Font font, BRStatePacket s, LocalPlayer player, int w) {
-        if (s.phase() != ClientBRState.PHASE_ACTIVE || s.radius() <= 0) return;
+        if (s.phase() != ClientBRState.PHASE_ACTIVE || s.radius() < 0) return; // -1 = 沒有圈；最終圈半徑可以是 0
         if (s.selfState() == ClientBRState.SELF_DEAD || s.selfState() == ClientBRState.SELF_NONE) return;
         double dist = Math.hypot(player.getX() - s.cx(), player.getZ() - s.cz()) - s.radius();
         if (dist <= 0) return;

@@ -31,7 +31,7 @@ public final class CircleRenderer {
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
         BRStatePacket s = ClientBRState.get();
-        if (s.phase() != ClientBRState.PHASE_ACTIVE || s.radius() <= 0) return;
+        if (s.phase() != ClientBRState.PHASE_ACTIVE || s.radius() < 0) return; // -1 = 沒有圈；最終圈半徑可以是 0
 
         Vec3 cam = event.getCamera().getPosition();
         PoseStack pose = event.getPoseStack();
@@ -51,7 +51,7 @@ public final class CircleRenderer {
         // 目前圈：白色（同地圖的白色實線），不透明度 circle_wall_opacity（預設 15%）
         ring(buf, m, s.cx(), s.cz(), s.radius(), cam, cam.y - 48, cam.y + 96, 0xFF, 0xFF, 0xFF, alpha(true));
         // 下一圈：淺藍 #60C0FF（同地圖的淺藍虛線），不透明度 circle_next_opacity（預設 7.5%），矮一點
-        if (s.nextRadius() > 0) {
+        if (s.nextRadius() >= 0) {
             ring(buf, m, s.nextCx(), s.nextCz(), s.nextRadius(), cam, cam.y - 8, cam.y + 8, 0x60, 0xC0, 0xFF, alpha(false));
         }
         BufferUploader.drawWithShader(buf.end());

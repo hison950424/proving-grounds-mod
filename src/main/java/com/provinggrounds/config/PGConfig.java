@@ -52,7 +52,7 @@ public class PGConfig {
     public final ForgeConfigSpec.DoubleValue wheelHoldSeconds;
     public final ForgeConfigSpec.IntValue brFirstWaitExtraSeconds;
     public final ForgeConfigSpec.BooleanValue uiWalkAllowed;
-    public final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> pistolGuns;
+    public final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> randomMelee;
     public final ForgeConfigSpec.IntValue backpackColumns;
     public final ForgeConfigSpec.DoubleValue mvpKill, mvpAssist, mvpDamagePerPoint, mvpRevive, mvpAltar, mvpWinBonus;
     public final ForgeConfigSpec.DoubleValue adminTextDeleteRange, adminSpawnViewRange;
@@ -162,19 +162,19 @@ public class PGConfig {
         brCircleWarnSeconds = builder.comment("縮圈開始前幾秒發出預警")
             .defineInRange("circle_warn_seconds", 30, 5, 120);
         brCircleMaxSpeedFactor = builder.comment(
-                "縮圈速度上限 = BR 疾跑速度 × 此倍率（預設 0.65 = 疾跑的 65%，約 3.15 格/秒）。1.0 以下圈都追不上全速疾跑的玩家",
+                "縮圈速度上限 = BR 疾跑速度 × 此倍率（預設 0.4875 = 原本 0.65 的 75%，約 2.19 格/秒）。1.0 以下圈都追不上全速疾跑的玩家",
                 "（BR 疾跑速度 = 原版 5.612 格/秒 × speed_multiplier）")
-            .defineInRange("max_speed_factor", 0.65, 0.1, 1.0);
-        brStandardRatios = builder.comment("標準方案：各階段半徑 ÷ 地圖半徑（沿用舊 Datapack 800→460→240→100→10）")
-            .defineList("standard_ratios", List.of(0.58, 0.30, 0.125, 0.01), PGConfig::isRatio);
+            .defineInRange("max_speed_factor", 0.4875, 0.1, 1.0);
+        brStandardRatios = builder.comment("標準方案：各階段半徑 ÷ 地圖半徑（800→460→240→100→0，最終圈縮到半徑 0）")
+            .defineList("standard_ratios", List.of(0.58, 0.30, 0.125, 0.0), PGConfig::isRatio);
         brStandardInterval = builder.comment("標準方案：階段間隔（秒）")
             .defineInRange("standard_interval_seconds", 60, 5, 600);
         brFastRatios = builder.comment("快速方案：各階段半徑比例（占位，未定案）")
-            .defineList("fast_ratios", List.of(0.45, 0.15, 0.01), PGConfig::isRatio);
+            .defineList("fast_ratios", List.of(0.45, 0.15, 0.0), PGConfig::isRatio);
         brFastInterval = builder.comment("快速方案：階段間隔（秒）")
             .defineInRange("fast_interval_seconds", 30, 5, 600);
         brSlowRatios = builder.comment("慢速方案：各階段半徑比例（占位，未定案）")
-            .defineList("slow_ratios", List.of(0.70, 0.45, 0.25, 0.10, 0.01), PGConfig::isRatio);
+            .defineList("slow_ratios", List.of(0.70, 0.45, 0.25, 0.10, 0.0), PGConfig::isRatio);
         brSlowInterval = builder.comment("慢速方案：階段間隔（秒）")
             .defineInRange("slow_interval_seconds", 90, 5, 600);
         brFirstWaitExtraSeconds = builder.comment("所有方案：開場第一次縮圈前額外多等幾秒（在階段間隔之外）")
@@ -208,8 +208,16 @@ public class PGConfig {
             .define("hotbar_rules_enabled", true);
         wheelHoldSeconds = builder.comment("長按快捷欄 4、5 開啟補品／投擲物輪盤的門檻（秒），短按維持原版選格")
             .defineInRange("wheel_hold_seconds", 0.25, 0.05, 2.0);
-        pistolGuns = builder.comment("額外視為手槍（放第 3 格）的槍械 ID。槍械包把它分類成其他類型、但實際上是短槍時加在這裡")
-            .defineListAllowEmpty("pistol_guns", java.util.List.of("tacz:db_short"), o -> o instanceof String);
+        randomMelee = builder.comment("開局時沒有自己帶近戰武器的玩家，從這個清單隨機給一把（放第 3 格）。格式同 /give：物品ID{NBT}",
+                "預設：lrtactical 的 3 把與 CS2 刀具包的 10 把")
+            .defineListAllowEmpty("random_melee", java.util.List.of(
+                "lrtactical:melee{MeleeWeaponId:\"lrtactical:dagger\"}", "lrtactical:melee{MeleeWeaponId:\"lrtactical:karambit\"}",
+                "lrtactical:melee{MeleeWeaponId:\"lrtactical:baseball_bat\"}", "lrtactical:melee{MeleeWeaponId:\"cs2_wt:bayonet\"}",
+                "lrtactical:melee{MeleeWeaponId:\"cs2_wt:butterfly\"}", "lrtactical:melee{MeleeWeaponId:\"cs2_wt:css\"}",
+                "lrtactical:melee{MeleeWeaponId:\"cs2_wt:karambit\"}", "lrtactical:melee{MeleeWeaponId:\"cs2_wt:m9\"}",
+                "lrtactical:melee{MeleeWeaponId:\"cs2_wt:push\"}", "lrtactical:melee{MeleeWeaponId:\"cs2_wt:skeleton\"}",
+                "lrtactical:melee{MeleeWeaponId:\"cs2_wt:stiletto\"}", "lrtactical:melee{MeleeWeaponId:\"cs2_wt:tactical\"}",
+                "lrtactical:melee{MeleeWeaponId:\"cs2_wt:talon\"}"), o -> o instanceof String);
         builder.pop();
 
         builder.comment("背包：一級開主背包最下列、二級加中間列、三級加最上列（沒有背包 = 全鎖，只對 BR 參賽者生效）。").push("backpack");
@@ -243,8 +251,8 @@ public class PGConfig {
         builder.pop();
 
         builder.push("loot");
-        lootSpawnChance = builder.comment("每個點位生成箱子的機率（沿用舊系統 50%）")
-            .defineInRange("spawn_chance", 0.5, 0.0, 1.0);
+        lootSpawnChance = builder.comment("每個點位生成箱子的機率（0.65 = 65% 的生成點會有箱子）")
+            .defineInRange("spawn_chance", 0.65, 0.0, 1.0);
         lootWeightLow = builder.comment("生成時抽中木箱（低階）的權重（占位）")
             .defineInRange("weight_low", 60, 0, 1000);
         lootWeightMid = builder.comment("生成時抽中鐵箱（中階）的權重（占位）")
@@ -399,7 +407,7 @@ public class PGConfig {
     }
 
     private static boolean isRatio(Object o) {
-        return o instanceof Number n && n.doubleValue() > 0 && n.doubleValue() < 1;
+        return o instanceof Number n && n.doubleValue() >= 0 && n.doubleValue() < 1; // 0 = 縮到一個點（最終圈）
     }
 
     /** BR 內疾跑速度（格/秒）。 */

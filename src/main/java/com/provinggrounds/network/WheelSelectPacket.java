@@ -15,6 +15,9 @@ import java.util.function.Supplier;
  */
 public record WheelSelectPacket(int target, int fromSlot) {
 
+    /** 輪盤打開的通知（fromSlot 用這個值）：伺服器中斷正在使用的物品。 */
+    public static final int OPENED = -1;
+
     public void encode(FriendlyByteBuf buf) {
         buf.writeByte(target);
         buf.writeByte(fromSlot);
@@ -27,7 +30,10 @@ public record WheelSelectPacket(int target, int fromSlot) {
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer p = ctx.get().getSender();
-            if (p != null && HotbarRules.active(p)) HotbarRules.wheelSelect(p, target, fromSlot);
+            if (p == null || !HotbarRules.active(p)) return;
+            // fromSlot = -1：輪盤剛打開，只中斷手上正在使用的補品／投擲物（不觸發放開，投擲物不會被丟出去）
+            if (fromSlot == OPENED) { p.stopUsingItem(); return; }
+            HotbarRules.wheelSelect(p, target, fromSlot);
         });
         ctx.get().setPacketHandled(true);
     }

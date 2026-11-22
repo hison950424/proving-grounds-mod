@@ -76,8 +76,8 @@ public final class BackpackOverlay {
         return new net.minecraft.resources.ResourceLocation(ProvingGroundsMod.MOD_ID, "textures/gui/" + name + ".png");
     }
 
-    /** 快捷欄第 1～5 格的提示圖示（tools/make_slot_icons.ps1 產生）：大型槍、大型槍、手槍、補品、投擲物。 */
+    /** 快捷欄第 1～5 格的提示圖示（tools/make_slot_icons.ps1 產生）：槍、槍、近戰武器、補品、投擲物。 */
     private static final net.minecraft.resources.ResourceLocation[] SLOT_ICONS = {
-        gui("slot_large"), gui("slot_large"), gui("slot_pistol"), gui("slot_healing"), gui("slot_throwable") };
+        gui("slot_large"), gui("slot_large"), gui("slot_melee"), gui("slot_healing"), gui("slot_throwable") };
     private static final net.minecraft.resources.ResourceLocation ICON_LOCKED = gui("slot_locked");
 }

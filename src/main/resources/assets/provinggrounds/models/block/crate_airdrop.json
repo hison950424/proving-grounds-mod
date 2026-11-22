@@ -1,4 +1,8 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "textures": { "all": "minecraft:block/gold_block" }
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "provinggrounds:block/crate_airdrop_top",
+    "bottom": "provinggrounds:block/crate_airdrop_bottom",
+    "side": "provinggrounds:block/crate_airdrop_side"
+  }
 }

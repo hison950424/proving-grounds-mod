@@ -56,6 +56,10 @@ public final class ClientWheel {
         if (openTarget >= 0) {
             KeyMapping key = mc.options.keyHotbarSlots[openTarget];
             if (mc.screen != null || !allowed(mc) || mc.mouseHandler.isMouseGrabbed()) { close(false); return; }
+            // 輪盤開著時不能使用物品（不能邊選邊吃補品、邊丟投擲物）
+            while (mc.options.keyUse.consumeClick()) { /* 丟掉 */ }
+            mc.options.keyUse.setDown(false);
+            if (mc.player.isUsingItem()) mc.player.stopUsingItem();
             entries = collect(mc.player.getInventory(), tagOf(openTarget), openTarget);
             if (entries.isEmpty()) { close(false); return; }
             if (!key.isDown()) close(true);
@@ -74,6 +78,9 @@ public final class ClientWheel {
                     openTarget = target;
                     hovered = -1;
                     mc.mouseHandler.releaseMouse(); // 游標放開（回到畫面中央），用來指向扇形
+                    // 長按開輪盤時，取消手上正在使用的補品／投擲物（客戶端停止動作，伺服器也中斷，不會觸發丟出）
+                    mc.player.stopUsingItem();
+                    PGNetwork.sendToServer(new WheelSelectPacket(target, WheelSelectPacket.OPENED));
                 }
             }
         }

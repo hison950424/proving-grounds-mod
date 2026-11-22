@@ -136,8 +136,8 @@ public final class MapRender {
         for (MapMarkersPacket.Marker m : ClientMapData.markers()) {
             int sx = (int) v.px(m.x()), sz = (int) v.pz(m.z());
             switch (m.kind()) {
-                case MapMarkersPacket.AIRDROP -> box(g, sx, sz, 3, AIRDROP);
-                case MapMarkersPacket.AIRDROP_FALLING -> { if ((now / 300) % 2 == 0) box(g, sx, sz, 3, AIRDROP); }
+                case MapMarkersPacket.AIRDROP -> airdropBox(g, sx, sz);
+                case MapMarkersPacket.AIRDROP_FALLING -> { if ((now / 300) % 2 == 0) airdropBox(g, sx, sz); }
                 case MapMarkersPacket.ENEMY -> {
                     float alpha = 1f - Math.min(1f, m.age() / 60f) * 0.7f;
                     arrow(g, font, sx, sz, m.yaw(), withAlpha(ENEMY, alpha));
@@ -168,6 +168,17 @@ public final class MapRender {
         g.pose().mulPose(Axis.ZP.rotationDegrees(yaw + 180));
         g.drawString(font, "▲", -font.width("▲") / 2 + 1, -4, 0xFF000000, false); // 黑邊
         g.drawString(font, "▲", -font.width("▲") / 2, -4, color, false);
+        g.pose().popPose();
+    }
+
+    /** 空投標記：原本的方塊（半徑 3）縮成 35%（AIRDROP_SCALE）。像素不能切一半，所以用縮放畫。 */
+    private static final float AIRDROP_SCALE = 0.35f;
+
+    private static void airdropBox(GuiGraphics g, int sx, int sz) {
+        g.pose().pushPose();
+        g.pose().translate(sx, sz, 0);
+        g.pose().scale(AIRDROP_SCALE, AIRDROP_SCALE, 1);
+        box(g, 0, 0, 3, AIRDROP);
         g.pose().popPose();
     }
 

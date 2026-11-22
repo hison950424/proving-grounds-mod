@@ -56,11 +56,11 @@ public final class HotbarRules {
 
     public enum Kind { LARGE, PISTOL, MELEE, HEALING, THROWABLE, BACKPACK, OTHER }
 
-    public static final String MSG_LARGE = "無法拿取兩把以上的大型槍（可用替換的方式拿取）";
+    public static final String MSG_LARGE = "無法拿取兩把以上的槍（可用替換的方式拿取）";
     public static final String MSG_PISTOL = "無法拿取兩把以上的手槍（可用替換的方式拿取）";
     public static final String MSG_FULL = "背包已滿，無法拿取";
-    private static final String MSG_GUN_SLOT = "槍只能放在快捷欄第 1～3 格（第 1、2 格大型槍，第 3 格手槍）";
-    private static final String MSG_SPECIAL_SLOT = "快捷欄第 1～5 格是專用格（1、2 大型槍｜3 手槍｜4 補品｜5 投擲物）";
+    private static final String MSG_GUN_SLOT = "槍只能放在快捷欄第 1、2 格";
+    private static final String MSG_SPECIAL_SLOT = "快捷欄第 1～5 格是專用格（1、2 槍｜3 近戰武器｜4 補品｜5 投擲物）";
     public static final String MSG_BACKPACK_HAVE = "已經裝著同等級或更高級的背包";
     private static final String MSG_BACKPACK_SLOT = "背包只能裝在物品欄的背包欄（副手格上方）";
     private static final String MSG_DROPPED = "放不下的物品已掉在腳邊";
@@ -114,8 +114,8 @@ public final class HotbarRules {
         Kind k = kind(s);
         if (k == Kind.BACKPACK) return false; // 背包只能在背包欄
         return switch (slot) {
-            case LARGE_A, LARGE_B -> k == Kind.LARGE;
-            case PISTOL -> k == Kind.PISTOL || k == Kind.MELEE;
+            case LARGE_A, LARGE_B -> k == Kind.LARGE || k == Kind.PISTOL; // 任何槍（含手槍）都放第 1、2 格
+            case PISTOL -> k == Kind.MELEE;                                  // 第 3 格：近戰武器專用
             case HEAL -> k == Kind.HEALING;
             case THROW -> k == Kind.THROWABLE;
             default -> k != Kind.LARGE && k != Kind.PISTOL && (slot < 9 || slot > 35 || backpackUsable(p, slot));
@@ -141,13 +141,9 @@ public final class HotbarRules {
         Inventory inv = p.getInventory();
         String fail = null;
         switch (kind(stack)) {
-            case LARGE -> {
+            case LARGE, PISTOL -> {
                 if (!putEmpty(inv, stack, LARGE_A)) putEmpty(inv, stack, LARGE_B);
                 fail = MSG_LARGE;
-            }
-            case PISTOL -> {
-                putEmpty(inv, stack, PISTOL);
-                fail = MSG_PISTOL;
             }
             case MELEE -> {
                 // 近戰武器：第 3 格空著就放第 3 格，否則當一般物品放第 6～9 格或背包
@@ -192,7 +188,20 @@ public final class HotbarRules {
         if (melee.isEmpty() && p.containerMenu.getCarried().is(GunCompat.MELEE)) melee = p.containerMenu.getCarried().copyWithCount(1);
         inv.clearContent();
         p.containerMenu.setCarried(ItemStack.EMPTY);
+        if (melee.isEmpty()) melee = randomMelee(p); // 沒有自己帶近戰武器：隨機給一把
         if (!melee.isEmpty()) inv.setItem(PISTOL, melee);
+    }
+
+    /** 從設定 [battle_royale.hotbar].random_melee 隨機挑一把近戰武器（格式同 /give）；清單是空的或都解析失敗時回傳空物品。 */
+    private static ItemStack randomMelee(ServerPlayer p) {
+        java.util.List<? extends String> list;
+        try {
+            list = com.provinggrounds.config.PGConfig.SERVER.randomMelee.get();
+        } catch (IllegalStateException e) {
+            return ItemStack.EMPTY;
+        }
+        if (list.isEmpty()) return ItemStack.EMPTY;
+        return RespawnKit.parse(list.get(p.getRandom().nextInt(list.size())));
     }
 
     /** 背包 → 快捷欄（物品欄畫面裡 Shift 點背包的物品）：只放專用格或第 6～9 格，不再放回背包。 */
@@ -202,8 +211,7 @@ public final class HotbarRules {
         switch (kind(stack)) {
             case HEALING -> { merge(inv, stack, HEAL); putEmpty(inv, stack, HEAL); }
             case THROWABLE -> { merge(inv, stack, THROW); putEmpty(inv, stack, THROW); }
-            case LARGE -> { if (!putEmpty(inv, stack, LARGE_A)) putEmpty(inv, stack, LARGE_B); }
-            case PISTOL -> putEmpty(inv, stack, PISTOL);
+            case LARGE, PISTOL -> { if (!putEmpty(inv, stack, LARGE_A)) putEmpty(inv, stack, LARGE_B); }
             case MELEE -> { if (!putEmpty(inv, stack, PISTOL)) { for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i); } }
             case BACKPACK -> Backpack.equipIfBetter(p, stack);
             case OTHER -> {
@@ -460,6 +468,7 @@ public final class HotbarRules {
     public static void wheelSelect(ServerPlayer p, int target, int fromSlot) {
         if (target != HEAL && target != THROW) return;
         if (fromSlot < 0 || fromSlot > 35) return;
+        p.stopUsingItem(); // 換物品前一定先中斷使用中的補品/投擲物，避免用到一半換成別的物品
         Inventory inv = p.getInventory();
         if (fromSlot != target) {
             ItemStack from = inv.getItem(fromSlot);

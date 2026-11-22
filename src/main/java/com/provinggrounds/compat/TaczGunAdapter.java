@@ -142,11 +142,6 @@ public class TaczGunAdapter implements GunAdapter {
         if (stack.isEmpty() || stack.getTag() == null || !stack.getTag().contains("GunId", 8)) return GunClass.NONE;
         net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.tryParse(stack.getTag().getString("GunId"));
         if (id == null) return GunClass.NONE;
-        try {
-            if (com.provinggrounds.config.PGConfig.SERVER.pistolGuns.get().contains(id.toString())) return GunClass.PISTOL; // 設定 pistol_guns
-        } catch (IllegalStateException ignored) {
-            // 設定還沒載入：照槍械包的分類
-        }
         return classCache.computeIfAbsent(id, TaczGunAdapter::lookupClass);
     }
 
