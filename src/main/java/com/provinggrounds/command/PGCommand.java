@@ -126,11 +126,19 @@ public class PGCommand {
     private static int status(CommandSourceStack src) {
         GameManager gm = GameManager.get();
         BattleRoyaleMode br = BattleRoyaleMode.get();
-        String msg = String.format("狀態: %s | 模式: %s | 玩家數: %d", gm.getState(), gm.getMode(), gm.getActivePlayerCount());
+        String msg = String.format("版本 v%s | 狀態: %s | 模式: %s | 玩家數: %d",
+            ProvingGroundsMod.version(), gm.getState(), gm.getMode(), gm.getActivePlayerCount());
         if (br.isRunning() && br.getMap() != null) {
             msg += String.format(" | BR 階段: %s | 地圖 #%d", br.getPhase(), br.getMap().id);
         }
         ok(src, msg, false);
+        // 速度資訊（A1）：BR 內走路／疾跑速度與縮圈圈邊速度上限
+        PGConfig c = PGConfig.SERVER;
+        double walk = 4.317 * c.brSpeedMultiplier.get();
+        double sprint = c.brSprintSpeed();
+        double zoneMax = sprint * c.brCircleMaxSpeedFactor.get();
+        ok(src, String.format("BR 速度：走路約 %.1f 格/秒、疾跑約 %.1f 格/秒（原版 × %.2f）；縮圈圈邊最快 %.1f 格/秒（疾跑 × %.2f）",
+            walk, sprint, c.brSpeedMultiplier.get(), zoneMax, c.brCircleMaxSpeedFactor.get()), false);
         return 1;
     }
 

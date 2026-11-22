@@ -143,9 +143,9 @@ public class PGConfig {
         brCircleWarnSeconds = builder.comment("縮圈開始前幾秒發出預警")
             .defineInRange("circle_warn_seconds", 30, 5, 120);
         brCircleMaxSpeedFactor = builder.comment(
-                "縮圈速度上限 = BR 疾跑速度 × 此倍率。1.0 = 圈永遠追不上全速疾跑的玩家",
+                "縮圈速度上限 = BR 疾跑速度 × 此倍率（預設 0.8 = 疾跑的 80%，約 3.4 格/秒）。1.0 以下圈都追不上全速疾跑的玩家",
                 "（BR 疾跑速度 = 原版 5.612 格/秒 × speed_multiplier）")
-            .defineInRange("max_speed_factor", 1.0, 0.1, 1.0);
+            .defineInRange("max_speed_factor", 0.8, 0.1, 1.0);
         brStandardRatios = builder.comment("標準方案：各階段半徑 ÷ 地圖半徑（沿用舊 Datapack 800→460→240→100→10）")
             .defineList("standard_ratios", List.of(0.58, 0.30, 0.125, 0.01), PGConfig::isRatio);
         brStandardInterval = builder.comment("標準方案：階段間隔（秒）")

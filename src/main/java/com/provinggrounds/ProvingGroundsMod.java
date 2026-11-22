@@ -31,6 +31,12 @@ public class ProvingGroundsMod {
     public static final String MOD_ID = "provinggrounds";
     public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
 
+    /** 模組版本（來自 gradle.properties 的 mod_version，經 jar 的 manifest 帶入；開發環境會顯示 0.0NONE）。 */
+    public static String version() {
+        return net.minecraftforge.fml.ModList.get().getModContainerById(MOD_ID)
+            .map(c -> c.getModInfo().getVersion().toString()).orElse("?");
+    }
+
     public ProvingGroundsMod() {
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
         modBus.addListener(this::setup);

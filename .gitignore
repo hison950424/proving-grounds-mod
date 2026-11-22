@@ -7,3 +7,5 @@ out/
 *.class
 # 外部模組 jar（TACZ 等）只放本機，不上傳
 libs/
+# 本機發佈設定（mods 資料夾路徑），不提交
+tools/release.local.json

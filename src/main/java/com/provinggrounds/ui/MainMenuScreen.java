@@ -340,6 +340,9 @@ public class MainMenuScreen extends Screen {
         MenuDataPacket menu = ClientMenuData.get();
         String status = menu != null ? menu.status() : "…";
         g.drawString(font, status, left + panelW - font.width(status) - 12, top + 10, TEXT_DIM, false);
+        // 右下角顯示模組版本（F1）
+        String ver = "v" + com.provinggrounds.ProvingGroundsMod.version();
+        g.drawString(font, ver, left + panelW - font.width(ver) - 6, top + panelH - 10, 0xFF6A7384, false);
         g.fill(left + 10, top + 24, left + panelW - 10, top + 25, BORDER);
 
         if (view == View.HOME) renderHomeFooter(g, menu); else renderLobby(g, mouseX, mouseY);

@@ -4,7 +4,7 @@ license="MIT"
 
 [[mods]]
 modId="provinggrounds"
-version="${file.jarVersion}" # 跟 build.gradle 的 version 同步（由 tools/release.ps1 自動加 1）
+version="${file.jarVersion}" # 來自 gradle.properties 的 mod_version（唯一來源）
 displayName="Proving Grounds"
 description='''
 Competitive multiplayer game modes: Battle Royale, TDM, DOM, GK.
