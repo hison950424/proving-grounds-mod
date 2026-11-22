@@ -61,7 +61,7 @@ public class MainMenuScreen extends Screen {
     private record Row(int team, String label, int color, @Nullable LobbyStatePacket.Entry entry) {}
 
     public MainMenuScreen() {
-        super(Component.literal("Proving Grounds"));
+        super(Tr.c("menu.screen"));
     }
 
     /** 從大地圖的「選單」按鈕打開時，直接顯示大廳頁（結束遊戲、加入遊戲在這裡）。 */
@@ -84,15 +84,15 @@ public class MainMenuScreen extends Screen {
 
     private void initHome() {
         int x = left + 14, w = panelW - 28;
-        addRenderableWidget(new PGButton(x, top + 36, w, 36, Component.literal("Battle Royale"), true, true,
+        addRenderableWidget(new PGButton(x, top + 36, w, 36, Tr.c("mode.br"), true, false,
             () -> switchTo(View.LOBBY)));
-        addModeStub(x, top + 80, w, "Team Deathmatch");
-        addModeStub(x, top + 104, w, "Domination");
-        addModeStub(x, top + 128, w, "Gunfight");
+        addModeStub(x, top + 80, w, Tr.t("mode.tdm"));
+        addModeStub(x, top + 104, w, Tr.t("mode.dom"));
+        addModeStub(x, top + 128, w, Tr.t("mode.gk"));
     }
 
     private void addModeStub(int x, int y, int w, String name) {
-        PGButton b = new PGButton(x, y, w, 20, Component.literal(name), false, true, () -> {}).withTag("PHASE 2");
+        PGButton b = new PGButton(x, y, w, 20, Component.literal(name), false, false, () -> {}).withTag(Tr.t("mode.coming"));
         b.active = false;
         addRenderableWidget(b);
     }
@@ -110,41 +110,41 @@ public class MainMenuScreen extends Screen {
         int sx = left + 12, sw = 150, y = top + 40;
         List<MenuDataPacket.MapEntry> maps = menu != null ? menu.maps() : List.of();
         MenuDataPacket.MapEntry map = findMap(maps, lobby != null ? lobby.mapId() : -1);
-        String mapLabel = map == null ? "地圖：（無）" : "地圖：#" + map.id() + " " + map.name();
+        String mapLabel = map == null ? Tr.t("lobby.map_none") : Tr.t("lobby.map", map.id(), map.name());
         setting(sx, y, sw, mapLabel, canEdit && maps.size() > 1, () -> {
             int i = maps.indexOf(map);
             send(LobbyManager.Action.SET_MAP, maps.get((i + 1) % maps.size()).id());
         });
         y += 20;
         CirclePreset preset = lobby != null ? CirclePreset.values()[lobby.presetOrdinal()] : CirclePreset.STANDARD;
-        setting(sx, y, sw, "縮圈：" + preset.displayName, canEdit,
+        setting(sx, y, sw, Tr.t("lobby.preset", preset.displayName), canEdit,
             () -> send(LobbyManager.Action.SET_PRESET, (preset.ordinal() + 1) % CirclePreset.values().length));
         y += 20;
         BattleRoyaleMode.Variant variant = lobby != null ? BattleRoyaleMode.Variant.values()[lobby.variantOrdinal()] : BattleRoyaleMode.Variant.NORMAL;
-        setting(sx, y, sw, "模式：" + variant.displayName, canEdit,
+        setting(sx, y, sw, Tr.t("lobby.variant", variant.displayName), canEdit,
             () -> send(LobbyManager.Action.SET_VARIANT, (variant.ordinal() + 1) % BattleRoyaleMode.Variant.values().length));
         y += 20;
         LobbyManager.TeamMode teamMode = lobby != null ? LobbyManager.TeamMode.values()[lobby.teamModeOrdinal()] : LobbyManager.TeamMode.FREE;
-        setting(sx, y, sw, "分隊：" + teamMode.displayName, canEdit,
+        setting(sx, y, sw, Tr.t("lobby.team_mode", teamMode.displayName), canEdit,
             () -> send(LobbyManager.Action.SET_TEAM_MODE, (teamMode.ordinal() + 1) % LobbyManager.TeamMode.values().length));
         y += 20;
         int teamCount = lobby != null ? lobby.teamCount() : 4;
-        setting(sx, y, sw - 44, "隊伍數：" + teamCount, false, () -> {});
+        setting(sx, y, sw - 44, Tr.t("lobby.team_count", teamCount), false, () -> {});
         setting(sx + sw - 42, y, 20, "－", canEdit && teamCount > 1, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount - 1));
         setting(sx + sw - 20, y, 20, "＋", canEdit && teamCount < LobbyManager.MAX_TEAMS, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount + 1));
         y += 20;
         int half = (sw - 2) / 2;
-        setting(sx, y, half, "自動分隊", canEdit, () -> send(LobbyManager.Action.AUTO_BALANCE, 0));
-        setting(sx + sw - half, y, half, "全部移出隊伍", canEdit, () -> send(LobbyManager.Action.CLEAR_TEAMS, 0));
+        setting(sx, y, half, Tr.t("lobby.auto_balance"), canEdit, () -> send(LobbyManager.Action.AUTO_BALANCE, 0));
+        setting(sx + sw - half, y, half, Tr.t("lobby.clear_teams"), canEdit, () -> send(LobbyManager.Action.CLEAR_TEAMS, 0));
         y += 24;
 
         // 管理員：選取玩家後的工具
         LobbyStatePacket.Entry sel = find(lobby, selected);
         if (op && sel != null) {
-            setting(sx, y, sw, (sel.spectator() ? "取消觀戰：" : "設為觀戰：") + sel.name(), canEdit,
+            setting(sx, y, sw, Tr.t(sel.spectator() ? "lobby.unspectate" : "lobby.spectate", sel.name()), canEdit,
                 () -> send(LobbyManager.Action.SET_SPECTATOR, sel.spectator() ? 0 : 1, sel.id()));
             y += 20;
-            setting(sx, y, sw, "取消選取", true, () -> { selected = null; rebuildWidgets(); });
+            setting(sx, y, sw, Tr.t("lobby.deselect"), true, () -> { selected = null; rebuildWidgets(); });
         }
 
         // 右欄：名單
@@ -159,13 +159,13 @@ public class MainMenuScreen extends Screen {
         boolean inLobby = lobby != null && lobby.inLobby();
         if (me != null && me.spectator()) {
             PGButton join = new PGButton(bx, by, bw, 20,
-                Component.literal(me.joinPending() ? "結束後加入" : inLobby ? "加入遊戲" : "本局後加入"), true, false,
+                Tr.c(me.joinPending() ? "lobby.join_pending" : inLobby ? "lobby.join_game" : "lobby.join_after"), true, false,
                 () -> send(LobbyManager.Action.JOIN_GAME, 0));
             join.active = !me.joinPending();
             addRenderableWidget(join);
         } else {
             boolean ready = me != null && me.ready();
-            PGButton r = new PGButton(bx, by, bw, 20, Component.literal(ready ? "取消準備" : "準備"), !ready, false,
+            PGButton r = new PGButton(bx, by, bw, 20, Tr.c(ready ? "lobby.unready" : "lobby.ready"), !ready, false,
                 () -> send(LobbyManager.Action.TOGGLE_READY, 0));
             r.active = inLobby && me != null;
             addRenderableWidget(r);
@@ -174,7 +174,7 @@ public class MainMenuScreen extends Screen {
         if (op && lobby != null && !inLobby) {
             // 遊戲進行中：開始鍵換成「結束遊戲」，要按兩次（3 秒內）才會執行
             boolean confirming = System.currentTimeMillis() < endConfirmUntil;
-            PGButton end = new PGButton(bx + (bw + 6), by, bw, 20, Component.literal(confirming ? "確定結束？" : "結束遊戲"), true, false, () -> {
+            PGButton end = new PGButton(bx + (bw + 6), by, bw, 20, Tr.c(confirming ? "lobby.end_confirm" : "lobby.end"), true, false, () -> {
                 if (System.currentTimeMillis() < endConfirmUntil) {
                     endConfirmUntil = 0;
                     send(LobbyManager.Action.END_GAME, 0);
@@ -185,16 +185,16 @@ public class MainMenuScreen extends Screen {
             });
             addRenderableWidget(end);
         } else {
-            PGButton start = new PGButton(bx + (bw + 6), by, bw, 20, Component.literal("開始"), true, false,
+            PGButton start = new PGButton(bx + (bw + 6), by, bw, 20, Tr.c("lobby.start"), true, false,
                 () -> send(LobbyManager.Action.START, 0));
             start.active = canEdit && !counting;
             addRenderableWidget(start);
         }
-        PGButton force = new PGButton(bx + 2 * (bw + 6), by, bw, 20, Component.literal(counting ? "取消倒數" : "強制開始"), false, false,
+        PGButton force = new PGButton(bx + 2 * (bw + 6), by, bw, 20, Tr.c(counting ? "lobby.cancel_countdown" : "lobby.force_start"), false, false,
             () -> send(counting ? LobbyManager.Action.CANCEL_COUNTDOWN : LobbyManager.Action.FORCE_START, 0));
         force.active = canEdit;
         addRenderableWidget(force);
-        addRenderableWidget(new PGButton(bx + 3 * (bw + 6), by, bw, 20, Component.literal("返回"), false, false,
+        addRenderableWidget(new PGButton(bx + 3 * (bw + 6), by, bw, 20, Tr.c("common.back"), false, false,
             () -> switchTo(View.HOME)));
     }
 
@@ -212,11 +212,11 @@ public class MainMenuScreen extends Screen {
         addGroup(lobby, 0);
         List<LobbyStatePacket.Entry> unassigned = lobby.players().stream().filter(e -> !e.spectator() && e.team() < 0).toList();
         if (!unassigned.isEmpty()) {
-            rows.add(new Row(-1, "未分隊（開局為孤狼）", TEXT_DIM, null));
+            rows.add(new Row(-1, Tr.t("lobby.unassigned"), TEXT_DIM, null));
             for (LobbyStatePacket.Entry e : unassigned) rows.add(new Row(-1, e.name(), TEXT, e));
         }
         List<LobbyStatePacket.Entry> specs = lobby.players().stream().filter(LobbyStatePacket.Entry::spectator).toList();
-        rows.add(new Row(-2, "觀戰（" + specs.size() + "）", TEXT_DIM, null));
+        rows.add(new Row(-2, Tr.t("lobby.spectators", specs.size()), TEXT_DIM, null));
         for (LobbyStatePacket.Entry e : specs) rows.add(new Row(-2, e.name(), TEXT_DIM, e));
         scroll = Math.max(0, Math.min(scroll, rows.size() - listH / ROW_H));
     }
@@ -227,7 +227,7 @@ public class MainMenuScreen extends Screen {
             .filter(e -> !e.spectator() && e.team() == teamId).toList();
         Integer c = t.color.getColor();
         int color = 0xFF000000 | (c != null ? c : 0xFFFFFF);
-        rows.add(new Row(teamId, t.displayName + "（" + members.size() + "）", color, null));
+        rows.add(new Row(teamId, Tr.t("lobby.team_header", t.displayName, members.size()), color, null));
         for (LobbyStatePacket.Entry e : members) rows.add(new Row(teamId, e.name(), TEXT, e));
     }
 
@@ -336,7 +336,7 @@ public class MainMenuScreen extends Screen {
         g.fill(left, top, left + panelW, top + panelH, BG);
 
         // 標題列
-        PGButton.drawSpaced(g, font, "▸ PROVING GROUNDS", left + 12, top + 10, ACCENT);
+        g.drawString(font, Tr.t("menu.header"), left + 12, top + 10, ACCENT, false);
         MenuDataPacket menu = ClientMenuData.get();
         String status = menu != null ? menu.status() : "…";
         g.drawString(font, status, left + panelW - font.width(status) - 12, top + 10, TEXT_DIM, false);
@@ -352,11 +352,11 @@ public class MainMenuScreen extends Screen {
     private void renderHomeFooter(GuiGraphics g, @Nullable MenuDataPacket data) {
         int footY = top + panelH - 30;
         g.fill(left + 10, footY, left + panelW - 10, footY + 1, BORDER);
-        String stats = data == null ? "你的統計：載入中…"
-            : String.format("你的統計：K/D %.2f  Lv.%d  XP %d / %d", data.kd(), data.level(), data.xp(), data.nextLevelXp());
+        String stats = data == null ? Tr.t("stats.loading")
+            : Tr.t("stats.summary", String.format("%.2f", data.kd()), data.level(), data.xp(), data.nextLevelXp());
         g.drawString(font, stats, left + 14, footY + 8, TEXT, false);
         if (data != null) {
-            String sub = String.format("擊殺 %d  死亡 %d  助攻 %d  勝場 %d", data.kills(), data.deaths(), data.assists(), data.wins());
+            String sub = Tr.t("stats.detail", data.kills(), data.deaths(), data.assists(), data.wins());
             g.drawString(font, sub, left + 14, footY + 18, TEXT_DIM, false);
         }
     }
@@ -365,7 +365,7 @@ public class MainMenuScreen extends Screen {
         LobbyStatePacket lobby = ClientLobbyData.get();
         MenuDataPacket menu = ClientMenuData.get();
         boolean op = menu != null && menu.isOp();
-        PGButton.drawSpaced(g, font, "BATTLE ROYALE", left + 14, top + 29, TEXT_DIM);
+        g.drawString(font, Tr.t("mode.br"), left + 14, top + 29, TEXT_DIM, false);
 
         // 名單
         g.fill(listX - 1, listY - 1, listX + listW + 1, listY + listH + 1, BORDER);
@@ -383,12 +383,12 @@ public class MainMenuScreen extends Screen {
                 if (e.id().equals(selected)) g.fill(listX, ry, listX + listW, ry + ROW_H, SELECT);
                 else if (hover && op) g.fill(listX, ry, listX + listW, ry + ROW_H, 0x20FFFFFF);
                 if (!e.spectator()) g.drawString(font, e.ready() ? "✔" : "·", listX + 12, ry + 2, e.ready() ? READY : TEXT_DIM, false);
-                String name = e.name() + (e.op() ? " [管理員]" : "") + (e.joinPending() ? "（結束後加入）" : "");
+                String name = e.name() + (e.op() ? Tr.t("lobby.admin_tag") : "") + (e.joinPending() ? Tr.t("lobby.pending_tag") : "");
                 g.drawString(font, name, listX + 22, ry + 2, row.color(), false);
             }
         }
         if (rows.size() > visible) {
-            String more = (scroll + visible < rows.size()) ? "▼ 滾輪看更多" : "▲";
+            String more = (scroll + visible < rows.size()) ? Tr.t("lobby.more") : "▲";
             g.drawString(font, more, listX + listW - font.width(more) - 3, listY + listH - 9, TEXT_DIM, false);
         }
 
@@ -399,17 +399,17 @@ public class MainMenuScreen extends Screen {
 
     @Nullable
     private String lobbyHint(@Nullable LobbyStatePacket lobby, @Nullable MenuDataPacket menu) {
-        if (lobby == null || menu == null) return "正在向伺服器取得資料…";
-        if (lobby.countdownSeconds() >= 0) return "強制開始倒數：" + lobby.countdownSeconds() + " 秒";
-        if (!lobby.inLobby()) return "遊戲進行中：" + menu.status();
+        if (lobby == null || menu == null) return Tr.t("lobby.loading");
+        if (lobby.countdownSeconds() >= 0) return Tr.t("lobby.countdown", lobby.countdownSeconds());
+        if (!lobby.inLobby()) return Tr.t("lobby.in_game", menu.status());
         long total = lobby.players().stream().filter(e -> !e.spectator()).count();
         long ready = lobby.players().stream().filter(e -> !e.spectator() && e.ready()).count();
-        String base = "已準備 " + ready + " / " + total;
+        String base = Tr.t("lobby.ready_count", ready, total);
         if (menu.isOp()) {
-            return base + (selected != null ? "｜點隊伍標題把選取的玩家移過去" : "｜點玩家名字可以選取");
+            return base + (selected != null ? Tr.t("lobby.hint_admin_selected") : Tr.t("lobby.hint_admin"));
         }
         LobbyManager.TeamMode mode = LobbyManager.TeamMode.values()[lobby.teamModeOrdinal()];
-        return base + (mode == LobbyManager.TeamMode.FREE ? "｜點隊伍標題加入該隊" : "｜由管理員分隊");
+        return base + (mode == LobbyManager.TeamMode.FREE ? Tr.t("lobby.hint_free") : Tr.t("lobby.hint_assign"));
     }
 
     @Override

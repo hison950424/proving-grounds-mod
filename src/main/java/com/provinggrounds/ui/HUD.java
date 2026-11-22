@@ -55,12 +55,12 @@ public final class HUD {
         int boxW = 96, boxH = cards ? 47 : 34;
         int x = w - boxW - 8, y = 8;
         panel(g, x, y, boxW, boxH);
-        g.drawString(font, "存活", x + PAD + 2, y + PAD, TEXT_DIM, false);
+        g.drawString(font, Tr.t("hud.alive"), x + PAD + 2, y + PAD, TEXT_DIM, false);
         g.drawString(font, String.valueOf(s.alivePlayers()), x + PAD + 30, y + PAD, TEXT, false);
-        g.drawString(font, "隊伍", x + PAD + 2, y + PAD + 13, TEXT_DIM, false);
+        g.drawString(font, Tr.t("hud.teams"), x + PAD + 2, y + PAD + 13, TEXT_DIM, false);
         g.drawString(font, String.valueOf(s.aliveTeams()), x + PAD + 30, y + PAD + 13, TEXT, false);
         if (cards) {
-            g.drawString(font, "復活牌", x + PAD + 2, y + PAD + 26, TEXT_DIM, false);
+            g.drawString(font, Tr.t("hud.cards"), x + PAD + 2, y + PAD + 26, TEXT_DIM, false);
             g.drawString(font, "×" + s.cardsHeld(), x + PAD + 42, y + PAD + 26, ACCENT, false);
         }
         return y + boxH + 4;
@@ -89,7 +89,8 @@ public final class HUD {
             MapRender.drawSelf(g, font, v, cam.getX(), cam.getZ(), cam.getYRot());
         }
         g.disableScissor();
-        g.drawString(font, "N", x + MINIMAP / 2 - 2, y + 2, ACCENT, true);
+        String north = Tr.t("hud.north");
+        g.drawString(font, north, x + (MINIMAP - font.width(north)) / 2, y + 2, ACCENT, true);
         return y + MINIMAP + 6;
     }
 
@@ -99,28 +100,28 @@ public final class HUD {
         int lineColor = TEXT;
         switch (s.phase()) {
             case ClientBRState.PHASE_PREPARING -> {
-                title = "BATTLE ROYALE";
-                line = "登機倒數 " + s.seconds() + " 秒";
+                title = Tr.t("mode.br");
+                line = Tr.t("hud.boarding", s.seconds());
             }
             case ClientBRState.PHASE_PLANE -> {
-                title = "飛行中";
-                line = "剩 " + s.seconds() + " 秒";
+                title = Tr.t("hud.flying");
+                line = Tr.t("hud.remaining", s.seconds());
             }
             case ClientBRState.PHASE_ACTIVE -> {
-                title = "第 " + s.stage() + " / " + s.totalStages() + " 階段";
+                title = Tr.t("hud.stage", s.stage(), s.totalStages());
                 if (s.nextRadius() < 0) {
-                    line = "最終圈";
+                    line = Tr.t("hud.final_zone");
                     lineColor = DANGER;
                 } else if (s.shrinking()) {
-                    line = "縮圈中 " + mmss(s.seconds());
+                    line = Tr.t("hud.shrinking", mmss(s.seconds()));
                     lineColor = DANGER;
                 } else {
-                    line = mmss(s.seconds()) + " 後縮圈";
+                    line = Tr.t("hud.shrink_in", mmss(s.seconds()));
                 }
             }
             case ClientBRState.PHASE_ENDING -> {
-                title = "本局結束";
-                line = s.seconds() + " 秒後返回大廳";
+                title = Tr.t("hud.ended");
+                line = Tr.t("hud.return_in", s.seconds());
             }
             default -> { return; }
         }
@@ -138,7 +139,7 @@ public final class HUD {
         if (s.selfState() == ClientBRState.SELF_DEAD || s.selfState() == ClientBRState.SELF_NONE) return;
         double dist = Math.hypot(player.getX() - s.cx(), player.getZ() - s.cz()) - s.radius();
         if (dist <= 0) return;
-        String msg = "圈外！距安全區 " + (int) Math.ceil(dist) + " 格";
+        String msg = Tr.t("hud.outside", (int) Math.ceil(dist));
         int boxW = font.width(msg) + PAD * 2;
         int x = (w - boxW) / 2, y = 8;
         // 閃爍的紅色邊條
@@ -152,17 +153,17 @@ public final class HUD {
 
     private static void renderHint(GuiGraphics g, Font font, BRStatePacket s, int w, int h) {
         String hint = switch (s.selfState()) {
-            case ClientBRState.SELF_PLANE -> "按 Shift 跳傘";
-            case ClientBRState.SELF_FREEFALL -> "自由落體｜按 Shift 開傘";
-            case ClientBRState.SELF_CHUTE -> "已開傘";
-            case ClientBRState.SELF_DOWNED -> "倒地中｜流血 " + mmss(s.timerSeconds()) + "｜等待隊友扶起";
+            case ClientBRState.SELF_PLANE -> Tr.t("hud.hint.plane");
+            case ClientBRState.SELF_FREEFALL -> Tr.t("hud.hint.freefall");
+            case ClientBRState.SELF_CHUTE -> Tr.t("hud.hint.chute");
+            case ClientBRState.SELF_DOWNED -> Tr.t("hud.hint.downed", mmss(s.timerSeconds()));
             case ClientBRState.SELF_DEAD -> switch (s.timerKind()) {
                 case ClientBRState.TIMER_CARD_GROUND -> s.timerSeconds() >= 0
-                    ? "已淘汰｜復活牌剩 " + mmss(s.timerSeconds()) + "，等待隊友撿起"
-                    : "已淘汰｜你的復活牌掉在地上，等待隊友撿起";
-                case ClientBRState.TIMER_FINAL -> "已確定死亡｜觀戰中";
-                case ClientBRState.TIMER_CARD_HELD -> "已淘汰｜隊友已撿起你的復活牌，等待祭壇復活";
-                default -> "已淘汰｜觀戰中";
+                    ? Tr.t("hud.hint.card_ground", mmss(s.timerSeconds()))
+                    : Tr.t("hud.hint.card_ground_nolimit");
+                case ClientBRState.TIMER_FINAL -> Tr.t("hud.hint.final");
+                case ClientBRState.TIMER_CARD_HELD -> Tr.t("hud.hint.card_held");
+                default -> Tr.t("hud.hint.dead");
             };
             default -> null;
         };
@@ -181,9 +182,9 @@ public final class HUD {
     /** 讀條：扶起隊友 / 被扶起 / 啟動祭壇。 */
     private static void renderProgress(GuiGraphics g, Font font, BRStatePacket s, int w, int y) {
         String label = switch (s.progressKind()) {
-            case ClientBRState.PROGRESS_REVIVING -> "扶起隊友中…";
-            case ClientBRState.PROGRESS_BEING_REVIVED -> "隊友正在扶你起來…";
-            case ClientBRState.PROGRESS_ALTAR -> "啟動祭壇中…";
+            case ClientBRState.PROGRESS_REVIVING -> Tr.t("hud.progress.reviving");
+            case ClientBRState.PROGRESS_BEING_REVIVED -> Tr.t("hud.progress.being_revived");
+            case ClientBRState.PROGRESS_ALTAR -> Tr.t("hud.progress.altar");
             default -> null;
         };
         if (label == null) return;
@@ -210,7 +211,7 @@ public final class HUD {
             KillFeedPacket d = k.data();
             // 淘汰：「擊殺者 ▸ 被殺者」（非玩家致死：「☠ 被殺者」）；擊倒：「擊倒者 擊倒 被擊倒者」（非玩家：「倒地 被擊倒者」）
             String sep = d.knock()
-                ? (d.killer().isEmpty() ? "倒地 " : " 擊倒 ")
+                ? (d.killer().isEmpty() ? Tr.t("hud.feed.downed") + " " : " " + Tr.t("hud.feed.knock") + " ")
                 : (d.killer().isEmpty() ? "☠ " : "  ▸  ");
             int wKiller = font.width(d.killer());
             int wSep = font.width(sep);
@@ -265,15 +266,6 @@ public final class HUD {
     private static void panel(GuiGraphics g, int x, int y, int w, int h) {
         g.fill(x, y, x + w, y + h, BG);
         g.fill(x, y, x + 2, y + h, ACCENT);
-    }
-
-    /** 字距模擬：逐字繪製，每字多 1 像素間距（Minecraft 無法換字體）。 */
-    private static void spaced(GuiGraphics g, Font font, String text, int x, int y, int color) {
-        for (int i = 0; i < text.length(); i++) {
-            String ch = String.valueOf(text.charAt(i));
-            g.drawString(font, ch, x, y, color, false);
-            x += font.width(ch) + 1;
-        }
     }
 
     private static int withAlpha(int argb, float alpha) {

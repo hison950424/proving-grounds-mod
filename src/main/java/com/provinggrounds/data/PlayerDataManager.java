@@ -66,7 +66,7 @@ public class PlayerDataManager {
         int after = levelFor(s.xp);
         markDirty();
         if (after > before) {
-            player.sendSystemMessage(Component.literal("▲ 升級！Lv." + before + " → Lv." + after)
+            player.sendSystemMessage(Component.literal("▲ 升級！等級 " + before + " → " + after)
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
         }
         return gained;

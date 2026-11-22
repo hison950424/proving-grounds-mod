@@ -30,7 +30,7 @@ public class BigMapScreen extends Screen {
     private boolean dragging;
 
     public BigMapScreen() {
-        super(Component.literal("Map"));
+        super(Tr.c("map.screen"));
     }
 
     @Override
@@ -41,12 +41,12 @@ public class BigMapScreen extends Screen {
         computeFull();
         if (span <= 0) resetView();
 
-        addRenderableWidget(new PGButton(mapX, 5, 60, 18, Component.literal("選單"), true, false, () -> {
+        addRenderableWidget(new PGButton(mapX, 5, 60, 18, Tr.c("map.menu"), true, false, () -> {
             PGNetwork.sendToServer(new MenuRequestPacket());
             MainMenuScreen.openLobbyView();
             Minecraft.getInstance().setScreen(new MainMenuScreen());
         }));
-        addRenderableWidget(new PGButton(mapX + mapSize - 60, 5, 60, 18, Component.literal("關閉"), false, false, this::onClose));
+        addRenderableWidget(new PGButton(mapX + mapSize - 60, 5, 60, 18, Tr.c("map.close"), false, false, this::onClose));
     }
 
     /** 全圖範圍：有俯視圖用圖片範圍，沒有就用目前安全區外加一點。 */
@@ -147,9 +147,9 @@ public class BigMapScreen extends Screen {
         g.disableScissor();
 
         // 標題、座標、說明
-        String title = "地圖" + (MapRender.image() == null ? "（尚未產生俯視圖：/pg map render）" : "");
+        String title = Tr.t("map.title") + (MapRender.image() == null ? Tr.t("map.no_image") : "");
         g.drawString(font, title, (width - font.width(title)) / 2, 10, 0xFFE8D060, false);
-        String help = "滾輪縮放｜左鍵拖曳｜右鍵全圖｜M 關閉";
+        String help = Tr.t("map.help", ClientModEvents.OPEN_MENU.getTranslatedKeyMessage().getString());
         if (inMap(mouseX, mouseY)) {
             int wx = (int) Math.floor(viewX + (mouseX - mapX) / (double) mapSize * span);
             int wz = (int) Math.floor(viewZ + (mouseY - mapY) / (double) mapSize * span);

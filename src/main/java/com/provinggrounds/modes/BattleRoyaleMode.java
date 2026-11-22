@@ -278,7 +278,7 @@ public class BattleRoyaleMode {
         phase = Phase.PREPARING;
         phaseTicks = PGConfig.SERVER.lobbyCountdownSeconds.get() * 20;
 
-        broadcast(Component.literal("▸ BATTLE ROYALE").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
+        broadcast(Component.literal("▸ 大逃殺").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
             .append(Component.literal(String.format("  地圖 #%d %s｜%s｜%s模式｜%d 人 / %d 隊",
                 m.id, m.name, preset.displayName, variant.displayName, players.size(), startTeamCount))
                 .withStyle(ChatFormatting.WHITE)));
@@ -784,7 +784,7 @@ public class BattleRoyaleMode {
         if (killer != null && !TeamManager.get().isSameTeam(killer, victim)) {
             data.addKill(killer);
             int xp = data.addXp(killer, c.xpKill.get(), competitive);
-            killer.displayClientMessage(Component.literal("擊殺 " + part.name + "  +" + xp + " XP")
+            killer.displayClientMessage(Component.literal("擊殺 " + part.name + "  +" + xp + " 經驗")
                 .withStyle(ChatFormatting.GOLD), true);
         }
         Set<UUID> hitBy = damagers.remove(victim.getUUID());
@@ -795,7 +795,7 @@ public class BattleRoyaleMode {
                 if (assister == null) continue;
                 data.addAssist(assister);
                 int xp = data.addXp(assister, c.xpAssist.get(), competitive);
-                assister.displayClientMessage(Component.literal("助攻 " + part.name + "  +" + xp + " XP")
+                assister.displayClientMessage(Component.literal("助攻 " + part.name + "  +" + xp + " 經驗")
                     .withStyle(ChatFormatting.YELLOW), true);
             }
         }
@@ -931,12 +931,12 @@ public class BattleRoyaleMode {
                 TeamManager.get().syncVanillaTeams(level.getServer(), all);
                 startTeamCount = countAliveTeams();
             }
-            p.sendSystemMessage(Component.literal("已加入即將開始的 BR。").withStyle(ChatFormatting.GREEN));
+            p.sendSystemMessage(Component.literal("已加入即將開始的大逃殺。").withStyle(ChatFormatting.GREEN));
             sendMapImage(p);
         } else if (phase != Phase.IDLE) {
             if (!sameGame) markForRestore(p);
             p.setGameMode(GameType.SPECTATOR);
-            p.sendSystemMessage(Component.literal("BR 進行中，你目前是觀察者。").withStyle(ChatFormatting.GRAY));
+            p.sendSystemMessage(Component.literal("大逃殺進行中，你目前是觀察者。").withStyle(ChatFormatting.GRAY));
             sendMapImage(p);
         } else if (!tag.isEmpty()) {
             restore(p);
@@ -1324,7 +1324,7 @@ public class BattleRoyaleMode {
                 if (p == null) continue;
                 data.addWin(p);
                 int xp = data.addXp(p, PGConfig.SERVER.xpWin.get(), competitive);
-                p.sendSystemMessage(Component.literal("勝利！+" + xp + " XP").withStyle(ChatFormatting.GOLD));
+                p.sendSystemMessage(Component.literal("勝利！+" + xp + " 經驗").withStyle(ChatFormatting.GOLD));
                 TeamManager.Team t = TeamManager.get().getTeamOrSolo(part.id);
                 if (t != TeamManager.Team.SOLO) teamLabel = t.displayName;
             }
@@ -1336,7 +1336,7 @@ public class BattleRoyaleMode {
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
         broadcast(headline);
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
-            title(p, winnerNames.isEmpty() ? Component.literal("本局結束") : Component.literal("WINNER WINNER").withStyle(ChatFormatting.GOLD),
+            title(p, winnerNames.isEmpty() ? Component.literal("本局結束") : Component.literal("大吉大利，今晚吃雞").withStyle(ChatFormatting.GOLD),
                 headline);
         }
         playSoundAll(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1f, PGConfig.SERVER.endSoundVolume.get().floatValue()); // 結束音效（音量可調，預設 0.5）

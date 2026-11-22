@@ -145,7 +145,7 @@ public final class MapRender {
                 case MapMarkersPacket.TEAMMATE_DOWNED -> {
                     int c = (now / 300) % 2 == 0 ? ENEMY : 0xFFFFFFFF;
                     box(g, sx, sz, 2, c);
-                    if (names) label(g, font, sx, sz, m.name() + "（倒地）", c);
+                    if (names) label(g, font, sx, sz, Tr.t("map.downed_name", m.name()), c);
                 }
                 default -> { // 隊友、觀戰時的所有玩家
                     int c = 0xFF000000 | m.color();
