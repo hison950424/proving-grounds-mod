@@ -106,16 +106,19 @@ public final class ClientForgeEvents {
     }
 
     /**
-     * BR 進行中（自己不是觀察者）時：
-     *   愛心 → 改畫數字血條（同一個位置），並把左側高度往上推，讓護甲條畫在血條上方而不是重疊。
-     *   飢餓條 → 不畫（BR 不使用飢餓度）。
+     * 任何時候（大廳、BR、觀戰）：
+     *   經驗值條與等級數字 → 不畫。
+     *   愛心 → 改畫數字血條（同一個位置，依實際最大血量比例），並把左側高度往上推，讓護甲條畫在血條上方而不是重疊。
+     * 只有 BR 進行中：飢餓條 → 不畫（BR 不使用飢餓度），其他時候維持原版。
      */
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiOverlayEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.player.isSpectator() || !ClientBRState.active()) return;
-        if (event.getOverlay() == VanillaGuiOverlay.FOOD_LEVEL.type()) {
+        if (mc.player == null) return;
+        if (event.getOverlay() == VanillaGuiOverlay.EXPERIENCE_BAR.type()) {
             event.setCanceled(true);
+        } else if (event.getOverlay() == VanillaGuiOverlay.FOOD_LEVEL.type()) {
+            if (ClientBRState.active() && !mc.player.isSpectator()) event.setCanceled(true);
         } else if (event.getOverlay() == VanillaGuiOverlay.PLAYER_HEALTH.type()) {
             event.setCanceled(true);
             if (mc.gui instanceof ForgeGui gui && gui.shouldDrawSurvivalElements()) {

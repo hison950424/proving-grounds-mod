@@ -54,6 +54,7 @@ public final class MarkerScanJob {
     private final MapRegistry.BRMap map;
     private final Mode mode;
     private final CommandSourceStack source;
+    private final long startMs = System.currentTimeMillis();
     private final Deque<List<ChunkPos>> batches = new ArrayDeque<>();
     private final List<List<ChunkPos>> allBatches = new ArrayList<>();
     private final int totalBatches;
@@ -215,7 +216,7 @@ public final class MarkerScanJob {
         if (mode == Mode.MIGRATE && !deleting) {
             // 先存檔，確保點位寫進硬碟之後才刪 marker（中途當機也不會兩邊都沒有）
             level.getServer().overworld().getDataStorage().save();
-            say("匯入完成並已存檔：" + summary(), ChatFormatting.GREEN);
+            say("匯入完成並已存檔（耗時 " + elapsed() + "）：" + summary(), ChatFormatting.GREEN);
             if (imported + duplicate == 0) {
                 say("沒有任何點位可確認，不刪除 marker。", ChatFormatting.YELLOW);
                 ProvingGroundsMod.LOGGER.info("Marker MIGRATE on map {}: nothing imported, {}", map.id, summary());
@@ -226,7 +227,7 @@ public final class MarkerScanJob {
             batches.addAll(allBatches);
             return false;
         }
-        say("完成！" + summary(), ChatFormatting.GREEN);
+        say("完成！（耗時 " + elapsed() + "）" + summary(), ChatFormatting.GREEN);
         if (timeouts > 0) {
             say(String.format("注意：有 %d 批區塊等太久沒載完，裡面的 marker 可能漏掉，可以再執行一次（重複的點位不會重複登記）。",
                 timeouts), ChatFormatting.RED);
@@ -245,6 +246,12 @@ public final class MarkerScanJob {
                 found, imported, duplicate, outside, map.id, map.lootPoints.size())
             : String.format("找到 %d 個，刪除 %d 個，地圖範圍外 %d 個（未刪除）。", found, removed, outside);
         return base;
+    }
+
+    /** 從開始到現在經過的時間（例如「2 分 05 秒」）。 */
+    private String elapsed() {
+        long s = (System.currentTimeMillis() - startMs) / 1000;
+        return s >= 60 ? (s / 60) + " 分 " + String.format("%02d", s % 60) + " 秒" : s + " 秒";
     }
 
     private void say(String msg, ChatFormatting color) {

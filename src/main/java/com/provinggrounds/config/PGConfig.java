@@ -28,6 +28,7 @@ public class PGConfig {
     public final ForgeConfigSpec.IntValue lobbyCountdownSeconds;
     public final ForgeConfigSpec.IntValue minPlayersToStart;
     public final ForgeConfigSpec.IntValue forceStartSeconds;
+    public final ForgeConfigSpec.DoubleValue endSoundVolume;
 
     // ── BR：縮圈 ──────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.IntValue brGameDurationSeconds;
@@ -131,6 +132,8 @@ public class PGConfig {
             .defineInRange("countdown_seconds", 10, 5, 300);
         forceStartSeconds = builder.comment("管理員按「強制開始」後，全體提示並倒數的秒數")
             .defineInRange("force_start_seconds", 10, 1, 60);
+        endSoundVolume = builder.comment("遊戲結束音效的音量（1.0 = 原本音量，0.5 = 一半）")
+            .defineInRange("end_sound_volume", 0.5, 0.0, 1.0);
         minPlayersToStart = builder.comment("最少開始人數（1 = 方便單人測試）")
             .defineInRange("min_players", 1, 1, 100);
         builder.pop();

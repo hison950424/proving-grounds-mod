@@ -33,6 +33,10 @@ if (-not $SkipGitHub) {
     & gh auth status *> $null
     if ($LASTEXITCODE -ne 0) { Stop-Release 'gh 尚未登入（gh auth login）' }
 }
+# Java 在 Windows 上不會鎖住 jar，執行中也換得掉，所以要主動檢查伺服器／Prism 客戶端是否正在執行
+$running = Get-CimInstance Win32_Process -Filter "Name='java.exe' OR Name='javaw.exe'" |
+    Where-Object { $_.CommandLine -match 'forge/1\.20\.1-[\d.]+/win_args\.txt|Proving Grounds_Client_Mod' }
+if ($running) { Stop-Release '偵測到 Minecraft 伺服器或 Prism 客戶端正在執行，請全部關閉後再發佈' }
 $localCfg = Join-Path $PSScriptRoot 'release.local.json'
 if (-not (Test-Path $localCfg)) { Stop-Release "缺少 $localCfg（列出要替換模組的 mods 資料夾）" }
 $modsDirs = @((Get-Content $localCfg -Raw | ConvertFrom-Json).modsDirs)

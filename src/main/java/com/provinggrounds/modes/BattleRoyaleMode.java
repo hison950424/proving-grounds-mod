@@ -401,8 +401,8 @@ public class BattleRoyaleMode {
             part.carrier = carrier;
             part.state = PlayerState.PLANE;
             BRMovement.apply(p);
-            title(p, Component.literal("已登機").withStyle(ChatFormatting.GOLD),
-                Component.literal("按 Shift 跳傘").withStyle(ChatFormatting.WHITE));
+            // 操作提示只由客戶端 HUD（快捷欄上方）顯示，這裡只給標題，避免同一句話出現兩次
+            title(p, Component.literal("已登機").withStyle(ChatFormatting.GOLD), Component.empty());
         }
         phase = Phase.PLANE;
         broadcast(Component.literal("飛機起飛！任何時候按 Shift 跳出，飛到尾端會自動跳出。").withStyle(ChatFormatting.AQUA));
@@ -438,7 +438,6 @@ public class BattleRoyaleMode {
         part.sneakReleased = false;
         part.groundTicks = 0;
         p.fallDistance = 0;
-        p.displayClientMessage(Component.literal("自由落體中：按 Shift 開傘").withStyle(ChatFormatting.YELLOW), true);
     }
 
     private void discardCarrier(Participant part) {
@@ -467,7 +466,6 @@ public class BattleRoyaleMode {
                     part.state = PlayerState.CHUTE;
                     p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, CHUTE_DURATION_TICKS, 0, false, false, false));
                     level.playSound(null, p.blockPosition(), SoundEvents.ARMOR_EQUIP_ELYTRA, SoundSource.PLAYERS, 1f, 1f);
-                    p.displayClientMessage(Component.literal("已開傘").withStyle(ChatFormatting.GREEN), true);
                 }
             }
 
@@ -1252,8 +1250,7 @@ public class BattleRoyaleMode {
         v.teleportTo(level, altarPos.getX() + 0.5, y, altarPos.getZ() + 0.5, v.getYRot(), 0);
         v.fallDistance = 0;
         BRMovement.apply(v);
-        title(v, Component.literal("已復活").withStyle(ChatFormatting.GREEN),
-            Component.literal("按 Shift 開傘").withStyle(ChatFormatting.WHITE));
+        title(v, Component.literal("已復活").withStyle(ChatFormatting.GREEN), Component.empty()); // 跳傘提示由 HUD 顯示
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -1342,7 +1339,7 @@ public class BattleRoyaleMode {
             title(p, winnerNames.isEmpty() ? Component.literal("本局結束") : Component.literal("WINNER WINNER").withStyle(ChatFormatting.GOLD),
                 headline);
         }
-        playSoundAll(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1f);
+        playSoundAll(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1f, PGConfig.SERVER.endSoundVolume.get().floatValue()); // 結束音效（音量可調，預設 0.5）
 
         releaseAll();
         AirdropManager.cleanupAll(level);
@@ -1711,10 +1708,14 @@ public class BattleRoyaleMode {
     }
 
     private void playSoundAll(net.minecraft.sounds.SoundEvent sound, float pitch) {
+        playSoundAll(sound, pitch, 1f);
+    }
+
+    private void playSoundAll(net.minecraft.sounds.SoundEvent sound, float pitch, float volume) {
         MinecraftServer server = level != null ? level.getServer() : GameManager.get().getServer();
         if (server == null) return;
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            p.playNotifySound(sound, SoundSource.MASTER, 1f, pitch);
+            p.playNotifySound(sound, SoundSource.MASTER, volume, pitch);
         }
     }
 

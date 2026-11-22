@@ -41,6 +41,7 @@ public final class MapRenderJob {
     private final ServerLevel level;
     private final MapRegistry.BRMap map;
     private final CommandSourceStack source;
+    private final long startMs = System.currentTimeMillis();
     private final int minX, minZ, size, scale;
     private final double reach; // 圓圈 + 邊界
     private final byte[] color;  // 原版地圖顏色 id（0 = 沒資料）
@@ -219,7 +220,8 @@ public final class MapRenderJob {
             }
         }
         MapImageStore.MapImage img = MapImageStore.save(level.getServer(), map.id, minX, minZ, size, scale, pixels);
-        say(String.format("地圖 #%d 俯視圖產生完成（壓縮後 %d KB）。下一局開始時會傳給玩家。", map.id, img.data().length / 1024),
+        say(String.format("地圖 #%d 俯視圖產生完成（%d × %d、壓縮後 %d KB、耗時 %s）。下一局開始時會傳給玩家。",
+            map.id, size, size, img.data().length / 1024, elapsed()),
             ChatFormatting.GREEN);
         if (timeouts > 0) {
             say("注意：有 " + timeouts + " 批區塊等太久沒載入，地圖上那些位置會是空白，可以再執行一次。", ChatFormatting.RED);
@@ -232,6 +234,12 @@ public final class MapRenderJob {
         if (active == null) return;
         for (ChunkPos c : active) level.getChunkSource().removeRegionTicket(TICKET, c, TICKET_DISTANCE, c);
         active = null;
+    }
+
+    /** 從開始到現在經過的時間（例如「2 分 05 秒」）。 */
+    private String elapsed() {
+        long s = (System.currentTimeMillis() - startMs) / 1000;
+        return s >= 60 ? (s / 60) + " 分 " + String.format("%02d", s % 60) + " 秒" : s + " 秒";
     }
 
     private void say(String msg, ChatFormatting color) {
