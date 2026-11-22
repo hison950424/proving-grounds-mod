@@ -297,6 +297,7 @@ public class BattleRoyaleMode {
         GameManager.get().addPlayer(p);
         p.setGameMode(GameType.ADVENTURE); // 冒險模式：不能破壞／放置地圖方塊（同舊 Datapack），仍可開箱、用祭壇、開槍
         p.getInventory().clearContent();
+        com.provinggrounds.modes.br.Backpack.clear(p);
         p.removeAllEffects();
         applyMaxHealth(p);
         p.setHealth(p.getMaxHealth());
@@ -836,6 +837,7 @@ public class BattleRoyaleMode {
 
         // 掉落全部物品，然後變成觀察者
         SkydiveWings.removeAll(victim);
+        com.provinggrounds.modes.br.Backpack.dropEquipped(victim);
         victim.getInventory().dropAll();
         discardCarrier(part);
         victim.stopRiding();
@@ -1289,6 +1291,7 @@ public class BattleRoyaleMode {
         if (v.getCamera() != v) v.setCamera(v);
         v.setGameMode(GameType.ADVENTURE);
         v.getInventory().clearContent();
+        com.provinggrounds.modes.br.Backpack.clear(v);
         v.removeAllEffects();
         applyMaxHealth(v);
         healFull(v);
@@ -1499,6 +1502,7 @@ public class BattleRoyaleMode {
         if (p.getCamera() != p) p.setCamera(p);
         BRMovement.remove(p);
         p.getInventory().clearContent();
+        com.provinggrounds.modes.br.Backpack.clear(p);
         p.removeAllEffects();
         removeMaxHealth(p);
         healFull(p);

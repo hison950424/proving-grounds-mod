@@ -92,7 +92,7 @@ public final class LootSimulator {
         if (id.equals("lrtactical:throwable")) return "投擲物";
         if (id.equals("lrtactical:melee")) return "近戰";
         if (s.getItem() instanceof ArmorItem) return "防具";
-        if (id.endsWith("_shulker_box")) return "背包";
+        if (s.getItem() instanceof com.provinggrounds.item.BackpackItem) return "背包";
         return "其他";
     }
 

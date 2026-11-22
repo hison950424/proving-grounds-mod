@@ -54,13 +54,15 @@ public final class HotbarRules {
     public static final int LARGE_A = 0, LARGE_B = 1, PISTOL = 2, HEAL = 3, THROW = 4;
     public static final int OFFHAND = 40;
 
-    public enum Kind { LARGE, PISTOL, HEALING, THROWABLE, OTHER }
+    public enum Kind { LARGE, PISTOL, HEALING, THROWABLE, BACKPACK, OTHER }
 
     public static final String MSG_LARGE = "無法拿取兩把以上的大型槍（可用替換的方式拿取）";
     public static final String MSG_PISTOL = "無法拿取兩把以上的手槍（可用替換的方式拿取）";
     public static final String MSG_FULL = "背包已滿，無法拿取";
     private static final String MSG_GUN_SLOT = "槍只能放在快捷欄第 1～3 格（第 1、2 格大型槍，第 3 格手槍）";
     private static final String MSG_SPECIAL_SLOT = "快捷欄第 1～5 格是專用格（1、2 大型槍｜3 手槍｜4 補品｜5 投擲物）";
+    public static final String MSG_BACKPACK_HAVE = "已經裝著同等級或更高級的背包";
+    private static final String MSG_BACKPACK_SLOT = "背包只能裝在物品欄的背包欄（副手格上方）";
     private static final String MSG_DROPPED = "放不下的物品已掉在腳邊";
 
     private static final Map<UUID, Long> lastMessage = new HashMap<>();
@@ -70,6 +72,7 @@ public final class HotbarRules {
     // ── 分類與規則 ───────────────────────────────────────────────────────────
 
     public static Kind kind(ItemStack s) {
+        if (s.getItem() instanceof com.provinggrounds.item.BackpackItem) return Kind.BACKPACK;
         GunClass g = GunCompat.classify(s);
         if (g == GunClass.LARGE) return Kind.LARGE;
         if (g == GunClass.PISTOL) return Kind.PISTOL;
@@ -98,9 +101,9 @@ public final class HotbarRules {
         return br.isAliveParticipant(sp.getUUID());
     }
 
-    /** 背包格（9～35）可不可以用。B3 背包系統會依背包等級鎖格；目前全部可用。 */
+    /** 背包格（9～35）可不可以用（依背包等級，見 Backpack）。 */
     public static boolean backpackUsable(ServerPlayer p, int slot) {
-        return true;
+        return !Backpack.locked(p, slot);
     }
 
     /** 這格可不可以放這個物品。 */
@@ -108,6 +111,7 @@ public final class HotbarRules {
         if (s.isEmpty()) return true;
         if (slot >= 36 && slot <= 39) return true; // 防具欄不管
         Kind k = kind(s);
+        if (k == Kind.BACKPACK) return false; // 背包只能在背包欄
         return switch (slot) {
             case LARGE_A, LARGE_B -> k == Kind.LARGE;
             case PISTOL -> k == Kind.PISTOL;
@@ -152,6 +156,10 @@ public final class HotbarRules {
                 for (int i = 9; i <= 35 && !stack.isEmpty(); i++) if (backpackUsable(p, i)) putEmpty(inv, stack, i);
                 fail = MSG_FULL;
             }
+            case BACKPACK -> {
+                Backpack.equipIfBetter(p, stack); // 更高級就換上，舊的掉在腳邊
+                fail = MSG_BACKPACK_HAVE;
+            }
             case OTHER -> {
                 for (int i = 5; i <= 8 && !stack.isEmpty(); i++) merge(inv, stack, i);
                 for (int i = 9; i <= 35 && !stack.isEmpty(); i++) if (backpackUsable(p, i)) merge(inv, stack, i);
@@ -172,6 +180,7 @@ public final class HotbarRules {
             case THROWABLE -> { merge(inv, stack, THROW); putEmpty(inv, stack, THROW); }
             case LARGE -> { if (!putEmpty(inv, stack, LARGE_A)) putEmpty(inv, stack, LARGE_B); }
             case PISTOL -> putEmpty(inv, stack, PISTOL);
+            case BACKPACK -> Backpack.equipIfBetter(p, stack);
             case OTHER -> {
                 for (int i = 5; i <= 8 && !stack.isEmpty(); i++) merge(inv, stack, i);
                 for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i);
@@ -220,6 +229,7 @@ public final class HotbarRules {
         final ItemStack[] inventory;  // 玩家物品欄 0～40
         final ItemStack carried;
         final int violations;
+        final int backpackLevel;
 
         Snapshot(AbstractContainerMenu menu, ServerPlayer p) {
             Inventory inv = p.getInventory();
@@ -232,6 +242,7 @@ public final class HotbarRules {
             for (int i = 0; i <= OFFHAND; i++) inventory[i] = inv.getItem(i).copy();
             carried = menu.getCarried().copy();
             violations = HotbarRules.violations(p);
+            backpackLevel = Backpack.level(p);
         }
 
         void restore(AbstractContainerMenu menu, ServerPlayer p) {
@@ -281,6 +292,10 @@ public final class HotbarRules {
 
     /** 點擊後呼叫：違規變多就整個還原。 */
     public static void afterClick(AbstractContainerMenu menu, ServerPlayer p, Snapshot snap) {
+        if (Backpack.level(p) != snap.backpackLevel) {
+            normalize(p); // 換了背包：容量變了，鎖定格裡的物品搬走或掉落（不還原）
+            return;
+        }
         if (violations(p) <= snap.violations) return;
         String why = MSG_SPECIAL_SLOT;
         Inventory inv = p.getInventory();
@@ -288,6 +303,7 @@ public final class HotbarRules {
             ItemStack s = inv.getItem(i);
             if (!allowedAt(p, i, s)) {
                 if (isGun(s)) why = MSG_GUN_SLOT;
+                else if (kind(s) == Kind.BACKPACK) why = MSG_BACKPACK_SLOT;
                 break;
             }
         }

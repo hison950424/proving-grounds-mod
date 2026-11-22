@@ -41,6 +41,14 @@
           ]
         }
       ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:empty", "weight": 70 },
+        { "type": "minecraft:item", "name": "provinggrounds:backpack_2", "weight": 15 },
+        { "type": "minecraft:item", "name": "provinggrounds:backpack_3", "weight": 15 }
+      ]
     }
   ]
 }

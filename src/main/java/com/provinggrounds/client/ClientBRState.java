@@ -32,6 +32,10 @@ public final class ClientBRState {
     public static void apply(BRStatePacket packet) {
         state = packet;
         lastUpdateMs = System.currentTimeMillis();
+        // 背包鎖格（B3）只對 BR 進行中的參賽者生效：客戶端用來預測與畫遮罩
+        byte s = packet.selfState();
+        com.provinggrounds.modes.br.Backpack.clientRulesActive = (packet.phase() == PHASE_PLANE || packet.phase() == PHASE_ACTIVE)
+            && s != SELF_NONE && s != SELF_DEAD;
         if (packet.phase() == PHASE_NONE) {
             synchronized (KILLS) { KILLS.clear(); }
         }
@@ -64,6 +68,7 @@ public final class ClientBRState {
 
     public static void clear() {
         state = BRStatePacket.none();
+        com.provinggrounds.modes.br.Backpack.clearClient();
         synchronized (KILLS) { KILLS.clear(); }
     }
 }

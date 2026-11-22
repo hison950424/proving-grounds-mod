@@ -6,7 +6,9 @@
   "mixins": [
     "GunDataMixin",
     "ItemStackMixin",
-    "ContainerMenuMixin"
+    "ContainerMenuMixin",
+    "InventoryMenuMixin",
+    "SlotMixin"
   ],
   "injectors": {
     "defaultRequire": 0

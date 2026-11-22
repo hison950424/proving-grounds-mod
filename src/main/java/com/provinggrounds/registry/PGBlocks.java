@@ -58,6 +58,14 @@ public final class PGBlocks {
     public static final RegistryObject<Item> REVIVE_CARD = ITEMS.register("revive_card",
         () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
 
+    /** 一～三級背包（計畫書 B3）。 */
+    public static final RegistryObject<Item> BACKPACK_1 = ITEMS.register("backpack_1",
+        () -> new com.provinggrounds.item.BackpackItem(1, new Item.Properties()));
+    public static final RegistryObject<Item> BACKPACK_2 = ITEMS.register("backpack_2",
+        () -> new com.provinggrounds.item.BackpackItem(2, new Item.Properties().rarity(Rarity.UNCOMMON)));
+    public static final RegistryObject<Item> BACKPACK_3 = ITEMS.register("backpack_3",
+        () -> new com.provinggrounds.item.BackpackItem(3, new Item.Properties().rarity(Rarity.EPIC)));
+
     private PGBlocks() {}
 
     private static RegistryObject<Block> crate(String name, MapColor color, SoundType sound) {
@@ -81,6 +89,11 @@ public final class PGBlocks {
             event.accept(CRATE_HIGH);
             event.accept(CRATE_AIRDROP);
             event.accept(ALTAR_ITEM);
+        }
+        if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
+            event.accept(BACKPACK_1);
+            event.accept(BACKPACK_2);
+            event.accept(BACKPACK_3);
         }
     }
 }

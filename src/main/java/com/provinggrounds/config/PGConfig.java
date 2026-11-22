@@ -51,6 +51,7 @@ public class PGConfig {
     public final ForgeConfigSpec.DoubleValue chuteSink, chuteHorizontal, skydiveToggleCooldown;
     public final ForgeConfigSpec.BooleanValue hotbarRulesEnabled;
     public final ForgeConfigSpec.DoubleValue wheelHoldSeconds;
+    public final ForgeConfigSpec.IntValue backpackLevel1Slots, backpackLevel2Slots, backpackLevel3Slots;
 
     // ── BR：移動 ──────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.DoubleValue brSpeedMultiplier;
@@ -204,6 +205,12 @@ public class PGConfig {
             .define("hotbar_rules_enabled", true);
         wheelHoldSeconds = builder.comment("長按快捷欄 4、5 開啟補品／投擲物輪盤的門檻（秒），短按維持原版選格")
             .defineInRange("wheel_hold_seconds", 0.25, 0.05, 2.0);
+        builder.pop();
+
+        builder.comment("背包：裝在物品欄背包欄的背包等級決定主背包開放幾格（沒有背包 = 全鎖，只對 BR 參賽者生效）。").push("backpack");
+        backpackLevel1Slots = builder.comment("一級背包開放的格數").defineInRange("backpack_level1_slots", 5, 0, 27);
+        backpackLevel2Slots = builder.comment("二級背包開放的格數").defineInRange("backpack_level2_slots", 10, 0, 27);
+        backpackLevel3Slots = builder.comment("三級背包開放的格數").defineInRange("backpack_level3_slots", 15, 0, 27);
         builder.pop();
 
         builder.push("movement");
