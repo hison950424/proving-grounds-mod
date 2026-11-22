@@ -1,0 +1,4 @@
+{
+  "config.tacz.client.sound.first_person_animation_sound_tracking": "第一人稱動畫音效追蹤",
+  "config.tacz.client.sound.first_person_animation_sound_tracking.desc": "第一人稱動畫關鍵影格的音效改用跟隨實體的世界音源。可以提升與物理音效模組的相容性，但移動時立體聲可能會稍微偏移。"
+}
