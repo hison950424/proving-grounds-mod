@@ -360,18 +360,19 @@ public class PGConfig {
                 "爆頭只看頭盔；身體中彈看胸甲、護腿、靴子（每件 1/3）。",
                 "原版護甲值本來就會再擋一次一般部分（TACZ 原本的行為）。")
             .push("bulletproof");
+        // 2026-11-23：防彈係數整體減半（鍵名加 _v2，舊設定檔的數值不會蓋掉新預設）
         bulletproofEnabled = builder.comment("是否啟用防彈").define("enabled", true);
         armorDurabilityMultiplier = builder.comment("所有防具的最大耐久度倍率（2.0 = 原版兩倍，例如鐵頭盔 165 → 330）。登入時同步到客戶端")
             .defineInRange("armor_durability_multiplier", 2.0, 0.1, 10.0);
         bulletproofHeadBodySplit = builder.comment("爆頭只看頭盔、身體只看其他三件；false = 不分部位，四件各占 1/4")
             .define("head_body_split", true);
-        bulletproofLeather = builder.comment("皮革全套減傷").defineInRange("leather", 0.10, 0.0, 0.95);
-        bulletproofChainmail = builder.comment("鎖鏈全套減傷（占位）").defineInRange("chainmail", 0.15, 0.0, 0.95);
-        bulletproofIron = builder.comment("鐵全套減傷").defineInRange("iron", 0.20, 0.0, 0.95);
-        bulletproofGold = builder.comment("金全套減傷（占位）").defineInRange("gold", 0.15, 0.0, 0.95);
-        bulletproofDiamond = builder.comment("鑽石全套減傷").defineInRange("diamond", 0.30, 0.0, 0.95);
-        bulletproofNetherite = builder.comment("獄髓全套減傷").defineInRange("netherite", 0.40, 0.0, 0.95);
-        bulletproofTurtle = builder.comment("海龜殼（只有頭盔）全套減傷（占位）").defineInRange("turtle", 0.10, 0.0, 0.95);
+        bulletproofLeather = builder.comment("皮革全套減傷").defineInRange("leather_v2", 0.05, 0.0, 0.95);
+        bulletproofChainmail = builder.comment("鎖鏈全套減傷（占位）").defineInRange("chainmail_v2", 0.075, 0.0, 0.95);
+        bulletproofIron = builder.comment("鐵全套減傷").defineInRange("iron_v2", 0.10, 0.0, 0.95);
+        bulletproofGold = builder.comment("金全套減傷（占位）").defineInRange("gold_v2", 0.075, 0.0, 0.95);
+        bulletproofDiamond = builder.comment("鑽石全套減傷").defineInRange("diamond_v2", 0.15, 0.0, 0.95);
+        bulletproofNetherite = builder.comment("獄髓全套減傷").defineInRange("netherite_v2", 0.20, 0.0, 0.95);
+        bulletproofTurtle = builder.comment("海龜殼（只有頭盔）全套減傷（占位）").defineInRange("turtle_v2", 0.05, 0.0, 0.95);
         builder.pop();
 
         builder.comment("管理員工具物品（浮空文字、箱子生成點）").push("admin_tools");
