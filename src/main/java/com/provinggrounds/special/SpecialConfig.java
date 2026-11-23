@@ -14,6 +14,7 @@ public final class SpecialConfig {
 
     public final ForgeConfigSpec.BooleanValue enabled;
     public final ForgeConfigSpec.DoubleValue chance;
+    public final ForgeConfigSpec.DoubleValue airdropChance;
     public final ForgeConfigSpec.IntValue useCooldownTicks;
 
     // 共用引擎
@@ -56,6 +57,7 @@ public final class SpecialConfig {
         enabled = b.comment("特殊物品模式：關閉時箱子不會出現特殊物品、不能使用、也不顯示特殊物品欄。大廳選單（管理員）或 /pg special mode on|off 可以切換").define("enabled", true);
         chance = b.comment("每個箱子（低、中、高、空投都一樣）出現 1 件特殊物品的機率，0.1 = 約每 10 箱 1 件。出現哪一件依 data/br/loot_tables/special.json 的權重")
             .defineInRange("chance", 0.1, 0.0, 1.0);
+        airdropChance = b.comment("空投箱出現 1 件特殊物品的機率（1.0 = 每個空投一定有）").defineInRange("airdrop_chance", 1.0, 0.0, 1.0);
         useCooldownTicks = b.comment("兩次使用特殊物品之間至少間隔幾 tick（防止連按）").defineInRange("use_cooldown_ticks", 10, 0, 200);
 
         b.comment("共用引擎").push("engine");

@@ -27,7 +27,10 @@ public final class SpecialLoot {
         if (!(level instanceof ServerLevel sl)) return;
         SpecialConfig s;
         try { s = SpecialConfig.get(); } catch (IllegalStateException e) { return; }
-        if (!s.enabled.get() || sl.getRandom().nextDouble() >= s.chance.get()) return;
+        boolean airdrop = crate instanceof net.minecraft.world.level.block.entity.BlockEntity be
+            && be.getBlockState().is(com.provinggrounds.registry.PGBlocks.CRATE_AIRDROP.get());
+        double chance = airdrop ? s.airdropChance.get() : s.chance.get(); // 空投：高風險高回報，預設一定有
+        if (!s.enabled.get() || sl.getRandom().nextDouble() >= chance) return;
         ItemStack pick = roll(sl);
         if (pick.isEmpty()) return;
         for (int i = 0; i < crate.getContainerSize(); i++) {
