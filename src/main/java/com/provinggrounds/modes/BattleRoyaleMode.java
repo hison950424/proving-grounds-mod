@@ -1315,8 +1315,10 @@ public class BattleRoyaleMode {
 
             Participant victim = participants.get(victimId);
             String victimName = victim != null ? victim.name : "?";
-            player.displayClientMessage(Component.literal("撿起 " + victimName + " 的復活牌，帶到祭壇可復活隊友")
+            player.displayClientMessage(Component.literal("撿起 " + victimName + " 的復活牌，任何存活隊友到祭壇都可以復活他")
                 .withStyle(ChatFormatting.GOLD), true);
+            notifyTeam(holder.id, Component.literal(player.getGameProfile().getName() + " 撿起了 " + victimName + " 的復活牌：任何存活隊友到祭壇都可以復活他")
+                .withStyle(ChatFormatting.GOLD), player.getUUID());
             player.playNotifySound(SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.8f, 1.2f);
             ServerPlayer vp = player(victimId);
             if (vp != null) {
@@ -1412,9 +1414,10 @@ public class BattleRoyaleMode {
             AltarBlockEntity altar = target != null && level.getBlockEntity(target) instanceof AltarBlockEntity a ? a : null;
             if (altar == null) { resetAltar(part); continue; }
 
-            boolean holding = part.heldCards.stream().anyMatch(this::isAwaiting);
+            // 復活牌全隊共用：隊伍裡任何一個活著（沒倒地）的隊友撿到，其他存活隊友都可以到祭壇復活
+            boolean holding = teamCards(part) > 0;
             if (!holding) {
-                if (using) p.displayClientMessage(Component.literal("你身上沒有隊友的復活牌").withStyle(ChatFormatting.GRAY), true);
+                if (using) p.displayClientMessage(Component.literal("隊伍裡沒有人撿到復活牌").withStyle(ChatFormatting.GRAY), true);
                 resetAltar(part);
                 continue;
             }
@@ -1459,6 +1462,17 @@ public class BattleRoyaleMode {
     }
 
     /** 復活同隊所有「牌已被撿起」的死者（任何一位站著的隊友身上的牌都算）。 */
+    /** 全隊（活著、沒倒地的隊友）持有、還在等復活的復活牌數。 */
+    private int teamCards(Participant part) {
+        String team = TeamManager.get().teamKey(part.id);
+        int n = 0;
+        for (Participant holder : participants.values()) {
+            if (!holder.alive || holder.downed || !TeamManager.get().teamKey(holder.id).equals(team)) continue;
+            for (UUID v : holder.heldCards) if (isAwaiting(v)) n++;
+        }
+        return n;
+    }
+
     private void activateAltar(ServerPlayer activator, Participant part, BlockPos pos, AltarBlockEntity altar) {
         assert level != null;
         String team = TeamManager.get().teamKey(part.id);
@@ -1895,7 +1909,7 @@ public class BattleRoyaleMode {
                 }
                 progressKind = part.progressKind;
                 progress = part.progress;
-                cards = (byte) Math.min(127, part.heldCards.stream().filter(this::isAwaiting).count());
+                cards = (byte) Math.min(127, part.alive ? teamCards(part) : 0); // 顯示全隊共用的復活牌數
             }
             boolean movement = part != null && part.alive && phase != Phase.PREPARING && phase != Phase.ENDING;
             PGNetwork.sendTo(p, new BRStatePacket(phaseId, seconds, shrinking, stage, total,
