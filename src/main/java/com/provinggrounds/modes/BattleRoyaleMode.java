@@ -634,10 +634,10 @@ public class BattleRoyaleMode {
     private void beginActive() {
         assert map != null && level != null;
         for (Participant part : participants.values()) discardCarrier(part);
-        double maxSpeed = PGConfig.SERVER.brSprintSpeed() * PGConfig.SERVER.brCircleMaxSpeedFactor.get();
+        double maxSpeed = PGConfig.SERVER.brSprintSpeed() * preset.speedFactor(); // 每種模式各自的圈速度上限
         circle = new Circle(map.centerX, map.centerZ, map.radius, preset.ratios(), preset.intervalSeconds(),
             maxSpeed, level.getRandom());
-        circle.addInitialWait(PGConfig.SERVER.brFirstWaitExtraSeconds.get() * 20); // 開場第一次縮圈多等（預設 60 秒）
+        circle.addInitialWait(preset.firstWaitSeconds() * 20); // 開場第一次縮圈多等（每種模式各自設定）
         phase = Phase.ACTIVE;
         broadcast(Component.literal(String.format("第 1 階段：%d 秒後開始縮圈。", circle.secondsLeft()))
             .withStyle(ChatFormatting.AQUA));

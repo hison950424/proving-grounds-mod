@@ -187,9 +187,9 @@ public class PGCommand {
         PGConfig c = PGConfig.SERVER;
         double walk = 4.317 * c.brSpeedMultiplier.get();
         double sprint = c.brSprintSpeed();
-        double zoneMax = sprint * c.brCircleMaxSpeedFactor.get();
+        double zoneMax = sprint * c.brStandardSpeed.get();
         ok(src, String.format("BR 速度：走路約 %.1f 格/秒、疾跑約 %.1f 格/秒（原版 × %.2f）；縮圈圈邊最快 %.1f 格/秒（疾跑 × %.2f）",
-            walk, sprint, c.brSpeedMultiplier.get(), zoneMax, c.brCircleMaxSpeedFactor.get()), false);
+            walk, sprint, c.brSpeedMultiplier.get(), zoneMax, c.brStandardSpeed.get()), false);
         // 防具耐久（A14）：直接讀實際的最大耐久，順便確認倍率有生效
         int helmet = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_HELMET).getMaxDamage();
         ok(src, String.format("防具耐久倍率 ×%.1f（鐵頭盔最大耐久 %d，原版 165）", c.armorDurabilityMultiplier.get(), helmet), false);

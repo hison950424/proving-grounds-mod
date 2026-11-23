@@ -72,6 +72,7 @@ public class ProvingGroundsMod {
     public void onRegisterCommands(RegisterCommandsEvent event) {
         PGCommand.register(event.getDispatcher());
         com.provinggrounds.command.RandomCommand.register(event.getDispatcher()); // 移植 1.20.2 的 /random
+        com.provinggrounds.command.CircleCommand.register(event.getDispatcher()); // /pg circle：管理員自訂縮圈數值
         LOGGER.info("Proving Grounds commands registered.");
     }
 }
