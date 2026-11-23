@@ -182,7 +182,7 @@ public final class SpecialWorld {
             c.travelled += step;
             c.level.sendParticles(BLACK, c.pos.x, c.pos.y, c.pos.z, 14, 1.0, 1.0, 1.0, 0);
             for (Player p : c.level.getEntitiesOfClass(Player.class, new AABB(c.pos, c.pos).inflate(1.5))) {
-                if (p.isSpectator() || (!s.friendlyFire.get() && p.getUUID().equals(c.owner))) continue; // 預設自己也會被致盲
+                if (p.isSpectator() || p.getUUID().equals(c.owner)) continue; // 使用者本人不會被自己的黑霧致盲（隊友仍會）
                 p.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, blind, 0, false, false, true));
             }
             if (c.travelled >= s.blindRange.get()) it.remove();
