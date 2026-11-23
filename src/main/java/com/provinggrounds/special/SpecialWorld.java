@@ -54,7 +54,7 @@ public final class SpecialWorld {
     private record Area(ServerLevel level, Vec3 center, long end, @Nullable UUID owner) {}
     private static final class SnowTrail { Snowball ball; Vec3 start; long lastCol = Long.MIN_VALUE; }
     private record SnowColumn(ServerLevel level, int x, int z, double ballY, long at) {}
-    private static final class Gunfire { ServerLevel level; Vec3 pos; long end; long next; int burst; ResourceLocation gun; Entity anchor; }
+    private static final class Gunfire { ServerLevel level; Vec3 pos; long end; long next; int burst; net.minecraft.world.item.ItemStack gun; Entity anchor; }
 
     private static final Map<UUID, Burn> BURNS = new HashMap<>();
     private static final List<Cloud> BLIND = new ArrayList<>();
@@ -107,13 +107,13 @@ public final class SpecialWorld {
         p.serverLevel().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.SNOWBALL_THROW, SoundSource.PLAYERS, 1f, 0.8f);
     }
 
-    public static void addGunfire(ServerPlayer p, Vec3 at, ResourceLocation gun) {
+    public static void addGunfire(ServerPlayer p, Vec3 at, net.minecraft.world.item.ItemStack gun) {
         Gunfire g = new Gunfire();
         g.level = p.serverLevel();
         g.pos = at;
         g.end = p.server.getTickCount() + SpecialConfig.ticks(SpecialConfig.get().gunshotSeconds);
         g.next = p.server.getTickCount() + 3; // 等音源實體送到客戶端再開始播
-        g.gun = gun;
+        g.gun = gun.copy();
         // TACZ 的槍聲要綁在一個「活的實體」上播（不是活的實體 TACZ 會直接略過）：
         // 放一個看不見、沒有碰撞箱的盔甲座（marker）當音源
         net.minecraft.world.entity.decoration.ArmorStand anchor = new net.minecraft.world.entity.decoration.ArmorStand(

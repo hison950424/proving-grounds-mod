@@ -202,8 +202,8 @@ public final class SpecialUse {
             case ARMOR_REPAIR, ARMOR_REPAIR_PLUS -> repairArmor(p, type == SpecialType.ARMOR_REPAIR_PLUS);
             case ZONE_SHELTER -> Engines.effect(p, SpecialRegistry.ZONE_SHELTER.get(), SpecialConfig.ticks(s.shelterSeconds), 0);
             case FAKE_GUNSHOT -> {
-                ResourceLocation gun = GunCompat.gunId(p.getMainHandItem()); // 用手上那把槍的槍聲
-                if (gun == null) { msg(p, "手上要拿著槍才能使用假槍聲"); return false; }
+                ItemStack gun = p.getMainHandItem(); // 用手上那把槍的槍聲
+                if (GunCompat.gunId(gun) == null) { msg(p, "手上要拿著槍才能使用假槍聲"); return false; }
                 Vec3 eye = p.getEyePosition();
                 Vec3 end = eye.add(p.getLookAngle().scale(s.gunshotRange.get()));
                 BlockHitResult hit = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));

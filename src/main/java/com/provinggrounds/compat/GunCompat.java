@@ -60,8 +60,8 @@ public final class GunCompat {
     }
 
     /** 在實體的位置播放槍聲；沒有槍械模組或失敗時回傳 false。 */
-    public static boolean playGunSound(net.minecraft.world.entity.Entity at, net.minecraft.resources.ResourceLocation gunId) {
-        return active != null && active.playGunSound(at, gunId);
+    public static boolean playGunSound(net.minecraft.world.entity.Entity at, net.minecraft.world.item.ItemStack gun) {
+        return active != null && active.playGunSound(at, gun);
     }
 
     public static void init() {

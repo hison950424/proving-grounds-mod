@@ -82,5 +82,5 @@ public interface GunAdapter {
      * 在實體的位置播放這把槍的射擊聲（伺服器端呼叫，附近的玩家都聽得到；假槍聲用）。
      * @return 是否成功（失敗時呼叫端改用原版音效）
      */
-    default boolean playGunSound(net.minecraft.world.entity.Entity at, net.minecraft.resources.ResourceLocation gunId) { return false; }
+    default boolean playGunSound(net.minecraft.world.entity.Entity at, net.minecraft.world.item.ItemStack gun) { return false; }
 }

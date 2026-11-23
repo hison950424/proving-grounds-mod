@@ -316,27 +316,42 @@ public class TaczGunAdapter implements GunAdapter {
         return net.minecraft.resources.ResourceLocation.tryParse(stack.getTag().getString("GunId"));
     }
 
-    private static java.lang.reflect.Constructor<?> soundCtor;
-    private static Method sendTracking;
+    private static Method sendSoundToNearby, getGunDisplayId;
+    private static String shoot3p;
     private static boolean soundFailed;
 
+    /**
+     * 跟 TACZ 自己開槍時送給「其他玩家」的槍聲完全一樣：SoundManager.sendSoundToNearby(音源, 距離, 槍 ID, 槍外觀 ID, "shoot_3p", 音量, 音調)。
+     * 客戶端用槍外觀裡的第三人稱槍聲播放；音源必須是活的實體（假槍聲用看不見的盔甲座）。
+     */
     @Override
-    public boolean playGunSound(net.minecraft.world.entity.Entity at, net.minecraft.resources.ResourceLocation gunId) {
-        if (at == null || soundFailed) return false;
+    public boolean playGunSound(net.minecraft.world.entity.Entity at, net.minecraft.world.item.ItemStack gun) {
+        if (!(at instanceof net.minecraft.world.entity.LivingEntity living) || soundFailed) return false;
+        net.minecraft.resources.ResourceLocation gunId = gunId(gun);
+        if (gunId == null) return false;
         try {
-            if (soundCtor == null) {
-                Class<?> msg = Class.forName("com.tacz.guns.network.message.ServerMessageSound");
-                soundCtor = msg.getConstructor(int.class, net.minecraft.resources.ResourceLocation.class, String.class, float.class, float.class, int.class);
-                sendTracking = Class.forName("com.tacz.guns.network.NetworkHandler").getMethod("sendToTrackingEntityAndSelf", net.minecraft.world.entity.Entity.class, Object.class);
+            if (sendSoundToNearby == null) {
+                Class<?> sm = Class.forName("com.tacz.guns.sound.SoundManager");
+                sendSoundToNearby = sm.getMethod("sendSoundToNearby", net.minecraft.world.entity.LivingEntity.class, int.class,
+                    net.minecraft.resources.ResourceLocation.class, net.minecraft.resources.ResourceLocation.class, String.class, float.class, float.class);
+                shoot3p = (String) sm.getField("SHOOT_3P_SOUND").get(null);
+                getGunDisplayId = Class.forName("com.tacz.guns.api.item.IGun").getMethod("getGunDisplayId", net.minecraft.world.item.ItemStack.class);
             }
-            Object packet = soundCtor.newInstance(at.getId(), gunId, "shoot", 1.0f, 0.9f + at.level().getRandom().nextFloat() * 0.2f, 96);
-            sendTracking.invoke(null, at, packet);
+            Object iGun = getIGunOrNull(gun);
+            Object display = iGun == null ? null : getGunDisplayId.invoke(iGun, gun);
+            if (display == null) display = new net.minecraft.resources.ResourceLocation("tacz", "default");
+            float pitch = 0.9f + at.level().getRandom().nextFloat() * 0.125f;
+            sendSoundToNearby.invoke(null, living, 128, gunId, display, shoot3p, 0.8f, pitch);
             return true;
         } catch (ReflectiveOperationException | RuntimeException e) {
             soundFailed = true;
-            ProvingGroundsMod.LOGGER.warn("TACZ adapter: gun sound packet not available ({}); fake gunshot uses vanilla sound.", e.toString());
+            ProvingGroundsMod.LOGGER.warn("TACZ adapter: gun sound not available ({}); fake gunshot uses vanilla sound.", e.toString());
             return false;
         }
+    }
+
+    private static Object getIGunOrNull(net.minecraft.world.item.ItemStack stack) throws ReflectiveOperationException {
+        return Class.forName("com.tacz.guns.api.item.IGun").getMethod("getIGunOrNull", net.minecraft.world.item.ItemStack.class).invoke(null, stack);
     }
 
     /** 找「回傳 LivingEntity、沒有參數」的方法（TACZ 1.1.x 是 getShooter）。 */
