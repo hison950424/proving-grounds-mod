@@ -322,6 +322,8 @@ public final class HotbarRules {
             ItemStack stack = slot.getItem();
             Inventory inv = p.getInventory();
             if (!stack.isEmpty() && !(slot instanceof ResultSlot) && slot.mayPickup(p)) {
+                // 防具：Shift＋左鍵背包、快捷欄或箱子裡的防具，身上同部位已經有穿 → 直接互換（換下來的放回原本那一格）
+                if (swapArmor(slot, stack, p, inv)) return true;
                 if (slot.container != inv && !(menu instanceof InventoryMenu)) {
                     // 特殊物品：特殊物品欄已經有東西時，Shift 點箱子裡的特殊物品 = 互換（舊的放回箱子那一格）
                     if (kind(stack) == Kind.SPECIAL && stack.getCount() == 1
@@ -347,6 +349,23 @@ public final class HotbarRules {
         }
         out[0] = new Snapshot(menu, p);
         return false;
+    }
+
+    /** 防具互換：回傳 true = 已處理。身上那個部位空著時交給原本的流程（直接穿上）。 */
+    private static boolean swapArmor(Slot slot, ItemStack stack, ServerPlayer p, Inventory inv) {
+        if (slot.container == inv && slot.getContainerSlot() >= 36 && slot.getContainerSlot() <= 39) return false; // 本來就在防具欄
+        if (stack.getCount() != 1) return false;
+        net.minecraft.world.entity.EquipmentSlot es = net.minecraft.world.entity.Mob.getEquipmentSlotForItem(stack);
+        if (es.getType() != net.minecraft.world.entity.EquipmentSlot.Type.ARMOR) return false;
+        ItemStack worn = p.getItemBySlot(es);
+        if (worn.isEmpty()) return false;
+        if (net.minecraft.world.item.enchantment.EnchantmentHelper.hasBindingCurse(worn) && !p.isCreative()) return false; // 綁定詛咒脫不下來
+        if (!slot.mayPlace(worn)) return false;
+        ItemStack old = worn.copy();
+        p.setItemSlot(es, stack.copy());
+        slot.set(old);
+        p.level().playSound(null, p.getX(), p.getY(), p.getZ(), net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC, net.minecraft.sounds.SoundSource.PLAYERS, 1f, 1f);
+        return true;
     }
 
     private static void quickMove(Slot slot, ServerPlayer p, Result r) {
