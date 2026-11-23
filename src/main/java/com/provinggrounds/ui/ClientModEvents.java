@@ -59,5 +59,6 @@ public final class ClientModEvents {
         event.register(OPEN_MENU);
         event.register(PRONE);
         event.register(com.provinggrounds.special.client.ClientSpecial.USE_KEY); // 使用特殊物品（預設 Q）
+        event.register(ClientMovement.QUIET_WALK); // 靜走（預設 Shift）
     }
 }

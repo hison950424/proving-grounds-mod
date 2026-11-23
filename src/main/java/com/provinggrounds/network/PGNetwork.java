@@ -76,6 +76,8 @@ public final class PGNetwork {
             SpecialUsePacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(id++, GlowSyncPacket.class, GlowSyncPacket::encode, GlowSyncPacket::decode,
             GlowSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, QuietWalkPacket.class, QuietWalkPacket::encode, QuietWalkPacket::decode,
+            QuietWalkPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(id++, SpecialFxPacket.class, SpecialFxPacket::encode, SpecialFxPacket::decode,
             SpecialFxPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }

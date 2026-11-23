@@ -19,7 +19,8 @@ import java.util.Map;
  * 目的: Proving Grounds 的預設按鍵（使用者指定），新版第一次開遊戲時自動套用一次（客戶端設定 default_keys_applied_v1）。
  *   套用後玩家自己在按鍵設定改的都會保留，不會再被蓋掉。
  *
- *   使用者指定：使用特殊物品 Q、丟棄 G、TACZ 切換射擊模式 B、TACZ 倍鏡倍率 V、趴下 C、物品欄（背包）Tab。
+ *   使用者指定：使用特殊物品 Q、丟棄 G、TACZ 切換射擊模式 B、TACZ 倍鏡倍率 V、趴下 C、物品欄（背包）Tab、
+ *              靜走 Shift、蹲下 Ctrl（疾跑鍵不綁定，改成自動奔跑）。
  *   為了不撞鍵，另外調整（原本會和上面撞在一起）：
  *     TACZ 匍匐（原本 C）→ 不綁定（趴下改用本模組的 C）
  *     TACZ 近戰（原本 V，和倍鏡倍率撞）→ F；原版「主副手交換」F 已經沒有作用（副手不能放東西）→ 不綁定
@@ -52,6 +53,9 @@ public final class ClientKeyDefaults {
         want.put("key.tacz.zoom.desc", "key.keyboard.v");
         want.put("key.provinggrounds.prone", "key.keyboard.c");
         want.put("key.inventory", "key.keyboard.tab");
+        want.put("key.provinggrounds.quiet_walk", "key.keyboard.left.shift"); // 靜走
+        want.put("key.sneak", "key.keyboard.left.control");           // 蹲下
+        want.put("key.sprint", "key.keyboard.unknown");               // 自動奔跑，不需要疾跑鍵
         // 避免撞鍵
         want.put("key.tacz.crawl.desc", "key.keyboard.unknown");
         want.put("key.tacz.melee.desc", "key.keyboard.f");

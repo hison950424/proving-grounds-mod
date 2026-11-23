@@ -96,6 +96,7 @@ public final class SpecialEvents {
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer p) {
             KnockbackShield.restore(p);
+            com.provinggrounds.core.Footsteps.setQuiet(p.getUUID(), false);
             Totem.remove(p);
         }
     }

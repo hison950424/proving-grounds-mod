@@ -190,5 +190,6 @@
   "entity.provinggrounds.mine": "Mine",
   "entity.provinggrounds.decoy": "Decoy",
   "entity.provinggrounds.special_projectile": "Special Item",
-  "hud.provinggrounds.special_slot": "Special"
+  "hud.provinggrounds.special_slot": "Special",
+  "key.provinggrounds.quiet_walk": "Quiet Walk"
 }

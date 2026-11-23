@@ -129,6 +129,10 @@ public class PGConfig {
     public final ForgeConfigSpec.BooleanValue proneEnabled;
     public final ForgeConfigSpec.DoubleValue proneCooldownSeconds;
 
+    // ── 移動方式與腳步聲（所有模式通用） ─────────────────────────────────────
+    public final ForgeConfigSpec.BooleanValue autoSprint;
+    public final ForgeConfigSpec.DoubleValue quietWalkSpeed, stepVolumeSprint, stepVolumeWalk, stepVolumeQuiet, stepMaterialContrast;
+
     // ── 防彈（所有模式通用） ───────────────────────────────────────────────────
     public final ForgeConfigSpec.DoubleValue armorDurabilityMultiplier;
     /** 特殊物品的設定（[special] 區段）。 */
@@ -385,6 +389,16 @@ public class PGConfig {
         proneEnabled = builder.comment("是否允許玩家自己趴下").define("enabled", true);
         proneCooldownSeconds = builder.comment("趴下後多久才能站起來、站起來後多久才能再趴下（秒）")
             .defineInRange("cooldown_seconds", 1.0, 0.0, 10.0);
+        builder.pop();
+
+        builder.comment("移動方式：按方向鍵自動奔跑；按「靜走」鍵（預設 Shift）慢慢走、腳步聲小；蹲下（預設 Ctrl）。按鍵都可以在按鍵設定改。",
+            "腳步聲：奔跑比原版大聲（也傳得比較遠），靜走比較小聲；不同材質的地面聲音差異加大，比較好分辨。").push("movement");
+        autoSprint = builder.comment("按方向鍵（往前）時自動奔跑").define("auto_sprint", true);
+        quietWalkSpeed = builder.comment("靜走速度：一般走路速度的幾倍").defineInRange("quiet_walk_speed", 0.6, 0.1, 1.0);
+        stepVolumeSprint = builder.comment("奔跑腳步聲音量倍率（大於 1 也會傳得比較遠；原版 = 1）").defineInRange("step_volume_sprint", 2.0, 0.0, 8.0);
+        stepVolumeWalk = builder.comment("一般走路腳步聲音量倍率").defineInRange("step_volume_walk", 1.0, 0.0, 8.0);
+        stepVolumeQuiet = builder.comment("靜走腳步聲音量倍率").defineInRange("step_volume_quiet", 0.3, 0.0, 8.0);
+        stepMaterialContrast = builder.comment("不同材質地面的聲音差異（0 = 原版，1 = 預設加強，越大差越多）").defineInRange("step_material_contrast", 1.0, 0.0, 3.0);
         builder.pop();
 
         builder.comment("彈藥分類：把各槍械包的子彈歸成 5 大類，槍改吃對應的大類彈藥。",
