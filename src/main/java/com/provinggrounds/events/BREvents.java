@@ -47,7 +47,10 @@ public class BREvents {
     public void onPlaneAttack(net.minecraftforge.event.entity.living.LivingAttackEvent event) {
         if (event.getEntity().level().isClientSide) return;
         BattleRoyaleMode br = BattleRoyaleMode.get();
-        if (event.getEntity() instanceof ServerPlayer victim && br.isProtected(victim.getUUID())) { event.setCanceled(true); return; }
+        if (event.getEntity() instanceof ServerPlayer victim && (br.isProtected(victim.getUUID()) || br.isPreparingParticipant(victim.getUUID()))) {
+            event.setCanceled(true); // 飛機上、剛跳機、上飛機前的準備時間：不會受傷
+            return;
+        }
         if (event.getSource().getEntity() instanceof ServerPlayer attacker && br.isProtected(attacker.getUUID())) event.setCanceled(true);
     }
 

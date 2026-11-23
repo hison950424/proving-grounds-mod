@@ -35,14 +35,40 @@ public final class Hitbox {
         } catch (IllegalStateException e) {
             return true;
         }
-        Pose pose = p.getPose();
-        if (pose != Pose.STANDING && pose != Pose.CROUCHING) return true;
         if (p.isPassenger() || p.isFallFlying() || p.isSleeping()) return true;
+        // TACZ 判定命中時會把目標往回推（延遲補償：約 3 tick ＋ 開槍者的延遲），
+        // 所以這裡要用目標「最近幾 tick 的位置」逐一檢查，任何一個打到模型就算中（否則移動中的人會打不到）
+        if (check(new Snap(p), a, b, tol)) return true;
+        java.util.Deque<Snap> hist = HISTORY.get(p.getUUID());
+        if (hist != null) for (Snap s : hist) if (check(s, a, b, tol)) return true;
+        return false;
+    }
 
+    /** 某一個時間點的姿勢與位置。 */
+    private record Snap(double x, double y, double z, float bodyYaw, float headYaw, float height, Pose pose) {
+        Snap(Player p) { this(p.getX(), p.getY(), p.getZ(), p.yBodyRot, p.yHeadRot, p.getBbHeight(), p.getPose()); }
+    }
+
+    /** 每位玩家最近 HISTORY_TICKS 個 tick 的位置（伺服器每 tick 記錄）。 */
+    private static final java.util.Map<java.util.UUID, java.util.Deque<Snap>> HISTORY = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final int HISTORY_TICKS = 12; // 600 毫秒：涵蓋 TACZ 的 3 tick 偏移與最多 250 毫秒延遲，再留一點餘裕
+
+    /** 每 tick 記錄一次（SpecialEvents.onPlayerTick）。 */
+    public static void record(Player p) {
+        java.util.Deque<Snap> d = HISTORY.computeIfAbsent(p.getUUID(), k -> new java.util.ArrayDeque<>());
+        d.addFirst(new Snap(p));
+        while (d.size() > HISTORY_TICKS) d.removeLast();
+    }
+
+    public static void forget(java.util.UUID id) { HISTORY.remove(id); }
+
+    private static boolean check(Snap s, Vec3 a, Vec3 b, double tol) {
+        Pose pose = s.pose();
+        if (pose != Pose.STANDING && pose != Pose.CROUCHING) return true; // 趴下、游泳等：照原版碰撞箱
         boolean crouch = pose == Pose.CROUCHING;
-        double hScale = p.getBbHeight() / 1.8 * (1.8 / (32 * PX)); // 模型高度縮放到碰撞箱高度
-        double y0 = p.getY();
-        double body = Math.toRadians(p.yBodyRot), head = Math.toRadians(p.yHeadRot);
+        double hScale = s.height() / (32 * PX); // 模型高度縮放到碰撞箱高度
+        double y0 = s.y();
+        double body = Math.toRadians(s.bodyYaw()), head = Math.toRadians(s.headYaw());
         double depth = crouch ? 8 : 4; // 蹲下時身體前傾，前後比較厚
 
         // 各部位：{中心 x（往右）, 底 y, 中心 z（往前）, 半寬, 高, 半厚}，單位像素
@@ -54,10 +80,10 @@ public final class Hitbox {
             { 6, 12, 0, 2, 12, 2 },          // 右手
         };
         for (double[] part : bodyParts) {
-            if (segmentHitsBox(a, b, p.getX(), y0, p.getZ(), body, part, hScale, tol)) return true;
+            if (segmentHitsBox(a, b, s.x(), y0, s.z(), body, part, hScale, tol)) return true;
         }
         double[] headPart = { 0, 24, 0, 4, 8, 4 };
-        return segmentHitsBox(a, b, p.getX(), y0, p.getZ(), head, headPart, hScale, tol);
+        return segmentHitsBox(a, b, s.x(), y0, s.z(), head, headPart, hScale, tol);
     }
 
     /** 把線段轉到部位自己的座標（繞垂直軸旋轉），再做 AABB 與線段的相交測試。 */

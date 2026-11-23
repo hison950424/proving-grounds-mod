@@ -255,6 +255,58 @@ public class TaczGunAdapter implements GunAdapter {
         }
     }
 
+    // ── 拿配件右鍵槍枝裝上 ──────────────────────────────────────────────────
+    // 跟 TACZ 改裝畫面（ClientMessageRefitGun）同樣的步驟：檢查配件鎖與相容 → 取出同類型的舊配件 → 裝上新配件
+    // → 通知配件屬性變更；換的是擴充彈匣時把槍裡的子彈退出來（TACZ 原本的行為）。
+
+    private static Method hasAttachmentLock, getAttachmentType, getAttachmentOfType, installAttachmentM, postChangeEvent, dropAllAmmo;
+    private static boolean installReady, installFailed;
+
+    private static synchronized boolean installApi() {
+        if (installReady) return true;
+        if (installFailed || !attachmentApi()) return false;
+        try {
+            Class<?> gun = Class.forName("com.tacz.guns.api.item.IGun");
+            Class<?> att = Class.forName("com.tacz.guns.api.item.IAttachment");
+            Class<?> type = Class.forName("com.tacz.guns.api.item.attachment.AttachmentType");
+            Class<?> stack = net.minecraft.world.item.ItemStack.class;
+            hasAttachmentLock = gun.getMethod("hasAttachmentLock", stack);
+            getAttachmentType = att.getMethod("getType", stack);
+            getAttachmentOfType = gun.getMethod("getAttachment", stack, type);
+            installAttachmentM = gun.getMethod("installAttachment", stack, stack);
+            postChangeEvent = Class.forName("com.tacz.guns.resource.modifier.AttachmentPropertyManager")
+                .getMethod("postChangeEvent", net.minecraft.world.entity.LivingEntity.class, stack);
+            dropAllAmmo = gun.getMethod("dropAllAmmo", net.minecraft.world.entity.player.Player.class, stack);
+            installReady = true;
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            installFailed = true;
+            ProvingGroundsMod.LOGGER.warn("TACZ adapter: install attachment API not found ({}); right-click install disabled.", e.toString());
+            return false;
+        }
+    }
+
+    @Override
+    public net.minecraft.world.item.ItemStack installAttachment(net.minecraft.world.entity.player.Player player,
+            net.minecraft.world.item.ItemStack gunStack, net.minecraft.world.item.ItemStack attachment) {
+        if (gunStack.isEmpty() || attachment.isEmpty() || !installApi()) return null;
+        try {
+            Object iGun = getIGun.invoke(null, gunStack);
+            Object iAtt = getIAttachment.invoke(null, attachment);
+            if (iGun == null || iAtt == null) return null;
+            if (Boolean.TRUE.equals(hasAttachmentLock.invoke(iGun, gunStack))) return null;
+            if (!Boolean.TRUE.equals(allowAttachment.invoke(iGun, gunStack, attachment))) return null;
+            Object type = getAttachmentType.invoke(iAtt, attachment);
+            Object old = getAttachmentOfType.invoke(iGun, gunStack, type);
+            installAttachmentM.invoke(iGun, gunStack, attachment.copyWithCount(1));
+            postChangeEvent.invoke(null, player, gunStack);
+            if ("EXTENDED_MAG".equals(String.valueOf(type))) dropAllAmmo.invoke(iGun, player, gunStack);
+            return old instanceof net.minecraft.world.item.ItemStack s ? s.copy() : net.minecraft.world.item.ItemStack.EMPTY;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return null;
+        }
+    }
+
     // ── 假槍聲（第四份計畫書 33 號）────────────────────────────────────────────
     // 用 TACZ 自己的封包 ServerMessageSound（槍 ID、聲音名稱 "shoot"）綁在一個實體上，送給追蹤那個實體的玩家。
 

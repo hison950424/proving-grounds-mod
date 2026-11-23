@@ -53,6 +53,7 @@ public final class SpecialEvents {
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer p)) return;
         Totem.tick(p);
+        com.provinggrounds.core.Hitbox.record(p); // 精準命中的位置記錄（延遲補償用）
         KnockbackShield.tick(p);
         if (p.tickCount % 20 == 0) KnockbackShield.sanity(p);
         if (p.hasEffect(SpecialRegistry.GASSED.get())) {
@@ -97,6 +98,7 @@ public final class SpecialEvents {
         if (event.getEntity() instanceof ServerPlayer p) {
             KnockbackShield.restore(p);
             com.provinggrounds.core.Footsteps.setQuiet(p.getUUID(), false);
+            com.provinggrounds.core.Hitbox.forget(p.getUUID());
             Totem.remove(p);
         }
     }

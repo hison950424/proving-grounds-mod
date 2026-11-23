@@ -16,7 +16,7 @@ import java.util.function.Supplier;
  */
 public record MapMarkersPacket(List<Marker> markers) {
 
-    public static final byte TEAMMATE = 0, TEAMMATE_DOWNED = 1, ENEMY = 2, AIRDROP = 3, AIRDROP_FALLING = 4, PLAYER = 5;
+    public static final byte TEAMMATE = 0, TEAMMATE_DOWNED = 1, ENEMY = 2, AIRDROP = 3, AIRDROP_FALLING = 4, PLAYER = 5, ALTAR = 6, ALTAR_COOLDOWN = 7;
 
     /** color：隊伍顏色（RGB）；yaw：面向（度）；age：敵人標記距離最後看到幾 tick。 */
     public record Marker(byte kind, float x, float z, float yaw, int color, String name, int age) {}

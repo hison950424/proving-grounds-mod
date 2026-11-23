@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * 檔案: PlayerPoseMixin.java
- * 目的: 趴下／倒地趴地時強制游泳姿勢（模型趴下、第一人稱鏡頭變低、碰撞箱 0.6 格高）。
+ * 目的: 趴下／倒地趴地時強制游泳姿勢（模型趴下、第一人稱鏡頭變低、碰撞箱 0.6 格高）；靜走時不會從方塊邊緣掉下去。
  *   為什麼用 Mixin：原本用 setForcedPose，但 TACZ 的匍匐功能每 tick 都把本地玩家的強制姿勢清成 null，
  *   沒有事件可以在「TACZ 清掉之後、原版決定姿勢之前」介入，只能在原版決定姿勢的方法開頭接手。
  *   方法名稱同時寫開發名稱（updatePlayerPose）與 SRG 名稱（m_7594_），不需要 refmap。
@@ -25,5 +25,14 @@ public abstract class PlayerPoseMixin {
             self.setPose(Pose.SWIMMING);
             ci.cancel();
         }
+    }
+
+    /**
+     * 靜走時跟蹲下一樣不會從方塊邊緣掉下去（原版用 isStayingOnGroundSurface = m_36343_ 決定要不要擋在邊緣）。
+     * 兩端都會判斷：客戶端看自己有沒有按住靜走鍵，伺服器看 QuietWalkPacket 記下的狀態。
+     */
+    @Inject(method = { "isStayingOnGroundSurface", "m_36343_" }, at = @At("HEAD"), cancellable = true, remap = false)
+    private void provinggrounds$quietEdge(org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Boolean> cir) {
+        if (com.provinggrounds.core.Footsteps.quiet((Player) (Object) this)) cir.setReturnValue(true);
     }
 }

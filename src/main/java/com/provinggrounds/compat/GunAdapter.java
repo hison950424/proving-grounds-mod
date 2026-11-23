@@ -66,6 +66,14 @@ public interface GunAdapter {
     /** 這把槍能不能裝這個配件（只看能不能裝，不管槍上是不是已經裝了同類型）。兩端都可呼叫。 */
     default boolean canAttach(net.minecraft.world.item.ItemStack gun, net.minecraft.world.item.ItemStack attachment) { return false; }
 
+    /**
+     * 把配件裝到槍上（伺服器端；會改動 gun）。
+     * @return 換下來的舊配件（沒有舊配件時是空物品）；裝不上時回傳 null
+     */
+    @javax.annotation.Nullable
+    default net.minecraft.world.item.ItemStack installAttachment(net.minecraft.world.entity.player.Player player,
+            net.minecraft.world.item.ItemStack gun, net.minecraft.world.item.ItemStack attachment) { return null; }
+
     /** 槍的 ID（例如 tacz:ak47）；不是槍時回傳 null。 */
     @javax.annotation.Nullable
     default net.minecraft.resources.ResourceLocation gunId(net.minecraft.world.item.ItemStack stack) { return null; }

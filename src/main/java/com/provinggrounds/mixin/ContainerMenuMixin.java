@@ -28,6 +28,11 @@ public abstract class ContainerMenuMixin {
         provinggrounds$snapshot.remove();
         // 副手不能主動放東西（計畫書 4 的 A6）：物品欄裡把游標指著的格子和副手對調（F 鍵）一律取消，兩端都擋，畫面不會閃
         if (type == ClickType.SWAP && button == 40) { ci.cancel(); return; }
+        // 拿著配件右鍵點槍：裝上配件（換下來的舊配件留在游標上）。兩端都取消原版的右鍵，伺服器負責真正裝上
+        if (type == ClickType.PICKUP && button == 1 && com.provinggrounds.modes.br.AttachmentClick.handle((AbstractContainerMenu) (Object) this, slotId, player)) {
+            ci.cancel();
+            return;
+        }
         if (!(player instanceof ServerPlayer sp) || !HotbarRules.active(sp)) return;
         HotbarRules.Snapshot[] out = new HotbarRules.Snapshot[1];
         if (HotbarRules.beforeClick((AbstractContainerMenu) (Object) this, slotId, type, sp, out)) {

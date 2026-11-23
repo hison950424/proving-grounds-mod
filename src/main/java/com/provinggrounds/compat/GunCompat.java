@@ -46,6 +46,13 @@ public final class GunCompat {
         return active == null ? GunClass.NONE : active.classify(stack);
     }
 
+    /** 把配件裝到槍上；回傳換下來的舊配件（可能是空物品），裝不上回傳 null。 */
+    @javax.annotation.Nullable
+    public static net.minecraft.world.item.ItemStack installAttachment(net.minecraft.world.entity.player.Player p,
+            net.minecraft.world.item.ItemStack gun, net.minecraft.world.item.ItemStack attachment) {
+        return active == null ? null : active.installAttachment(p, gun, attachment);
+    }
+
     /** 槍的 ID；沒有槍械模組或不是槍時回傳 null。 */
     @javax.annotation.Nullable
     public static net.minecraft.resources.ResourceLocation gunId(net.minecraft.world.item.ItemStack stack) {

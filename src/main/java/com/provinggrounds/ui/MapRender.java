@@ -137,6 +137,7 @@ public final class MapRender {
             int sx = (int) v.px(m.x()), sz = (int) v.pz(m.z());
             switch (m.kind()) {
                 case MapMarkersPacket.AIRDROP -> airdropBox(g, sx, sz);
+                case MapMarkersPacket.ALTAR, MapMarkersPacket.ALTAR_COOLDOWN -> altarIcon(g, sx, sz, m.kind() == MapMarkersPacket.ALTAR);
                 case MapMarkersPacket.AIRDROP_FALLING -> { if ((now / 300) % 2 == 0) airdropBox(g, sx, sz); }
                 case MapMarkersPacket.ENEMY -> {
                     float alpha = 1f - Math.min(1f, m.age() / 60f) * 0.7f;
@@ -160,6 +161,15 @@ public final class MapRender {
             box(g, sx, sz, 3, 0xFFFFFFFF);
             box(g, sx, sz, 2, (now / 250) % 2 == 0 ? 0xFFFF3030 : 0xFFB00000);
         }
+    }
+
+    /** 復活祭壇：紫色十字（冷卻中是灰色），外圈黑框。 */
+    private static void altarIcon(GuiGraphics g, int x, int z, boolean ready) {
+        int c = ready ? 0xFFB070FF : 0xFF808080;
+        g.fill(x - 1, z - 4, x + 2, z + 4, 0xFF000000);
+        g.fill(x - 3, z - 2, x + 4, z + 1, 0xFF000000);
+        g.fill(x, z - 3, x + 1, z + 3, c);
+        g.fill(x - 2, z - 1, x + 3, z, c);
     }
 
     /** 自己：白色箭頭。 */

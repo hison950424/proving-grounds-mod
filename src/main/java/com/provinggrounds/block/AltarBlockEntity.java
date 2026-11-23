@@ -81,17 +81,25 @@ public class AltarBlockEntity extends BlockEntity {
         // 只登記主世界（BR 只在主世界進行），避免其他維度同座標的祭壇被誤認
         if (level != null && !level.isClientSide && level.dimension() == Level.OVERWORLD) {
             LOADED.add(getBlockPos().immutable());
+            if (level.getServer() != null) com.provinggrounds.data.AltarLedger.get(level.getServer()).add(getBlockPos()); // 地圖用
         }
     }
+
+    /** 區塊卸載時也會呼叫 setRemoved，用這個旗標分辨「卸載」和「被破壞」。 */
+    private boolean unloading;
 
     @Override
     public void setRemoved() {
         super.setRemoved();
-        if (level != null && !level.isClientSide && level.dimension() == Level.OVERWORLD) LOADED.remove(getBlockPos());
+        if (level != null && !level.isClientSide && level.dimension() == Level.OVERWORLD) {
+            LOADED.remove(getBlockPos());
+            if (!unloading && level.getServer() != null) com.provinggrounds.data.AltarLedger.get(level.getServer()).remove(getBlockPos()); // 被破壞：地圖上也拿掉
+        }
     }
 
     @Override
     public void onChunkUnloaded() {
+        unloading = true;
         super.onChunkUnloaded();
         if (level != null && !level.isClientSide && level.dimension() == Level.OVERWORLD) LOADED.remove(getBlockPos());
     }

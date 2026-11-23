@@ -237,6 +237,11 @@ public class BattleRoyaleMode {
         return p != null && p.alive && p.state == PlayerState.PLANE;
     }
 
+    /** 上飛機前的準備時間：參賽者不會受到傷害。 */
+    public boolean isPreparingParticipant(UUID id) {
+        return phase == Phase.PREPARING && participants.containsKey(id);
+    }
+
     /** 受保護（隱形、無敵、不能攻擊）：在飛機上，或剛跳出飛機的 jump_invisible_seconds 秒內。 */
     public boolean isProtected(UUID id) {
         Participant p = participants.get(id);
@@ -351,7 +356,7 @@ public class BattleRoyaleMode {
         switch (phase) {
             case PREPARING -> tickPreparing();
             case PLANE -> { tickPlane(); tickDropping(); tickRevival(); tickFood(); checkWin(); }
-            case ACTIVE -> { tickFood(); tickDropping(); tickCircle(); tickRevival(); tickSpectators(); tickMeleeSpeed(); checkWin(); }
+            case ACTIVE -> { tickFood(); tickDropping(); tickCircle(); tickRevival(); tickSpectators(); tickMeleeSpeed(); tickDeadHealth(); checkWin(); }
             case ENDING -> tickEnding();
             default -> {}
         }
@@ -442,6 +447,7 @@ public class BattleRoyaleMode {
             part.carrier = carrier;
             part.state = PlayerState.PLANE;
             part.boardTick = tickCount;
+            healFull(p); // 上飛機自動回滿血（100）
             part.jumpGraceUntil = -1;
             // 飛機上大家擠在一起看不到畫面：全員隱形（沒有粒子、沒有圖示）。同隊因為隊伍設定 seeFriendlyInvisibles 會看到半透明；
             // 飛機上也不會受傷、不能攻擊（BREvents、GunCompat）。跳出飛機時解除。
@@ -570,6 +576,16 @@ public class BattleRoyaleMode {
     // ═════════════════════════════════════════════════════════════════════════
     // 跳傘
     // ═════════════════════════════════════════════════════════════════════════
+
+    /** 淘汰的參賽者保持滿血（觀戰中、等復活時都是 100）。 */
+    private void tickDeadHealth() {
+        if (tickCount % 10 != 0) return;
+        for (Participant part : participants.values()) {
+            if (part.alive) continue;
+            ServerPlayer p = player(part.id);
+            if (p != null && p.getHealth() < p.getMaxHealth()) p.setHealth(p.getMaxHealth());
+        }
+    }
 
     /** 跳機後的隱形、無敵時間到了就解除。 */
     private void tickJumpGrace() {
@@ -1930,6 +1946,12 @@ public class BattleRoyaleMode {
                 drops.add(new MapMarkersPacket.Marker(d.falling() ? MapMarkersPacket.AIRDROP_FALLING : MapMarkersPacket.AIRDROP,
                     d.x() + 0.5f, d.z() + 0.5f, 0, 0xFFD040, "", 0));
             }
+        }
+        // 復活祭壇（所有人都看得到）：冷卻中的用灰色
+        for (BlockPos a : com.provinggrounds.data.AltarLedger.get(server).entries()) {
+            boolean ready = !(level != null && level.isLoaded(a) && level.getBlockEntity(a) instanceof AltarBlockEntity ab && !ab.isReady());
+            drops.add(new MapMarkersPacket.Marker(ready ? MapMarkersPacket.ALTAR : MapMarkersPacket.ALTAR_COOLDOWN,
+                a.getX() + 0.5f, a.getZ() + 0.5f, 0, 0xB070FF, "", 0));
         }
         for (ServerPlayer viewer : server.getPlayerList().getPlayers()) {
             List<MapMarkersPacket.Marker> list = new ArrayList<>(drops);
