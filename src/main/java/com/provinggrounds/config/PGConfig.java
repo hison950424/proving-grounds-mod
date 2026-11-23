@@ -131,6 +131,8 @@ public class PGConfig {
 
     // ── 移動方式與腳步聲（所有模式通用） ─────────────────────────────────────
     public final ForgeConfigSpec.BooleanValue autoSprint;
+    public final ForgeConfigSpec.DoubleValue spotRange, spotRangeCrouch, spotRangeProne, spotAngle, spotCloseRange, spotCloseAngle;
+    public final ForgeConfigSpec.IntValue spotDelayTicks;
     public final ForgeConfigSpec.BooleanValue preciseHitbox;
     public final ForgeConfigSpec.DoubleValue hitboxTolerance;
     public final ForgeConfigSpec.DoubleValue quietWalkSpeed, stepVolumeSprint, stepVolumeWalk, stepVolumeQuiet, stepMaterialContrast;
@@ -435,6 +437,16 @@ public class PGConfig {
         stepVolumeWalk = builder.comment("一般走路腳步聲音量倍率").defineInRange("step_volume_walk", 1.0, 0.0, 8.0);
         stepVolumeQuiet = builder.comment("靜走腳步聲音量倍率").defineInRange("step_volume_quiet", 0.3, 0.0, 8.0);
         stepMaterialContrast = builder.comment("不同材質地面的聲音差異（0 = 原版，1 = 預設加強，越大差越多）").defineInRange("step_material_contrast", 1.0, 0.0, 3.0);
+        builder.pop();
+
+        builder.comment("小地圖發現敵人：要「真的看到」才會標在小地圖上（BR）").push("spotting");
+        spotRange = builder.comment("幾格內看得到站著的敵人").defineInRange("spot_range", 64.0, 1.0, 512.0);
+        spotRangeCrouch = builder.comment("幾格內看得到蹲著的敵人").defineInRange("spot_range_crouch", 40.0, 1.0, 512.0);
+        spotRangeProne = builder.comment("幾格內看得到趴下或倒地的敵人").defineInRange("spot_range_prone", 24.0, 1.0, 512.0);
+        spotAngle = builder.comment("敵人要在準星幾度以內").defineInRange("spot_angle", 25.0, 1.0, 90.0);
+        spotCloseRange = builder.comment("近距離（幾格內）角度放寬").defineInRange("spot_close_range", 16.0, 0.0, 512.0);
+        spotCloseAngle = builder.comment("近距離時敵人要在準星幾度以內").defineInRange("spot_close_angle", 45.0, 1.0, 90.0);
+        spotDelayTicks = builder.comment("要連續看到幾 tick 才標記（20 tick = 1 秒；檢查每 5 tick 一次）").defineInRange("spot_delay_ticks", 10, 0, 200);
         builder.pop();
 
         builder.comment("彈藥分類：把各槍械包的子彈歸成 5 大類，槍改吃對應的大類彈藥。",

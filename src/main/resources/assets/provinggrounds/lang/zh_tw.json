@@ -152,7 +152,7 @@
   "item.provinggrounds.smoke_burst": "煙幕彈",
   "item.provinggrounds.smoke_burst.desc": "以自己為中心放出半徑 5 格的圓形煙霧",
   "item.provinggrounds.totem": "不死圖騰",
-  "item.provinggrounds.totem.desc": "15 秒內副手有不死圖騰：致命傷害時不死也不倒地",
+  "item.provinggrounds.totem.desc": "15 秒內副手有不死圖騰：受到致命傷時不死也不倒地，回到 50 血、額外生命 +25、恢復效果 10 秒",
   "item.provinggrounds.shield_bubble": "護盾泡泡",
   "item.provinggrounds.shield_bubble.desc": "15 秒內第一次受到傷害時完全擋下，並獲得 25 額外生命值與 10 秒加速",
   "item.provinggrounds.warp_pearl": "傳送珠",

@@ -38,7 +38,7 @@ public final class SpecialConfig {
     public final ForgeConfigSpec.DoubleValue windShockRadius;
     public final ForgeConfigSpec.DoubleValue landMineDamage, landMineSlowSeconds, fireMineSeconds, fireMineDamage;
     public final ForgeConfigSpec.DoubleValue smokeRadius, smokeSeconds;
-    public final ForgeConfigSpec.DoubleValue totemSeconds;
+    public final ForgeConfigSpec.DoubleValue totemSeconds, totemHeal, totemAbsorption, totemRegenSeconds, totemSoundVolume;
     public final ForgeConfigSpec.DoubleValue bubbleSeconds, bubbleAbsorption, bubbleSpeedBonus, bubbleSpeedSeconds;
     public final ForgeConfigSpec.DoubleValue pearlRange, pearlSeconds, pearlSpeed;
     public final ForgeConfigSpec.DoubleValue silentSeconds;
@@ -101,6 +101,10 @@ public final class SpecialConfig {
         smokeRadius = b.comment("煙幕彈：煙霧半徑（格），以自己為中心的圓球形").defineInRange("smoke_radius_v2", 5.0, 0.5, 20.0);
         smokeSeconds = b.comment("煙幕彈：煙霧持續秒數（占位）").defineInRange("smoke_seconds", 15.0, 1.0, 120.0);
         totemSeconds = b.comment("不死圖騰：副手有圖騰的秒數").defineInRange("totem_seconds", 15.0, 1.0, 600.0);
+        totemHeal = b.comment("不死圖騰：觸發後血量回到多少").defineInRange("totem_heal", 50.0, 1.0, 1000.0);
+        totemAbsorption = b.comment("不死圖騰：觸發後額外生命值 +多少（不會消失）").defineInRange("totem_absorption", 25.0, 0.0, 1000.0);
+        totemRegenSeconds = b.comment("不死圖騰：觸發後恢復效果 I 幾秒").defineInRange("totem_regen_seconds", 10.0, 0.0, 120.0);
+        totemSoundVolume = b.comment("不死圖騰：觸發音效音量（1.0 = 原版；0.5 = 一半）").defineInRange("totem_sound_volume", 0.5, 0.0, 1.0);
         bubbleSeconds = b.comment("護盾泡泡：等待受傷的秒數").defineInRange("bubble_seconds", 15.0, 1.0, 600.0);
         bubbleAbsorption = b.comment("護盾泡泡：觸發時獲得的額外生命值（不會消失）").defineInRange("bubble_absorption", 25.0, 0.0, 1000.0);
         bubbleSpeedBonus = b.comment("護盾泡泡：觸發後的移動速度加成（0.25 = +25%）").defineInRange("bubble_speed_bonus", 0.25, 0.0, 5.0);

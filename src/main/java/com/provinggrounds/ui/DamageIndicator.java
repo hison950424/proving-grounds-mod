@@ -31,7 +31,7 @@ import java.util.List;
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
 public final class DamageIndicator {
 
-    private record Hit(Vec3 from, long startMs) {}
+    private record Hit(Vec3 from, long startMs, boolean silenced) {}
 
     private static final List<Hit> HITS = new ArrayList<>();
     private static DamageSource lastSeen;
@@ -50,8 +50,11 @@ public final class DamageIndicator {
         lastSeen = src;
         Vec3 from = sourcePos(src, p);
         if (from == null) return;
+        // 開槍的人的槍裝了消音器：指示器寬 3 倍（只知道大概方向）
+        boolean silenced = src.getEntity() instanceof net.minecraft.world.entity.LivingEntity shooter
+            && com.provinggrounds.compat.GunCompat.isSilenced(shooter.getMainHandItem());
         synchronized (HITS) {
-            HITS.add(new Hit(from, System.currentTimeMillis()));
+            HITS.add(new Hit(from, System.currentTimeMillis(), silenced));
             while (HITS.size() > MAX_HITS) HITS.remove(0);
         }
     }
@@ -94,7 +97,7 @@ public final class DamageIndicator {
                 // 螢幕方向：上 = 前方（螢幕 y 往下為正，所以前方是 −y）
                 double sx = right, sy = -fwd;
                 float alpha = (float) (1.0 - age / life);
-                drawEdge(g, width, height, sx, sy, alpha);
+                drawEdge(g, width, height, sx, sy, alpha, h.silenced() ? 3 : 1);
             }
         }
     }
@@ -103,7 +106,7 @@ public final class DamageIndicator {
      * 從畫面中央往 (sx, sy) 方向延伸到螢幕邊緣，在那裡畫一塊紅色方塊，往畫面中央漸淡。
      * 碰到上下邊就畫橫向的方塊、碰到左右邊就畫直向的方塊。
      */
-    private static void drawEdge(GuiGraphics g, int w, int h, double sx, double sy, float alpha) {
+    private static void drawEdge(GuiGraphics g, int w, int h, double sx, double sy, float alpha, int widthMul) {
         double len = Math.sqrt(sx * sx + sy * sy);
         sx /= len;
         sy /= len;
@@ -113,18 +116,19 @@ public final class DamageIndicator {
         double t = Math.min(tx, ty);
         int px = (int) Math.round(cx + sx * t), py = (int) Math.round(cy + sy * t);
         int a = Math.max(0, Math.min(255, Math.round(alpha * 240))); // 最不透明約 94%（原本 78%）
-        final int size = 50, depth = 18, steps = 8; // 紅色細長方形：沿著邊緣長 50（原本 40 的 125%）、從邊緣往內 18 像素漸淡（原本 24 的 75%）
+        final int depth = 18, steps = 8;
+        int size = 50 * widthMul; // 消音器：寬 3 倍 // 紅色細長方形：沿著邊緣長 50（原本 40 的 125%）、從邊緣往內 18 像素漸淡（原本 24 的 75%）
         boolean horizontalEdge = ty <= tx; // 碰到上下邊
         for (int i = 0; i < steps; i++) {
             int stripA = a * (steps - i) / steps;
             int color = (stripA << 24) | 0xE02020;
             int d0 = depth * i / steps, d1 = depth * (i + 1) / steps;
             if (horizontalEdge) {
-                int x0 = Mth.clamp(px - size / 2, 0, w - size), x1 = x0 + size;
+                int s = Math.min(size, w), x0 = Mth.clamp(px - s / 2, 0, w - s), x1 = x0 + s;
                 if (sy < 0) g.fill(x0, d0, x1, d1, color);           // 上邊（前方）
                 else g.fill(x0, h - d1, x1, h - d0, color);          // 下邊（後方）
             } else {
-                int y0 = Mth.clamp(py - size / 2, 0, h - size), y1 = y0 + size;
+                int s = Math.min(size, h), y0 = Mth.clamp(py - s / 2, 0, h - s), y1 = y0 + s;
                 if (sx < 0) g.fill(d0, y0, d1, y1, color);           // 左邊
                 else g.fill(w - d1, y0, w - d0, y1, color);          // 右邊
             }

@@ -1940,11 +1940,11 @@ public class BattleRoyaleMode {
             for (ServerPlayer target : alive) {
                 if (target == watcher || TeamManager.get().isSameTeam(watcher, target)) continue;
                 if (target.isInvisible()) continue; // 隱形的人（飛機上、剛跳機、隱形斗篷）不會被看到、不會出現在小地圖
-                Vec3 to = target.position().add(0, target.getBbHeight() * 0.6, 0).subtract(eye);
-                double dist = to.length();
-                if (dist > SPOT_RANGE || dist < 0.01) continue;
-                if (to.scale(1 / dist).dot(look) < SPOT_COS) continue;
-                if (!watcher.hasLineOfSight(target)) continue;
+                String pair = watcher.getUUID() + "|" + target.getUUID();
+                if (!reallySees(watcher, eye, look, target)) { spotStart.remove(pair); continue; }
+                // 要連續看到 spot_delay_ticks 才標記（一閃而過的不算）
+                int since = spotStart.computeIfAbsent(pair, k -> tickCount);
+                if (tickCount - since < PGConfig.SERVER.spotDelayTicks.get()) continue;
                 spotted.computeIfAbsent(key, k -> new HashMap<>())
                     .put(target.getUUID(), new Spot((float) target.getX(), (float) target.getZ(), target.getYRot(), tickCount));
             }
@@ -1954,6 +1954,38 @@ public class BattleRoyaleMode {
             m.values().removeIf(s -> tickCount - s.tick() > SPOT_KEEP_TICKS);
             m.keySet().removeIf(id -> { ServerPlayer sp = player(id); return sp != null && sp.isInvisible(); });
         }
+        if (spotStart.size() > 4096) spotStart.clear(); // 保險：不會無限長大
+    }
+
+    /** 「開始看到」的 tick（看的人|被看的人）。 */
+    private final Map<String, Integer> spotStart = new HashMap<>();
+
+    /**
+     * 真的看到敵人（小地圖標記用）：
+     *   距離：spot_range 格內（蹲下 spot_range_crouch、趴下或倒地 spot_range_prone）；
+     *   角度：在準星附近（spot_angle 度內；spot_close_range 格內放寬到 spot_close_angle 度）；
+     *   遮擋：頭、身體、腳三個點至少看得到兩個（只露一點邊不算）。
+     */
+    private boolean reallySees(ServerPlayer watcher, Vec3 eye, Vec3 look, ServerPlayer target) {
+        PGConfig c = PGConfig.SERVER;
+        double h = target.getBbHeight();
+        Vec3 center = target.position().add(0, h * 0.6, 0);
+        Vec3 to = center.subtract(eye);
+        double dist = to.length();
+        if (dist < 0.01) return true;
+        double range = target.getPose() == net.minecraft.world.entity.Pose.SWIMMING ? c.spotRangeProne.get()
+            : target.isCrouching() ? c.spotRangeCrouch.get() : c.spotRange.get();
+        if (dist > range) return false;
+        double angle = dist <= c.spotCloseRange.get() ? c.spotCloseAngle.get() : c.spotAngle.get();
+        if (to.scale(1 / dist).dot(look) < Math.cos(Math.toRadians(angle))) return false;
+        int visible = 0;
+        for (double f : new double[] { 0.9, 0.55, 0.1 }) { // 頭、身體、腳
+            Vec3 p = target.position().add(0, h * f, 0);
+            var hit = level.clip(new net.minecraft.world.level.ClipContext(eye, p, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                net.minecraft.world.level.ClipContext.Fluid.NONE, watcher));
+            if (hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS) visible++;
+        }
+        return visible >= 2;
     }
 
     /** 每 5 tick 送地圖標記給每位玩家。 */

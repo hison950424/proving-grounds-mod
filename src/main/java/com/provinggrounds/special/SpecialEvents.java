@@ -99,6 +99,31 @@ public final class SpecialEvents {
         if (KnockbackShield.tryBlock(p, src, event.getAmount())) event.setCanceled(true);
     }
 
+    /**
+     * 不死圖騰（計畫書 4 的 23 號，使用者 2026-11-23 調整）：受到致命傷時由我們處理，不讓原版圖騰觸發（沒有螢幕中間的圖騰動畫）：
+     *   這一下傷害取消 → 血量回到 totem_heal（50）、額外生命值 +totem_absorption（25）、恢復效果 I totem_regen_seconds（10 秒）；
+     *   圖騰粒子照樣有，圖騰音效音量 × totem_sound_volume。圖騰用掉後消失。
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onLethal(net.minecraftforge.event.entity.living.LivingDamageEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer p) || event.getAmount() < p.getHealth()) return;
+        var src = event.getSource();
+        if (src.is(DamageTypes.FELL_OUT_OF_WORLD) || src.is(DamageTypes.GENERIC_KILL)) return;
+        var off = p.getInventory().offhand.get(0);
+        if (!off.is(net.minecraft.world.item.Items.TOTEM_OF_UNDYING) || !off.hasTag() || !off.getTag().getBoolean(com.provinggrounds.events.OffhandEvents.SYSTEM_TAG)) return;
+        event.setCanceled(true);
+        SpecialConfig s = SpecialConfig.get();
+        Totem.remove(p);
+        p.removeEffect(SpecialRegistry.TOTEM_HELD.get());
+        p.setHealth((float) Math.min(p.getMaxHealth(), s.totemHeal.get()));
+        Engines.addExtraHealth(p, s.totemAbsorption.get().floatValue());
+        int regen = SpecialConfig.ticks(s.totemRegenSeconds);
+        if (regen > 0) p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, regen, 0, false, false, true));
+        p.serverLevel().sendParticles(net.minecraft.core.particles.ParticleTypes.TOTEM_OF_UNDYING, p.getX(), p.getY() + 1, p.getZ(), 60, 0.4, 0.8, 0.4, 0.4);
+        float vol = s.totemSoundVolume.get().floatValue();
+        if (vol > 0) p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, vol, 1f);
+    }
+
     @SubscribeEvent
     public static void onFall(LivingFallEvent event) {
         if (event.getEntity() instanceof ServerPlayer p && SpecialWorld.noFall(p)) event.setCanceled(true);

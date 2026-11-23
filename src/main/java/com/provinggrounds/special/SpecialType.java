@@ -30,7 +30,7 @@ public enum SpecialType {
     BLAST_SCANNER("blast_scanner", "爆破敵人偵測器", "Blast Scanner", "隨機一名敵人發光並顯示在地圖上（所有人都看得到）", 0xE08020),
     BLAST_SCANNER_PLUS("blast_scanner_plus", "爆破敵人偵測器加強版", "Blast Scanner+", "其中一隊的所有敵人發光並顯示在地圖上（所有人都看得到）", 0xC05010),
     SMOKE_BURST("smoke_burst", "煙幕彈", "Smoke Burst", "以自己為中心放出半徑 5 格的圓形煙霧", 0x909090),
-    TOTEM("totem", "不死圖騰", "Totem", "15 秒內副手有不死圖騰：致命傷害時不死也不倒地", 0xF0D040),
+    TOTEM("totem", "不死圖騰", "Totem", "15 秒內副手有不死圖騰：受到致命傷時不死也不倒地，回到 50 血、額外生命 +25、恢復效果 10 秒", 0xF0D040),
     SHIELD_BUBBLE("shield_bubble", "護盾泡泡", "Shield Bubble", "15 秒內第一次受到傷害時完全擋下，並獲得 25 額外生命值與 10 秒加速", 0x60C0FF),
     WARP_PEARL("warp_pearl", "傳送珠", "Warp Pearl", "丟出不受重力的珍珠，再按一次使用鍵或飛到盡頭時，傳送到它正下方", 0x20A080),
     SILENT_BOOTS("silent_boots", "靜音靴", "Silent Boots", "15 秒內移動不會發出聲音", 0x404060),

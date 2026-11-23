@@ -53,6 +53,11 @@ public final class GunCompat {
         return active == null ? null : active.installAttachment(p, gun, attachment);
     }
 
+    /** 這把槍有沒有裝消音器；沒有槍械模組時一律 false。 */
+    public static boolean isSilenced(net.minecraft.world.item.ItemStack gun) {
+        return active != null && !gun.isEmpty() && active.isSilenced(gun);
+    }
+
     /** 槍的 ID；沒有槍械模組或不是槍時回傳 null。 */
     @javax.annotation.Nullable
     public static net.minecraft.resources.ResourceLocation gunId(net.minecraft.world.item.ItemStack stack) {

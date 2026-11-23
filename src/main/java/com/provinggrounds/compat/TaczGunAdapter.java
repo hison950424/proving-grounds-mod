@@ -338,6 +338,33 @@ public class TaczGunAdapter implements GunAdapter {
         }
     }
 
+    // ── 消音器（受擊指示器用）────────────────────────────────────────────────
+
+    private static Object muzzleType;
+    private static boolean silenceFailed;
+
+    @Override
+    public boolean isSilenced(net.minecraft.world.item.ItemStack gunStack) {
+        if (silenceFailed || !installApi()) return false;
+        try {
+            if (muzzleType == null) {
+                Class<?> type = Class.forName("com.tacz.guns.api.item.attachment.AttachmentType");
+                muzzleType = type.getMethod("valueOf", String.class).invoke(null, "MUZZLE");
+            }
+            Object iGun = getIGun.invoke(null, gunStack);
+            if (iGun == null) return false;
+            Object att = getAttachmentOfType.invoke(iGun, gunStack, muzzleType);
+            if (!(att instanceof net.minecraft.world.item.ItemStack a) || a.isEmpty()) return false;
+            Object iAtt = getIAttachment.invoke(null, a);
+            if (iAtt == null) return false;
+            String id = String.valueOf(getAttachmentId.invoke(iAtt, a)).toLowerCase(java.util.Locale.ROOT);
+            return id.contains("silencer") || id.contains("suppressor");
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            silenceFailed = true;
+            return false;
+        }
+    }
+
     // ── 拿配件右鍵槍枝裝上 ──────────────────────────────────────────────────
     // 跟 TACZ 改裝畫面（ClientMessageRefitGun）同樣的步驟：檢查配件鎖與相容 → 取出同類型的舊配件 → 裝上新配件
     // → 通知配件屬性變更；換的是擴充彈匣時把槍裡的子彈退出來（TACZ 原本的行為）。

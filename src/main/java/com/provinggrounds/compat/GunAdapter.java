@@ -74,6 +74,9 @@ public interface GunAdapter {
     default net.minecraft.world.item.ItemStack installAttachment(net.minecraft.world.entity.player.Player player,
             net.minecraft.world.item.ItemStack gun, net.minecraft.world.item.ItemStack attachment) { return null; }
 
+    /** 這把槍有沒有裝消音器（槍口配件 ID 含 silencer／suppressor）。兩端都可呼叫。 */
+    default boolean isSilenced(net.minecraft.world.item.ItemStack gun) { return false; }
+
     /** 槍的原始數值（槍械平衡用）；查不到回傳 null。 */
     @javax.annotation.Nullable
     default com.provinggrounds.core.GunBalance.Stats gunStats(net.minecraft.resources.ResourceLocation gunId) { return null; }
