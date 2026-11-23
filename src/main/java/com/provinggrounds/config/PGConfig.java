@@ -181,23 +181,24 @@ public class PGConfig {
         brCircleWarnSeconds = builder.comment("縮圈開始前幾秒發出預警")
             .defineInRange("circle_warn_seconds", 30, 5, 120);
         brCircleMaxSpeedFactor = builder.comment(
-                "縮圈速度上限 = BR 疾跑速度 × 此倍率（預設 0.4875 = 原本 0.65 的 75%，約 2.19 格/秒）。1.0 以下圈都追不上全速疾跑的玩家",
-                "（BR 疾跑速度 = 原版 5.612 格/秒 × speed_multiplier）")
-            .defineInRange("max_speed_factor", 0.4875, 0.1, 1.0);
-        brStandardRatios = builder.comment("標準方案：各階段半徑 ÷ 地圖半徑（800→460→240→100→0，最終圈縮到半徑 0）")
-            .defineList("standard_ratios", List.of(0.58, 0.30, 0.125, 0.0), PGConfig::isRatio);
+                "縮圈速度上限 = BR 疾跑速度 × 此倍率（預設 0.5，約 2.24 格/秒，玩家疾跑的一半）。1.0 以下圈都追不上全速疾跑的玩家",
+                "（BR 疾跑速度 = 原版 5.612 格/秒 × speed_multiplier）",
+                "2026-11-23 整體調整（鍵名 _v2）：每場約 快速 8.5～10 分、標準 14.5 分、慢速 20.5 分（地圖半徑 300～450）")
+            .defineInRange("max_speed_factor_v2", 0.5, 0.1, 1.0);
+        brStandardRatios = builder.comment("標準方案：各階段半徑 ÷ 地圖半徑（例：半徑 400 → 240 → 140 → 60 → 0，最終圈縮到半徑 0）")
+            .defineList("standard_ratios_v2", List.of(0.60, 0.35, 0.15, 0.0), PGConfig::isRatio);
         brStandardInterval = builder.comment("標準方案：階段間隔（秒）")
-            .defineInRange("standard_interval_seconds", 60, 5, 600);
-        brFastRatios = builder.comment("快速方案：各階段半徑比例（占位，未定案）")
-            .defineList("fast_ratios", List.of(0.45, 0.15, 0.0), PGConfig::isRatio);
+            .defineInRange("standard_interval_seconds_v2", 95, 5, 600);
+        brFastRatios = builder.comment("快速方案：各階段半徑比例（3 階段）")
+            .defineList("fast_ratios_v2", List.of(0.50, 0.22, 0.0), PGConfig::isRatio);
         brFastInterval = builder.comment("快速方案：階段間隔（秒）")
-            .defineInRange("fast_interval_seconds", 30, 5, 600);
-        brSlowRatios = builder.comment("慢速方案：各階段半徑比例（占位，未定案）")
-            .defineList("slow_ratios", List.of(0.70, 0.45, 0.25, 0.10, 0.0), PGConfig::isRatio);
+            .defineInRange("fast_interval_seconds_v2", 60, 5, 600);
+        brSlowRatios = builder.comment("慢速方案：各階段半徑比例（5 階段）")
+            .defineList("slow_ratios_v2", List.of(0.70, 0.48, 0.28, 0.12, 0.0), PGConfig::isRatio);
         brSlowInterval = builder.comment("慢速方案：階段間隔（秒）")
-            .defineInRange("slow_interval_seconds", 90, 5, 600);
+            .defineInRange("slow_interval_seconds_v2", 115, 5, 600);
         brFirstWaitExtraSeconds = builder.comment("所有方案：開場第一次縮圈前額外多等幾秒（在階段間隔之外）")
-            .defineInRange("first_wait_extra_seconds", 60, 0, 600);
+            .defineInRange("first_wait_extra_seconds_v2", 90, 0, 600);
         brDamageBase = builder.comment("圈外傷害基礎值（HP/秒）。BR 最大血量 100：預設第 1~4 階段每秒 1、2.5、4、5.5")
             .defineInRange("damage_base", 1.0, 0.0, 100.0);
         brDamagePerStage = builder.comment("圈外傷害每階段增加量（HP/秒）。傷害 = 基礎 + 每階段 × 階段索引(0 起算)")
