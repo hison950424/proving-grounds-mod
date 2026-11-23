@@ -44,7 +44,7 @@ import java.util.Set;
 /**
  * 檔案: ClientSpecial.java
  * 目的: 特殊物品系統的客戶端（只在客戶端載入）：
- *   - 「使用特殊物品」鍵（預設 G，可在按鍵設定修改）→ 送 SpecialUsePacket，伺服器驗證後使用。
+ *   - 「使用特殊物品」鍵（預設 Q，可在按鍵設定修改）→ 送 SpecialUsePacket，伺服器驗證後使用。
  *   - 動作鎖定的輸入層：倒地、隱形斗篷時，左右鍵在客戶端就先擋掉（手感乾淨；伺服器另外擋）。
  *   - 發光：GlowSyncPacket 的清單 → 畫發光外框（EntitySpecialMixin）與地圖紅點（MapRender）；
  *           殘影分身對使用者與隊友帶淡色輪廓。
@@ -56,7 +56,7 @@ import java.util.Set;
 public final class ClientSpecial {
 
     public static final KeyMapping USE_KEY = new KeyMapping("key.provinggrounds.special", KeyConflictContext.IN_GAME,
-        InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, "key.categories.provinggrounds");
+        InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Q, "key.categories.provinggrounds");
 
     private static final Set<Integer> GLOW_IDS = new HashSet<>();
     private static volatile List<GlowSyncPacket.Entry> mapTargets = List.of();

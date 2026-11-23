@@ -176,7 +176,7 @@
   "item.provinggrounds.decoy": "殘影分身",
   "item.provinggrounds.decoy.desc": "產生一個跟你一模一樣的分身，往前奔跑 10 秒",
   "item.provinggrounds.knockback_shield_held": "擊退盾",
-  "tooltip.provinggrounds.special_use": "放在特殊物品欄，按「使用特殊物品」鍵（預設 G）使用",
+  "tooltip.provinggrounds.special_use": "放在特殊物品欄，按「使用特殊物品」鍵（預設 Q）使用",
   "key.provinggrounds.special": "使用特殊物品",
   "effect.provinggrounds.concussion": "震盪",
   "effect.provinggrounds.cloak": "隱形斗篷",

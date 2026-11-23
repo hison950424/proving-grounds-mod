@@ -8,7 +8,7 @@ import java.util.function.Supplier;
 
 /**
  * 檔案: SpecialUsePacket.java
- * 目的: 客戶端 → 伺服器。玩家按下「使用特殊物品」鍵（預設 G）。伺服器驗證後使用特殊物品欄裡的物品（SpecialUse）。
+ * 目的: 客戶端 → 伺服器。玩家按下「使用特殊物品」鍵（預設 Q）。伺服器驗證後使用特殊物品欄裡的物品（SpecialUse）。
  */
 public record SpecialUsePacket() {
 

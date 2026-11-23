@@ -14,7 +14,7 @@ import org.lwjgl.glfw.GLFW;
 /**
  * 檔案: ClientModEvents.java
  * 目的: 客戶端啟動時的註冊（只在客戶端載入）：
- *       HUD overlay，以及按鍵：打開主選單／大地圖（預設 M）、趴下／站起來（預設 Z）。
+ *       HUD overlay，以及按鍵：打開主選單／大地圖（預設 M）、趴下／站起來（預設 C）。
  *       都可以在 選項 → 控制 → 按鍵設定 修改。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -27,12 +27,12 @@ public final class ClientModEvents {
         GLFW.GLFW_KEY_M,
         "key.categories.provinggrounds");
 
-    /** 趴下／站起來（預設 Z）。 */
+    /** 趴下／站起來（預設 C）。 */
     public static final KeyMapping PRONE = new KeyMapping(
         "key.provinggrounds.prone",
         KeyConflictContext.IN_GAME,
         InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_Z,
+        GLFW.GLFW_KEY_C,
         "key.categories.provinggrounds");
 
     private ClientModEvents() {}
@@ -58,6 +58,6 @@ public final class ClientModEvents {
     public static void onRegisterKeys(RegisterKeyMappingsEvent event) {
         event.register(OPEN_MENU);
         event.register(PRONE);
-        event.register(com.provinggrounds.special.client.ClientSpecial.USE_KEY); // 使用特殊物品（預設 G）
+        event.register(com.provinggrounds.special.client.ClientSpecial.USE_KEY); // 使用特殊物品（預設 Q）
     }
 }

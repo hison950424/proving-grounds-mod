@@ -381,7 +381,7 @@ public class PGConfig {
             .define("bullet_hurt_shake", false);
         builder.pop();
 
-        builder.comment("趴下：玩家按鍵（預設 Z）趴下／站起來。").push("prone");
+        builder.comment("趴下：玩家按鍵（預設 C）趴下／站起來。").push("prone");
         proneEnabled = builder.comment("是否允許玩家自己趴下").define("enabled", true);
         proneCooldownSeconds = builder.comment("趴下後多久才能站起來、站起來後多久才能再趴下（秒）")
             .defineInRange("cooldown_seconds", 1.0, 0.0, 10.0);

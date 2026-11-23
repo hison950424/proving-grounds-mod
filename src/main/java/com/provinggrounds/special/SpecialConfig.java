@@ -52,7 +52,7 @@ public final class SpecialConfig {
     public final ForgeConfigSpec.DoubleValue decoySeconds;
 
     public SpecialConfig(ForgeConfigSpec.Builder b) {
-        b.comment("特殊物品（計畫書 4）：特殊物品欄 1 格，按「使用特殊物品」鍵（預設 G）使用，用完就消失").push("special");
+        b.comment("特殊物品（計畫書 4）：特殊物品欄 1 格，按「使用特殊物品」鍵（預設 Q）使用，用完就消失").push("special");
         enabled = b.comment("是否在箱子裡生成特殊物品").define("enabled", true);
         chance = b.comment("每個箱子（低、中、高、空投都一樣）出現 1 件特殊物品的機率，0.1 = 約每 10 箱 1 件。出現哪一件依 data/br/loot_tables/special.json 的權重")
             .defineInRange("chance", 0.1, 0.0, 1.0);

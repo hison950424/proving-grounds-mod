@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * 檔案: SpecialItem.java
- * 目的: 特殊物品（計畫書 4 的 B 章）。只能放在特殊物品欄（物品欄上方那 1 格），按「使用特殊物品」鍵（預設 G）使用，用完就消失。
+ * 目的: 特殊物品（計畫書 4 的 B 章）。只能放在特殊物品欄（物品欄上方那 1 格），按「使用特殊物品」鍵（預設 Q）使用，用完就消失。
  *   物品本身沒有右鍵功能，效果全部在 SpecialUse。
  */
 public class SpecialItem extends Item {

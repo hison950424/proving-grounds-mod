@@ -38,7 +38,7 @@ import java.util.UUID;
 
 /**
  * 檔案: SpecialUse.java
- * 目的: 按下「使用特殊物品」鍵（預設 G）時，伺服器端的處理（計畫書 4 的 B2）：
+ * 目的: 按下「使用特殊物品」鍵（預設 Q）時，伺服器端的處理（計畫書 4 的 B2）：
  *   1. 擊退盾穿戴中 → 衝撞；傳送珠飛行中 → 立刻傳送（「再次按使用鍵」）。
  *   2. 否則使用特殊物品欄那一格：驗證持有、動作鎖定（ActionLock）、冷卻，成功後物品銷毀。
  *   每個物品只是把參數交給共用引擎（GlowManager、Engines、SpecialWorld、MineEntity…）。
