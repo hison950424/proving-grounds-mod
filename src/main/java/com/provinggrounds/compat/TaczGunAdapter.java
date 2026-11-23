@@ -255,6 +255,89 @@ public class TaczGunAdapter implements GunAdapter {
         }
     }
 
+    // ── 槍械平衡（GunBalance）────────────────────────────────────────────────
+    // 讀 TACZ 的槍械資料（類型、射速、傷害、彈丸數、爆頭倍率、距離減傷表），在 EntityHurtByGunEvent.Pre 改這一發的傷害。
+
+    private final java.util.Map<net.minecraft.resources.ResourceLocation, java.util.Optional<com.provinggrounds.core.GunBalance.Stats>> statsCache =
+        new java.util.concurrent.ConcurrentHashMap<>();
+
+    @Override
+    public com.provinggrounds.core.GunBalance.Stats gunStats(net.minecraft.resources.ResourceLocation gunId) {
+        return statsCache.computeIfAbsent(gunId, TaczGunAdapter::readStats).orElse(null);
+    }
+
+    private static java.util.Optional<com.provinggrounds.core.GunBalance.Stats> readStats(net.minecraft.resources.ResourceLocation gunId) {
+        try {
+            Class<?> api = Class.forName("com.tacz.guns.api.TimelessAPI");
+            Object opt = api.getMethod("getCommonGunIndex", net.minecraft.resources.ResourceLocation.class).invoke(null, gunId);
+            if (!(opt instanceof java.util.Optional<?> o) || o.isEmpty()) return java.util.Optional.empty();
+            Object index = o.get();
+            String type = String.valueOf(index.getClass().getMethod("getType").invoke(index));
+            Object gunData = index.getClass().getMethod("getGunData").invoke(index);
+            int rpm = ((Number) gunData.getClass().getMethod("getRoundsPerMinute").invoke(gunData)).intValue();
+            int mag = ((Number) gunData.getClass().getMethod("getAmmoAmount").invoke(gunData)).intValue();
+            Object bullet = gunData.getClass().getMethod("getBulletData").invoke(gunData);
+            float damage = ((Number) bullet.getClass().getMethod("getDamageAmount").invoke(bullet)).floatValue();
+            int amount = ((Number) bullet.getClass().getMethod("getBulletAmount").invoke(bullet)).intValue();
+            float head = 1.0f;
+            java.util.List<float[]> falloff = new java.util.ArrayList<>();
+            Object extra = bullet.getClass().getMethod("getExtraDamage").invoke(bullet);
+            if (extra != null) {
+                head = ((Number) extra.getClass().getMethod("getHeadShotMultiplier").invoke(extra)).floatValue();
+                Object list = extra.getClass().getMethod("getDamageAdjust").invoke(extra);
+                if (list instanceof java.util.List<?> l) {
+                    for (Object pair : l) {
+                        float d = ((Number) pair.getClass().getMethod("getDistance").invoke(pair)).floatValue();
+                        float v = ((Number) pair.getClass().getMethod("getDamage").invoke(pair)).floatValue();
+                        falloff.add(new float[] { d, v });
+                    }
+                }
+            }
+            return java.util.Optional.of(new com.provinggrounds.core.GunBalance.Stats(type, rpm, damage, amount, head, falloff, mag));
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return java.util.Optional.empty();
+        }
+    }
+
+    @Override
+    public boolean registerDamageBalancer() {
+        String className = "com.tacz.guns.api.event.common.EntityHurtByGunEvent$Pre";
+        try {
+            Class<?> raw = Class.forName(className);
+            if (!Event.class.isAssignableFrom(raw)) return false;
+            Method getSide = raw.getMethod("getLogicalSide");
+            Method getGunId = raw.getMethod("getGunId");
+            Method getAttacker = raw.getMethod("getAttacker");
+            Method getTarget = raw.getMethod("getHurtEntity");
+            Method getBase = raw.getMethod("getBaseAmount");
+            Method setBase = raw.getMethod("setBaseAmount", float.class);
+            Method setHead = raw.getMethod("setHeadshotMultiplier", float.class);
+            @SuppressWarnings("unchecked")
+            Class<Event> type = (Class<Event>) raw;
+            MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGH, false, type, event -> {
+                try {
+                    if (getSide.invoke(event) != LogicalSide.SERVER || !com.provinggrounds.core.GunBalance.enabled()) return;
+                    if (!(getGunId.invoke(event) instanceof net.minecraft.resources.ResourceLocation gunId)) return;
+                    Entity target = (Entity) getTarget.invoke(event);
+                    Entity attacker = (Entity) getAttacker.invoke(event);
+                    double dist = attacker != null && target != null ? attacker.distanceTo(target) : 0;
+                    com.provinggrounds.core.GunBalance.Stats stats = gunStats(gunId);
+                    float base = ((Number) getBase.invoke(event)).floatValue();
+                    setBase.invoke(event, com.provinggrounds.core.GunBalance.adjust(gunId, stats, base, dist));
+                    float head = com.provinggrounds.core.GunBalance.headMultiplier(gunId, stats);
+                    if (head > 0) setHead.invoke(event, head);
+                } catch (ReflectiveOperationException | RuntimeException ignored) {
+                    // 取不到資料就照原本的傷害
+                }
+            });
+            ProvingGroundsMod.LOGGER.info("TACZ adapter: gun damage balancer hooked.");
+            return true;
+        } catch (ClassNotFoundException | NoSuchMethodException e) {
+            ProvingGroundsMod.LOGGER.warn("TACZ adapter: cannot hook damage balancer ({}).", e.toString());
+            return false;
+        }
+    }
+
     // ── 拿配件右鍵槍枝裝上 ──────────────────────────────────────────────────
     // 跟 TACZ 改裝畫面（ClientMessageRefitGun）同樣的步驟：檢查配件鎖與相容 → 取出同類型的舊配件 → 裝上新配件
     // → 通知配件屬性變更；換的是擴充彈匣時把槍裡的子彈退出來（TACZ 原本的行為）。

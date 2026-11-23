@@ -149,6 +149,15 @@ public class PGConfig {
     public final ForgeConfigSpec.DoubleValue bulletproofNetherite;
     public final ForgeConfigSpec.DoubleValue bulletproofTurtle;
 
+    // ── 槍械平衡（所有模式通用，GunBalance） ─────────────────────────────────
+    public final ForgeConfigSpec.BooleanValue gunBalanceEnabled;
+    public final ForgeConfigSpec.DoubleValue autoTtk, pistolTtk, shotgunShotDamage, sniperHeadMultiplier;
+    public final ForgeConfigSpec.IntValue sniperBodyShots, sniperBoltRpm;
+    public final ForgeConfigSpec.DoubleValue rifleFalloffStart, rifleFalloffEnd, rifleFalloffMin;
+    public final ForgeConfigSpec.DoubleValue smgFalloffStart, smgFalloffEnd, smgFalloffMin;
+    public final ForgeConfigSpec.DoubleValue shotgunFalloffStart, shotgunFalloffEnd, shotgunFalloffMin;
+    public final ForgeConfigSpec.BooleanValue bulletIgnoresVanillaArmor;
+
     private PGConfig(ForgeConfigSpec.Builder builder) {
         builder.push("lobby");
         uiWalkAllowed = builder.comment("是否允許玩家開著介面（物品欄、箱子、地圖…）時用移動鍵走動（預設允許）。設成 false 是緊急關閉：所有玩家都不能（不管各自的客戶端設定）。",
@@ -360,19 +369,40 @@ public class PGConfig {
                 "爆頭只看頭盔；身體中彈看胸甲、護腿、靴子（每件 1/3）。",
                 "原版護甲值本來就會再擋一次一般部分（TACZ 原本的行為）。")
             .push("bulletproof");
-        // 2026-11-23：防彈係數整體減半（鍵名加 _v2，舊設定檔的數值不會蓋掉新預設）
+        // 2026-11-23：槍械平衡後子彈不再吃原版護甲值，防彈係數重新設定（鍵名 _v3，舊設定檔的數值不會蓋掉新預設）
+        bulletIgnoresVanillaArmor = builder.comment("子彈傷害不吃原版護甲值（只算下面的防彈係數），穿什麼甲慢多少對每把槍都一致。改了要重開伺服器").define("bullet_ignores_vanilla_armor", true);
         bulletproofEnabled = builder.comment("是否啟用防彈").define("enabled", true);
         armorDurabilityMultiplier = builder.comment("所有防具的最大耐久度倍率（2.0 = 原版兩倍，例如鐵頭盔 165 → 330）。登入時同步到客戶端")
             .defineInRange("armor_durability_multiplier", 2.0, 0.1, 10.0);
         bulletproofHeadBodySplit = builder.comment("爆頭只看頭盔、身體只看其他三件；false = 不分部位，四件各占 1/4")
             .define("head_body_split", true);
-        bulletproofLeather = builder.comment("皮革全套減傷").defineInRange("leather_v2", 0.05, 0.0, 0.95);
-        bulletproofChainmail = builder.comment("鎖鏈全套減傷（占位）").defineInRange("chainmail_v2", 0.075, 0.0, 0.95);
-        bulletproofIron = builder.comment("鐵全套減傷").defineInRange("iron_v2", 0.10, 0.0, 0.95);
-        bulletproofGold = builder.comment("金全套減傷（占位）").defineInRange("gold_v2", 0.075, 0.0, 0.95);
-        bulletproofDiamond = builder.comment("鑽石全套減傷").defineInRange("diamond_v2", 0.15, 0.0, 0.95);
-        bulletproofNetherite = builder.comment("獄髓全套減傷").defineInRange("netherite_v2", 0.20, 0.0, 0.95);
-        bulletproofTurtle = builder.comment("海龜殼（只有頭盔）全套減傷（占位）").defineInRange("turtle_v2", 0.05, 0.0, 0.95);
+        bulletproofLeather = builder.comment("皮革全套減傷").defineInRange("leather_v3", 0.12, 0.0, 0.95);
+        bulletproofChainmail = builder.comment("鎖鏈全套減傷（占位）").defineInRange("chainmail_v3", 0.18, 0.0, 0.95);
+        bulletproofIron = builder.comment("鐵全套減傷").defineInRange("iron_v3", 0.25, 0.0, 0.95);
+        bulletproofGold = builder.comment("金全套減傷（占位）").defineInRange("gold_v3", 0.18, 0.0, 0.95);
+        bulletproofDiamond = builder.comment("鑽石全套減傷").defineInRange("diamond_v3", 0.40, 0.0, 0.95);
+        bulletproofNetherite = builder.comment("獄髓全套減傷").defineInRange("netherite_v3", 0.50, 0.0, 0.95);
+        bulletproofTurtle = builder.comment("海龜殼（只有頭盔）全套減傷（占位）").defineInRange("turtle_v3", 0.12, 0.0, 0.95);
+        builder.pop();
+
+        builder.comment("槍械平衡：不改槍械包，依每把槍的射速重新決定每發傷害，讓同類型的槍打死人的時間差不多。",
+                "目標 TTK（秒）= 沒穿甲、近距離、全部打身體；穿全套鐵甲約再慢 25%（例：2.0 → 2.5 秒）。").push("gun_balance");
+        gunBalanceEnabled = builder.comment("是否啟用槍械平衡（false = 照槍械包原本的數值）").define("enabled", true);
+        autoTtk = builder.comment("步槍、衝鋒槍、機槍、半自動狙擊的目標 TTK（秒）").defineInRange("auto_ttk", 2.0, 0.2, 20.0);
+        pistolTtk = builder.comment("手槍的目標 TTK（秒）").defineInRange("pistol_ttk", 2.4, 0.2, 20.0);
+        shotgunShotDamage = builder.comment("霰彈槍每一發（所有彈丸加起來、近距離）的傷害；50 = 近距離 2 發").defineInRange("shotgun_shot_damage", 50.0, 1.0, 1000.0);
+        sniperBoltRpm = builder.comment("射速不超過這個值的狙擊槍算栓動狙擊（其餘照步槍算）").defineInRange("sniper_bolt_rpm", 200, 1, 2000);
+        sniperBodyShots = builder.comment("栓動狙擊打身體幾發死（沒穿甲）").defineInRange("sniper_body_shots", 2, 1, 20);
+        sniperHeadMultiplier = builder.comment("栓動狙擊的爆頭倍率至少多少（2.0 = 沒穿甲一發爆頭）").defineInRange("sniper_head_multiplier", 2.0, 1.0, 10.0);
+        rifleFalloffStart = builder.comment("步槍、機槍：幾格內全額傷害").defineInRange("rifle_falloff_start", 30.0, 0.0, 500.0);
+        rifleFalloffEnd = builder.comment("步槍、機槍：到幾格時降到最低").defineInRange("rifle_falloff_end", 60.0, 0.0, 500.0);
+        rifleFalloffMin = builder.comment("步槍、機槍：最遠的傷害比例").defineInRange("rifle_falloff_min", 0.7, 0.0, 1.0);
+        smgFalloffStart = builder.comment("衝鋒槍、手槍：幾格內全額傷害").defineInRange("smg_falloff_start", 20.0, 0.0, 500.0);
+        smgFalloffEnd = builder.comment("衝鋒槍、手槍：到幾格時降到最低").defineInRange("smg_falloff_end", 40.0, 0.0, 500.0);
+        smgFalloffMin = builder.comment("衝鋒槍、手槍：最遠的傷害比例").defineInRange("smg_falloff_min", 0.6, 0.0, 1.0);
+        shotgunFalloffStart = builder.comment("霰彈槍：幾格內全額傷害").defineInRange("shotgun_falloff_start", 5.0, 0.0, 500.0);
+        shotgunFalloffEnd = builder.comment("霰彈槍：到幾格時降到最低").defineInRange("shotgun_falloff_end", 15.0, 0.0, 500.0);
+        shotgunFalloffMin = builder.comment("霰彈槍：最遠的傷害比例").defineInRange("shotgun_falloff_min", 0.3, 0.0, 1.0);
         builder.pop();
 
         builder.comment("管理員工具物品（浮空文字、箱子生成點）").push("admin_tools");

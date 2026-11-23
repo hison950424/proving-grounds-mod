@@ -74,6 +74,16 @@ public interface GunAdapter {
     default net.minecraft.world.item.ItemStack installAttachment(net.minecraft.world.entity.player.Player player,
             net.minecraft.world.item.ItemStack gun, net.minecraft.world.item.ItemStack attachment) { return null; }
 
+    /** 槍的原始數值（槍械平衡用）；查不到回傳 null。 */
+    @javax.annotation.Nullable
+    default com.provinggrounds.core.GunBalance.Stats gunStats(net.minecraft.resources.ResourceLocation gunId) { return null; }
+
+    /**
+     * 註冊傷害調整（伺服器端，子彈命中、扣血之前）：依槍與距離重新計算這一發的傷害與爆頭倍率。
+     * @return 是否成功掛上
+     */
+    default boolean registerDamageBalancer() { return false; }
+
     /** 槍的 ID（例如 tacz:ak47）；不是槍時回傳 null。 */
     @javax.annotation.Nullable
     default net.minecraft.resources.ResourceLocation gunId(net.minecraft.world.item.ItemStack stack) { return null; }

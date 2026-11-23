@@ -72,6 +72,7 @@ public final class GunCompat {
                 ProvingGroundsMod.LOGGER.info("Gun adapter enabled: {}", adapter.name());
             }
             adapter.registerHitListener(ArmorEvents::recordHit); // 防彈：記錄爆頭
+            adapter.registerDamageBalancer(); // 槍械平衡（GunBalance）
             // 精準命中：子彈這一 tick 的路線（往前後各延伸一段）要打到人物模型才算數
             adapter.registerHitFilter((target, bullet) -> {
                 net.minecraft.world.phys.Vec3 v = bullet.getDeltaMovement();
