@@ -1,0 +1,2784 @@
+[
+ {
+  "file": "aa12",
+  "price": 450,
+  "free": 360,
+  "name": "AA-12",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:aa12\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "ak47",
+  "price": 300,
+  "free": 240,
+  "name": "AK-47",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:ak47\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "ammo_mod_fmj",
+  "price": 350,
+  "free": 280,
+  "name": "全金屬被甲",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:ammo_mod_fmj\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "ammo_mod_he",
+  "price": 250,
+  "free": 200,
+  "name": "高爆彈",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:ammo_mod_he\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "ammo_mod_hp",
+  "price": 350,
+  "free": 280,
+  "name": "空尖彈",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:ammo_mod_hp\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "ammo_mod_i",
+  "price": 350,
+  "free": 280,
+  "name": "燃燒彈",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:ammo_mod_i\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "ammo_mod_slug",
+  "price": 350,
+  "free": 280,
+  "name": "獨頭彈",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:ammo_mod_slug\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "ar57",
+  "price": 480,
+  "free": 384,
+  "name": "AR-57",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:ar57\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "ash12",
+  "price": 1050,
+  "free": 840,
+  "name": "ASh-12.7",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:ash12\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "aw50",
+  "price": 1300,
+  "free": 1040,
+  "name": "AW .50",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:aw50\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "axsr",
+  "price": 1000,
+  "free": 800,
+  "name": "AXSR",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:axsr\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "b93r",
+  "price": 120,
+  "free": 96,
+  "name": "B93R",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:b93r\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "baseball_bat",
+  "price": 50,
+  "free": 40,
+  "name": "棒球棒",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"lrtactical:baseball_bat\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "bayonet_6h3",
+  "price": 80,
+  "free": 64,
+  "name": "6H3 刺刀（膛口）",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:bayonet_6h3\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "bayonet_knife",
+  "price": 65,
+  "free": 52,
+  "name": "刺刀",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"cs2_wt:bayonet\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "bayonet_m9",
+  "price": 80,
+  "free": 64,
+  "name": "M9 刺刀（膛口）",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:bayonet_m9\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "butterfly",
+  "price": 60,
+  "free": 48,
+  "name": "蝴蝶刀",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"cs2_wt:butterfly\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "c4",
+  "price": 96,
+  "free": null,
+  "name": "C4",
+  "gives": [
+   [
+    "lrtactical:throwable",
+    "{ThrowableId:\"lrtactical:c4\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "crowbar_classic",
+  "price": 70,
+  "free": 56,
+  "name": "撬棍",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"suffuse:crowbar_classic\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "cs2_karambit",
+  "price": 60,
+  "free": 48,
+  "name": "卡拉姆比刀 CS2",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"cs2_wt:karambit\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "cslr4_flash_hider",
+  "price": 70,
+  "free": 56,
+  "name": "CS/LR4 消焰器",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:cslr4_flash_hider\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "css",
+  "price": 60,
+  "free": 48,
+  "name": "CSS 折刀",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"cs2_wt:css\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "dadao",
+  "price": 70,
+  "free": 56,
+  "name": "大刀",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"suffuse:dadao\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "dagger",
+  "price": 50,
+  "free": 40,
+  "name": "匕首",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"lrtactical:dagger\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "db_long",
+  "price": 250,
+  "free": 200,
+  "name": "雙管長槍",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:db_long\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "db_short",
+  "price": 200,
+  "free": 160,
+  "name": "雙管短槍",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:db_short\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "deagle_golden",
+  "price": 170,
+  "free": 136,
+  "name": "黃金沙漠之鷹",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:deagle_golden\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "deagle_golden_long_barrel",
+  "price": 130,
+  "free": 104,
+  "name": "沙漠金鷹長槍管",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:deagle_golden_long_barrel\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "desert",
+  "price": 180,
+  "free": 144,
+  "name": "Desert Eagle",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:desert\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "diamond_boots",
+  "price": 160,
+  "free": 128,
+  "name": "鑽石靴子",
+  "gives": [
+   [
+    "minecraft:diamond_boots",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "diamond_chestplate",
+  "price": 300,
+  "free": 240,
+  "name": "鑽石胸甲",
+  "gives": [
+   [
+    "minecraft:diamond_chestplate",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "diamond_helmet",
+  "price": 160,
+  "free": 128,
+  "name": "鑽石頭盔",
+  "gives": [
+   [
+    "minecraft:diamond_helmet",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "diamond_leggings",
+  "price": 240,
+  "free": 192,
+  "name": "鑽石護腿",
+  "gives": [
+   [
+    "minecraft:diamond_leggings",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "dvl10",
+  "price": 800,
+  "free": 640,
+  "name": "DVL-10",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:dvl10\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "extended_mag_1",
+  "price": 70,
+  "free": 56,
+  "name": "重型彈匣 I",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:extended_mag_1\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "extended_mag_2",
+  "price": 130,
+  "free": 104,
+  "name": "重型彈匣 II",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:extended_mag_2\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "extended_mag_3",
+  "price": 200,
+  "free": 160,
+  "name": "重型彈匣 III",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:extended_mag_3\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "famas",
+  "price": 380,
+  "free": 304,
+  "name": "FAMAS",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:famas\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "fire_axe",
+  "price": 70,
+  "free": 56,
+  "name": "消防斧",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"suffuse:fire_axe\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "flash_grenade",
+  "price": 48,
+  "free": null,
+  "name": "閃光彈",
+  "gives": [
+   [
+    "lrtactical:throwable",
+    "{ThrowableId:\"lrtactical:flash_grenade\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "flash_shield",
+  "price": 140,
+  "free": 112,
+  "name": "防彈閃光盾",
+  "gives": [
+   [
+    "lrtactical:flash_shield",
+    "",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "fn_evolys",
+  "price": 680,
+  "free": 544,
+  "name": "FN Evolys",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:fn_evolys\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "fn_fal",
+  "price": 580,
+  "free": 464,
+  "name": "FN FAL",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:fn_fal\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "g36k",
+  "price": 450,
+  "free": 360,
+  "name": "G36K",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:g36k\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "gepardpdw",
+  "price": 340,
+  "free": 272,
+  "name": "Gepard PDW",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:gepardpdw\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_bt10vbatlas",
+  "price": 90,
+  "free": 72,
+  "name": "BT10 摺疊腳架",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:grip_bt10vbatlas\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_cobra",
+  "price": 65,
+  "free": 52,
+  "name": "SI 握把",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:grip_cobra\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_flashlight",
+  "price": 100,
+  "free": 80,
+  "name": "CAG 手電握把",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:grip_flashlight\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_m203",
+  "price": 280,
+  "free": 224,
+  "name": "M203 榴彈發射器",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:grip_m203\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_magpul_afg_2",
+  "price": 70,
+  "free": 56,
+  "name": "AFG1 直角握把",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:grip_magpul_afg_2\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_osovets_black",
+  "price": 100,
+  "free": null,
+  "name": "P-2 握把",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:grip_osovets_black\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_rk0",
+  "price": 65,
+  "free": 52,
+  "name": "RK-0",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:grip_rk0\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_rk1_b25u",
+  "price": 140,
+  "free": null,
+  "name": "RK-1 B25U 握把",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:grip_rk1_b25u\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_rk6",
+  "price": 70,
+  "free": 56,
+  "name": "RK-6",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:grip_rk6\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_rvg",
+  "price": 70,
+  "free": 56,
+  "name": "Magpul RVG",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:grip_rvg\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_se_5",
+  "price": 65,
+  "free": 52,
+  "name": "SE-5 前握把",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:grip_se_5\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_td",
+  "price": 65,
+  "free": 52,
+  "name": "TD 握把",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:grip_td\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_td_black",
+  "price": 70,
+  "free": 56,
+  "name": "TD 快拆 黑色",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:grip_td_black\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_td_green",
+  "price": 100,
+  "free": null,
+  "name": "TD 快拆握把 (綠)",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:grip_td_green\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_usgi_m249",
+  "price": 70,
+  "free": 56,
+  "name": "M249 戰術前握把",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:grip_usgi_m249\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_vertical_military",
+  "price": 65,
+  "free": 52,
+  "name": "Nagoma 軍用",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:grip_vertical_military\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_vertical_ranger",
+  "price": 70,
+  "free": 56,
+  "name": "Koch 遊騎兵重型",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:grip_vertical_ranger\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "grip_vertical_talon",
+  "price": 100,
+  "free": null,
+  "name": "Talon SG2 握把",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:grip_vertical_talon\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "hk416d",
+  "price": 320,
+  "free": 256,
+  "name": "HK416D",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:hk416d\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "hk_mp5a5",
+  "price": 270,
+  "free": 216,
+  "name": "HK MP5A5",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:hk_mp5a5\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "iron_boots",
+  "price": 80,
+  "free": 64,
+  "name": "鐵靴子",
+  "gives": [
+   [
+    "minecraft:iron_boots",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "iron_chestplate",
+  "price": 160,
+  "free": 128,
+  "name": "鐵胸甲",
+  "gives": [
+   [
+    "minecraft:iron_chestplate",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "iron_helmet",
+  "price": 80,
+  "free": 64,
+  "name": "鐵頭盔",
+  "gives": [
+   [
+    "minecraft:iron_helmet",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "iron_leggings",
+  "price": 130,
+  "free": 104,
+  "name": "鐵護腿",
+  "gives": [
+   [
+    "minecraft:iron_leggings",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "kar98",
+  "price": 550,
+  "free": 440,
+  "name": "Kar98k",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:kar98\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "knife_rambo",
+  "price": 65,
+  "free": 52,
+  "name": "藍波刀",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"suffuse:knife_rambo\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "ks23m",
+  "price": 420,
+  "free": 336,
+  "name": "KS-23M",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:ks23m\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "laser_an_peq_2a",
+  "price": 80,
+  "free": 64,
+  "name": "AN/PEQ-2A",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:laser_an_peq_2a\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "laser_compact",
+  "price": 70,
+  "free": 56,
+  "name": "Militech 緊湊型",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:laser_compact\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "laser_dbala2",
+  "price": 120,
+  "free": null,
+  "name": "DBAL-A2 雷射",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:laser_dbala2\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "laser_dbala2_attachment",
+  "price": 90,
+  "free": 72,
+  "name": "DBAL-A2 雷射",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:laser_dbala2\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "laser_lopro",
+  "price": 75,
+  "free": 60,
+  "name": "Lopro 戰術型",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:laser_lopro\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "laser_nightstick",
+  "price": 60,
+  "free": null,
+  "name": "Nightstick 緊湊雷射",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:laser_nightstick\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "laser_peq6",
+  "price": 100,
+  "free": 80,
+  "name": "PEQ-6 戰術燈+雷射",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:laser_peq6\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "laser_pistol",
+  "price": 60,
+  "free": 48,
+  "name": "手槍式緊湊雷射",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:laser_pistol\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "leather_boots",
+  "price": 30,
+  "free": 24,
+  "name": "皮革靴子",
+  "gives": [
+   [
+    "minecraft:leather_boots",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "leather_chestplate",
+  "price": 60,
+  "free": 48,
+  "name": "皮革胸甲",
+  "gives": [
+   [
+    "minecraft:leather_chestplate",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "leather_helmet",
+  "price": 30,
+  "free": 24,
+  "name": "皮革頭盔",
+  "gives": [
+   [
+    "minecraft:leather_helmet",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "leather_leggings",
+  "price": 50,
+  "free": 40,
+  "name": "皮革護腿",
+  "gives": [
+   [
+    "minecraft:leather_leggings",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "light_extended_mag_1",
+  "price": 70,
+  "free": 56,
+  "name": "輕型彈匣 I",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:light_extended_mag_1\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "light_extended_mag_2",
+  "price": 130,
+  "free": 104,
+  "name": "輕型彈匣 II",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:light_extended_mag_2\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "light_extended_mag_3",
+  "price": 200,
+  "free": 160,
+  "name": "輕型彈匣 III",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:light_extended_mag_3\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "lonetrail",
+  "price": 200,
+  "free": 160,
+  "name": "Lonetrail",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:lonetrail\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "lr_karambit",
+  "price": 55,
+  "free": 44,
+  "name": "卡拉姆比刀",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"lrtactical:karambit\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "m1014",
+  "price": 380,
+  "free": 304,
+  "name": "M1014",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:m1014\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "m107",
+  "price": 650,
+  "free": 520,
+  "name": "M107",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:m107\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "m16a1",
+  "price": 400,
+  "free": 320,
+  "name": "M16A1",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:m16a1\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "m1911",
+  "price": 120,
+  "free": 96,
+  "name": "M1911",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:m1911\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "m200",
+  "price": 1550,
+  "free": 1240,
+  "name": "M200 Intervention",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:m200\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "m24",
+  "price": 64,
+  "free": null,
+  "name": "柄式手榴彈",
+  "gives": [
+   [
+    "lrtactical:throwable",
+    "{ThrowableId:\"suffuse:m24\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "m249",
+  "price": 550,
+  "free": 440,
+  "name": "M249 SAW",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:m249\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "m24_cluster",
+  "price": 160,
+  "free": null,
+  "name": "集束手榴彈",
+  "gives": [
+   [
+    "lrtactical:throwable",
+    "{ThrowableId:\"suffuse:m24_cluster\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "m67",
+  "price": 64,
+  "free": null,
+  "name": "M67 手榴彈",
+  "gives": [
+   [
+    "lrtactical:throwable",
+    "{ThrowableId:\"lrtactical:m67\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "m700",
+  "price": 500,
+  "free": 400,
+  "name": "M700",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:m700\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "m7_silencer",
+  "price": 200,
+  "free": null,
+  "name": "M7 滅音器",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:m7_silencer\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "m870",
+  "price": 310,
+  "free": 248,
+  "name": "M870",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:m870\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "m9_knife",
+  "price": 60,
+  "free": 48,
+  "name": "M9 刺刀",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"cs2_wt:m9\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "mg338_silencer",
+  "price": 120,
+  "free": 96,
+  "name": "MG338 消音器",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:mg338_silencer\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "minigun",
+  "price": 1100,
+  "free": 880,
+  "name": "Minigun",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:minigun\",GunFireMode:\"AUTO\",HasBulletInBarrel:1b,HeatAmount:0.0f,GunCurrentAmmoCount:9999}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "mk14",
+  "price": 620,
+  "free": 496,
+  "name": "MK14 EBR",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:mk14\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "molotov",
+  "price": 72,
+  "free": null,
+  "name": "燃燒彈",
+  "gives": [
+   [
+    "lrtactical:throwable",
+    "{ThrowableId:\"lrtactical:molotov\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_brake_cthulhu",
+  "price": 150,
+  "free": null,
+  "name": "Cthulhu K7 制退器",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_brake_cthulhu\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_brake_cyclone_d2",
+  "price": 80,
+  "free": 64,
+  "name": "Cyclone D2",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_brake_cyclone_d2\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_brake_mastiff_sg",
+  "price": 80,
+  "free": 64,
+  "name": "Mastiff 霰彈",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_brake_mastiff_sg\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_brake_pioneer",
+  "price": 80,
+  "free": 64,
+  "name": "Pioneer A3",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_brake_pioneer\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_brake_timeless50",
+  "price": 200,
+  "free": null,
+  "name": "Timeless .50 制退器",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_brake_timeless50\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_brake_trex",
+  "price": 90,
+  "free": 72,
+  "name": "T-Rex 重型",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_brake_trex\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_choke_sg",
+  "price": 80,
+  "free": 64,
+  "name": "散彈槍喉縮",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_choke_sg\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_compensator_trident",
+  "price": 85,
+  "free": 68,
+  "name": "Trident 補償器",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_compensator_trident\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_silencer_knight_qd",
+  "price": 150,
+  "free": null,
+  "name": "Knight QD 滅音器",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_silencer_knight_qd\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_silencer_mirage",
+  "price": 150,
+  "free": null,
+  "name": "Mirage 滅音器",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_silencer_mirage\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_silencer_phantom_s1",
+  "price": 110,
+  "free": 88,
+  "name": "Phantom S1",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_silencer_phantom_s1\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_silencer_ptilopsis",
+  "price": 110,
+  "free": 88,
+  "name": "PO-2 白頭角鴞",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_silencer_ptilopsis\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_silencer_sg",
+  "price": 100,
+  "free": 80,
+  "name": "12鉛徑消音",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_silencer_sg\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_silencer_ursus",
+  "price": 120,
+  "free": 96,
+  "name": "Ursus 軍規",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_silencer_ursus\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_silencer_vulture",
+  "price": 130,
+  "free": 104,
+  "name": "Vulture .50",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_silencer_vulture\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "muzzle_silencer_wraith",
+  "price": 100,
+  "free": 80,
+  "name": "魅影消音器",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:muzzle_silencer_wraith\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "n4",
+  "price": 950,
+  "free": 760,
+  "name": "N4",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:n4\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "netherite_boots",
+  "price": 240,
+  "free": 192,
+  "name": "獄髓靴子",
+  "gives": [
+   [
+    "minecraft:netherite_boots",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "netherite_chestplate",
+  "price": 450,
+  "free": 360,
+  "name": "獄髓胸甲",
+  "gives": [
+   [
+    "minecraft:netherite_chestplate",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "netherite_helmet",
+  "price": 240,
+  "free": 192,
+  "name": "獄髓頭盔",
+  "gives": [
+   [
+    "minecraft:netherite_helmet",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "netherite_leggings",
+  "price": 360,
+  "free": 288,
+  "name": "獄髓護腿",
+  "gives": [
+   [
+    "minecraft:netherite_leggings",
+    "{Unbreakable:1b}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "oem_stock_heavy",
+  "price": 60,
+  "free": 48,
+  "name": "原廠重型",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:oem_stock_heavy\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "oem_stock_light",
+  "price": 60,
+  "free": 48,
+  "name": "原廠輕型",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:oem_stock_light\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "oem_stock_tactical",
+  "price": 60,
+  "free": 48,
+  "name": "原廠戰術",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:oem_stock_tactical\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "p320",
+  "price": 140,
+  "free": 112,
+  "name": "SIG P320",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:p320\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "pistollaser",
+  "price": 80,
+  "free": 64,
+  "name": "手槍雷射（裝備槽）",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:pistollaser\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "pkp",
+  "price": 640,
+  "free": 512,
+  "name": "PKP Pecheneg",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:pkp\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "pp19",
+  "price": 310,
+  "free": 248,
+  "name": "PP-19 Bizon",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:pp19\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "ptrd41",
+  "price": 1800,
+  "free": 1440,
+  "name": "PTRD-41",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:ptrd41\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "push",
+  "price": 60,
+  "free": 48,
+  "name": "推刀",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"cs2_wt:push\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "qbz_191",
+  "price": 430,
+  "free": 344,
+  "name": "QBZ-191",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:qbz_191\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "qcq171",
+  "price": 380,
+  "free": 304,
+  "name": "QCQ-171",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:qcq171\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "qjz171",
+  "price": 1750,
+  "free": 1400,
+  "name": "QJZ-171",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:qjz171\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "qsz92g",
+  "price": 120,
+  "free": 96,
+  "name": "QSZ-92G",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:qsz92g\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "rgn",
+  "price": 64,
+  "free": null,
+  "name": "RGN 手榴彈",
+  "gives": [
+   [
+    "lrtactical:throwable",
+    "{ThrowableId:\"lrtactical:rgn\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "rhino357",
+  "price": 150,
+  "free": 120,
+  "name": "Rhino 357",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:rhino357\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "rm277_silencer",
+  "price": 100,
+  "free": 80,
+  "name": "RM277 滅音器",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:rm277_silencer\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "rpk",
+  "price": 590,
+  "free": 472,
+  "name": "RPK",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:rpk\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scar_h",
+  "price": 550,
+  "free": 440,
+  "name": "SCAR-H",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:scar_h\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scar_l",
+  "price": 370,
+  "free": 296,
+  "name": "SCAR-L",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:scar_l\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_1873_6x",
+  "price": 300,
+  "free": null,
+  "name": "老式春田瞄具",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:scope_1873_6x\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_acog_ta31",
+  "price": 130,
+  "free": 104,
+  "name": "ACOG TA31",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:scope_acog_ta31\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_compm4",
+  "price": 90,
+  "free": 72,
+  "name": "Aimpoint CompM4",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:scope_compm4\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_contender",
+  "price": 180,
+  "free": null,
+  "name": "Contender 4x",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:scope_contender\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_elcan_4x",
+  "price": 150,
+  "free": 120,
+  "name": "Elcan 4x",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:scope_elcan_4x\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_hamr",
+  "price": 180,
+  "free": null,
+  "name": "HAMR 3x 瞄具",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:scope_hamr\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_lpvo_1_6",
+  "price": 160,
+  "free": 128,
+  "name": "LPVO 1-6x",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:scope_lpvo_1_6\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_mk5hd",
+  "price": 280,
+  "free": 224,
+  "name": "Mark 5 HD 5-25x",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:scope_mk5hd\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_qlu11s",
+  "price": 140,
+  "free": 112,
+  "name": "QLU-11 光電",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:scope_qlu11s\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_qmk152",
+  "price": 180,
+  "free": null,
+  "name": "QMK152 3x 瞄具",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:scope_qmk152\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_retro_2x",
+  "price": 180,
+  "free": null,
+  "name": "老式3倍瞄具",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:scope_retro_2x\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_sig_tango_msr_1_6",
+  "price": 300,
+  "free": null,
+  "name": "SIG Tango 1-6x",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:scope_sig_tango_msr_1_6\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_standard_8x",
+  "price": 220,
+  "free": 176,
+  "name": "斥候 4-10x",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:scope_standard_8x\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "scope_vudu",
+  "price": 170,
+  "free": 136,
+  "name": "Vudu 1-6x",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:scope_vudu\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "shotgun_extended_mag_1",
+  "price": 70,
+  "free": 56,
+  "name": "霰彈彈匣 I",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:shotgun_extended_mag_1\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "shotgun_extended_mag_2",
+  "price": 130,
+  "free": 104,
+  "name": "霰彈彈匣 II",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:shotgun_extended_mag_2\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "shotgun_extended_mag_3",
+  "price": 200,
+  "free": 160,
+  "name": "霰彈彈匣 III",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:shotgun_extended_mag_3\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_552",
+  "price": 100,
+  "free": null,
+  "name": "552 全息瞄具",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sight_552\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_acro_pistol",
+  "price": 50,
+  "free": null,
+  "name": "Acro P-1 瞄具",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sight_acro_pistol\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_cobra_eekp_818",
+  "price": 60,
+  "free": 48,
+  "name": "EKP-8-18 俄式",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:sight_cobra_ekp_818\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_coyote",
+  "price": 100,
+  "free": null,
+  "name": "土狼紅點",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sight_coyote\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_dbala2",
+  "price": 90,
+  "free": 72,
+  "name": "DBAL-A2（瞄具槽）",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:sight_dbala2\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_deltapoint_pistol",
+  "price": 70,
+  "free": 56,
+  "name": "DeltaPoint 手槍版",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sight_deltapoint_pistol\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_exp3",
+  "price": 120,
+  "free": 96,
+  "name": "EXP3 全息",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sight_exp3\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_fastfire_pistol",
+  "price": 50,
+  "free": null,
+  "name": "FastFire 瞄具",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sight_fastfire_pistol\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_pk06_pistol",
+  "price": 50,
+  "free": null,
+  "name": "PK06 瞄具",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sight_pk06_pistol\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_rmr_dot",
+  "price": 60,
+  "free": 48,
+  "name": "RMR 迷你紅點",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sight_rmr_dot\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_sro_dot",
+  "price": 50,
+  "free": null,
+  "name": "SRO 迷你紅點",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sight_sro_dot\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_srs_02",
+  "price": 70,
+  "free": 56,
+  "name": "SRS-02",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sight_srs_02\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_t1",
+  "price": 100,
+  "free": null,
+  "name": "T1 紅點",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sight_t1\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_t2",
+  "price": 90,
+  "free": 72,
+  "name": "T2 紅點",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sight_t2\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sight_uh1",
+  "price": 110,
+  "free": 88,
+  "name": "UH-1 全息",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sight_uh1\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "skeleton",
+  "price": 60,
+  "free": 48,
+  "name": "骷髏刀",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"cs2_wt:skeleton\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "smoke_grenade",
+  "price": 48,
+  "free": null,
+  "name": "M18 煙霧彈",
+  "gives": [
+   [
+    "lrtactical:throwable",
+    "{ThrowableId:\"lrtactical:smoke_grenade\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sniper_extended_mag_1",
+  "price": 70,
+  "free": 56,
+  "name": "狙擊彈匣 I",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sniper_extended_mag_1\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sniper_extended_mag_2",
+  "price": 130,
+  "free": 104,
+  "name": "狙擊彈匣 II",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sniper_extended_mag_2\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "sniper_extended_mag_3",
+  "price": 200,
+  "free": 160,
+  "name": "狙擊彈匣 III",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:sniper_extended_mag_3\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "spas_12_tacz",
+  "price": 500,
+  "free": 400,
+  "name": "SPAS-12",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:spas_12\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stiletto",
+  "price": 60,
+  "free": 48,
+  "name": "細刃刀",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"cs2_wt:stiletto\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_ak12",
+  "price": 70,
+  "free": 56,
+  "name": "AK12 標準",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:stock_ak12\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_bcm_mod2_sopmod",
+  "price": 80,
+  "free": 64,
+  "name": "BCM MOD2 SOPMOD",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:stock_bcm_mod2_sopmod\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_carbon_bone_c5",
+  "price": 160,
+  "free": null,
+  "name": "Carbon bone C5",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:stock_carbon_bone_c5\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_colt",
+  "price": 80,
+  "free": null,
+  "name": "Colt M4 槍托",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:stock_colt\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_colt_plus",
+  "price": 120,
+  "free": null,
+  "name": "Colt M4 增厚槍托",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:stock_colt_plus\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_comb_jiazhou",
+  "price": 70,
+  "free": 56,
+  "name": "甲胄 95式托腮板",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:stock_comb_jiazhou\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_elf_ultralight",
+  "price": 80,
+  "free": null,
+  "name": "ELF 超輕槍托",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:stock_elf_ultralight\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_heavy_spas_12",
+  "price": 70,
+  "free": 56,
+  "name": "佛蘭基重型 SPAS",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:stock_heavy_spas_12\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_hk_slim_line",
+  "price": 70,
+  "free": 56,
+  "name": "HK 薄身版",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:stock_hk_slim_line\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_m249",
+  "price": 70,
+  "free": 56,
+  "name": "M249 傘兵伸縮",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:stock_m249\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_m4ss",
+  "price": 120,
+  "free": null,
+  "name": "M4SS 槍托",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:stock_m4ss\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_militech_b5",
+  "price": 70,
+  "free": 56,
+  "name": "Militech B5",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:stock_militech_b5\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_moe",
+  "price": 70,
+  "free": 56,
+  "name": "Magpul MOE",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:stock_moe\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_n4",
+  "price": 80,
+  "free": null,
+  "name": "MOE-SL-K 槍托",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:stock_n4\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_ripstock",
+  "price": 160,
+  "free": null,
+  "name": "RipStock 槍托",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:stock_ripstock\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_sba3",
+  "price": 70,
+  "free": 56,
+  "name": "SBA3",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:stock_sba3\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_sig_black",
+  "price": 75,
+  "free": 60,
+  "name": "SIG 戰術黑",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:stock_sig_black\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_sig_blue_grey",
+  "price": 120,
+  "free": null,
+  "name": "SIG 槍托(灰藍)",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:stock_sig_blue_grey\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_tactical_ar",
+  "price": 80,
+  "free": 64,
+  "name": "Magpul CTR",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:stock_tactical_ar\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_tactical_spas_12",
+  "price": 75,
+  "free": 60,
+  "name": "佛蘭基戰術 SPAS",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"tacz:stock_tactical_spas_12\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_vltor_emod_black",
+  "price": 80,
+  "free": 64,
+  "name": "VLTOR E-MOD 黑",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:stock_vltor_emod_black\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "stock_vltor_emod_green",
+  "price": 160,
+  "free": null,
+  "name": "VLTOR E-MOD 槍托",
+  "gives": [
+   [
+    "tacz:attachment",
+    "{AttachmentId:\"suffuse:stock_vltor_emod_green\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "tactical_knife",
+  "price": 65,
+  "free": 52,
+  "name": "戰術刀",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"cs2_wt:tactical\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "talon",
+  "price": 65,
+  "free": 52,
+  "name": "利爪刀",
+  "gives": [
+   [
+    "lrtactical:melee",
+    "{MeleeWeaponId:\"cs2_wt:talon\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "taurus500",
+  "price": 280,
+  "free": 224,
+  "name": "Taurus 500",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:taurus500\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "tec9",
+  "price": 100,
+  "free": 80,
+  "name": "Tec-9",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:tec9\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "tti2011",
+  "price": 130,
+  "free": 104,
+  "name": "TTI 2011",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"suffuse:tti2011\",GunFireMode:\"SEMI\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "ump45",
+  "price": 420,
+  "free": 336,
+  "name": "UMP-45",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:ump45\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ },
+ {
+  "file": "vector45",
+  "price": 290,
+  "free": 232,
+  "name": "Vector .45",
+  "gives": [
+   [
+    "tacz:modern_kinetic_gun",
+    "{GunId:\"tacz:vector45\",GunFireMode:\"AUTO\"}",
+    1
+   ]
+  ]
+ }
+]
