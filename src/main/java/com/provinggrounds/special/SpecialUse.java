@@ -68,16 +68,17 @@ public final class SpecialUse {
         p.displayClientMessage(Component.literal(text).withStyle(ChatFormatting.RED), true);
     }
 
-    /** 可以使用的時機：BR 進行中的存活參賽者；管理員在創造模式可以隨時測試。 */
+    /** 可以使用的時機：對局外（大廳）隨時可以用，方便測試；對局中只有存活的參賽者能用（觀戰者不行）。 */
     private static boolean canUseNow(ServerPlayer p) {
         BattleRoyaleMode br = BattleRoyaleMode.get();
-        if (p.isCreative() && p.hasPermissions(2)) return true;
-        return br.isInPlay() && br.isAliveParticipant(p.getUUID());
+        if (p.isSpectator()) return false;
+        if (!br.isInPlay()) return true;
+        return br.isAliveParticipant(p.getUUID()) || (p.isCreative() && p.hasPermissions(2));
     }
 
     public static void onKey(ServerPlayer p) {
         if (!SpecialConfig.enabledSafe()) { msg(p, "特殊物品模式已關閉"); return; }
-        if (!canUseNow(p)) { msg(p, "只能在對局中使用特殊物品"); return; }
+        if (!canUseNow(p)) { msg(p, "觀戰中不能使用特殊物品"); return; }
         if (KnockbackShield.active(p)) {
             if (ActionLock.blocksSpecial(p)) { msg(p, "現在不能使用"); return; }
             KnockbackShield.charge(p);

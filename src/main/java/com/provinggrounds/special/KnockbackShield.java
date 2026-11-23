@@ -177,6 +177,7 @@ public final class KnockbackShield {
 
     /** 對局沒有在進行（例如回到大廳）時還拿著盾：還回去。 */
     public static void sanity(ServerPlayer p) {
-        if (active(p) && !BattleRoyaleMode.get().isAliveParticipant(p.getUUID()) && !p.isCreative()) restore(p);
+        BattleRoyaleMode br = BattleRoyaleMode.get();
+        if (active(p) && br.isInPlay() && !br.isAliveParticipant(p.getUUID()) && !p.isCreative()) restore(p); // 對局中被淘汰等：還原（大廳測試時不還原）
     }
 }

@@ -113,8 +113,10 @@ public final class GlowManager {
         BattleRoyaleMode br = BattleRoyaleMode.get();
         TeamManager teams = TeamManager.get();
         List<ServerPlayer> out = new ArrayList<>();
+        boolean inPlay = br.isInPlay();
         for (ServerPlayer p : user.server.getPlayerList().getPlayers()) {
-            if (p == user || !br.isAliveParticipant(p.getUUID())) continue;
+            if (p == user || p.isSpectator()) continue;
+            if (inPlay && !br.isAliveParticipant(p.getUUID())) continue; // 對局外（測試）：線上的其他玩家都算
             if (teams.isSameTeam(p.getUUID(), user.getUUID())) continue;
             out.add(p);
         }

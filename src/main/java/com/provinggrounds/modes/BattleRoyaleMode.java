@@ -326,6 +326,8 @@ public class BattleRoyaleMode {
     /** 加入成為參賽者（開局時或倒數期間登入）。 */
     private void join(ServerPlayer p) {
         com.provinggrounds.core.ProneManager.clear(p);
+        com.provinggrounds.special.KnockbackShield.restore(p); // 大廳測試時舉著的擊退盾先還原
+        com.provinggrounds.special.Totem.remove(p);
         markForRestore(p);
         participants.put(p.getUUID(), new Participant(p));
         GameManager.get().addPlayer(p);
