@@ -391,6 +391,27 @@ public class TaczGunAdapter implements GunAdapter {
         }
     }
 
+    @Override
+    public net.minecraft.world.item.ItemStack createLoadedGun(net.minecraft.resources.ResourceLocation gunId, @javax.annotation.Nullable String fireMode) {
+        net.minecraft.world.item.ItemStack stack = createGun(gunId);
+        if (stack.isEmpty()) return stack;
+        if (fireMode != null && !fireMode.isEmpty()) stack.getOrCreateTag().putString("GunFireMode", fireMode);
+        fillAmmo(stack);
+        return stack;
+    }
+
+    @Override
+    public void fillAmmo(net.minecraft.world.item.ItemStack gun) {
+        net.minecraft.resources.ResourceLocation id = gunId(gun);
+        if (id == null) return;
+        com.provinggrounds.core.GunBalance.Stats s = gunStats(id);
+        int mag = s == null ? 0 : s.magazine();
+        net.minecraft.nbt.CompoundTag tag = gun.getOrCreateTag();
+        // 膛內一發＋彈匣（容量 - 1），同舊版資料包的寫法
+        tag.putInt("GunCurrentAmmoCount", Math.max(0, mag - 1));
+        tag.putBoolean("HasBulletInBarrel", true);
+    }
+
     // ── 消音器（受擊指示器用）────────────────────────────────────────────────
 
     private static Object muzzleType;

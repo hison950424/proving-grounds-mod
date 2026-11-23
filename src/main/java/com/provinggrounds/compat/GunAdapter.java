@@ -87,6 +87,12 @@ public interface GunAdapter {
     /** 做出一把槍（預設射擊模式、空彈匣）；做不出來回傳空物品。 */
     default net.minecraft.world.item.ItemStack createGun(net.minecraft.resources.ResourceLocation gunId) { return net.minecraft.world.item.ItemStack.EMPTY; }
 
+    /** 做一把上好子彈的槍（彈匣滿、膛內一發）；fireMode 是射擊模式名稱（AUTO、SEMI…，null = 預設）。 */
+    default net.minecraft.world.item.ItemStack createLoadedGun(net.minecraft.resources.ResourceLocation gunId, @javax.annotation.Nullable String fireMode) { return createGun(gunId); }
+
+    /** 把一把槍裝滿子彈（給玩家前用）。 */
+    default void fillAmmo(net.minecraft.world.item.ItemStack gun) {}
+
     /** 槍的原始數值（槍械平衡用）；查不到回傳 null。 */
     @javax.annotation.Nullable
     default com.provinggrounds.core.GunBalance.Stats gunStats(net.minecraft.resources.ResourceLocation gunId) { return null; }

@@ -60,6 +60,12 @@ public final class GunCompat {
 
     public static net.minecraft.world.item.ItemStack createGun(net.minecraft.resources.ResourceLocation id) { return active == null ? net.minecraft.world.item.ItemStack.EMPTY : active.createGun(id); }
 
+    /** 上好子彈的槍（團隊死鬥／佔點／槍王之王發槍用）。 */
+    public static net.minecraft.world.item.ItemStack createLoadedGun(net.minecraft.resources.ResourceLocation id, @javax.annotation.Nullable String fireMode) { return active == null ? net.minecraft.world.item.ItemStack.EMPTY : active.createLoadedGun(id, fireMode); }
+
+    /** 把槍裝滿子彈（不是槍就不做事）。 */
+    public static void fillAmmo(net.minecraft.world.item.ItemStack gun) { if (active != null) active.fillAmmo(gun); }
+
     /** 這把槍有沒有裝消音器；沒有槍械模組時一律 false。 */
     public static boolean isSilenced(net.minecraft.world.item.ItemStack gun) {
         return active != null && !gun.isEmpty() && active.isSilenced(gun);

@@ -163,6 +163,7 @@ public class PGConfig {
     public final ForgeConfigSpec.DoubleValue smgFalloffStart, smgFalloffEnd, smgFalloffMin;
     public final ForgeConfigSpec.DoubleValue shotgunFalloffStart, shotgunFalloffEnd, shotgunFalloffMin;
     public final ForgeConfigSpec.BooleanValue bulletIgnoresVanillaArmor;
+    public final com.provinggrounds.modes.arena.ArenaConfig arena; // 團隊死鬥／佔點／槍王之王
 
     private PGConfig(ForgeConfigSpec.Builder builder) {
         builder.push("lobby");
@@ -500,6 +501,7 @@ public class PGConfig {
         builder.pop();
 
         special = new com.provinggrounds.special.SpecialConfig(builder); // 特殊物品（計畫書 4）
+        arena = new com.provinggrounds.modes.arena.ArenaConfig(builder); // 團隊死鬥／佔點／槍王之王
     }
 
     private static ForgeConfigSpec.ConfigValue<List<? extends String>> ammoList(

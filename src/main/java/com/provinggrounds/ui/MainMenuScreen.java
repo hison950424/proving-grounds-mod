@@ -3,6 +3,7 @@ package com.provinggrounds.ui;
 import com.provinggrounds.client.ClientBRState;
 import com.provinggrounds.client.ClientLobbyData;
 import com.provinggrounds.client.ClientMenuData;
+import com.provinggrounds.core.GameManager;
 import com.provinggrounds.core.LobbyManager;
 import com.provinggrounds.core.TeamManager;
 import com.provinggrounds.modes.BattleRoyaleMode;
@@ -97,14 +98,28 @@ public class MainMenuScreen extends Screen {
             () -> switchTo(View.VENUES)));
     }
 
-    /** 開始遊戲 → 選模式（大逃殺；其他模式之後加入）。 */
+    /** 開始遊戲 → 選模式。管理員在大廳時點了就換成這個模式；其他人點了看目前的大廳。 */
     private void initModes() {
         int x = left + 14, w = panelW - 28;
-        addRenderableWidget(new PGButton(x, top + 36, w, 36, Tr.c("mode.br"), true, false,
-            () -> switchTo(View.LOBBY)));
-        addModeStub(x, top + 80, w, Tr.t("mode.tdm"));
-        addModeStub(x, top + 104, w, Tr.t("mode.dom"));
-        addModeStub(x, top + 128, w, Tr.t("mode.gk"));
+        MenuDataPacket menu = ClientMenuData.get();
+        LobbyStatePacket lobby = ClientLobbyData.get();
+        boolean canEdit = menu != null && menu.isOp() && lobby != null && lobby.inLobby();
+        int current = lobby != null ? lobby.gameModeOrdinal() : GameManager.GameMode.BATTLE_ROYALE.ordinal();
+        GameManager.GameMode[] modes = { GameManager.GameMode.BATTLE_ROYALE, GameManager.GameMode.TDM, GameManager.GameMode.DOM, GameManager.GameMode.GK };
+        String[] keys = { "mode.br", "mode.tdm", "mode.dom", "mode.gk" };
+        int y = top + 36;
+        for (int i = 0; i < modes.length; i++) {
+            GameManager.GameMode m = modes[i];
+            boolean selected = m.ordinal() == current;
+            PGButton b = new PGButton(x, y, w, i == 0 ? 30 : 24, Tr.c(keys[i]), selected, false, () -> {
+                if (canEdit && !selected) send(LobbyManager.Action.SET_GAME_MODE, m.ordinal());
+                switchTo(View.LOBBY);
+            });
+            if (selected) b.withTag("目前");
+            else if (!canEdit) b.active = false;
+            addRenderableWidget(b);
+            y += i == 0 ? 36 : 30;
+        }
         addRenderableWidget(new PGButton(x, top + panelH - 30, 80, 20, Tr.c("common.back"), false, false,
             () -> switchTo(View.HOME)));
     }
@@ -126,12 +141,6 @@ public class MainMenuScreen extends Screen {
         }
         addRenderableWidget(new PGButton(x, top + panelH - 30, 80, 20, Tr.c("common.back"), false, false,
             () -> switchTo(View.HOME)));
-    }
-
-    private void addModeStub(int x, int y, int w, String name) {
-        PGButton b = new PGButton(x, y, w, 20, Component.literal(name), false, false, () -> {}).withTag(Tr.t("mode.coming"));
-        b.active = false;
-        addRenderableWidget(b);
     }
 
     // ── 大廳頁 ──────────────────────────────────────────────────────────────
@@ -157,8 +166,12 @@ public class MainMenuScreen extends Screen {
         LobbyManager.TeamMode teamMode = lobby != null ? LobbyManager.TeamMode.values()[lobby.teamModeOrdinal()] : LobbyManager.TeamMode.FREE;
         int teamCount = lobby != null ? lobby.teamCount() : 4;
 
+        GameManager.GameMode gm = lobby != null ? GameManager.GameMode.values()[lobby.gameModeOrdinal()] : GameManager.GameMode.BATTLE_ROYALE;
         section(sx, y, "比賽");
         y += 11;
+        if (gm != GameManager.GameMode.BATTLE_ROYALE) {
+            y = arenaRows(sx, y, sw, gm, lobby, canEdit, teamMode);
+        } else {
         y = row(sx, y, sw, "地圖", map == null ? "（無）" : map.name(), canEdit && maps.size() > 1, () -> {
             int i = maps.indexOf(map);
             send(LobbyManager.Action.SET_MAP, maps.get((i + 1) % maps.size()).id());
@@ -171,9 +184,20 @@ public class MainMenuScreen extends Screen {
             () -> send(LobbyManager.Action.SET_WEAPON_MODE, (weapon.ordinal() + 1) % com.provinggrounds.core.WeaponMode.values().length));
         y = row(sx, y, sw, "特殊物品", special ? "開" : "關", canEdit,
             () -> send(LobbyManager.Action.SET_SPECIAL, special ? 0 : 1));
+        }
         y += 4;
         section(sx, y, "隊伍");
         y += 11;
+        boolean twoTeams = gm == GameManager.GameMode.TDM || gm == GameManager.GameMode.DOM;
+        if (twoTeams) {
+            y = row(sx, y, sw, "分隊", teamMode.displayName, canEdit,
+                () -> send(LobbyManager.Action.SET_TEAM_MODE, (teamMode.ordinal() + 1) % LobbyManager.TeamMode.values().length));
+            y = row(sx, y, sw, "隊伍", "紅藍兩隊", false, () -> {});
+            if (canEdit) {
+                setting(sx, y, sw, Tr.t("lobby.auto_balance"), true, () -> send(LobbyManager.Action.AUTO_BALANCE, 0));
+                y += 20;
+            }
+        } else {
         y = row(sx, y, sw, "分隊", teamMode.displayName, canEdit,
             () -> send(LobbyManager.Action.SET_TEAM_MODE, (teamMode.ordinal() + 1) % LobbyManager.TeamMode.values().length));
         if (canEdit) {
@@ -188,6 +212,7 @@ public class MainMenuScreen extends Screen {
             y += 20;
         } else {
             y = row(sx, y, sw, "隊數", String.valueOf(teamCount), false, () -> {});
+        }
         }
 
         // 管理員：選取玩家後可以取消選取（移動玩家改用拖移或「點玩家 → 點隊伍標題」）
@@ -249,6 +274,32 @@ public class MainMenuScreen extends Screen {
         }
         addRenderableWidget(new PGButton(bx + 3 * (bw + 6), by, bw, 20, Tr.c("common.back"), false, false,
             () -> switchTo(View.MODES)));
+    }
+
+    /** 團隊死鬥／佔點／槍王之王的設定列（值左右各一個 －／＋）。 */
+    private int arenaRows(int sx, int y, int sw, GameManager.GameMode gm, @Nullable LobbyStatePacket lobby, boolean canEdit, LobbyManager.TeamMode teamMode) {
+        var a = lobby != null ? lobby.arena() : new com.provinggrounds.modes.arena.ArenaManager.Settings(100, 10, 1000, 1);
+        y = row(sx, y, sw, "模式", Tr.t(gm == GameManager.GameMode.TDM ? "mode.tdm" : gm == GameManager.GameMode.DOM ? "mode.dom" : "mode.gk"), false, () -> {});
+        switch (gm) {
+            case TDM -> {
+                y = stepper(sx, y, sw, "目標擊殺", String.valueOf(a.tdmKills()), canEdit, 10, a.tdmKills(), LobbyManager.Action.SET_TDM_KILLS);
+                y = stepper(sx, y, sw, "時間", a.tdmMinutes() + " 分", canEdit, 1, a.tdmMinutes(), LobbyManager.Action.SET_TDM_MINUTES);
+            }
+            case DOM -> y = stepper(sx, y, sw, "目標分數", String.valueOf(a.domScore()), canEdit, 100, a.domScore(), LobbyManager.Action.SET_DOM_SCORE);
+            case GK -> y = stepper(sx, y, sw, "擊殺倍率", "×" + a.gkMultiplier(), canEdit, 1, a.gkMultiplier(), LobbyManager.Action.SET_GK_MULTIPLIER);
+            default -> {}
+        }
+        return y;
+    }
+
+    private int stepper(int x, int y, int w, String label, String value, boolean editable, int step, int current, LobbyManager.Action action) {
+        if (!editable) return row(x, y, w, label, value, false, () -> {});
+        settingRows.add(new SettingRow(x, y, label, null));
+        int bw = 18, vx = x + LABEL_W + bw + 2, vw = w - LABEL_W - 2 * bw - 4;
+        setting(x + LABEL_W, y, bw, "－", true, () -> send(action, current - step));
+        settingRows.add(new SettingRow(vx, y, null, value));
+        setting(x + w - bw, y, bw, "＋", true, () -> send(action, current + step));
+        return y + 18;
     }
 
     /** 設定列（畫面上要畫的文字）：label = 左邊的標籤；value = 只讀時畫的值（null = 這一列是按鈕）。 */
@@ -516,7 +567,11 @@ public class MainMenuScreen extends Screen {
         LobbyStatePacket lobby = ClientLobbyData.get();
         MenuDataPacket menu = ClientMenuData.get();
         boolean op = menu != null && menu.isOp();
-        g.drawString(font, Tr.t("mode.br"), left + 14, top + 29, TEXT_DIM, false);
+        LobbyStatePacket lobbyNow = ClientLobbyData.get();
+        int gmo = lobbyNow != null ? lobbyNow.gameModeOrdinal() : GameManager.GameMode.BATTLE_ROYALE.ordinal();
+        String modeKey = gmo == GameManager.GameMode.TDM.ordinal() ? "mode.tdm" : gmo == GameManager.GameMode.DOM.ordinal() ? "mode.dom"
+            : gmo == GameManager.GameMode.GK.ordinal() ? "mode.gk" : "mode.br";
+        g.drawString(font, Tr.t(modeKey), left + 14, top + 29, TEXT_DIM, false);
         for (int i = 0; i < sections.size(); i++) {
             int[] sp = sections.get(i);
             g.drawString(font, sectionNames.get(i), sp[0], sp[1], ACCENT, false);

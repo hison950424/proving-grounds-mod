@@ -78,7 +78,7 @@ public final class VenueManager {
     public static void goTo(ServerPlayer p, int index) {
         List<Venue> list = visible();
         if (index < 0 || index >= list.size()) return;
-        if (BattleRoyaleMode.get().isAliveParticipant(p.getUUID())) {
+        if (BattleRoyaleMode.get().isAliveParticipant(p.getUUID()) || com.provinggrounds.modes.arena.ArenaManager.isParticipant(p.getUUID())) {
             p.displayClientMessage(Component.literal("對局中不能使用場地選擇").withStyle(ChatFormatting.RED), true);
             return;
         }
@@ -162,6 +162,8 @@ public final class VenueManager {
         if (!(event.getSource().getEntity() instanceof ServerPlayer attacker) || attacker == victim) return;
         BattleRoyaleMode br = BattleRoyaleMode.get();
         if (br.isParticipant(victim.getUUID()) || br.isParticipant(attacker.getUUID())) return;
+        if (com.provinggrounds.modes.arena.ArenaManager.isParticipant(victim.getUUID())
+            && com.provinggrounds.modes.arena.ArenaManager.isParticipant(attacker.getUUID())) return; // 對戰中照隊伍規則
         Venue v = current(victim), a = current(attacker);
         boolean pvp = v != null && v.has("pvp") && a != null && a.id().equals(v.id());
         if (!pvp) event.setCanceled(true);
@@ -171,7 +173,7 @@ public final class VenueManager {
     @SubscribeEvent
     public static void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer p) || event.isEndConquered()) return;
-        if (BattleRoyaleMode.get().isParticipant(p.getUUID())) return;
+        if (BattleRoyaleMode.get().isParticipant(p.getUUID()) || com.provinggrounds.modes.arena.ArenaManager.isParticipant(p.getUUID())) return;
         Venue v = current(p);
         if (v != null && v.has("respawn")) enter(p, v, false);
     }

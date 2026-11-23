@@ -58,7 +58,9 @@ public final class LobbyManager {
         CLEAR_TEAMS,        // 管理員：所有人移出隊伍（變成未分隊）
         SET_SPECIAL,        // 管理員：特殊物品模式開（arg 1）／關（arg 0）
         SET_WEAPON_MODE,    // 管理員：槍械模式（arg = WeaponMode 的順序）
-        GOTO_VENUE          // 自己：傳送到場地（arg = 場地選單的順序）
+        GOTO_VENUE,         // 自己：傳送到場地（arg = 場地選單的順序）
+        SET_GAME_MODE,      // 管理員：選模式（arg = GameManager.GameMode 的順序）
+        SET_TDM_KILLS, SET_TDM_MINUTES, SET_DOM_SCORE, SET_GK_MULTIPLIER // 管理員：對戰設定（arg = 新的值）
     }
 
     public static final String SPECTATOR_TAG = "pg_spectator";
@@ -74,6 +76,19 @@ public final class LobbyManager {
     private TeamMode teamMode = TeamMode.FREE;
     private int teamCount = 4;
     private WeaponMode weaponMode = WeaponMode.ALL;
+    private GameManager.GameMode gameMode = GameManager.GameMode.BATTLE_ROYALE;
+    private int tdmKills = -1, tdmMinutes = -1, domScore = -1, gkMultiplier = -1; // -1 = 用伺服器設定的預設值
+
+    /** 大廳選的模式。 */
+    public GameManager.GameMode gameMode() { return gameMode; }
+
+    /** 團隊死鬥／佔點／槍王之王的設定（沒調過就用伺服器設定的預設值）。 */
+    public com.provinggrounds.modes.arena.ArenaManager.Settings arenaSettings() {
+        var c = PGConfig.SERVER.arena;
+        return new com.provinggrounds.modes.arena.ArenaManager.Settings(
+            tdmKills > 0 ? tdmKills : c.tdmKills.get(), tdmMinutes > 0 ? tdmMinutes : c.tdmMinutes.get(),
+            domScore > 0 ? domScore : c.domScore.get(), gkMultiplier > 0 ? gkMultiplier : c.gkMultiplier.get());
+    }
 
     /** 槍械模式（這一場只出某一類的槍）。 */
     public WeaponMode weaponMode() { return weaponMode; }
@@ -226,6 +241,16 @@ public final class LobbyManager {
             }
             case SET_SPECIAL -> com.provinggrounds.special.SpecialConfig.setEnabled(arg != 0);
             case SET_WEAPON_MODE -> weaponMode = WeaponMode.byOrdinal(arg);
+            case SET_GAME_MODE -> {
+                GameManager.GameMode[] modes = GameManager.GameMode.values();
+                if (arg <= 0 || arg >= modes.length) return false; // 0 = NONE
+                gameMode = modes[arg];
+                if (gameMode == GameManager.GameMode.TDM || gameMode == GameManager.GameMode.DOM) teamCount = 2; // 紅藍兩隊
+            }
+            case SET_TDM_KILLS -> tdmKills = Math.max(10, Math.min(10_000, arg));
+            case SET_TDM_MINUTES -> tdmMinutes = Math.max(1, Math.min(120, arg));
+            case SET_DOM_SCORE -> domScore = Math.max(100, Math.min(100_000, arg));
+            case SET_GK_MULTIPLIER -> gkMultiplier = Math.max(1, Math.min(20, arg));
             case SET_TEAM_MODE -> {
                 TeamMode[] all = TeamMode.values();
                 if (arg < 0 || arg >= all.length) return false;
@@ -307,6 +332,19 @@ public final class LobbyManager {
     /** 真正開始遊戲。成功回傳 null。 */
     @Nullable
     private String doStart(MinecraftServer server) {
+        if (gameMode != GameManager.GameMode.BATTLE_ROYALE) {
+            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                if (isSpectator(p)) p.setGameMode(GameType.SPECTATOR);
+            }
+            String error = com.provinggrounds.modes.arena.ArenaManager.start(server, gameMode, participants(server), arenaSettings());
+            if (error == null) {
+                ready.clear();
+                countdownTicks = -1;
+                dirty = true;
+                ProvingGroundsMod.LOGGER.info("Lobby started {}", gameMode);
+            }
+            return error;
+        }
         MapRegistry reg = MapRegistry.get(server);
         MapRegistry.BRMap m = reg.getMap(mapId);
         if (m == null) {
@@ -405,6 +443,7 @@ public final class LobbyManager {
         }
         return new LobbyStatePacket(GameManager.get().isInLobby(), map, preset.ordinal(), variant.ordinal(),
             teamMode.ordinal(), teamCount, countdownTicks < 0 ? -1 : (countdownTicks + 19) / 20,
-            com.provinggrounds.special.SpecialConfig.enabledSafe(), weaponMode.ordinal(), players);
+            com.provinggrounds.special.SpecialConfig.enabledSafe(), weaponMode.ordinal(),
+            gameMode.ordinal(), arenaSettings(), players);
     }
 }

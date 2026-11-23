@@ -78,3 +78,15 @@
   - 第 9 階段再完成擊殺數，就到第 10 階段並獲勝。
 - 重生：隨機傳到一個 `gk_spawn` 標記（共 126 個；沒有的話用 red_spawn），血量 100。
 - 側邊欄顯示每隊目前的階段。
+
+## 模組版的做法（2026-11-24 實作）
+- 程式碼都放在 `modes/arena/`：
+  - `ArenaMode` 是共用框架，負責隊伍、職業、金錢、商店、轉帳、基地、防蹲點、重生、HUD、結束還原。
+  - 規則在子類別：`TdmMode`、`DomMode`、`GkMode`；`ArenaManager` 負責開局與轉發事件。
+- 所有數值都在伺服器設定 `[arena]`（tdm、dom、gk 三段），預設值照舊版。
+- 商店商品、槍王武器與配件池、126 個重生點放在 `data/provinggrounds/arena/shop.json` 和 `gk.json`。這兩個檔案由 `tools/make_arena_data.py` 從舊版資料包產生，重生點來源是 `tools/old_markers.json`。
+- 金錢存在模組裡，不再依賴 gd656killicon。
+- 與舊版不同的地方：
+  - 佔點的旁觀改成按 Shift 切換隊友。
+  - 基地內每秒回 5 血。
+  - 佔點的屍體箱改成掉在地上的物品，下回合清掉。

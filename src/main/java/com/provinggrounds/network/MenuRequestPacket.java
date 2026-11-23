@@ -46,6 +46,8 @@ public record MenuRequestPacket() {
         BattleRoyaleMode br = BattleRoyaleMode.get();
         if (br.isRunning() && br.getMap() != null) {
             status = "BR 進行中（地圖 #" + br.getMap().id + "）";
+        } else if (com.provinggrounds.modes.arena.ArenaManager.current() != null) {
+            status = com.provinggrounds.modes.arena.ArenaManager.current().title() + " 進行中";
         } else if (GameManager.get().isInLobby()) {
             status = "大廳";
         } else {

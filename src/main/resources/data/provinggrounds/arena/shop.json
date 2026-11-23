@@ -1,0 +1,1945 @@
+{
+ "categories": [
+  "手槍",
+  "衝鋒槍",
+  "散彈槍",
+  "步槍",
+  "機槍",
+  "狙擊槍",
+  "重武器",
+  "其他槍械",
+  "配件",
+  "近戰",
+  "投擲物",
+  "防具",
+  "其他"
+ ],
+ "items": [
+  {
+   "id": "tec9",
+   "name": "Tec-9",
+   "price": 100,
+   "free": 80,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:tec9\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "id": "b93r",
+   "name": "B93R",
+   "price": 120,
+   "free": 96,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:b93r\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "id": "m1911",
+   "name": "M1911",
+   "price": 120,
+   "free": 96,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m1911\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "id": "qsz92g",
+   "name": "QSZ-92G",
+   "price": 120,
+   "free": 96,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qsz92g\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "id": "tti2011",
+   "name": "TTI 2011",
+   "price": 130,
+   "free": 104,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:tti2011\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "id": "p320",
+   "name": "SIG P320",
+   "price": 140,
+   "free": 112,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:p320\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "id": "rhino357",
+   "name": "Rhino 357",
+   "price": 150,
+   "free": 120,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:rhino357\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "id": "deagle_golden",
+   "name": "黃金沙漠之鷹",
+   "price": 170,
+   "free": 136,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:deagle_golden\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "id": "desert",
+   "name": "Desert Eagle",
+   "price": 180,
+   "free": 144,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:desert\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "id": "taurus500",
+   "name": "Taurus 500",
+   "price": 280,
+   "free": 224,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:taurus500\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "id": "hk_mp5a5",
+   "name": "HK MP5A5",
+   "price": 270,
+   "free": 216,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:hk_mp5a5\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "衝鋒槍"
+  },
+  {
+   "id": "vector45",
+   "name": "Vector .45",
+   "price": 290,
+   "free": 232,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:vector45\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "衝鋒槍"
+  },
+  {
+   "id": "pp19",
+   "name": "PP-19 Bizon",
+   "price": 310,
+   "free": 248,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:pp19\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "衝鋒槍"
+  },
+  {
+   "id": "gepardpdw",
+   "name": "Gepard PDW",
+   "price": 340,
+   "free": 272,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:gepardpdw\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "衝鋒槍"
+  },
+  {
+   "id": "qcq171",
+   "name": "QCQ-171",
+   "price": 380,
+   "free": 304,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qcq171\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "衝鋒槍"
+  },
+  {
+   "id": "ump45",
+   "name": "UMP-45",
+   "price": 420,
+   "free": 336,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:ump45\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "衝鋒槍"
+  },
+  {
+   "id": "ar57",
+   "name": "AR-57",
+   "price": 480,
+   "free": 384,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:ar57\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "衝鋒槍"
+  },
+  {
+   "id": "db_short",
+   "name": "雙管短槍",
+   "price": 200,
+   "free": 160,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:db_short\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "散彈槍"
+  },
+  {
+   "id": "db_long",
+   "name": "雙管長槍",
+   "price": 250,
+   "free": 200,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:db_long\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "散彈槍"
+  },
+  {
+   "id": "m870",
+   "name": "M870",
+   "price": 310,
+   "free": 248,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m870\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "散彈槍"
+  },
+  {
+   "id": "m1014",
+   "name": "M1014",
+   "price": 380,
+   "free": 304,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m1014\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "散彈槍"
+  },
+  {
+   "id": "ks23m",
+   "name": "KS-23M",
+   "price": 420,
+   "free": 336,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:ks23m\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "散彈槍"
+  },
+  {
+   "id": "aa12",
+   "name": "AA-12",
+   "price": 450,
+   "free": 360,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:aa12\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "散彈槍"
+  },
+  {
+   "id": "spas_12_tacz",
+   "name": "SPAS-12",
+   "price": 500,
+   "free": 400,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:spas_12\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "散彈槍"
+  },
+  {
+   "id": "ak47",
+   "name": "AK-47",
+   "price": 300,
+   "free": 240,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:ak47\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "id": "hk416d",
+   "name": "HK416D",
+   "price": 320,
+   "free": 256,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:hk416d\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "id": "scar_l",
+   "name": "SCAR-L",
+   "price": 370,
+   "free": 296,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:scar_l\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "id": "famas",
+   "name": "FAMAS",
+   "price": 380,
+   "free": 304,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:famas\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "id": "m16a1",
+   "name": "M16A1",
+   "price": 400,
+   "free": 320,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m16a1\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "id": "qbz_191",
+   "name": "QBZ-191",
+   "price": 430,
+   "free": 344,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:qbz_191\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "id": "g36k",
+   "name": "G36K",
+   "price": 450,
+   "free": 360,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:g36k\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "id": "scar_h",
+   "name": "SCAR-H",
+   "price": 550,
+   "free": 440,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:scar_h\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "id": "fn_fal",
+   "name": "FN FAL",
+   "price": 580,
+   "free": 464,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:fn_fal\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "id": "mk14",
+   "name": "MK14 EBR",
+   "price": 620,
+   "free": 496,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:mk14\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "id": "n4",
+   "name": "N4",
+   "price": 950,
+   "free": 760,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:n4\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "id": "ash12",
+   "name": "ASh-12.7",
+   "price": 1050,
+   "free": 840,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:ash12\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "id": "m249",
+   "name": "M249 SAW",
+   "price": 550,
+   "free": 440,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m249\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "機槍"
+  },
+  {
+   "id": "rpk",
+   "name": "RPK",
+   "price": 590,
+   "free": 472,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:rpk\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "機槍"
+  },
+  {
+   "id": "pkp",
+   "name": "PKP Pecheneg",
+   "price": 640,
+   "free": 512,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:pkp\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "機槍"
+  },
+  {
+   "id": "fn_evolys",
+   "name": "FN Evolys",
+   "price": 680,
+   "free": 544,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:fn_evolys\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "機槍"
+  },
+  {
+   "id": "minigun",
+   "name": "Minigun",
+   "price": 1100,
+   "free": 880,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:minigun\",GunFireMode:\"AUTO\",HasBulletInBarrel:1b,HeatAmount:0.0f,GunCurrentAmmoCount:9999}",
+   "count": 1,
+   "cat": "機槍"
+  },
+  {
+   "id": "qjz171",
+   "name": "QJZ-171",
+   "price": 1750,
+   "free": 1400,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qjz171\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "機槍"
+  },
+  {
+   "id": "m700",
+   "name": "M700",
+   "price": 500,
+   "free": 400,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m700\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "id": "kar98",
+   "name": "Kar98k",
+   "price": 550,
+   "free": 440,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:kar98\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "id": "m107",
+   "name": "M107",
+   "price": 650,
+   "free": 520,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m107\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "id": "dvl10",
+   "name": "DVL-10",
+   "price": 800,
+   "free": 640,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:dvl10\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "id": "axsr",
+   "name": "AXSR",
+   "price": 1000,
+   "free": 800,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:axsr\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "id": "aw50",
+   "name": "AW .50",
+   "price": 1300,
+   "free": 1040,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:aw50\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "id": "m200",
+   "name": "M200 Intervention",
+   "price": 1550,
+   "free": 1240,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:m200\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "id": "ptrd41",
+   "name": "PTRD-41",
+   "price": 1800,
+   "free": 1440,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:ptrd41\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "id": "lonetrail",
+   "name": "Lonetrail",
+   "price": 200,
+   "free": 160,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:lonetrail\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "其他槍械"
+  },
+  {
+   "id": "sight_acro_pistol",
+   "name": "Acro P-1 瞄具",
+   "price": 50,
+   "free": 50,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sight_acro_pistol\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_fastfire_pistol",
+   "name": "FastFire 瞄具",
+   "price": 50,
+   "free": 50,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sight_fastfire_pistol\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_pk06_pistol",
+   "name": "PK06 瞄具",
+   "price": 50,
+   "free": 50,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sight_pk06_pistol\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_sro_dot",
+   "name": "SRO 迷你紅點",
+   "price": 50,
+   "free": 50,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sight_sro_dot\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_cobra_eekp_818",
+   "name": "EKP-8-18 俄式",
+   "price": 60,
+   "free": 48,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:sight_cobra_ekp_818\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "laser_nightstick",
+   "name": "Nightstick 緊湊雷射",
+   "price": 60,
+   "free": 60,
+   "item": "tacz:attachment{AttachmentId:\"tacz:laser_nightstick\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_rmr_dot",
+   "name": "RMR 迷你紅點",
+   "price": 60,
+   "free": 48,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sight_rmr_dot\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "oem_stock_tactical",
+   "name": "原廠戰術",
+   "price": 60,
+   "free": 48,
+   "item": "tacz:attachment{AttachmentId:\"tacz:oem_stock_tactical\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "oem_stock_light",
+   "name": "原廠輕型",
+   "price": 60,
+   "free": 48,
+   "item": "tacz:attachment{AttachmentId:\"tacz:oem_stock_light\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "oem_stock_heavy",
+   "name": "原廠重型",
+   "price": 60,
+   "free": 48,
+   "item": "tacz:attachment{AttachmentId:\"tacz:oem_stock_heavy\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "laser_pistol",
+   "name": "手槍式緊湊雷射",
+   "price": 60,
+   "free": 48,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:laser_pistol\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_vertical_military",
+   "name": "Nagoma 軍用",
+   "price": 65,
+   "free": 52,
+   "item": "tacz:attachment{AttachmentId:\"tacz:grip_vertical_military\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_rk0",
+   "name": "RK-0",
+   "price": 65,
+   "free": 52,
+   "item": "tacz:attachment{AttachmentId:\"tacz:grip_rk0\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_se_5",
+   "name": "SE-5 前握把",
+   "price": 65,
+   "free": 52,
+   "item": "tacz:attachment{AttachmentId:\"tacz:grip_se_5\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_cobra",
+   "name": "SI 握把",
+   "price": 65,
+   "free": 52,
+   "item": "tacz:attachment{AttachmentId:\"tacz:grip_cobra\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_td",
+   "name": "TD 握把",
+   "price": 65,
+   "free": 52,
+   "item": "tacz:attachment{AttachmentId:\"tacz:grip_td\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_magpul_afg_2",
+   "name": "AFG1 直角握把",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:grip_magpul_afg_2\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_ak12",
+   "name": "AK12 標準",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:stock_ak12\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "cslr4_flash_hider",
+   "name": "CS/LR4 消焰器",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:cslr4_flash_hider\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_deltapoint_pistol",
+   "name": "DeltaPoint 手槍版",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sight_deltapoint_pistol\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_hk_slim_line",
+   "name": "HK 薄身版",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:stock_hk_slim_line\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_vertical_ranger",
+   "name": "Koch 遊騎兵重型",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:grip_vertical_ranger\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_m249",
+   "name": "M249 傘兵伸縮",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:stock_m249\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_usgi_m249",
+   "name": "M249 戰術前握把",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:grip_usgi_m249\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_moe",
+   "name": "Magpul MOE",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:stock_moe\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_rvg",
+   "name": "Magpul RVG",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:grip_rvg\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_militech_b5",
+   "name": "Militech B5",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:stock_militech_b5\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "laser_compact",
+   "name": "Militech 緊湊型",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:laser_compact\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_rk6",
+   "name": "RK-6",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:grip_rk6\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_sba3",
+   "name": "SBA3",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:stock_sba3\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_srs_02",
+   "name": "SRS-02",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sight_srs_02\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_td_black",
+   "name": "TD 快拆 黑色",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:grip_td_black\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_heavy_spas_12",
+   "name": "佛蘭基重型 SPAS",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:stock_heavy_spas_12\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sniper_extended_mag_1",
+   "name": "狙擊彈匣 I",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sniper_extended_mag_1\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_comb_jiazhou",
+   "name": "甲胄 95式托腮板",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:stock_comb_jiazhou\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "light_extended_mag_1",
+   "name": "輕型彈匣 I",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:light_extended_mag_1\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "extended_mag_1",
+   "name": "重型彈匣 I",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:extended_mag_1\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "shotgun_extended_mag_1",
+   "name": "霰彈彈匣 I",
+   "price": 70,
+   "free": 56,
+   "item": "tacz:attachment{AttachmentId:\"tacz:shotgun_extended_mag_1\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "laser_lopro",
+   "name": "Lopro 戰術型",
+   "price": 75,
+   "free": 60,
+   "item": "tacz:attachment{AttachmentId:\"tacz:laser_lopro\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_sig_black",
+   "name": "SIG 戰術黑",
+   "price": 75,
+   "free": 60,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:stock_sig_black\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_tactical_spas_12",
+   "name": "佛蘭基戰術 SPAS",
+   "price": 75,
+   "free": 60,
+   "item": "tacz:attachment{AttachmentId:\"tacz:stock_tactical_spas_12\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "bayonet_6h3",
+   "name": "6H3 刺刀（膛口）",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:attachment{AttachmentId:\"tacz:bayonet_6h3\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "laser_an_peq_2a",
+   "name": "AN/PEQ-2A",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:laser_an_peq_2a\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_bcm_mod2_sopmod",
+   "name": "BCM MOD2 SOPMOD",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:stock_bcm_mod2_sopmod\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_colt",
+   "name": "Colt M4 槍托",
+   "price": 80,
+   "free": 80,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:stock_colt\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_brake_cyclone_d2",
+   "name": "Cyclone D2",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_brake_cyclone_d2\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_elf_ultralight",
+   "name": "ELF 超輕槍托",
+   "price": 80,
+   "free": 80,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:stock_elf_ultralight\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "bayonet_m9",
+   "name": "M9 刺刀（膛口）",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:attachment{AttachmentId:\"tacz:bayonet_m9\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_n4",
+   "name": "MOE-SL-K 槍托",
+   "price": 80,
+   "free": 80,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:stock_n4\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_tactical_ar",
+   "name": "Magpul CTR",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:attachment{AttachmentId:\"tacz:stock_tactical_ar\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_brake_mastiff_sg",
+   "name": "Mastiff 霰彈",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_brake_mastiff_sg\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_brake_pioneer",
+   "name": "Pioneer A3",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_brake_pioneer\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_vltor_emod_black",
+   "name": "VLTOR E-MOD 黑",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:stock_vltor_emod_black\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "pistollaser",
+   "name": "手槍雷射（裝備槽）",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:pistollaser\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_choke_sg",
+   "name": "散彈槍喉縮",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_choke_sg\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_compensator_trident",
+   "name": "Trident 補償器",
+   "price": 85,
+   "free": 68,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_compensator_trident\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_compm4",
+   "name": "Aimpoint CompM4",
+   "price": 90,
+   "free": 72,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:scope_compm4\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_bt10vbatlas",
+   "name": "BT10 摺疊腳架",
+   "price": 90,
+   "free": 72,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:grip_bt10vbatlas\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "laser_dbala2_attachment",
+   "name": "DBAL-A2 雷射",
+   "price": 90,
+   "free": 72,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:laser_dbala2\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_dbala2",
+   "name": "DBAL-A2（瞄具槽）",
+   "price": 90,
+   "free": 72,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:sight_dbala2\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_brake_trex",
+   "name": "T-Rex 重型",
+   "price": 90,
+   "free": 72,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_brake_trex\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_t2",
+   "name": "T2 紅點",
+   "price": 90,
+   "free": 72,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sight_t2\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_silencer_sg",
+   "name": "12鉛徑消音",
+   "price": 100,
+   "free": 80,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_silencer_sg\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_552",
+   "name": "552 全息瞄具",
+   "price": 100,
+   "free": 100,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sight_552\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_flashlight",
+   "name": "CAG 手電握把",
+   "price": 100,
+   "free": 80,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:grip_flashlight\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_osovets_black",
+   "name": "P-2 握把",
+   "price": 100,
+   "free": 100,
+   "item": "tacz:attachment{AttachmentId:\"tacz:grip_osovets_black\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "laser_peq6",
+   "name": "PEQ-6 戰術燈+雷射",
+   "price": 100,
+   "free": 80,
+   "item": "tacz:attachment{AttachmentId:\"tacz:laser_peq6\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "rm277_silencer",
+   "name": "RM277 滅音器",
+   "price": 100,
+   "free": 80,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:rm277_silencer\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_t1",
+   "name": "T1 紅點",
+   "price": 100,
+   "free": 100,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sight_t1\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_td_green",
+   "name": "TD 快拆握把 (綠)",
+   "price": 100,
+   "free": 100,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:grip_td_green\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_vertical_talon",
+   "name": "Talon SG2 握把",
+   "price": 100,
+   "free": 100,
+   "item": "tacz:attachment{AttachmentId:\"tacz:grip_vertical_talon\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_coyote",
+   "name": "土狼紅點",
+   "price": 100,
+   "free": 100,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sight_coyote\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_silencer_wraith",
+   "name": "魅影消音器",
+   "price": 100,
+   "free": 80,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_silencer_wraith\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_silencer_ptilopsis",
+   "name": "PO-2 白頭角鴞",
+   "price": 110,
+   "free": 88,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_silencer_ptilopsis\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_silencer_phantom_s1",
+   "name": "Phantom S1",
+   "price": 110,
+   "free": 88,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_silencer_phantom_s1\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_uh1",
+   "name": "UH-1 全息",
+   "price": 110,
+   "free": 88,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sight_uh1\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_colt_plus",
+   "name": "Colt M4 增厚槍托",
+   "price": 120,
+   "free": 120,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:stock_colt_plus\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "laser_dbala2",
+   "name": "DBAL-A2 雷射",
+   "price": 120,
+   "free": 120,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:laser_dbala2\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sight_exp3",
+   "name": "EXP3 全息",
+   "price": 120,
+   "free": 96,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sight_exp3\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_m4ss",
+   "name": "M4SS 槍托",
+   "price": 120,
+   "free": 120,
+   "item": "tacz:attachment{AttachmentId:\"tacz:stock_m4ss\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "mg338_silencer",
+   "name": "MG338 消音器",
+   "price": 120,
+   "free": 96,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:mg338_silencer\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_sig_blue_grey",
+   "name": "SIG 槍托(灰藍)",
+   "price": 120,
+   "free": 120,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:stock_sig_blue_grey\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_silencer_ursus",
+   "name": "Ursus 軍規",
+   "price": 120,
+   "free": 96,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_silencer_ursus\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_acog_ta31",
+   "name": "ACOG TA31",
+   "price": 130,
+   "free": 104,
+   "item": "tacz:attachment{AttachmentId:\"tacz:scope_acog_ta31\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_silencer_vulture",
+   "name": "Vulture .50",
+   "price": 130,
+   "free": 104,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_silencer_vulture\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "deagle_golden_long_barrel",
+   "name": "沙漠金鷹長槍管",
+   "price": 130,
+   "free": 104,
+   "item": "tacz:attachment{AttachmentId:\"tacz:deagle_golden_long_barrel\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sniper_extended_mag_2",
+   "name": "狙擊彈匣 II",
+   "price": 130,
+   "free": 104,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sniper_extended_mag_2\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "light_extended_mag_2",
+   "name": "輕型彈匣 II",
+   "price": 130,
+   "free": 104,
+   "item": "tacz:attachment{AttachmentId:\"tacz:light_extended_mag_2\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "extended_mag_2",
+   "name": "重型彈匣 II",
+   "price": 130,
+   "free": 104,
+   "item": "tacz:attachment{AttachmentId:\"tacz:extended_mag_2\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "shotgun_extended_mag_2",
+   "name": "霰彈彈匣 II",
+   "price": 130,
+   "free": 104,
+   "item": "tacz:attachment{AttachmentId:\"tacz:shotgun_extended_mag_2\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_qlu11s",
+   "name": "QLU-11 光電",
+   "price": 140,
+   "free": 112,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:scope_qlu11s\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_rk1_b25u",
+   "name": "RK-1 B25U 握把",
+   "price": 140,
+   "free": 140,
+   "item": "tacz:attachment{AttachmentId:\"tacz:grip_rk1_b25u\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_brake_cthulhu",
+   "name": "Cthulhu K7 制退器",
+   "price": 150,
+   "free": 150,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_brake_cthulhu\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_elcan_4x",
+   "name": "Elcan 4x",
+   "price": 150,
+   "free": 120,
+   "item": "tacz:attachment{AttachmentId:\"tacz:scope_elcan_4x\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_silencer_knight_qd",
+   "name": "Knight QD 滅音器",
+   "price": 150,
+   "free": 150,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_silencer_knight_qd\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_silencer_mirage",
+   "name": "Mirage 滅音器",
+   "price": 150,
+   "free": 150,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_silencer_mirage\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_carbon_bone_c5",
+   "name": "Carbon bone C5",
+   "price": 160,
+   "free": 160,
+   "item": "tacz:attachment{AttachmentId:\"tacz:stock_carbon_bone_c5\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_lpvo_1_6",
+   "name": "LPVO 1-6x",
+   "price": 160,
+   "free": 128,
+   "item": "tacz:attachment{AttachmentId:\"tacz:scope_lpvo_1_6\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_ripstock",
+   "name": "RipStock 槍托",
+   "price": 160,
+   "free": 160,
+   "item": "tacz:attachment{AttachmentId:\"tacz:stock_ripstock\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "stock_vltor_emod_green",
+   "name": "VLTOR E-MOD 槍托",
+   "price": 160,
+   "free": 160,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:stock_vltor_emod_green\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_vudu",
+   "name": "Vudu 1-6x",
+   "price": 170,
+   "free": 136,
+   "item": "tacz:attachment{AttachmentId:\"tacz:scope_vudu\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_contender",
+   "name": "Contender 4x",
+   "price": 180,
+   "free": 180,
+   "item": "tacz:attachment{AttachmentId:\"tacz:scope_contender\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_hamr",
+   "name": "HAMR 3x 瞄具",
+   "price": 180,
+   "free": 180,
+   "item": "tacz:attachment{AttachmentId:\"tacz:scope_hamr\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_qmk152",
+   "name": "QMK152 3x 瞄具",
+   "price": 180,
+   "free": 180,
+   "item": "tacz:attachment{AttachmentId:\"tacz:scope_qmk152\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_retro_2x",
+   "name": "老式3倍瞄具",
+   "price": 180,
+   "free": 180,
+   "item": "tacz:attachment{AttachmentId:\"tacz:scope_retro_2x\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "m7_silencer",
+   "name": "M7 滅音器",
+   "price": 200,
+   "free": 200,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:m7_silencer\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "muzzle_brake_timeless50",
+   "name": "Timeless .50 制退器",
+   "price": 200,
+   "free": 200,
+   "item": "tacz:attachment{AttachmentId:\"tacz:muzzle_brake_timeless50\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "sniper_extended_mag_3",
+   "name": "狙擊彈匣 III",
+   "price": 200,
+   "free": 160,
+   "item": "tacz:attachment{AttachmentId:\"tacz:sniper_extended_mag_3\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "light_extended_mag_3",
+   "name": "輕型彈匣 III",
+   "price": 200,
+   "free": 160,
+   "item": "tacz:attachment{AttachmentId:\"tacz:light_extended_mag_3\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "extended_mag_3",
+   "name": "重型彈匣 III",
+   "price": 200,
+   "free": 160,
+   "item": "tacz:attachment{AttachmentId:\"tacz:extended_mag_3\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "shotgun_extended_mag_3",
+   "name": "霰彈彈匣 III",
+   "price": 200,
+   "free": 160,
+   "item": "tacz:attachment{AttachmentId:\"tacz:shotgun_extended_mag_3\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_standard_8x",
+   "name": "斥候 4-10x",
+   "price": 220,
+   "free": 176,
+   "item": "tacz:attachment{AttachmentId:\"tacz:scope_standard_8x\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "ammo_mod_he",
+   "name": "高爆彈",
+   "price": 250,
+   "free": 200,
+   "item": "tacz:attachment{AttachmentId:\"tacz:ammo_mod_he\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "grip_m203",
+   "name": "M203 榴彈發射器",
+   "price": 280,
+   "free": 224,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:grip_m203\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_mk5hd",
+   "name": "Mark 5 HD 5-25x",
+   "price": 280,
+   "free": 224,
+   "item": "tacz:attachment{AttachmentId:\"tacz:scope_mk5hd\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_sig_tango_msr_1_6",
+   "name": "SIG Tango 1-6x",
+   "price": 300,
+   "free": 300,
+   "item": "tacz:attachment{AttachmentId:\"suffuse:scope_sig_tango_msr_1_6\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "scope_1873_6x",
+   "name": "老式春田瞄具",
+   "price": 300,
+   "free": 300,
+   "item": "tacz:attachment{AttachmentId:\"tacz:scope_1873_6x\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "ammo_mod_fmj",
+   "name": "全金屬被甲",
+   "price": 350,
+   "free": 280,
+   "item": "tacz:attachment{AttachmentId:\"tacz:ammo_mod_fmj\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "ammo_mod_i",
+   "name": "燃燒彈",
+   "price": 350,
+   "free": 280,
+   "item": "tacz:attachment{AttachmentId:\"tacz:ammo_mod_i\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "ammo_mod_slug",
+   "name": "獨頭彈",
+   "price": 350,
+   "free": 280,
+   "item": "tacz:attachment{AttachmentId:\"tacz:ammo_mod_slug\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "ammo_mod_hp",
+   "name": "空尖彈",
+   "price": 350,
+   "free": 280,
+   "item": "tacz:attachment{AttachmentId:\"tacz:ammo_mod_hp\"}",
+   "count": 1,
+   "cat": "配件"
+  },
+  {
+   "id": "dagger",
+   "name": "匕首",
+   "price": 50,
+   "free": 40,
+   "item": "lrtactical:melee{MeleeWeaponId:\"lrtactical:dagger\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "baseball_bat",
+   "name": "棒球棒",
+   "price": 50,
+   "free": 40,
+   "item": "lrtactical:melee{MeleeWeaponId:\"lrtactical:baseball_bat\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "lr_karambit",
+   "name": "卡拉姆比刀",
+   "price": 55,
+   "free": 44,
+   "item": "lrtactical:melee{MeleeWeaponId:\"lrtactical:karambit\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "css",
+   "name": "CSS 折刀",
+   "price": 60,
+   "free": 48,
+   "item": "lrtactical:melee{MeleeWeaponId:\"cs2_wt:css\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "m9_knife",
+   "name": "M9 刺刀",
+   "price": 60,
+   "free": 48,
+   "item": "lrtactical:melee{MeleeWeaponId:\"cs2_wt:m9\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "cs2_karambit",
+   "name": "卡拉姆比刀 CS2",
+   "price": 60,
+   "free": 48,
+   "item": "lrtactical:melee{MeleeWeaponId:\"cs2_wt:karambit\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "push",
+   "name": "推刀",
+   "price": 60,
+   "free": 48,
+   "item": "lrtactical:melee{MeleeWeaponId:\"cs2_wt:push\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "stiletto",
+   "name": "細刃刀",
+   "price": 60,
+   "free": 48,
+   "item": "lrtactical:melee{MeleeWeaponId:\"cs2_wt:stiletto\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "butterfly",
+   "name": "蝴蝶刀",
+   "price": 60,
+   "free": 48,
+   "item": "lrtactical:melee{MeleeWeaponId:\"cs2_wt:butterfly\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "skeleton",
+   "name": "骷髏刀",
+   "price": 60,
+   "free": 48,
+   "item": "lrtactical:melee{MeleeWeaponId:\"cs2_wt:skeleton\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "talon",
+   "name": "利爪刀",
+   "price": 65,
+   "free": 52,
+   "item": "lrtactical:melee{MeleeWeaponId:\"cs2_wt:talon\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "bayonet_knife",
+   "name": "刺刀",
+   "price": 65,
+   "free": 52,
+   "item": "lrtactical:melee{MeleeWeaponId:\"cs2_wt:bayonet\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "tactical_knife",
+   "name": "戰術刀",
+   "price": 65,
+   "free": 52,
+   "item": "lrtactical:melee{MeleeWeaponId:\"cs2_wt:tactical\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "knife_rambo",
+   "name": "藍波刀",
+   "price": 65,
+   "free": 52,
+   "item": "lrtactical:melee{MeleeWeaponId:\"suffuse:knife_rambo\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "dadao",
+   "name": "大刀",
+   "price": 70,
+   "free": 56,
+   "item": "lrtactical:melee{MeleeWeaponId:\"suffuse:dadao\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "crowbar_classic",
+   "name": "撬棍",
+   "price": 70,
+   "free": 56,
+   "item": "lrtactical:melee{MeleeWeaponId:\"suffuse:crowbar_classic\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "fire_axe",
+   "name": "消防斧",
+   "price": 70,
+   "free": 56,
+   "item": "lrtactical:melee{MeleeWeaponId:\"suffuse:fire_axe\"}",
+   "count": 1,
+   "cat": "近戰"
+  },
+  {
+   "id": "smoke_grenade",
+   "name": "M18 煙霧彈",
+   "price": 48,
+   "free": 48,
+   "item": "lrtactical:throwable{ThrowableId:\"lrtactical:smoke_grenade\"}",
+   "count": 1,
+   "cat": "投擲物"
+  },
+  {
+   "id": "flash_grenade",
+   "name": "閃光彈",
+   "price": 48,
+   "free": 48,
+   "item": "lrtactical:throwable{ThrowableId:\"lrtactical:flash_grenade\"}",
+   "count": 1,
+   "cat": "投擲物"
+  },
+  {
+   "id": "m67",
+   "name": "M67 手榴彈",
+   "price": 64,
+   "free": 64,
+   "item": "lrtactical:throwable{ThrowableId:\"lrtactical:m67\"}",
+   "count": 1,
+   "cat": "投擲物"
+  },
+  {
+   "id": "rgn",
+   "name": "RGN 手榴彈",
+   "price": 64,
+   "free": 64,
+   "item": "lrtactical:throwable{ThrowableId:\"lrtactical:rgn\"}",
+   "count": 1,
+   "cat": "投擲物"
+  },
+  {
+   "id": "m24",
+   "name": "柄式手榴彈",
+   "price": 64,
+   "free": 64,
+   "item": "lrtactical:throwable{ThrowableId:\"suffuse:m24\"}",
+   "count": 1,
+   "cat": "投擲物"
+  },
+  {
+   "id": "molotov",
+   "name": "燃燒彈",
+   "price": 72,
+   "free": 72,
+   "item": "lrtactical:throwable{ThrowableId:\"lrtactical:molotov\"}",
+   "count": 1,
+   "cat": "投擲物"
+  },
+  {
+   "id": "c4",
+   "name": "C4",
+   "price": 96,
+   "free": 96,
+   "item": "lrtactical:throwable{ThrowableId:\"lrtactical:c4\"}",
+   "count": 1,
+   "cat": "投擲物"
+  },
+  {
+   "id": "m24_cluster",
+   "name": "集束手榴彈",
+   "price": 160,
+   "free": 160,
+   "item": "lrtactical:throwable{ThrowableId:\"suffuse:m24_cluster\"}",
+   "count": 1,
+   "cat": "投擲物"
+  },
+  {
+   "id": "leather_boots",
+   "name": "皮革靴子",
+   "price": 30,
+   "free": 24,
+   "item": "minecraft:leather_boots{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "leather_helmet",
+   "name": "皮革頭盔",
+   "price": 30,
+   "free": 24,
+   "item": "minecraft:leather_helmet{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "leather_leggings",
+   "name": "皮革護腿",
+   "price": 50,
+   "free": 40,
+   "item": "minecraft:leather_leggings{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "leather_chestplate",
+   "name": "皮革胸甲",
+   "price": 60,
+   "free": 48,
+   "item": "minecraft:leather_chestplate{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "iron_boots",
+   "name": "鐵靴子",
+   "price": 80,
+   "free": 64,
+   "item": "minecraft:iron_boots{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "iron_helmet",
+   "name": "鐵頭盔",
+   "price": 80,
+   "free": 64,
+   "item": "minecraft:iron_helmet{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "iron_leggings",
+   "name": "鐵護腿",
+   "price": 130,
+   "free": 104,
+   "item": "minecraft:iron_leggings{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "iron_chestplate",
+   "name": "鐵胸甲",
+   "price": 160,
+   "free": 128,
+   "item": "minecraft:iron_chestplate{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "diamond_boots",
+   "name": "鑽石靴子",
+   "price": 160,
+   "free": 128,
+   "item": "minecraft:diamond_boots{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "diamond_helmet",
+   "name": "鑽石頭盔",
+   "price": 160,
+   "free": 128,
+   "item": "minecraft:diamond_helmet{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "netherite_boots",
+   "name": "獄髓靴子",
+   "price": 240,
+   "free": 192,
+   "item": "minecraft:netherite_boots{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "netherite_helmet",
+   "name": "獄髓頭盔",
+   "price": 240,
+   "free": 192,
+   "item": "minecraft:netherite_helmet{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "diamond_leggings",
+   "name": "鑽石護腿",
+   "price": 240,
+   "free": 192,
+   "item": "minecraft:diamond_leggings{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "diamond_chestplate",
+   "name": "鑽石胸甲",
+   "price": 300,
+   "free": 240,
+   "item": "minecraft:diamond_chestplate{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "netherite_leggings",
+   "name": "獄髓護腿",
+   "price": 360,
+   "free": 288,
+   "item": "minecraft:netherite_leggings{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "netherite_chestplate",
+   "name": "獄髓胸甲",
+   "price": 450,
+   "free": 360,
+   "item": "minecraft:netherite_chestplate{Unbreakable:1b}",
+   "count": 1,
+   "cat": "防具"
+  },
+  {
+   "id": "flash_shield",
+   "name": "防彈閃光盾",
+   "price": 140,
+   "free": 112,
+   "item": "lrtactical:flash_shield",
+   "count": 1,
+   "cat": "其他"
+  }
+ ]
+}

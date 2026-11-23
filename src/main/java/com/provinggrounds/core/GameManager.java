@@ -73,6 +73,7 @@ public class GameManager {
     public void reset() {
         // 若 BR 還在跑（例如管理員中途重置），先停止並還原玩家；已結束時這行不做事
         com.provinggrounds.modes.BattleRoyaleMode.get().forceStop(false);
+        com.provinggrounds.modes.arena.ArenaManager.forceStop(); // 團隊死鬥／佔點／槍王之王：還原參賽者
         state = GameState.LOBBY;
         mode  = GameMode.NONE;
         activePlayers.clear();

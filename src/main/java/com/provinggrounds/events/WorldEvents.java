@@ -61,9 +61,7 @@ public class WorldEvents {
 
         switch (GameManager.get().getMode()) {
             case BATTLE_ROYALE -> BattleRoyaleMode.get().tick();
-            case TDM           -> tickTDM();
-            case DOM           -> tickDOM();
-            case GK            -> tickGK();
+            case TDM, DOM, GK  -> com.provinggrounds.modes.arena.ArenaManager.tick();
             default            -> {}
         }
     }
@@ -81,7 +79,4 @@ public class WorldEvents {
         }
     }
 
-    private void tickTDM() { /* Phase 2：TDMMode.get().tick() */ }
-    private void tickDOM() { /* Phase 2：DOMMode.get().tick() */ }
-    private void tickGK()  { /* Phase 2：GKMode.get().tick() */ }
 }

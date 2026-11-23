@@ -19,6 +19,8 @@ public record LobbyStatePacket(
     int teamModeOrdinal, int teamCount, int countdownSeconds,
     boolean special, // 特殊物品模式
     int weaponModeOrdinal, // 槍械模式（WeaponMode）
+    int gameModeOrdinal, // 大廳選的模式（GameManager.GameMode）
+    com.provinggrounds.modes.arena.ArenaManager.Settings arena, // 團隊死鬥／佔點／槍王之王設定
     List<Entry> players
 ) {
 
@@ -35,6 +37,11 @@ public record LobbyStatePacket(
         buf.writeVarInt(countdownSeconds);
         buf.writeBoolean(special);
         buf.writeVarInt(weaponModeOrdinal);
+        buf.writeVarInt(gameModeOrdinal);
+        buf.writeVarInt(arena.tdmKills());
+        buf.writeVarInt(arena.tdmMinutes());
+        buf.writeVarInt(arena.domScore());
+        buf.writeVarInt(arena.gkMultiplier());
         buf.writeVarInt(players.size());
         for (Entry e : players) {
             buf.writeUUID(e.id());
@@ -51,6 +58,8 @@ public record LobbyStatePacket(
         int teamMode = buf.readVarInt(), teamCount = buf.readVarInt(), countdown = buf.readVarInt();
         boolean special = buf.readBoolean();
         int weapon = buf.readVarInt();
+        int gameMode = buf.readVarInt();
+        var arena = new com.provinggrounds.modes.arena.ArenaManager.Settings(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
         int n = Math.min(buf.readVarInt(), 1000);
         List<Entry> players = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
@@ -60,7 +69,7 @@ public record LobbyStatePacket(
             byte f = buf.readByte();
             players.add(new Entry(id, name, team, (f & 1) != 0, (f & 2) != 0, (f & 4) != 0, (f & 8) != 0));
         }
-        return new LobbyStatePacket(inLobby, map, preset, variant, teamMode, teamCount, countdown, special, weapon, players);
+        return new LobbyStatePacket(inLobby, map, preset, variant, teamMode, teamCount, countdown, special, weapon, gameMode, arena, players);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {

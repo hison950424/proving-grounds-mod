@@ -40,7 +40,10 @@ public final class ClientForgeEvents {
         while (ClientModEvents.OPEN_MENU.consumeClick()) {
             if (mc.player == null || mc.screen != null) continue;
             byte phase = ClientBRState.get().phase();
-            if (phase == ClientBRState.PHASE_PLANE || phase == ClientBRState.PHASE_ACTIVE) {
+            if (com.provinggrounds.client.ClientArenaState.active()) {
+                // 團隊死鬥／佔點／槍王之王：M 開商店（槍王之王沒有商店，顯示戰況與選單按鈕）
+                mc.setScreen(new ShopScreen());
+            } else if (phase == ClientBRState.PHASE_PLANE || phase == ClientBRState.PHASE_ACTIVE) {
                 // 遊戲中：M 開大地圖（大地圖左上有「選單」按鈕）
                 mc.setScreen(new BigMapScreen());
             } else {
@@ -202,6 +205,7 @@ public final class ClientForgeEvents {
         com.provinggrounds.client.ClientLobbyData.clear();
         com.provinggrounds.client.ClientMapData.clear();
         ClientBRState.clear();
+        com.provinggrounds.client.ClientArenaState.clear();
         com.provinggrounds.client.ClientProneData.clear();
         ClientStatsBoard.clear();
         SpawnPointRenderer.clear();
