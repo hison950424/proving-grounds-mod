@@ -65,7 +65,7 @@ public final class HotbarRules {
     public static final String MSG_BACKPACK_HAVE = "已經裝著同等級或更高級的背包";
 
     private static final String MSG_DROPPED = "放不下的物品已掉在腳邊";
-    public static final String MSG_SPECIAL_FULL = "特殊物品欄已經有物品，無法拿取";
+    public static final String MSG_SPECIAL_FULL = "特殊物品欄已經有物品（在箱子裡 Shift＋左鍵可以互換）";
     private static final String MSG_SPECIAL_ONLY = "特殊物品只能放在特殊物品欄（背包欄上方）";
 
     private static final Map<UUID, Long> lastMessage = new HashMap<>();
@@ -323,6 +323,17 @@ public final class HotbarRules {
             Inventory inv = p.getInventory();
             if (!stack.isEmpty() && !(slot instanceof ResultSlot) && slot.mayPickup(p)) {
                 if (slot.container != inv && !(menu instanceof InventoryMenu)) {
+                    // 特殊物品：特殊物品欄已經有東西時，Shift 點箱子裡的特殊物品 = 互換（舊的放回箱子那一格）
+                    if (kind(stack) == Kind.SPECIAL && stack.getCount() == 1
+                            && !com.provinggrounds.special.SpecialSlot.get(p).isEmpty()) {
+                        ItemStack old = com.provinggrounds.special.SpecialSlot.get(p).copy();
+                        if (slot.mayPlace(old)) {
+                            com.provinggrounds.special.SpecialSlot.set(p, stack.copy());
+                            slot.set(old);
+                            message(p, "已替換特殊物品（原本的放回箱子）");
+                            return true;
+                        }
+                    }
                     // 箱子 → 身上：照規則放（欄位滿了就拒絕，不自動替換）
                     quickMove(slot, p, insert(p, stack.copy()));
                     return true;
