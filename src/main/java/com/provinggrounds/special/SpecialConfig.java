@@ -119,7 +119,7 @@ public final class SpecialConfig {
         radarSeconds = b.comment("雷達脈衝：發光與地圖標點秒數").defineInRange("radar_seconds", 3.0, 0.5, 60.0);
         gunshotRange = b.comment("假槍聲：最遠距離（格）").defineInRange("gunshot_range", 40.0, 1.0, 200.0);
         gunshotSeconds = b.comment("假槍聲：持續秒數").defineInRange("gunshot_seconds", 6.0, 0.5, 60.0);
-        gunshotFallbackGuns = b.comment("假槍聲：手上沒有槍時，從這份清單隨機挑一把槍的聲音（TACZ 槍械 ID）")
+        gunshotFallbackGuns = b.comment("（已不使用：假槍聲改成一定要拿著槍，用手上那把槍的聲音）")
             .defineListAllowEmpty(List.of("gunshot_fallback_guns"), () -> List.of("tacz:ak47", "tacz:m4a1", "tacz:hk_mp5a5", "tacz:glock_17"),
                 o -> o instanceof String s && s.contains(":"));
         decoySeconds = b.comment("殘影分身：存在秒數").defineInRange("decoy_seconds", 10.0, 1.0, 120.0);

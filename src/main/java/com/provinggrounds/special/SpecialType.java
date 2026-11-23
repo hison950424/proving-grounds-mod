@@ -40,7 +40,7 @@ public enum SpecialType {
     ARMOR_REPAIR_PLUS("armor_repair_plus", "強化護甲修復包", "Armor Repair Kit+", "修滿所有護甲，並讓每件護甲的耐久上限 +50%（可疊加）", 0x4060C0),
     ZONE_SHELTER("zone_shelter", "圈外庇護", "Zone Shelter", "15 秒內不受圈外傷害，在圈外時移動速度 +25%", 0xC0F0C0),
     RADAR_PULSE("radar_pulse", "雷達脈衝", "Radar Pulse", "掃描 40 格內的敵人，讓他們發光並顯示在地圖上 3 秒（只有你看得到）", 0x40F0A0),
-    FAKE_GUNSHOT("fake_gunshot", "假槍聲", "Fake Gunshot", "在準星指的位置連續發出 6 秒槍聲", 0x606060),
+    FAKE_GUNSHOT("fake_gunshot", "假槍聲", "Fake Gunshot", "在準星指的位置連續發出 6 秒槍聲（手上那把槍的聲音，要拿著槍才能用）", 0x606060),
     DECOY("decoy", "殘影分身", "Decoy", "產生一個跟你一模一樣的分身，往前奔跑 10 秒", 0xA0A0F0);
 
     public final String id, zh, en, desc;

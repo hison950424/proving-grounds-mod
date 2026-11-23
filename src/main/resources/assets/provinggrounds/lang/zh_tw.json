@@ -172,7 +172,7 @@
   "item.provinggrounds.radar_pulse": "雷達脈衝",
   "item.provinggrounds.radar_pulse.desc": "掃描 40 格內的敵人，讓他們發光並顯示在地圖上 3 秒（只有你看得到）",
   "item.provinggrounds.fake_gunshot": "假槍聲",
-  "item.provinggrounds.fake_gunshot.desc": "在準星指的位置連續發出 6 秒槍聲",
+  "item.provinggrounds.fake_gunshot.desc": "在準星指的位置連續發出 6 秒槍聲（手上那把槍的聲音，要拿著槍才能用）",
   "item.provinggrounds.decoy": "殘影分身",
   "item.provinggrounds.decoy.desc": "產生一個跟你一模一樣的分身，往前奔跑 10 秒",
   "item.provinggrounds.knockback_shield_held": "擊退盾",

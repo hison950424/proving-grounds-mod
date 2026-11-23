@@ -202,11 +202,13 @@ public final class SpecialUse {
             case ARMOR_REPAIR, ARMOR_REPAIR_PLUS -> repairArmor(p, type == SpecialType.ARMOR_REPAIR_PLUS);
             case ZONE_SHELTER -> Engines.effect(p, SpecialRegistry.ZONE_SHELTER.get(), SpecialConfig.ticks(s.shelterSeconds), 0);
             case FAKE_GUNSHOT -> {
+                ResourceLocation gun = GunCompat.gunId(p.getMainHandItem()); // 用手上那把槍的槍聲
+                if (gun == null) { msg(p, "手上要拿著槍才能使用假槍聲"); return false; }
                 Vec3 eye = p.getEyePosition();
                 Vec3 end = eye.add(p.getLookAngle().scale(s.gunshotRange.get()));
                 BlockHitResult hit = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
                 Vec3 at = hit.getType() == HitResult.Type.BLOCK ? hit.getLocation() : end;
-                SpecialWorld.addGunfire(p, at, gunFor(p));
+                SpecialWorld.addGunfire(p, at, gun);
             }
             case DECOY -> level.addFreshEntity(DecoyEntity.create(level, p));
         }
@@ -215,18 +217,6 @@ public final class SpecialUse {
 
     private static void scanSound(ServerPlayer p) {
         p.serverLevel().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.NOTE_BLOCK_PLING.value(), SoundSource.PLAYERS, 0.8f, 1.8f);
-    }
-
-    /** 假槍聲用哪一把槍的聲音：優先手上的槍，否則從設定清單隨機挑。 */
-    private static ResourceLocation gunFor(ServerPlayer p) {
-        ResourceLocation id = GunCompat.gunId(p.getMainHandItem());
-        if (id != null) return id;
-        for (int i = 0; i < 9 && id == null; i++) id = GunCompat.gunId(p.getInventory().getItem(i));
-        if (id != null) return id;
-        List<? extends String> list = SpecialConfig.get().gunshotFallbackGuns.get();
-        if (list.isEmpty()) return new ResourceLocation("tacz", "ak47");
-        ResourceLocation r = ResourceLocation.tryParse(list.get(p.getRandom().nextInt(list.size())));
-        return r != null ? r : new ResourceLocation("tacz", "ak47");
     }
 
     /** 修復所有護甲；強化版另外讓耐久上限 +50%（記在物品 NBT pg_dura_bonus，ItemStackMixin 計算上限）。 */
