@@ -18,6 +18,7 @@ public record LobbyStatePacket(
     boolean inLobby, int mapId, int presetOrdinal, int variantOrdinal,
     int teamModeOrdinal, int teamCount, int countdownSeconds,
     boolean special, // 特殊物品模式
+    int weaponModeOrdinal, // 槍械模式（WeaponMode）
     List<Entry> players
 ) {
 
@@ -33,6 +34,7 @@ public record LobbyStatePacket(
         buf.writeVarInt(teamCount);
         buf.writeVarInt(countdownSeconds);
         buf.writeBoolean(special);
+        buf.writeVarInt(weaponModeOrdinal);
         buf.writeVarInt(players.size());
         for (Entry e : players) {
             buf.writeUUID(e.id());
@@ -48,6 +50,7 @@ public record LobbyStatePacket(
         int map = buf.readVarInt(), preset = buf.readVarInt(), variant = buf.readVarInt();
         int teamMode = buf.readVarInt(), teamCount = buf.readVarInt(), countdown = buf.readVarInt();
         boolean special = buf.readBoolean();
+        int weapon = buf.readVarInt();
         int n = Math.min(buf.readVarInt(), 1000);
         List<Entry> players = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
@@ -57,7 +60,7 @@ public record LobbyStatePacket(
             byte f = buf.readByte();
             players.add(new Entry(id, name, team, (f & 1) != 0, (f & 2) != 0, (f & 4) != 0, (f & 8) != 0));
         }
-        return new LobbyStatePacket(inLobby, map, preset, variant, teamMode, teamCount, countdown, special, players);
+        return new LobbyStatePacket(inLobby, map, preset, variant, teamMode, teamCount, countdown, special, weapon, players);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {

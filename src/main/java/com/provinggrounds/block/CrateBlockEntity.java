@@ -90,6 +90,7 @@ public class CrateBlockEntity extends RandomizableContainerBlockEntity {
         super.unpackLootTable(player);
         if (generating) {
             com.provinggrounds.special.SpecialLoot.maybeAdd(this, level); // 約每 10 箱 1 件特殊物品
+            com.provinggrounds.core.WeaponMode.applyToContainer(this, level.getRandom()); // 槍械模式：只出這一類的槍
             mergeStacks();
             com.provinggrounds.compat.AmmoCategories.addAmmoForGuns(this, level.getRandom());
             mergeStacks();

@@ -77,6 +77,16 @@ public interface GunAdapter {
     /** 這把槍有沒有裝消音器（槍口配件 ID 含 silencer／suppressor）。兩端都可呼叫。 */
     default boolean isSilenced(net.minecraft.world.item.ItemStack gun) { return false; }
 
+    /** 槍的類型（pistol、shotgun、smg、rifle、mg、sniper、rpg…）；不是槍回傳 null。 */
+    @javax.annotation.Nullable
+    default String gunType(net.minecraft.world.item.ItemStack stack) { return null; }
+
+    /** 這個類型的所有槍 ID（槍械模式用）。 */
+    default java.util.List<net.minecraft.resources.ResourceLocation> gunsOfType(String type) { return java.util.List.of(); }
+
+    /** 做出一把槍（預設射擊模式、空彈匣）；做不出來回傳空物品。 */
+    default net.minecraft.world.item.ItemStack createGun(net.minecraft.resources.ResourceLocation gunId) { return net.minecraft.world.item.ItemStack.EMPTY; }
+
     /** 槍的原始數值（槍械平衡用）；查不到回傳 null。 */
     @javax.annotation.Nullable
     default com.provinggrounds.core.GunBalance.Stats gunStats(net.minecraft.resources.ResourceLocation gunId) { return null; }

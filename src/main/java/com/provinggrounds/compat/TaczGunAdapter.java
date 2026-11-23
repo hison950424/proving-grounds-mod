@@ -338,6 +338,59 @@ public class TaczGunAdapter implements GunAdapter {
         }
     }
 
+    // ── 槍械模式（依類型換槍）────────────────────────────────────────────────
+
+    @Override
+    public String gunType(net.minecraft.world.item.ItemStack stack) {
+        net.minecraft.resources.ResourceLocation id = gunId(stack);
+        if (id == null) return null;
+        com.provinggrounds.core.GunBalance.Stats s = gunStats(id);
+        return s == null ? null : s.type();
+    }
+
+    private volatile java.util.Map<String, java.util.List<net.minecraft.resources.ResourceLocation>> byType;
+
+    @Override
+    public java.util.List<net.minecraft.resources.ResourceLocation> gunsOfType(String type) {
+        if (byType == null) {
+            java.util.Map<String, java.util.List<net.minecraft.resources.ResourceLocation>> map = new java.util.HashMap<>();
+            try {
+                Object set = Class.forName("com.tacz.guns.api.TimelessAPI").getMethod("getAllCommonGunIndex").invoke(null);
+                for (Object o : (java.util.Set<?>) set) {
+                    java.util.Map.Entry<?, ?> e = (java.util.Map.Entry<?, ?>) o;
+                    if (!(e.getKey() instanceof net.minecraft.resources.ResourceLocation id)) continue;
+                    String t = String.valueOf(e.getValue().getClass().getMethod("getType").invoke(e.getValue()));
+                    map.computeIfAbsent(t, k -> new java.util.ArrayList<>()).add(id);
+                }
+            } catch (ReflectiveOperationException | RuntimeException ex) {
+                ProvingGroundsMod.LOGGER.warn("TACZ adapter: cannot list guns ({})", ex.toString());
+            }
+            byType = map;
+        }
+        return byType.getOrDefault(type, java.util.List.of());
+    }
+
+    @Override
+    public net.minecraft.world.item.ItemStack createGun(net.minecraft.resources.ResourceLocation gunId) {
+        try {
+            Class<?> b = Class.forName("com.tacz.guns.api.item.builder.GunItemBuilder");
+            Object builder = b.getMethod("create").invoke(null);
+            builder = b.getMethod("setId", net.minecraft.resources.ResourceLocation.class).invoke(builder, gunId);
+            Object opt = Class.forName("com.tacz.guns.api.TimelessAPI").getMethod("getCommonGunIndex", net.minecraft.resources.ResourceLocation.class).invoke(null, gunId);
+            if (opt instanceof java.util.Optional<?> o && o.isPresent()) {
+                Object data = o.get().getClass().getMethod("getGunData").invoke(o.get());
+                Object modes = data.getClass().getMethod("getFireModeSet").invoke(data);
+                if (modes instanceof java.util.List<?> l && !l.isEmpty()) {
+                    builder = b.getMethod("setFireMode", Class.forName("com.tacz.guns.api.item.gun.FireMode")).invoke(builder, l.get(0));
+                }
+            }
+            Object stack = b.getMethod("build").invoke(builder);
+            return stack instanceof net.minecraft.world.item.ItemStack s ? s : net.minecraft.world.item.ItemStack.EMPTY;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return net.minecraft.world.item.ItemStack.EMPTY;
+        }
+    }
+
     // ── 消音器（受擊指示器用）────────────────────────────────────────────────
 
     private static Object muzzleType;

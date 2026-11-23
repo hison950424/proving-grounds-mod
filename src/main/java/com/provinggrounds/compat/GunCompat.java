@@ -53,6 +53,13 @@ public final class GunCompat {
         return active == null ? null : active.installAttachment(p, gun, attachment);
     }
 
+    @javax.annotation.Nullable
+    public static String gunType(net.minecraft.world.item.ItemStack stack) { return active == null ? null : active.gunType(stack); }
+
+    public static java.util.List<net.minecraft.resources.ResourceLocation> gunsOfType(String type) { return active == null ? java.util.List.of() : active.gunsOfType(type); }
+
+    public static net.minecraft.world.item.ItemStack createGun(net.minecraft.resources.ResourceLocation id) { return active == null ? net.minecraft.world.item.ItemStack.EMPTY : active.createGun(id); }
+
     /** 這把槍有沒有裝消音器；沒有槍械模組時一律 false。 */
     public static boolean isSilenced(net.minecraft.world.item.ItemStack gun) {
         return active != null && !gun.isEmpty() && active.isSilenced(gun);

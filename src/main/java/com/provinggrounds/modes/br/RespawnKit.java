@@ -32,7 +32,7 @@ public final class RespawnKit {
         p.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.LEATHER_BOOTS));
 
         for (String spec : PGConfig.SERVER.respawnKitItems.get()) {
-            ItemStack stack = parse(spec);
+            ItemStack stack = com.provinggrounds.core.WeaponMode.convert(parse(spec), p.getRandom()); // 槍械模式：換成這一場的槍種
             if (stack.isEmpty()) continue;
             ItemStack ammo = GunCompat.classify(stack) != GunClass.NONE ? AmmoCategories.ammoFor(stack, p.getRandom()) : ItemStack.EMPTY;
             give(p, stack);
@@ -41,7 +41,7 @@ public final class RespawnKit {
     }
 
     /** 解析「物品ID{NBT} 數量」（同 /give 的寫法）；格式錯誤或物品不存在時回傳空物品。 */
-    static ItemStack parse(String spec) {
+    public static ItemStack parse(String spec) {
         String s = spec.trim();
         int count = 1;
         int space = s.lastIndexOf(' ');

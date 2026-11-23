@@ -107,46 +107,57 @@ public class MainMenuScreen extends Screen {
         boolean canEdit = op && lobby != null && lobby.inLobby();
         LobbyStatePacket.Entry me = self(lobby);
 
-        // 左欄：設定
+        // 左欄：設定（簡化版：「標籤 ＋ 值」一列一項；管理員在大廳時值是按鈕，點一下切換；其他人只看文字）
         int sx = left + 12, sw = 150, y = top + 40;
+        settingRows.clear();
+        sections.clear();
+        sectionNames.clear();
         List<MenuDataPacket.MapEntry> maps = menu != null ? menu.maps() : List.of();
         MenuDataPacket.MapEntry map = findMap(maps, lobby != null ? lobby.mapId() : -1);
-        String mapLabel = map == null ? Tr.t("lobby.map_none") : Tr.t("lobby.map", map.id(), map.name());
-        setting(sx, y, sw, mapLabel, canEdit && maps.size() > 1, () -> {
+        CirclePreset preset = lobby != null ? CirclePreset.values()[lobby.presetOrdinal()] : CirclePreset.STANDARD;
+        BattleRoyaleMode.Variant variant = lobby != null ? BattleRoyaleMode.Variant.values()[lobby.variantOrdinal()] : BattleRoyaleMode.Variant.NORMAL;
+        com.provinggrounds.core.WeaponMode weapon = com.provinggrounds.core.WeaponMode.byOrdinal(lobby != null ? lobby.weaponModeOrdinal() : 0);
+        boolean special = lobby == null || lobby.special();
+        LobbyManager.TeamMode teamMode = lobby != null ? LobbyManager.TeamMode.values()[lobby.teamModeOrdinal()] : LobbyManager.TeamMode.FREE;
+        int teamCount = lobby != null ? lobby.teamCount() : 4;
+
+        section(sx, y, "比賽");
+        y += 11;
+        y = row(sx, y, sw, "地圖", map == null ? "（無）" : map.name(), canEdit && maps.size() > 1, () -> {
             int i = maps.indexOf(map);
             send(LobbyManager.Action.SET_MAP, maps.get((i + 1) % maps.size()).id());
         });
-        y += 20;
-        CirclePreset preset = lobby != null ? CirclePreset.values()[lobby.presetOrdinal()] : CirclePreset.STANDARD;
-        setting(sx, y, sw, Tr.t("lobby.preset", preset.displayName), canEdit,
+        y = row(sx, y, sw, "縮圈", preset.displayName + "・約 " + Math.round(estimateMinutes(preset)) + " 分", canEdit,
             () -> send(LobbyManager.Action.SET_PRESET, (preset.ordinal() + 1) % CirclePreset.values().length));
-        y += 20;
-        BattleRoyaleMode.Variant variant = lobby != null ? BattleRoyaleMode.Variant.values()[lobby.variantOrdinal()] : BattleRoyaleMode.Variant.NORMAL;
-        setting(sx, y, sw, Tr.t("lobby.variant", variant.displayName), canEdit,
+        y = row(sx, y, sw, "玩法", variant.displayName, canEdit,
             () -> send(LobbyManager.Action.SET_VARIANT, (variant.ordinal() + 1) % BattleRoyaleMode.Variant.values().length));
-        y += 20;
-        boolean special = lobby == null || lobby.special();
-        setting(sx, y, sw, Tr.t(special ? "lobby.special_on" : "lobby.special_off"), canEdit,
+        y = row(sx, y, sw, "槍械", weapon.displayName, canEdit,
+            () -> send(LobbyManager.Action.SET_WEAPON_MODE, (weapon.ordinal() + 1) % com.provinggrounds.core.WeaponMode.values().length));
+        y = row(sx, y, sw, "特殊物品", special ? "開" : "關", canEdit,
             () -> send(LobbyManager.Action.SET_SPECIAL, special ? 0 : 1));
-        y += 20;
-        LobbyManager.TeamMode teamMode = lobby != null ? LobbyManager.TeamMode.values()[lobby.teamModeOrdinal()] : LobbyManager.TeamMode.FREE;
-        setting(sx, y, sw, Tr.t("lobby.team_mode", teamMode.displayName), canEdit,
+        y += 4;
+        section(sx, y, "隊伍");
+        y += 11;
+        y = row(sx, y, sw, "分隊", teamMode.displayName, canEdit,
             () -> send(LobbyManager.Action.SET_TEAM_MODE, (teamMode.ordinal() + 1) % LobbyManager.TeamMode.values().length));
-        y += 20;
-        int teamCount = lobby != null ? lobby.teamCount() : 4;
-        setting(sx, y, sw - 44, Tr.t("lobby.team_count", teamCount), false, () -> {});
-        setting(sx + sw - 42, y, 20, "－", canEdit && teamCount > 1, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount - 1));
-        setting(sx + sw - 20, y, 20, "＋", canEdit && teamCount < LobbyManager.MAX_TEAMS, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount + 1));
-        y += 20;
-        int half = (sw - 2) / 2;
-        setting(sx, y, half, Tr.t("lobby.auto_balance"), canEdit, () -> send(LobbyManager.Action.AUTO_BALANCE, 0));
-        setting(sx + sw - half, y, half, Tr.t("lobby.clear_teams"), canEdit, () -> send(LobbyManager.Action.CLEAR_TEAMS, 0));
-        y += 24;
+        if (canEdit) {
+            settingRows.add(new SettingRow(sx, y, "隊數", null));
+            setting(sx + LABEL_W, y, 18, "－", teamCount > 1, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount - 1));
+            settingRows.add(new SettingRow(sx + LABEL_W + 20, y, null, String.valueOf(teamCount)));
+            setting(sx + LABEL_W + 46, y, 18, "＋", teamCount < LobbyManager.MAX_TEAMS, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount + 1));
+            y += 18;
+            int half = (sw - 2) / 2;
+            setting(sx, y, half, Tr.t("lobby.auto_balance"), true, () -> send(LobbyManager.Action.AUTO_BALANCE, 0));
+            setting(sx + sw - half, y, half, Tr.t("lobby.clear_teams"), true, () -> send(LobbyManager.Action.CLEAR_TEAMS, 0));
+            y += 20;
+        } else {
+            y = row(sx, y, sw, "隊數", String.valueOf(teamCount), false, () -> {});
+        }
 
         // 管理員：選取玩家後可以取消選取（移動玩家改用拖移或「點玩家 → 點隊伍標題」）
         LobbyStatePacket.Entry sel = find(lobby, selected);
         if (op && sel != null) {
-            setting(sx, y, sw, Tr.t("lobby.deselect"), true, () -> { selected = null; rebuildWidgets(); });
+            setting(sx, y + 2, sw, Tr.t("lobby.deselect"), true, () -> { selected = null; rebuildWidgets(); });
         }
 
         // 右欄：名單
@@ -188,18 +199,53 @@ public class MainMenuScreen extends Screen {
                 rebuildWidgets();
             });
             addRenderableWidget(end);
-        } else {
+        } else if (op) {
             PGButton start = new PGButton(bx + (bw + 6), by, bw, 20, Tr.c("lobby.start"), true, false,
                 () -> send(LobbyManager.Action.START, 0));
             start.active = canEdit && !counting;
             addRenderableWidget(start);
         }
-        PGButton force = new PGButton(bx + 2 * (bw + 6), by, bw, 20, Tr.c(counting ? "lobby.cancel_countdown" : "lobby.force_start"), false, false,
-            () -> send(counting ? LobbyManager.Action.CANCEL_COUNTDOWN : LobbyManager.Action.FORCE_START, 0));
-        force.active = canEdit;
-        addRenderableWidget(force);
+        if (op) {
+            PGButton force = new PGButton(bx + 2 * (bw + 6), by, bw, 20, Tr.c(counting ? "lobby.cancel_countdown" : "lobby.force_start"), false, false,
+                () -> send(counting ? LobbyManager.Action.CANCEL_COUNTDOWN : LobbyManager.Action.FORCE_START, 0));
+            force.active = canEdit;
+            addRenderableWidget(force);
+        }
         addRenderableWidget(new PGButton(bx + 3 * (bw + 6), by, bw, 20, Tr.c("common.back"), false, false,
             () -> switchTo(View.HOME)));
+    }
+
+    /** 設定列（畫面上要畫的文字）：label = 左邊的標籤；value = 只讀時畫的值（null = 這一列是按鈕）。 */
+    private record SettingRow(int x, int y, @Nullable String label, @Nullable String value) {}
+    private final List<SettingRow> settingRows = new ArrayList<>();
+    private final List<int[]> sections = new ArrayList<>();
+    private final List<String> sectionNames = new ArrayList<>();
+    private static final int LABEL_W = 46;
+
+    private void section(int x, int y, String name) {
+        if (sections.size() == sectionNames.size() && sectionNames.contains(name)) {
+            int i = sectionNames.indexOf(name);
+            sections.set(i, new int[] { x, y });
+            return;
+        }
+        sections.add(new int[] { x, y });
+        sectionNames.add(name);
+    }
+
+    /** 一列設定：左邊標籤，右邊是值（可以改時是按鈕，不能改時是文字）。回傳下一列的 y。 */
+    private int row(int x, int y, int w, String label, String value, boolean editable, Runnable action) {
+        if (editable) {
+            settingRows.add(new SettingRow(x, y, label, null));
+            setting(x + LABEL_W, y, w - LABEL_W, value, true, action);
+        } else {
+            settingRows.add(new SettingRow(x, y, label, value));
+        }
+        return y + 18;
+    }
+
+    /** 縮圈方案的估計時間（分鐘，以半徑 400 的地圖估算；數值由伺服器設定同步）。 */
+    private static double estimateMinutes(CirclePreset p) {
+        try { return p.estimateSeconds(400) / 60.0; } catch (IllegalStateException e) { return 0; }
     }
 
     private void setting(int x, int y, int w, String label, boolean active, Runnable action) {
@@ -430,6 +476,18 @@ public class MainMenuScreen extends Screen {
         MenuDataPacket menu = ClientMenuData.get();
         boolean op = menu != null && menu.isOp();
         g.drawString(font, Tr.t("mode.br"), left + 14, top + 29, TEXT_DIM, false);
+        for (int i = 0; i < sections.size(); i++) {
+            int[] sp = sections.get(i);
+            g.drawString(font, sectionNames.get(i), sp[0], sp[1], ACCENT, false);
+            g.fill(sp[0] + font.width(sectionNames.get(i)) + 4, sp[1] + 4, sp[0] + 150, sp[1] + 5, BORDER);
+        }
+        for (SettingRow r : settingRows) {
+            if (r.label() != null) g.drawString(font, r.label(), r.x(), r.y() + 5, TEXT_DIM, false);
+            if (r.value() != null) {
+                int vx = r.label() != null ? r.x() + LABEL_W : r.x();
+                g.drawString(font, r.value(), vx, r.y() + 5, TEXT, false);
+            }
+        }
 
         // 名單
         g.fill(listX - 1, listY - 1, listX + listW + 1, listY + listH + 1, BORDER);

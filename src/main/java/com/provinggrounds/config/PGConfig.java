@@ -153,6 +153,7 @@ public class PGConfig {
 
     // ── 槍械平衡（所有模式通用，GunBalance） ─────────────────────────────────
     public final ForgeConfigSpec.BooleanValue gunBalanceEnabled;
+    public final ForgeConfigSpec.ConfigValue<List<? extends String>> weaponModeThrowables;
     public final ForgeConfigSpec.DoubleValue autoTtk, pistolTtk, shotgunShotDamage, sniperHeadMultiplier;
     public final ForgeConfigSpec.IntValue sniperBodyShots, sniperBoltRpm;
     public final ForgeConfigSpec.DoubleValue rifleFalloffStart, rifleFalloffEnd, rifleFalloffMin;
@@ -398,6 +399,12 @@ public class PGConfig {
         builder.comment("槍械平衡：不改槍械包，依每把槍的射速重新決定每發傷害，讓同類型的槍打死人的時間差不多。",
                 "目標 TTK（秒）= 沒穿甲、近距離、全部打身體；穿全套鐵甲約再慢 25%（例：2.0 → 2.5 秒）。").push("gun_balance");
         gunBalanceEnabled = builder.comment("是否啟用槍械平衡（false = 照槍械包原本的數值）").define("enabled", true);
+        weaponModeThrowables = builder.comment("槍械模式「投擲物」：槍換成這些投擲物（格式同 /give）")
+            .defineListAllowEmpty(List.of("weapon_mode_throwables"), () -> List.of(
+                "lrtactical:throwable{ThrowableId:\"lrtactical:m67\"}", "lrtactical:throwable{ThrowableId:\"lrtactical:rgn\"}",
+                "lrtactical:throwable{ThrowableId:\"lrtactical:molotov\"}", "lrtactical:throwable{ThrowableId:\"lrtactical:flash_grenade\"}",
+                "lrtactical:throwable{ThrowableId:\"lrtactical:smoke_grenade\"}", "lrtactical:throwable{ThrowableId:\"suffuse:m24\"}",
+                "lrtactical:throwable{ThrowableId:\"suffuse:m24_cluster\"}"), o -> o instanceof String);
         autoTtk = builder.comment("步槍、衝鋒槍、機槍、半自動狙擊的目標 TTK（秒）").defineInRange("auto_ttk", 2.0, 0.2, 20.0);
         pistolTtk = builder.comment("手槍的目標 TTK（秒）").defineInRange("pistol_ttk", 2.4, 0.2, 20.0);
         shotgunShotDamage = builder.comment("霰彈槍每一發（所有彈丸加起來、近距離）的傷害；50 = 近距離 2 發").defineInRange("shotgun_shot_damage", 50.0, 1.0, 1000.0);
