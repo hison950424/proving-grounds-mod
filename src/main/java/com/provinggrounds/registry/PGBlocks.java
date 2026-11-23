@@ -90,6 +90,13 @@ public final class PGBlocks {
         }
     }
 
+    /** 墓碑畫面（跟物品欄一樣的分區）。 */
+    public static final DeferredRegister<net.minecraft.world.inventory.MenuType<?>> MENUS =
+        DeferredRegister.create(ForgeRegistries.MENU_TYPES, ProvingGroundsMod.MOD_ID);
+    public static final RegistryObject<net.minecraft.world.inventory.MenuType<com.provinggrounds.block.TombstoneMenu>> TOMBSTONE_MENU =
+        MENUS.register("tombstone", () -> new net.minecraft.world.inventory.MenuType<>(com.provinggrounds.block.TombstoneMenu::new,
+            net.minecraft.world.flag.FeatureFlags.DEFAULT_FLAGS));
+
     public static final DeferredRegister<net.minecraft.world.item.CreativeModeTab> TABS =
         DeferredRegister.create(net.minecraft.core.registries.Registries.CREATIVE_MODE_TAB, ProvingGroundsMod.MOD_ID);
     public static final RegistryObject<net.minecraft.world.item.CreativeModeTab> ADMIN_TAB = TABS.register("admin_tools",
@@ -124,6 +131,7 @@ public final class PGBlocks {
         ITEMS.register(modBus);
         BLOCK_ENTITIES.register(modBus);
         TABS.register(modBus);
+        MENUS.register(modBus);
         modBus.addListener(PGBlocks::addToCreativeTab);
     }
 

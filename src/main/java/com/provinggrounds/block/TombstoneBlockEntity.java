@@ -22,7 +22,8 @@ import javax.annotation.Nullable;
 
 /**
  * 檔案: TombstoneBlockEntity.java
- * 目的: 墓碑的內容（54 格，夠放身上 41 格加背包欄）與墓主名稱。用原版箱子畫面（6 列）打開。
+ * 目的: 墓碑的內容與墓主名稱。用 TombstoneMenu（跟物品欄一樣的分區）打開，格子編號見 TombstoneMenu。
+ *   存檔保留 54 格（舊版墓碑的資料也讀得進來），畫面只用前 43 格。
  *   關掉畫面時如果裡面已經空了，墓碑就自動移除。
  */
 public class TombstoneBlockEntity extends BlockEntity implements MenuProvider {
@@ -35,6 +36,12 @@ public class TombstoneBlockEntity extends BlockEntity implements MenuProvider {
         public void setChanged() {
             super.setChanged();
             TombstoneBlockEntity.this.setChanged();
+        }
+
+        @Override
+        public boolean stillValid(Player player) {
+            return level != null && level.getBlockEntity(worldPosition) == TombstoneBlockEntity.this
+                && player.distanceToSqr(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5) <= 64;
         }
 
         @Override
@@ -53,9 +60,16 @@ public class TombstoneBlockEntity extends BlockEntity implements MenuProvider {
         setChanged();
     }
 
-    /** 放進一個物品（墓碑建立時用）；放不下回傳 false。 */
+    /** 放到指定的格子（墓碑建立時用）；那格已經有東西回傳 false。 */
+    public boolean put(int index, ItemStack stack) {
+        if (index < 0 || index >= SIZE || !items.getItem(index).isEmpty()) return false;
+        items.setItem(index, stack);
+        return true;
+    }
+
+    /** 放進第一個空的背包／快捷欄格子；放不下回傳 false。 */
     public boolean add(ItemStack stack) {
-        for (int i = 0; i < SIZE; i++) {
+        for (int i = TombstoneMenu.MAIN; i < TombstoneMenu.SIZE; i++) {
             if (items.getItem(i).isEmpty()) {
                 items.setItem(i, stack);
                 return true;
@@ -83,7 +97,7 @@ public class TombstoneBlockEntity extends BlockEntity implements MenuProvider {
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int id, Inventory inv, Player player) {
-        return ChestMenu.sixRows(id, inv, items);
+        return new TombstoneMenu(id, inv, items);
     }
 
     @Override

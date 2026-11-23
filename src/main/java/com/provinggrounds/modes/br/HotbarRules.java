@@ -358,7 +358,13 @@ public final class HotbarRules {
         net.minecraft.world.entity.EquipmentSlot es = net.minecraft.world.entity.Mob.getEquipmentSlotForItem(stack);
         if (es.getType() != net.minecraft.world.entity.EquipmentSlot.Type.ARMOR) return false;
         ItemStack worn = p.getItemBySlot(es);
-        if (worn.isEmpty()) return false;
+        if (worn.isEmpty()) {
+            if (slot.container == inv) return false; // 自己背包裡的：交給原本的流程直接穿上
+            p.setItemSlot(es, stack.copy()); // 箱子、墓碑裡的防具：身上那個部位空著就直接穿上
+            slot.set(ItemStack.EMPTY);
+            p.level().playSound(null, p.getX(), p.getY(), p.getZ(), net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC, net.minecraft.sounds.SoundSource.PLAYERS, 1f, 1f);
+            return true;
+        }
         if (net.minecraft.world.item.enchantment.EnchantmentHelper.hasBindingCurse(worn) && !p.isCreative()) return false; // 綁定詛咒脫不下來
         if (!slot.mayPlace(worn)) return false;
         ItemStack old = worn.copy();

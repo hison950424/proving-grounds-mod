@@ -47,16 +47,25 @@ public final class Tombstones {
         t.setOwner(p.getGameProfile().getName());
         List<ItemStack> leftovers = new ArrayList<>();
         Inventory inv = p.getInventory();
+        // 照死者身上的位置放：快捷欄 → 墓碑快捷欄、背包 → 墓碑背包、防具 → 防具格、副手 → 副手格（見 TombstoneMenu）
+        List<ItemStack> later = new ArrayList<>();
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack s = inv.removeItemNoUpdate(i);
-            if (!s.isEmpty() && !t.add(s)) leftovers.add(s);
+            if (s.isEmpty()) continue;
+            int at;
+            if (i <= 8) at = com.provinggrounds.block.TombstoneMenu.HOTBAR + i;
+            else if (i <= 35) at = com.provinggrounds.block.TombstoneMenu.MAIN + (i - 9);
+            else if (i <= 39) at = com.provinggrounds.block.TombstoneMenu.ARMOR + (39 - i); // 36 腳、37 腿、38 胸、39 頭
+            else at = com.provinggrounds.block.TombstoneMenu.OFFHAND;
+            if (!t.put(at, s)) later.add(s);
         }
         ItemStack pack = Backpack.container(p).getItem(0).copy();
         Backpack.clear(p);
-        if (!pack.isEmpty() && !t.add(pack)) leftovers.add(pack);
+        if (!pack.isEmpty() && !t.put(com.provinggrounds.block.TombstoneMenu.BACKPACK, pack)) later.add(pack);
+        for (ItemStack s : later) if (!t.add(s)) leftovers.add(s);
         ItemStack special = com.provinggrounds.special.SpecialSlot.get(p).copy(); // 特殊物品也進墓碑
         com.provinggrounds.special.SpecialSlot.clear(p);
-        if (!special.isEmpty() && !t.add(special)) leftovers.add(special);
+        if (!special.isEmpty() && !t.put(com.provinggrounds.block.TombstoneMenu.SPECIAL, special) && !t.add(special)) leftovers.add(special);
         for (ItemStack s : leftovers) HotbarRules.dropAtFeet(p, s); // 理論上不會發生（54 格 > 42 格）
         Ledger.get(level).add(pos);
         return true;

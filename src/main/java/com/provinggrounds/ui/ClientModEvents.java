@@ -56,6 +56,12 @@ public final class ClientModEvents {
     }
 
     @SubscribeEvent
+    public static void onClientSetup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {
+        event.enqueueWork(() -> net.minecraft.client.gui.screens.MenuScreens.register(
+            com.provinggrounds.registry.PGBlocks.TOMBSTONE_MENU.get(), TombstoneScreen::new)); // 墓碑畫面
+    }
+
+    @SubscribeEvent
     public static void onRegisterKeys(RegisterKeyMappingsEvent event) {
         event.register(OPEN_MENU);
         event.register(PRONE);
