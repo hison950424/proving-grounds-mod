@@ -27,6 +27,7 @@ public final class PGClientConfig {
     public final ForgeConfigSpec.BooleanValue uiWalkEnabled;
     public final ForgeConfigSpec.ConfigValue<List<? extends String>> uiWalkExcludedScreens;
     public final ForgeConfigSpec.DoubleValue circleWallOpacity, circleNextOpacity;
+    public final ForgeConfigSpec.DoubleValue smokeDissipateVolume;
     public final ForgeConfigSpec.BooleanValue compassEnabled;
     public final ForgeConfigSpec.DoubleValue compassScale;
     public final ForgeConfigSpec.IntValue compassYOffset;
@@ -51,6 +52,11 @@ public final class PGClientConfig {
             .defineInRange("circle_wall_opacity", 0.15, 0.0, 1.0);
         circleNextOpacity = builder.comment("下一圈的環（淺藍色）不透明度，0.075 = 7.5%")
             .defineInRange("circle_next_opacity", 0.075, 0.0, 1.0);
+        builder.pop();
+
+        builder.comment("音效").push("sound");
+        smokeDissipateVolume = builder.comment("煙霧彈消散聲（lrtactical 煙霧彈結束時的聲音）的音量倍率，0.5 = 原本的一半")
+            .defineInRange("smoke_dissipate_volume", 0.5, 0.0, 1.0);
         builder.pop();
 
         builder.comment("大逃殺指北針（畫面上方中央的方位條，只在對局中顯示）").push("compass");

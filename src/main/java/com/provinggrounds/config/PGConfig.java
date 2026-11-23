@@ -46,6 +46,8 @@ public class PGConfig {
     // ── BR：飛機與跳傘 ─────────────────────────────────────────────────────────
     public final ForgeConfigSpec.IntValue brPlaneHeight;
     public final ForgeConfigSpec.DoubleValue brPlaneSpeed;
+    public final ForgeConfigSpec.IntValue boardLockSeconds;
+    public final ForgeConfigSpec.IntValue jumpInvisibleSeconds;
     // 跳傘（計畫書 B1）
     public final ForgeConfigSpec.DoubleValue skydiveAutoChuteHeight, chuteSink, chuteHorizontal, glidePitchUpMax;
     public final ForgeConfigSpec.BooleanValue hotbarRulesEnabled;
@@ -190,6 +192,10 @@ public class PGConfig {
             .defineInRange("height", 220, 100, 310);
         brPlaneSpeed = builder.comment("飛機速度（格/秒）")
             .defineInRange("speed", 25.0, 5.0, 100.0);
+        boardLockSeconds = builder.comment("登機後幾秒內不能跳傘（避免誤觸）")
+            .defineInRange("board_lock_seconds", 5, 0, 60);
+        jumpInvisibleSeconds = builder.comment("跳出飛機後維持隱形與無敵幾秒")
+            .defineInRange("jump_invisible_seconds", 2, 0, 30);
         builder.pop();
 
         builder.comment("跳傘：空白鍵跳出飛機後用原版鞘翅滑翔；按空白鍵或離地夠近時開傘。開傘後按空白鍵自由落體、再按開傘，可以反覆切換（回不到鞘翅）。").push("skydive");

@@ -106,6 +106,8 @@ public class BattleRoyaleMode {
         PlayerState state = PlayerState.GROUND;
         boolean alive = true;
         int lastSkydiveToggle = -1000;   // 跳出飛機的 tick（跳出後 0.5 秒內按空白鍵不開傘）
+        int boardTick = -1000;           // 登機的 tick（登機後 board_lock_seconds 秒內不能跳）
+        int jumpGraceUntil = -1;         // 跳機後維持隱形與無敵到這個 tick（jump_invisible_seconds）
         boolean kitOnLanding = false;    // 祭壇復活：落地後才發基礎裝備
         int groundTicks = 0;
         @Nullable Entity carrier;
@@ -221,11 +223,16 @@ public class BattleRoyaleMode {
         return part != null && part.downed && part.seat != null && part.seat == vehicle;
     }
 
-    /** 在飛機上、自由落體或開傘中（不能趴下）。 */
-    /** 在飛機上（隱形、無敵、不能攻擊）。 */
+    /** 在飛機上。 */
     public boolean isOnPlane(UUID id) {
         Participant p = participants.get(id);
         return p != null && p.alive && p.state == PlayerState.PLANE;
+    }
+
+    /** 受保護（隱形、無敵、不能攻擊）：在飛機上，或剛跳出飛機的 jump_invisible_seconds 秒內。 */
+    public boolean isProtected(UUID id) {
+        Participant p = participants.get(id);
+        return p != null && p.alive && (p.state == PlayerState.PLANE || tickCount < p.jumpGraceUntil);
     }
 
     public boolean isAirborne(UUID id) {
@@ -425,6 +432,8 @@ public class BattleRoyaleMode {
             p.startRiding(carrier, true);
             part.carrier = carrier;
             part.state = PlayerState.PLANE;
+            part.boardTick = tickCount;
+            part.jumpGraceUntil = -1;
             // 飛機上大家擠在一起看不到畫面：全員隱形（沒有粒子、沒有圖示）。同隊因為隊伍設定 seeFriendlyInvisibles 會看到半透明；
             // 飛機上也不會受傷、不能攻擊（BREvents、GunCompat）。跳出飛機時解除。
             p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.INVISIBILITY,
@@ -464,7 +473,9 @@ public class BattleRoyaleMode {
 
     private void jump(ServerPlayer p, Participant part) {
         part.state = PlayerState.GLIDE; // 先改狀態再下機：飛機座位在 PLANE 狀態時會擋住下機
-        p.removeEffect(net.minecraft.world.effect.MobEffects.INVISIBILITY); // 解除飛機上的隱形
+        // 跳出後 jump_invisible_seconds 秒內維持隱形與無敵，時間到由 tickJumpGrace 解除
+        part.jumpGraceUntil = tickCount + PGConfig.SERVER.jumpInvisibleSeconds.get() * 20;
+        if (part.jumpGraceUntil <= tickCount) p.removeEffect(net.minecraft.world.effect.MobEffects.INVISIBILITY);
         discardCarrier(part);
         if (p.getVehicle() != null) p.stopRiding();
         part.groundTicks = 0;
@@ -482,7 +493,12 @@ public class BattleRoyaleMode {
     public void onSkydiveKey(ServerPlayer p) {
         Participant part = participants.get(p.getUUID());
         if (part == null || !part.alive || part.downed || !inPlay()) return;
-        if (part.state == PlayerState.PLANE) { jump(p, part); return; }
+        if (part.state == PlayerState.PLANE) {
+            // 登機後 board_lock_seconds 秒內按空白鍵沒反應（避免誤觸），HUD 會顯示倒數
+            if (tickCount - part.boardTick < PGConfig.SERVER.boardLockSeconds.get() * 20) return;
+            jump(p, part);
+            return;
+        }
         if (tickCount - part.lastSkydiveToggle < 10) return;
         switch (part.state) {
             case GLIDE, FREEFALL -> openChute(p, part, false);
@@ -546,7 +562,18 @@ public class BattleRoyaleMode {
     // 跳傘
     // ═════════════════════════════════════════════════════════════════════════
 
+    /** 跳機後的隱形、無敵時間到了就解除。 */
+    private void tickJumpGrace() {
+        for (Participant part : participants.values()) {
+            if (part.jumpGraceUntil < 0 || tickCount < part.jumpGraceUntil) continue;
+            part.jumpGraceUntil = -1;
+            ServerPlayer p = player(part.id);
+            if (p != null) p.removeEffect(net.minecraft.world.effect.MobEffects.INVISIBILITY);
+        }
+    }
+
     private void tickDropping() {
+        tickJumpGrace();
         for (Participant part : participants.values()) {
             if (!part.alive || !isDroppingState(part.state)) continue;
             ServerPlayer p = player(part.id);
@@ -622,6 +649,7 @@ public class BattleRoyaleMode {
         PGConfig c = PGConfig.SERVER;
         float damage = (float) (c.brDamageBase.get() + c.brDamagePerStage.get() * circle.damageStageIndex());
         if (damage <= 0) return;
+        if (!circle.started()) return; // 第一次縮圈開始前沒有圈外傷害
         for (Participant part : new ArrayList<>(participants.values())) {
             if (!part.alive) continue;
             ServerPlayer p = player(part.id);
@@ -1712,7 +1740,7 @@ public class BattleRoyaleMode {
         boolean shrinking = false;
         byte stage = 0, total = (byte) preset.ratios().length;
         if (circle != null) {
-            cx = (float) circle.centerX(); cz = (float) circle.centerZ(); r = (float) circle.radius();
+            cx = (float) circle.centerX(); cz = (float) circle.centerZ(); r = circle.started() ? (float) circle.radius() : -1f; // 第一次縮圈前沒有白圈
             nx = (float) circle.nextX(); nz = (float) circle.nextZ(); nr = (float) circle.nextRadius();
             shrinking = circle.isShrinking();
             stage = (byte) circle.displayStage();

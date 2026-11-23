@@ -42,18 +42,18 @@ public class BREvents {
         if (BattleRoyaleMode.get().isDropping(p.getUUID())) event.setCanceled(true);
     }
 
-    /** 飛機上：不會受傷，也不能攻擊別人。 */
+    /** 飛機上與剛跳機的幾秒內：不會受傷，也不能攻擊別人。 */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onPlaneAttack(net.minecraftforge.event.entity.living.LivingAttackEvent event) {
         if (event.getEntity().level().isClientSide) return;
         BattleRoyaleMode br = BattleRoyaleMode.get();
-        if (event.getEntity() instanceof ServerPlayer victim && br.isOnPlane(victim.getUUID())) { event.setCanceled(true); return; }
-        if (event.getSource().getEntity() instanceof ServerPlayer attacker && br.isOnPlane(attacker.getUUID())) event.setCanceled(true);
+        if (event.getEntity() instanceof ServerPlayer victim && br.isProtected(victim.getUUID())) { event.setCanceled(true); return; }
+        if (event.getSource().getEntity() instanceof ServerPlayer attacker && br.isProtected(attacker.getUUID())) event.setCanceled(true);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onPlaneMelee(net.minecraftforge.event.entity.player.AttackEntityEvent event) {
-        if (event.getEntity() instanceof ServerPlayer p && BattleRoyaleMode.get().isOnPlane(p.getUUID())) event.setCanceled(true);
+        if (event.getEntity() instanceof ServerPlayer p && BattleRoyaleMode.get().isProtected(p.getUUID())) event.setCanceled(true);
     }
 
     /** 鞘翅滑翔撞牆的傷害（原版 fly_into_wall）：跳傘中不受傷。 */

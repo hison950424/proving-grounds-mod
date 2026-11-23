@@ -159,9 +159,28 @@ public final class HUD {
 
     // ── 中下：提示 ──────────────────────────────────────────────────────────
 
+    /** 登機的時間（客戶端時鐘），用來顯示「幾秒後可跳傘」。 */
+    private static long planeSinceMs;
+    private static int lastSelfState = -1;
+
+    /** 登機後還要等幾秒才能跳（0 = 可以跳）。秒數來自伺服器同步的 board_lock_seconds。 */
+    private static int boardLockLeft() {
+        int lock;
+        try { lock = com.provinggrounds.config.PGConfig.SERVER.boardLockSeconds.get(); }
+        catch (IllegalStateException e) { lock = 5; }
+        long left = lock * 1000L - (System.currentTimeMillis() - planeSinceMs);
+        return left <= 0 ? 0 : (int) ((left + 999) / 1000);
+    }
+
     private static void renderHint(GuiGraphics g, Font font, BRStatePacket s, int w, int h) {
+        if (s.selfState() != lastSelfState) {
+            if (s.selfState() == ClientBRState.SELF_PLANE) planeSinceMs = System.currentTimeMillis();
+            lastSelfState = s.selfState();
+        }
         String hint = switch (s.selfState()) {
-            case ClientBRState.SELF_PLANE -> Tr.t("hud.hint.plane", jumpKey());
+            case ClientBRState.SELF_PLANE -> boardLockLeft() > 0
+                ? Tr.t("hud.hint.plane_locked", boardLockLeft())
+                : Tr.t("hud.hint.plane", jumpKey());
             case ClientBRState.SELF_GLIDE -> Tr.t("hud.hint.glide", jumpKey());
             case ClientBRState.SELF_FREEFALL -> Tr.t("hud.hint.freefall", jumpKey());
             case ClientBRState.SELF_CHUTE -> Tr.t("hud.hint.chute", jumpKey());

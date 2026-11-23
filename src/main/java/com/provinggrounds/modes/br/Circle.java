@@ -99,6 +99,8 @@ public class Circle {
     /** 已經縮完的階段數。 */
     public int completedStages()  { return stageIndex; }
     public boolean isShrinking()  { return shrinking; }
+    /** 第一次縮圈已經開始（開始前沒有實際邊界：不畫白牆、不扣圈外血）。 */
+    public boolean started()      { return shrinking || stageIndex > 0; }
     public int totalStages()      { return ratios.length; }
     /** 顯示用階段編號（1 起算），全部縮完後停在最後一階段。 */
     public int displayStage()     { return Math.min(stageIndex + 1, ratios.length); }

@@ -20,7 +20,7 @@ public final class BRDowned {
         if (isDowned(e)) return true;
         if (!(e instanceof Player p)) return false;
         if (p.level().isClientSide) return p.isLocalPlayer() && ClientBRState.get().selfState() == ClientBRState.SELF_PLANE;
-        return BattleRoyaleMode.get().isOnPlane(p.getUUID());
+        return BattleRoyaleMode.get().isProtected(p.getUUID());
     }
 
     public static boolean isDowned(Entity e) {

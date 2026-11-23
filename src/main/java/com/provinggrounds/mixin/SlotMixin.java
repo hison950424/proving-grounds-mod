@@ -22,6 +22,8 @@ public abstract class SlotMixin {
 
     @Inject(method = { "mayPlace", "m_5857_" }, at = @At("HEAD"), cancellable = true, remap = false)
     private void provinggrounds$lockedPlace(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
+        Slot self = (Slot) (Object) this;
+        if (self.container instanceof Inventory && self.getContainerSlot() == 40) { cir.setReturnValue(false); return; } // 副手格：玩家不能放（計畫書 4 的 A6）
         if (provinggrounds$locked()) cir.setReturnValue(false);
     }
 

@@ -26,6 +26,8 @@ public abstract class ContainerMenuMixin {
     @Inject(method = { "clicked", "m_150399_" }, at = @At("HEAD"), cancellable = true, remap = false)
     private void provinggrounds$beforeClick(int slotId, int button, ClickType type, Player player, CallbackInfo ci) {
         provinggrounds$snapshot.remove();
+        // 副手不能主動放東西（計畫書 4 的 A6）：物品欄裡把游標指著的格子和副手對調（F 鍵）一律取消，兩端都擋，畫面不會閃
+        if (type == ClickType.SWAP && button == 40) { ci.cancel(); return; }
         if (!(player instanceof ServerPlayer sp) || !HotbarRules.active(sp)) return;
         HotbarRules.Snapshot[] out = new HotbarRules.Snapshot[1];
         if (HotbarRules.beforeClick((AbstractContainerMenu) (Object) this, slotId, type, sp, out)) {
