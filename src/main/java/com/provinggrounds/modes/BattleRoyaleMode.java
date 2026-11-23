@@ -1926,6 +1926,7 @@ public class BattleRoyaleMode {
             Vec3 look = watcher.getLookAngle();
             for (ServerPlayer target : alive) {
                 if (target == watcher || TeamManager.get().isSameTeam(watcher, target)) continue;
+                if (target.isInvisible()) continue; // 隱形的人（飛機上、剛跳機、隱形斗篷）不會被看到、不會出現在小地圖
                 Vec3 to = target.position().add(0, target.getBbHeight() * 0.6, 0).subtract(eye);
                 double dist = to.length();
                 if (dist > SPOT_RANGE || dist < 0.01) continue;
@@ -1935,8 +1936,11 @@ public class BattleRoyaleMode {
                     .put(target.getUUID(), new Spot((float) target.getX(), (float) target.getZ(), target.getYRot(), tickCount));
             }
         }
-        // 清掉過期的
-        for (Map<UUID, Spot> m : spotted.values()) m.values().removeIf(s -> tickCount - s.tick() > SPOT_KEEP_TICKS);
+        // 清掉過期的；正在隱形的人，之前留下的標記也立刻拿掉
+        for (Map<UUID, Spot> m : spotted.values()) {
+            m.values().removeIf(s -> tickCount - s.tick() > SPOT_KEEP_TICKS);
+            m.keySet().removeIf(id -> { ServerPlayer sp = player(id); return sp != null && sp.isInvisible(); });
+        }
     }
 
     /** 每 5 tick 送地圖標記給每位玩家。 */

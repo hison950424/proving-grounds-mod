@@ -83,10 +83,11 @@ public final class GlowManager {
                 if (t == null || t.level() != viewer.level() || t == viewer) continue;
                 if (!seen.add(t.getUUID())) {
                     // 同一個目標有多筆：只要有一筆上地圖就上地圖
-                    if (g.map()) list.replaceAll(e -> e.entityId() == t.getId() ? new GlowSyncPacket.Entry(e.entityId(), e.x(), e.z(), true, e.color()) : e);
+                    if (g.map() && !t.isInvisible()) list.replaceAll(e -> e.entityId() == t.getId() ? new GlowSyncPacket.Entry(e.entityId(), e.x(), e.z(), true, e.color()) : e);
                     continue;
                 }
-                list.add(new GlowSyncPacket.Entry(t.getId(), (float) t.getX(), (float) t.getZ(), g.map(), 0xFF3030));
+                // 隱形中的人不會出現在地圖上（外框照樣發光）
+                list.add(new GlowSyncPacket.Entry(t.getId(), (float) t.getX(), (float) t.getZ(), g.map() && !t.isInvisible(), 0xFF3030));
             }
             if (list.isEmpty()) {
                 if (SENT.remove(viewer.getUUID())) PGNetwork.sendTo(viewer, new GlowSyncPacket(list));
