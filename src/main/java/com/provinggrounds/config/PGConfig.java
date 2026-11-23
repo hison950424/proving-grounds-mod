@@ -131,6 +131,8 @@ public class PGConfig {
 
     // ── 移動方式與腳步聲（所有模式通用） ─────────────────────────────────────
     public final ForgeConfigSpec.BooleanValue autoSprint;
+    public final ForgeConfigSpec.BooleanValue preciseHitbox;
+    public final ForgeConfigSpec.DoubleValue hitboxTolerance;
     public final ForgeConfigSpec.DoubleValue quietWalkSpeed, stepVolumeSprint, stepVolumeWalk, stepVolumeQuiet, stepMaterialContrast;
 
     // ── 防彈（所有模式通用） ───────────────────────────────────────────────────
@@ -394,6 +396,8 @@ public class PGConfig {
         builder.comment("移動方式：按方向鍵自動奔跑；按「靜走」鍵（預設 Shift）慢慢走、腳步聲小；蹲下（預設 Ctrl）。按鍵都可以在按鍵設定改。",
             "腳步聲：奔跑比原版大聲（也傳得比較遠），靜走比較小聲；不同材質的地面聲音差異加大，比較好分辨。").push("movement");
         autoSprint = builder.comment("按方向鍵（往前）時自動奔跑").define("auto_sprint", true);
+        preciseHitbox = builder.comment("精準命中：子彈要打到人物模型（頭、身體、手、腳）才算數，不再是比模型大的方柱").define("precise_hitbox", true);
+        hitboxTolerance = builder.comment("精準命中：每個部位往外放寬幾格（護甲厚度、網路延遲；0.06 約 1 像素）").defineInRange("hitbox_tolerance", 0.06, 0.0, 0.5);
         quietWalkSpeed = builder.comment("靜走速度：一般走路速度的幾倍").defineInRange("quiet_walk_speed", 0.6, 0.1, 1.0);
         stepVolumeSprint = builder.comment("奔跑腳步聲音量倍率（大於 1 也會傳得比較遠；原版 = 1）").defineInRange("step_volume_sprint", 2.0, 0.0, 8.0);
         stepVolumeWalk = builder.comment("一般走路腳步聲音量倍率").defineInRange("step_volume_walk", 1.0, 0.0, 8.0);

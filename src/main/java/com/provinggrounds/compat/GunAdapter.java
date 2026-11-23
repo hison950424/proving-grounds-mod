@@ -33,6 +33,18 @@ public interface GunAdapter {
      */
     boolean registerHitListener(HitListener listener);
 
+    /** 命中過濾（伺服器端，在扣血之前）：回傳 false 代表「其實沒打中」，這次傷害取消。 */
+    @FunctionalInterface
+    interface HitFilter {
+        boolean accept(Entity target, Entity bullet);
+    }
+
+    /**
+     * 註冊命中過濾（精準命中判定用）。
+     * @return 是否成功掛上
+     */
+    default boolean registerHitFilter(HitFilter filter) { return false; }
+
     /** 子彈打到方塊通知（伺服器端，在槍械模組處理之前，例如打破玻璃之前）。 */
     @FunctionalInterface
     interface BlockHitListener {

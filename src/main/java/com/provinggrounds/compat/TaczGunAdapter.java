@@ -64,6 +64,40 @@ public class TaczGunAdapter implements GunAdapter {
     }
 
     /**
+     * 精準命中：掛 EntityHurtByGunEvent.Pre（最高優先度），過濾器回傳 false 就取消這次傷害。
+     */
+    @Override
+    public boolean registerHitFilter(HitFilter filter) {
+        String className = "com.tacz.guns.api.event.common.EntityHurtByGunEvent$Pre";
+        try {
+            Class<?> raw = Class.forName(className);
+            if (!Event.class.isAssignableFrom(raw)) return false;
+            Method getTarget = raw.getMethod("getHurtEntity");
+            Method getBullet = raw.getMethod("getBullet");
+            Method getSide = raw.getMethod("getLogicalSide");
+            @SuppressWarnings("unchecked")
+            Class<Event> type = (Class<Event>) raw;
+            MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, false, type, event -> {
+                if (!event.isCancelable()) return;
+                try {
+                    if (getSide.invoke(event) != LogicalSide.SERVER) return;
+                    if (getTarget.invoke(event) instanceof Entity target && getBullet.invoke(event) instanceof Entity bullet
+                            && !filter.accept(target, bullet)) {
+                        event.setCanceled(true);
+                    }
+                } catch (ReflectiveOperationException | RuntimeException ignored) {
+                    // 取不到資料就照原本的命中
+                }
+            });
+            ProvingGroundsMod.LOGGER.info("TACZ adapter: hit filter hooked.");
+            return true;
+        } catch (ClassNotFoundException | NoSuchMethodException e) {
+            ProvingGroundsMod.LOGGER.warn("TACZ adapter: cannot hook {} ({}); precise hitbox disabled.", className, e.toString());
+            return false;
+        }
+    }
+
+    /**
      * 掛 EntityHurtByGunEvent.Pre（TACZ 在扣血前觸發，帶有爆頭判定）。
      * 用最低優先度、且不接收已取消的事件，拿到其他模組修改後的最終爆頭結果。
      */

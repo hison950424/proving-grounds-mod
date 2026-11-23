@@ -34,6 +34,22 @@ public final class ClientKeyDefaults {
 
     private static boolean checked;
 
+    /**
+     * 聲音方向更準：第一次開新版遊戲時幫玩家打開原版的「方向性音訊」（選項 → 音效 → 方向性音訊，HRTF），
+     * 戴耳機時前後、上下的聲音方向更容易分辨。之後玩家自己關掉不會再被打開。
+     */
+    private static void applyDirectionalAudio(Minecraft mc) {
+        if (PGClientConfig.CLIENT.directionalAudioApplied.get()) return;
+        if (!mc.options.directionalAudio().get()) {
+            mc.options.directionalAudio().set(true);
+            mc.options.save();
+            mc.getSoundManager().reload(); // 重新開啟音效裝置才會生效
+        }
+        PGClientConfig.CLIENT.directionalAudioApplied.set(true);
+        PGClientConfig.CLIENT.directionalAudioApplied.save();
+        ProvingGroundsMod.LOGGER.info("Enabled directional audio (HRTF).");
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (checked || event.phase != TickEvent.Phase.END) return;
@@ -41,6 +57,7 @@ public final class ClientKeyDefaults {
         if (mc.options == null) return;
         checked = true;
         try {
+            applyDirectionalAudio(mc);
             if (PGClientConfig.CLIENT.defaultKeysApplied.get()) return;
         } catch (IllegalStateException e) {
             checked = false; // 設定還沒載入，下個 tick 再試

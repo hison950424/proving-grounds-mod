@@ -29,6 +29,7 @@ public final class PGClientConfig {
     public final ForgeConfigSpec.DoubleValue circleWallOpacity, circleNextOpacity;
     public final ForgeConfigSpec.DoubleValue smokeDissipateVolume;
     public final ForgeConfigSpec.BooleanValue defaultKeysApplied;
+    public final ForgeConfigSpec.BooleanValue directionalAudioApplied;
     public final ForgeConfigSpec.BooleanValue compassEnabled;
     public final ForgeConfigSpec.DoubleValue compassScale;
     public final ForgeConfigSpec.IntValue compassYOffset;
@@ -58,6 +59,8 @@ public final class PGClientConfig {
         builder.comment("按鍵").push("keys");
         defaultKeysApplied = builder.comment("是否已經套用過 Proving Grounds 的預設按鍵（特殊物品 Q、丟棄 G、切換射擊模式 B、倍鏡倍率 V、趴下 C、物品欄 Tab）。改成 false 會在下次開遊戲時再套用一次")
             .define("default_keys_applied_v1", false);
+        directionalAudioApplied = builder.comment("是否已經幫你打開過原版的「方向性音訊」（HRTF，戴耳機時聲音方向更準）。改成 false 會在下次開遊戲時再打開一次")
+            .define("directional_audio_applied_v1", false);
         builder.pop();
 
         builder.comment("音效").push("sound");
