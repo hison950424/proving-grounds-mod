@@ -12,7 +12,8 @@
     "PlayerPoseMixin",
     "EntitySprintMixin",
     "EntitySpecialMixin",
-    "LivingSpecialMixin"
+    "LivingSpecialMixin",
+    "CreativeSlotMixin"
   ],
   "injectors": {
     "defaultRequire": 0
