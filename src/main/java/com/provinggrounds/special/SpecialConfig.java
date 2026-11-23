@@ -96,7 +96,7 @@ public final class SpecialConfig {
         landMineSlowSeconds = b.comment("地雷：緩速秒數").defineInRange("land_mine_slow_seconds", 5.0, 0.0, 120.0);
         fireMineSeconds = b.comment("燃燒地雷：燃燒秒數").defineInRange("fire_mine_seconds", 5.0, 0.0, 120.0);
         fireMineDamage = b.comment("燃燒地雷：每秒燒傷").defineInRange("fire_mine_damage", 6.0, 0.0, 1000.0);
-        smokeRadius = b.comment("煙幕彈：煙霧半徑（格）").defineInRange("smoke_radius", 3.0, 0.5, 20.0);
+        smokeRadius = b.comment("煙幕彈：煙霧半徑（格），以自己為中心的圓球形").defineInRange("smoke_radius_v2", 5.0, 0.5, 20.0);
         smokeSeconds = b.comment("煙幕彈：煙霧持續秒數（占位）").defineInRange("smoke_seconds", 15.0, 1.0, 120.0);
         totemSeconds = b.comment("不死圖騰：副手有圖騰的秒數").defineInRange("totem_seconds", 15.0, 1.0, 600.0);
         bubbleSeconds = b.comment("護盾泡泡：等待受傷的秒數").defineInRange("bubble_seconds", 15.0, 1.0, 600.0);

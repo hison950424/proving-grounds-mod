@@ -42,6 +42,9 @@ public final class SpecialEvents {
 
     private SpecialEvents() {}
 
+    /** 護盾泡泡觸發的 tick（同一 tick 內的其他傷害一起擋掉）。 */
+    private static final java.util.Map<java.util.UUID, Long> BUBBLE_POPPED = new java.util.HashMap<>();
+
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -73,11 +76,19 @@ public final class SpecialEvents {
         if (!(event.getEntity() instanceof ServerPlayer p) || event.getAmount() <= 0) return;
         var src = event.getSource();
         if (src.is(DamageTypes.FELL_OUT_OF_WORLD) || src.is(DamageTypes.GENERIC_KILL)) return;
-        if (p.hasEffect(SpecialRegistry.SHIELD_BUBBLE.get()) && !src.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+        Long popped = BUBBLE_POPPED.get(p.getUUID());
+        if (popped != null && p.server.getTickCount() - popped <= 1) {
+            // 護盾泡泡剛擋下的那一下：同一發攻擊的其他部分（例如 TACZ 的穿甲傷害是分開扣的）也一起擋掉
+            event.setCanceled(true);
+            return;
+        }
+        // 不能看「無視無敵」標籤：TACZ 的 bullet_void 子彈也在那個標籤裡，會讓護盾泡泡擋不到
+        if (p.hasEffect(SpecialRegistry.SHIELD_BUBBLE.get())) {
             // 護盾泡泡：第一下傷害完全取消，給額外生命值（不會消失）與加速，只觸發一次
             event.setCanceled(true);
             SpecialConfig s = SpecialConfig.get();
             p.removeEffect(SpecialRegistry.SHIELD_BUBBLE.get());
+            BUBBLE_POPPED.put(p.getUUID(), (long) p.server.getTickCount());
             Engines.addExtraHealth(p, s.bubbleAbsorption.get().floatValue());
             int speed = SpecialConfig.ticks(s.bubbleSpeedSeconds);
             if (speed > 0) Engines.effect(p, SpecialRegistry.BUBBLE_SPEED.get(), speed, 0);

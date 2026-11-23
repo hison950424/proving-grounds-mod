@@ -150,7 +150,7 @@
   "item.provinggrounds.blast_scanner_plus": "Blast Scanner+",
   "item.provinggrounds.blast_scanner_plus.desc": "其中一隊的所有敵人發光並顯示在地圖上（所有人都看得到）",
   "item.provinggrounds.smoke_burst": "Smoke Burst",
-  "item.provinggrounds.smoke_burst.desc": "以自己為中心放出半徑 3 格的煙霧",
+  "item.provinggrounds.smoke_burst.desc": "以自己為中心放出半徑 5 格的圓形煙霧",
   "item.provinggrounds.totem": "Totem",
   "item.provinggrounds.totem.desc": "15 秒內副手有不死圖騰：致命傷害時不死也不倒地",
   "item.provinggrounds.shield_bubble": "Shield Bubble",

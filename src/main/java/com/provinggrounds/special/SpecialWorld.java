@@ -112,11 +112,20 @@ public final class SpecialWorld {
         g.level = p.serverLevel();
         g.pos = at;
         g.end = p.server.getTickCount() + SpecialConfig.ticks(SpecialConfig.get().gunshotSeconds);
-        g.next = p.server.getTickCount();
+        g.next = p.server.getTickCount() + 3; // 等音源實體送到客戶端再開始播
         g.gun = gun;
-        // TACZ 的槍聲要綁在一個實體上播：放一個看不見的展示實體當音源
-        net.minecraft.world.entity.Display.ItemDisplay anchor = new net.minecraft.world.entity.Display.ItemDisplay(
-            net.minecraft.world.entity.EntityType.ITEM_DISPLAY, g.level);
+        // TACZ 的槍聲要綁在一個「活的實體」上播（不是活的實體 TACZ 會直接略過）：
+        // 放一個看不見、沒有碰撞箱的盔甲座（marker）當音源
+        net.minecraft.world.entity.decoration.ArmorStand anchor = new net.minecraft.world.entity.decoration.ArmorStand(
+            net.minecraft.world.entity.EntityType.ARMOR_STAND, g.level);
+        anchor.moveTo(at.x, at.y, at.z);
+        net.minecraft.nbt.CompoundTag marker = new net.minecraft.nbt.CompoundTag();
+        marker.putBoolean("Marker", true);
+        marker.putBoolean("Invisible", true);
+        marker.putBoolean("NoGravity", true);
+        marker.putBoolean("Silent", true);
+        marker.putBoolean("Invulnerable", true);
+        anchor.load(anchor.saveWithoutId(new net.minecraft.nbt.CompoundTag()).merge(marker));
         anchor.moveTo(at.x, at.y, at.z);
         anchor.addTag(ANCHOR_TAG);
         g.level.addFreshEntity(anchor);
@@ -202,9 +211,12 @@ public final class SpecialWorld {
         ParticleOptions lr = smokeParticle();
         for (Area a : SMOKES) {
             RandomSource rnd = a.level().getRandom();
-            for (int i = 0; i < 4; i++) {
-                double dx = (rnd.nextDouble() * 2 - 1) * r, dy = rnd.nextDouble() * r * 0.8, dz = (rnd.nextDouble() * 2 - 1) * r;
-                if (dx * dx + dz * dz > r * r) continue;
+            int n = Math.max(4, (int) Math.round(r * r * 0.5)); // 半徑越大，每 tick 的煙越多
+            for (int i = 0; i < n; i++) {
+                // 圓球形：在半徑 r 的球裡均勻取點（下半部壓扁貼地，看起來是圓頂）
+                double dx = (rnd.nextDouble() * 2 - 1) * r, dy = (rnd.nextDouble() * 2 - 1) * r, dz = (rnd.nextDouble() * 2 - 1) * r;
+                if (dx * dx + dy * dy + dz * dz > r * r) continue;
+                dy = dy < 0 ? dy * 0.15 + 0.3 : dy + 0.3;
                 double x = a.center().x + dx, y = a.center().y + dy, z = a.center().z + dz;
                 if (lr != null) {
                     for (ServerPlayer p : a.level().players()) a.level().sendParticles(p, lr, true, x, y, z, 1, 0, 0, 0, 0);
