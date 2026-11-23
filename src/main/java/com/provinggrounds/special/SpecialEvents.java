@@ -115,6 +115,9 @@ public final class SpecialEvents {
         String[] ids = Arrays.stream(SpecialType.values()).map(t -> t.id).toArray(String[]::new);
         event.getDispatcher().register(Commands.literal("pg")
             .then(Commands.literal("special").requires(s -> s.hasPermission(2))
+                .then(Commands.literal("mode")
+                    .then(Commands.literal("on").executes(ctx -> mode(ctx.getSource(), true)))
+                    .then(Commands.literal("off").executes(ctx -> mode(ctx.getSource(), false))))
                 .then(Commands.literal("list").executes(ctx -> {
                     StringBuilder sb = new StringBuilder("[PG] 特殊物品（" + ids.length + " 種）：");
                     for (SpecialType t : SpecialType.values()) sb.append("\n  ").append(t.id).append("  ").append(t.zh);
@@ -139,6 +142,13 @@ public final class SpecialEvents {
                 .then(Commands.literal("simulate")
                     .then(Commands.argument("count", IntegerArgumentType.integer(1, 100000))
                         .executes(ctx -> simulate(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "count")))))));
+    }
+
+    /** 特殊物品模式開關（同大廳選單的按鈕）。 */
+    private static int mode(net.minecraft.commands.CommandSourceStack src, boolean on) {
+        SpecialConfig.setEnabled(on);
+        src.sendSuccess(() -> Component.literal("[PG] 特殊物品模式：" + (on ? "開" : "關")).withStyle(ChatFormatting.GREEN), true);
+        return 1;
     }
 
     /** 模擬開 count 個箱子：印出每種特殊物品出現幾次（驗證「約 10 箱 1 件」）。 */

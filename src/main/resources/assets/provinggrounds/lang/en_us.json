@@ -191,5 +191,7 @@
   "entity.provinggrounds.decoy": "Decoy",
   "entity.provinggrounds.special_projectile": "Special Item",
   "hud.provinggrounds.special_slot": "Special",
-  "key.provinggrounds.quiet_walk": "Quiet Walk"
+  "key.provinggrounds.quiet_walk": "Quiet Walk",
+  "provinggrounds.lobby.special_on": "Special items: ON",
+  "provinggrounds.lobby.special_off": "Special items: OFF"
 }

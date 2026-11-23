@@ -21,7 +21,8 @@ public final class SpecialSpeed {
     public static double multiplier(ServerPlayer p, double base, double current) {
         SpecialConfig s;
         try { s = SpecialConfig.get(); } catch (IllegalStateException e) { return current; }
-        if (p.hasEffect(SpecialRegistry.ADRENALINE.get())) return base * (1 + s.adrenalineBonus.get());
+        double shield = KnockbackShield.active(p) ? 1 - s.shieldSpeedPenalty.get() : 1; // 擊退盾舉著：移動速度 -25%
+        if (p.hasEffect(SpecialRegistry.ADRENALINE.get())) return base * (1 + s.adrenalineBonus.get()) * shield;
         double bonus = 0;
         if (p.hasEffect(SpecialRegistry.CLOAK.get())) bonus += base * s.cloakBonus.get();
         if (p.hasEffect(SpecialRegistry.BUBBLE_SPEED.get())) bonus += base * s.bubbleSpeedBonus.get();
@@ -29,6 +30,6 @@ public final class SpecialSpeed {
             Circle c = BattleRoyaleMode.get().circle();
             if (c != null && c.started() && c.isOutside(p.getX(), p.getZ())) bonus += base * s.shelterBonus.get();
         }
-        return current + bonus;
+        return (current + bonus) * shield;
     }
 }

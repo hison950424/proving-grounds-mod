@@ -114,7 +114,8 @@ public final class KnockbackShield {
         CHARGING.remove(p.getUUID());
         p.setDeltaMovement(Vec3.ZERO);
         p.hurtMarked = true;
-        Engines.shockwave(p.serverLevel(), at, s.shieldShockRadius.get(), p);
+        SpecialConfig sc = SpecialConfig.get(); // 擊退盾：自己與隊友不受影響
+        Engines.shockwave(p.serverLevel(), at, s.shieldShockRadius.get(), sc.shockCenterDamage.get(), SpecialConfig.ticks(sc.shockConcussSeconds), p, true);
         restore(p);
     }
 

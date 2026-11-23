@@ -125,6 +125,10 @@ public class MainMenuScreen extends Screen {
         setting(sx, y, sw, Tr.t("lobby.variant", variant.displayName), canEdit,
             () -> send(LobbyManager.Action.SET_VARIANT, (variant.ordinal() + 1) % BattleRoyaleMode.Variant.values().length));
         y += 20;
+        boolean special = lobby == null || lobby.special();
+        setting(sx, y, sw, Tr.t(special ? "lobby.special_on" : "lobby.special_off"), canEdit,
+            () -> send(LobbyManager.Action.SET_SPECIAL, special ? 0 : 1));
+        y += 20;
         LobbyManager.TeamMode teamMode = lobby != null ? LobbyManager.TeamMode.values()[lobby.teamModeOrdinal()] : LobbyManager.TeamMode.FREE;
         setting(sx, y, sw, Tr.t("lobby.team_mode", teamMode.displayName), canEdit,
             () -> send(LobbyManager.Action.SET_TEAM_MODE, (teamMode.ordinal() + 1) % LobbyManager.TeamMode.values().length));

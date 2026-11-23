@@ -20,7 +20,7 @@ import java.util.List;
 /**
  * 檔案: Engines.java
  * 目的: 共用引擎（計畫書 4 的 B4）：衝擊波、震盪、額外生命值。物品只傳參數進來，不自己寫一套。
- *   衝擊波：把範圍內的人往外震飛，傷害從中心 center_damage 往外線性遞減到 0，再附帶震盪。施放者與隊友不受影響。
+ *   衝擊波：把範圍內的人往外震飛，傷害從中心 center_damage 往外線性遞減到 0，再附帶震盪。預設連施放者與隊友都會受影響（friendly_fire）；擊退盾的衝撞例外。
  *   震盪：自訂效果 provinggrounds:concussion（沒有粒子），客戶端讓視角不受控制地晃動，快結束時線性減弱。
  *   額外生命值：用原版吸收生命值（不會隨時間消失），血條上畫黃色。
  */
@@ -50,7 +50,8 @@ public final class Engines {
     /** 衝擊波：用設定檔的預設值。 */
     public static void shockwave(ServerLevel level, Vec3 c, double radius, @Nullable ServerPlayer by) {
         SpecialConfig s = SpecialConfig.get();
-        shockwave(level, c, radius, s.shockCenterDamage.get(), SpecialConfig.ticks(s.shockConcussSeconds), by, true);
+        // 預設會影響自己與隊友（friendly_fire；擊退盾的衝撞另外呼叫、不影響自己）
+        shockwave(level, c, radius, s.shockCenterDamage.get(), SpecialConfig.ticks(s.shockConcussSeconds), by, !s.friendlyFire.get());
     }
 
     /**

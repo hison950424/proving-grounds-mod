@@ -191,5 +191,7 @@
   "entity.provinggrounds.decoy": "殘影分身",
   "entity.provinggrounds.special_projectile": "特殊物品",
   "hud.provinggrounds.special_slot": "特殊物品",
-  "key.provinggrounds.quiet_walk": "靜走（慢慢走，腳步聲小）"
+  "key.provinggrounds.quiet_walk": "靜走（慢慢走，腳步聲小）",
+  "provinggrounds.lobby.special_on": "特殊物品：開",
+  "provinggrounds.lobby.special_off": "特殊物品：關"
 }

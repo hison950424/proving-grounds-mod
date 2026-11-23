@@ -77,6 +77,7 @@ public final class ClientSpecial {
         mapTargets = List.of();
         coughTicks = -1;
         disorientTicks = 0;
+        SpecialHotbar.pearlFlying = false;
         radarStart = -1;
     }
 
@@ -105,6 +106,7 @@ public final class ClientSpecial {
     public static void applyFx(SpecialFxPacket fx) {
         switch (fx.kind()) {
             case SpecialFxPacket.COUGH -> coughTicks = 0;
+            case SpecialFxPacket.PEARL -> SpecialHotbar.pearlFlying = fx.a() != 0;
             case SpecialFxPacket.DISORIENT -> { disorientDir = fx.a(); disorientTicks = fx.b(); }
             case SpecialFxPacket.RADAR -> {
                 radarStart = System.currentTimeMillis();

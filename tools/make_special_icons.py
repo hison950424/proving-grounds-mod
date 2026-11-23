@@ -309,7 +309,7 @@ def render(shape, rgb, alpha=255):
 def main():
     src = open(os.path.join(ROOT, "java", "com", "provinggrounds", "special", "SpecialType.java"), encoding="utf-8").read()
     items = re.findall(r'^\s+[A-Z_]+\("([a-z_]+)", "[^"]+", "[^"]+", "[^"]+", 0x([0-9A-F]+)\)', src, re.M)
-    items.append(("knockback_shield_held", "806040"))
+    # knockback_shield_held 用原版盾牌模型（ShieldItemRenderer），不需要貼圖
     for iid, hexcol in items:
         v = int(hexcol, 16)
         rgb = ((v >> 16) & 255, (v >> 8) & 255, v & 255)

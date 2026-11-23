@@ -43,6 +43,7 @@ public final class ClientModEvents {
         event.registerAboveAll("item_wheel", ClientWheel.OVERLAY);
         event.registerAboveAll("compass", Compass.OVERLAY);
         event.registerAboveAll("damage_indicator", DamageIndicator.OVERLAY);
+        event.registerAbove(net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.HOTBAR.id(), "special_hotbar", com.provinggrounds.special.client.SpecialHotbar.OVERLAY); // 特殊物品快捷欄
     }
 
     @SubscribeEvent

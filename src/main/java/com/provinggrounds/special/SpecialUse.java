@@ -53,11 +53,15 @@ public final class SpecialUse {
 
     public static void reset() {
         LAST_USE.clear();
+        for (SpecialProjectile e : PEARLS.values()) {
+            if (e.getOwner() instanceof ServerPlayer p) PGNetwork.sendTo(p, SpecialFxPacket.of(SpecialFxPacket.PEARL, 0, 0));
+        }
         PEARLS.clear();
     }
 
     public static void forgetPearl(SpecialProjectile e) {
         PEARLS.values().removeIf(v -> v == e);
+        if (e.getOwner() instanceof ServerPlayer p) PGNetwork.sendTo(p, SpecialFxPacket.of(SpecialFxPacket.PEARL, 0, 0)); // 快捷欄提示收起
     }
 
     private static void msg(ServerPlayer p, String text) {
@@ -72,6 +76,7 @@ public final class SpecialUse {
     }
 
     public static void onKey(ServerPlayer p) {
+        if (!SpecialConfig.enabledSafe()) { msg(p, "特殊物品模式已關閉"); return; }
         if (!canUseNow(p)) { msg(p, "只能在對局中使用特殊物品"); return; }
         if (KnockbackShield.active(p)) {
             if (ActionLock.blocksSpecial(p)) { msg(p, "現在不能使用"); return; }
@@ -161,7 +166,10 @@ public final class SpecialUse {
             }
             case WIND_BOMB -> SpecialProjectile.throwFrom(p, SpecialType.WIND_BOMB, 1.4f);
             case GAS_GRENADE -> SpecialProjectile.throwFrom(p, SpecialType.GAS_GRENADE, 1.2f);
-            case WARP_PEARL -> PEARLS.put(p.getUUID(), SpecialProjectile.throwFrom(p, SpecialType.WARP_PEARL, s.pearlSpeed.get().floatValue()));
+            case WARP_PEARL -> {
+                PEARLS.put(p.getUUID(), SpecialProjectile.throwFrom(p, SpecialType.WARP_PEARL, s.pearlSpeed.get().floatValue()));
+                PGNetwork.sendTo(p, SpecialFxPacket.of(SpecialFxPacket.PEARL, 1, 0)); // 快捷欄提示「再按一次傳送」
+            }
             case FAKE_CRATE_LOW, FAKE_CRATE_MID, FAKE_CRATE_HIGH -> {
                 if (!placeFakeCrate(p, type)) { msg(p, "前方沒有可以放箱子的地面"); return false; }
             }

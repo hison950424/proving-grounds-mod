@@ -33,7 +33,7 @@ public final class SpecialConfig {
     public final ForgeConfigSpec.DoubleValue snowRange, snowSeconds;
     public final ForgeConfigSpec.IntValue snowHeight;
     public final ForgeConfigSpec.IntValue shieldDurability;
-    public final ForgeConfigSpec.DoubleValue shieldChargeRange, shieldShockRadius;
+    public final ForgeConfigSpec.DoubleValue shieldChargeRange, shieldShockRadius, shieldSpeedPenalty;
     public final ForgeConfigSpec.DoubleValue windShockRadius;
     public final ForgeConfigSpec.DoubleValue landMineDamage, landMineSlowSeconds, fireMineSeconds, fireMineDamage;
     public final ForgeConfigSpec.DoubleValue smokeRadius, smokeSeconds;
@@ -49,11 +49,11 @@ public final class SpecialConfig {
     public final ForgeConfigSpec.DoubleValue radarRange, radarSeconds;
     public final ForgeConfigSpec.DoubleValue gunshotRange, gunshotSeconds;
     public final ForgeConfigSpec.ConfigValue<List<? extends String>> gunshotFallbackGuns;
-    public final ForgeConfigSpec.DoubleValue decoySeconds;
+    public final ForgeConfigSpec.DoubleValue decoySeconds, decoyRevealSeconds;
 
     public SpecialConfig(ForgeConfigSpec.Builder b) {
         b.comment("特殊物品（計畫書 4）：特殊物品欄 1 格，按「使用特殊物品」鍵（預設 Q）使用，用完就消失").push("special");
-        enabled = b.comment("是否在箱子裡生成特殊物品").define("enabled", true);
+        enabled = b.comment("特殊物品模式：關閉時箱子不會出現特殊物品、不能使用、也不顯示特殊物品欄。大廳選單（管理員）或 /pg special mode on|off 可以切換").define("enabled", true);
         chance = b.comment("每個箱子（低、中、高、空投都一樣）出現 1 件特殊物品的機率，0.1 = 約每 10 箱 1 件。出現哪一件依 data/br/loot_tables/special.json 的權重")
             .defineInRange("chance", 0.1, 0.0, 1.0);
         useCooldownTicks = b.comment("兩次使用特殊物品之間至少間隔幾 tick（防止連按）").defineInRange("use_cooldown_ticks", 10, 0, 200);
@@ -72,7 +72,7 @@ public final class SpecialConfig {
         fakeCrateDamage = b.comment("假箱：打開的人受到的傷害").defineInRange("fake_crate_damage", 10.0, 0.0, 1000.0);
         fakeCrateGlowSeconds = b.comment("假箱：打開的人發光秒數（全體看得到、不上地圖）").defineInRange("fake_crate_glow_seconds", 5.0, 0.0, 120.0);
         fakeCrateConcussSeconds = b.comment("假箱：打開的人震盪秒數").defineInRange("fake_crate_concuss_seconds", 5.0, 0.0, 120.0);
-        friendlyFire = b.comment("地雷、燃燒地雷的「所有人」包含隊友與自己").define("friendly_fire", true);
+        friendlyFire = b.comment("特殊物品的效果會影響自己與隊友（衝擊波、地雷、燃燒、致盲、毒氣…；擊退盾的衝撞例外）").define("friendly_fire", true);
         b.pop();
 
         b.comment("各物品").push("items");
@@ -90,6 +90,7 @@ public final class SpecialConfig {
         shieldDurability = b.comment("擊退盾：耐久度（擋下的傷害會扣耐久）").defineInRange("shield_durability", 500, 1, 100000);
         shieldChargeRange = b.comment("擊退盾：衝撞最遠距離（格）").defineInRange("shield_charge_range", 25.0, 1.0, 100.0);
         shieldShockRadius = b.comment("擊退盾：衝撞的衝擊波半徑（格）").defineInRange("shield_shock_radius", 2.5, 0.5, 20.0);
+        shieldSpeedPenalty = b.comment("擊退盾：舉著盾時移動速度減少多少（0.25 = -25%；衝撞不受影響）").defineInRange("shield_speed_penalty", 0.25, 0.0, 0.95);
         windShockRadius = b.comment("擊退風暴彈：衝擊波半徑（格）").defineInRange("wind_shock_radius", 2.5, 0.5, 20.0);
         landMineDamage = b.comment("地雷：中心傷害（越外圍越低）").defineInRange("land_mine_damage", 45.0, 0.0, 1000.0);
         landMineSlowSeconds = b.comment("地雷：緩速秒數").defineInRange("land_mine_slow_seconds", 5.0, 0.0, 120.0);
@@ -122,11 +123,24 @@ public final class SpecialConfig {
             .defineListAllowEmpty(List.of("gunshot_fallback_guns"), () -> List.of("tacz:ak47", "tacz:m4a1", "tacz:hk_mp5a5", "tacz:glock_17"),
                 o -> o instanceof String s && s.contains(":"));
         decoySeconds = b.comment("殘影分身：存在秒數").defineInRange("decoy_seconds", 10.0, 1.0, 120.0);
+        decoyRevealSeconds = b.comment("殘影分身：打掉分身的人發光幾秒（所有人都看得到，不上地圖；0 = 不發光）").defineInRange("decoy_reveal_seconds", 3.0, 0.0, 60.0);
         b.pop();
         b.pop();
     }
 
     public static SpecialConfig get() { return PGConfig.SERVER.special; }
+
+    /** 特殊物品模式是否開啟（設定還沒載入時當作開啟）。 */
+    public static boolean enabledSafe() {
+        try { return get().enabled.get(); } catch (IllegalStateException e) { return true; }
+    }
+
+    /** 切換特殊物品模式（寫進設定檔），並更新所有人的大廳資料（客戶端用來決定要不要顯示特殊物品欄）。 */
+    public static void setEnabled(boolean on) {
+        get().enabled.set(on);
+        get().enabled.save();
+        com.provinggrounds.core.LobbyManager.get().broadcast();
+    }
 
     public static int ticks(ForgeConfigSpec.DoubleValue seconds) {
         return (int) Math.round(seconds.get() * 20);

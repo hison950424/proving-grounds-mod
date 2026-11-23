@@ -1,6 +1,6 @@
 {
-  "parent": "minecraft:item/generated",
+  "parent": "minecraft:item/shield_blocking",
   "textures": {
-    "layer0": "provinggrounds:item/knockback_shield_held"
+    "particle": "minecraft:block/dark_oak_planks"
   }
 }

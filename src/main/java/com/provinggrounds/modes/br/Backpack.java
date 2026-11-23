@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 檔案: Backpack.java
  * 目的: 背包系統（計畫書 B3）。
  *   - 每個玩家有一格「背包欄」（InventoryMenuMixin 加在物品欄畫面、副手格的正上方），只接受 BackpackItem。
+ *     背包也可以放在物品欄裡帶著（例如拿去給隊友），只有裝在背包欄的才會解鎖格子。
  *   - 主背包 27 格（3 列 × 9 欄，Inventory 9～35）依背包等級一列一列解鎖：一級開最下列、二級加中間列、
  *     三級加最上列，每列開左邊 backpack_columns 欄（預設 7，也就是 7／14／21 格）。沒有背包時全鎖。
  *   - 鎖定只在 BR 進行中的參賽者身上生效（跟快捷欄規則一樣），大廳與創造模式不受影響。
@@ -131,7 +132,10 @@ public final class Backpack {
         SimpleContainer c = container(p);
         ItemStack old = c.getItem(0);
         c.setItem(0, stack.split(1));
-        if (!old.isEmpty()) HotbarRules.dropAtFeet(p, old);
+        if (!old.isEmpty()) {
+            HotbarRules.insert(p, old); // 舊的放進物品欄（可以拿去給隊友），放不下才掉在腳邊
+            if (!old.isEmpty()) HotbarRules.dropAtFeet(p, old);
+        }
         return true;
     }
 

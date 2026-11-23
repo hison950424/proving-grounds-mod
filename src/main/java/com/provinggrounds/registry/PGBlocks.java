@@ -94,7 +94,7 @@ public final class PGBlocks {
         DeferredRegister.create(net.minecraft.core.registries.Registries.CREATIVE_MODE_TAB, ProvingGroundsMod.MOD_ID);
     public static final RegistryObject<net.minecraft.world.item.CreativeModeTab> ADMIN_TAB = TABS.register("admin_tools",
         () -> net.minecraft.world.item.CreativeModeTab.builder()
-            .title(net.minecraft.network.chat.Component.literal("PG 管理工具"))
+            .title(net.minecraft.network.chat.Component.literal("Proving Grounds"))
             .icon(() -> new net.minecraft.world.item.ItemStack(ADMIN_TOOLS.get(com.provinggrounds.item.AdminToolItem.Tool.FLOAT_TEXT).get()))
             .displayItems((params, out) -> {
                 // 管理員會用到的全部放這裡（看板、箱子、祭壇、背包、工具），不用到各個原版分頁找
@@ -103,6 +103,10 @@ public final class PGBlocks {
                 out.accept(CRATE_LOW.get()); out.accept(CRATE_MID.get()); out.accept(CRATE_HIGH.get()); out.accept(CRATE_AIRDROP.get());
                 out.accept(ALTAR_ITEM.get());
                 out.accept(BACKPACK_1.get()); out.accept(BACKPACK_2.get()); out.accept(BACKPACK_3.get());
+                out.accept(REVIVE_CARD.get());
+                // 特殊物品（計畫書 4）與擊退盾：本模組所有物品都可以在創造模式拿到
+                com.provinggrounds.special.SpecialRegistry.ITEM.values().forEach(r -> out.accept(r.get()));
+                out.accept(com.provinggrounds.special.SpecialRegistry.SHIELD_HELD.get());
             })
             .build());
 

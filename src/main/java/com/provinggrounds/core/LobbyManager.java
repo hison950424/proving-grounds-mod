@@ -55,7 +55,8 @@ public final class LobbyManager {
         JOIN_GAME,          // 觀戰者自己按「加入遊戲」
         START, FORCE_START, CANCEL_COUNTDOWN, // 管理員：開始
         END_GAME,           // 管理員：強制結束進行中的遊戲、全員回大廳
-        CLEAR_TEAMS         // 管理員：所有人移出隊伍（變成未分隊）
+        CLEAR_TEAMS,        // 管理員：所有人移出隊伍（變成未分隊）
+        SET_SPECIAL         // 管理員：特殊物品模式開（arg 1）／關（arg 0）
     }
 
     public static final String SPECTATOR_TAG = "pg_spectator";
@@ -213,6 +214,7 @@ public final class LobbyManager {
                 if (arg < 0 || arg >= all.length) return false;
                 variant = all[arg];
             }
+            case SET_SPECIAL -> com.provinggrounds.special.SpecialConfig.setEnabled(arg != 0);
             case SET_TEAM_MODE -> {
                 TeamMode[] all = TeamMode.values();
                 if (arg < 0 || arg >= all.length) return false;
@@ -391,6 +393,7 @@ public final class LobbyManager {
             map = it.hasNext() ? it.next().id : -1;
         }
         return new LobbyStatePacket(GameManager.get().isInLobby(), map, preset.ordinal(), variant.ordinal(),
-            teamMode.ordinal(), teamCount, countdownTicks < 0 ? -1 : (countdownTicks + 19) / 20, players);
+            teamMode.ordinal(), teamCount, countdownTicks < 0 ? -1 : (countdownTicks + 19) / 20,
+            com.provinggrounds.special.SpecialConfig.enabledSafe(), players);
     }
 }

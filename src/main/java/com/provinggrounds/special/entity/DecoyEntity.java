@@ -29,7 +29,7 @@ import java.util.UUID;
  * 目的: 殘影分身（計畫書 4 的 34 號）。
  *   - 外觀複製使用者的皮膚（DecoyRenderer 依 OWNER 取皮膚）、護甲與手持物（生成時複製到這個實體的裝備格）。
  *   - 朝使用者當時面向的方向奔跑（疾跑速度）decoy_seconds 秒後消失；前方有 1 格高的方塊會自動跳起。
- *   - 只有 1 點血：被打中就冒煙消失，不算擊殺、不掉東西。
+ *   - 只有 1 點血：被打中就冒煙消失，不算擊殺、不掉東西。打掉它的人會發光 3 秒，所有人都看得到。
  *   - 隊友看到帶淡色輪廓（EntitySpecialMixin 對同隊的人畫發光外框），避免誤傷；不出現在地圖上。
  */
 public class DecoyEntity extends PathfinderMob {
@@ -114,6 +114,11 @@ public class DecoyEntity extends PathfinderMob {
     public boolean hurt(DamageSource source, float amount) {
         if (level().isClientSide || isRemoved()) return false;
         if (source.is(net.minecraft.tags.DamageTypeTags.IS_FALL)) return false;
+        // 打掉分身的人會發光 decoy_reveal_seconds 秒（所有人都看得到，不上地圖）
+        if (source.getEntity() instanceof ServerPlayer attacker) {
+            double sec = SpecialConfig.get().decoyRevealSeconds.get();
+            if (sec > 0) com.provinggrounds.special.GlowManager.add(attacker, com.provinggrounds.special.GlowManager.Audience.ALL, null, false, sec);
+        }
         poof();
         return false; // 不算傷害、不算擊殺
     }

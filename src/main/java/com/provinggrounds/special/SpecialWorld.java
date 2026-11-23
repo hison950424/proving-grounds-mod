@@ -182,7 +182,7 @@ public final class SpecialWorld {
             c.travelled += step;
             c.level.sendParticles(BLACK, c.pos.x, c.pos.y, c.pos.z, 14, 1.0, 1.0, 1.0, 0);
             for (Player p : c.level.getEntitiesOfClass(Player.class, new AABB(c.pos, c.pos).inflate(1.5))) {
-                if (p.getUUID().equals(c.owner) || p.isSpectator()) continue;
+                if (p.isSpectator() || (!s.friendlyFire.get() && p.getUUID().equals(c.owner))) continue; // 預設自己也會被致盲
                 p.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, blind, 0, false, false, true));
             }
             if (c.travelled >= s.blindRange.get()) it.remove();
@@ -227,7 +227,7 @@ public final class SpecialWorld {
             AABB box = new AABB(c.x - 1.5, c.y - 0.5, c.z - 1.5, c.x + 1.5, c.y + 2.5, c.z + 1.5);
             ServerPlayer owner = a.owner() == null ? null : server.getPlayerList().getPlayer(a.owner());
             for (ServerPlayer p : a.level().getEntitiesOfClass(ServerPlayer.class, box)) {
-                if (p.isSpectator() || (owner != null && Engines.ally(owner, p))) continue;
+                if (p.isSpectator() || (!s.friendlyFire.get() && owner != null && Engines.ally(owner, p))) continue; // 預設自己與隊友也會中毒氣
                 p.addEffect(new MobEffectInstance(SpecialRegistry.GASSED.get(), linger, 0, false, false, true));
                 MobEffectInstance cur = p.getEffect(MobEffects.POISON);
                 if (cur == null || cur.getDuration() < poison - 20) p.addEffect(new MobEffectInstance(MobEffects.POISON, poison, 0, false, false, true));

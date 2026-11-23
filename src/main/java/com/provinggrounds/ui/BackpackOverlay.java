@@ -45,7 +45,8 @@ public final class BackpackOverlay {
             g.fill(x + 1, y + 1, x + 17, y + 17, 0xA08B8B8B); // 蓋一層讓圖示變淡
             g.pose().popPose();
         }
-        // 特殊物品欄（背包欄正上方，計畫書 4 的 B1）
+        // 特殊物品欄（背包欄正上方，計畫書 4 的 B1）；特殊物品模式關閉時不畫
+        if (!com.provinggrounds.special.client.SpecialHotbar.modeOn()) return;
         int sx = screen.getGuiLeft() + com.provinggrounds.special.SpecialSlot.X - 1, sy = screen.getGuiTop() + com.provinggrounds.special.SpecialSlot.Y - 1;
         g.fill(sx, sy, sx + 18, sy + 18, 0xFF373737);
         g.fill(sx + 1, sy + 1, sx + 18, sy + 18, 0xFFFFFFFF);

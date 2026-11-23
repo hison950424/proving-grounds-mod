@@ -17,7 +17,7 @@ import java.util.function.Supplier;
  */
 public record SpecialFxPacket(byte kind, int a, int b, double x, double y, double z) {
 
-    public static final byte COUGH = 0, DISORIENT = 1, RADAR = 2, SELF_REVIVE = 3;
+    public static final byte COUGH = 0, DISORIENT = 1, RADAR = 2, SELF_REVIVE = 3, PEARL = 4; // PEARL：a = 1 傳送珠飛行中、0 結束
 
     public static SpecialFxPacket of(byte kind, int a, int b) { return new SpecialFxPacket(kind, a, b, 0, 0, 0); }
 

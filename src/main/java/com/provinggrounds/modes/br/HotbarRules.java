@@ -63,7 +63,7 @@ public final class HotbarRules {
     private static final String MSG_GUN_SLOT = "槍只能放在快捷欄第 1、2 格";
     private static final String MSG_SPECIAL_SLOT = "快捷欄第 1～5 格是專用格（1、2 槍｜3 近戰武器｜4 補品｜5 投擲物）";
     public static final String MSG_BACKPACK_HAVE = "已經裝著同等級或更高級的背包";
-    private static final String MSG_BACKPACK_SLOT = "背包只能裝在物品欄的背包欄（副手格上方）";
+
     private static final String MSG_DROPPED = "放不下的物品已掉在腳邊";
     public static final String MSG_SPECIAL_FULL = "特殊物品欄已經有物品，無法拿取";
     private static final String MSG_SPECIAL_ONLY = "特殊物品只能放在特殊物品欄（背包欄上方）";
@@ -117,7 +117,7 @@ public final class HotbarRules {
         if (s.isEmpty()) return true;
         if (slot >= 36 && slot <= 39) return true; // 防具欄不管
         Kind k = kind(s);
-        if (k == Kind.BACKPACK) return false; // 背包只能在背包欄
+        // 背包：除了裝在背包欄，也可以放在第 6～9 格或背包裡（帶去給隊友），規則同一般物品
         if (k == Kind.SPECIAL) return false; // 特殊物品只能在特殊物品欄
         if (k == Kind.SHIELD) return slot >= 0 && slot <= 8; // 擊退盾佔用穿戴時拿著的那一格
         return switch (slot) {
@@ -165,8 +165,9 @@ public final class HotbarRules {
                 fail = MSG_FULL;
             }
             case BACKPACK -> {
-                Backpack.equipIfBetter(p, stack); // 更高級就換上，舊的掉在腳邊
-                fail = MSG_BACKPACK_HAVE;
+                // 更高級就換上（舊的放進物品欄）；不是更高級就當一般物品帶著（可以拿去給隊友）
+                if (!Backpack.equipIfBetter(p, stack)) insertOther(p, inv, stack);
+                fail = MSG_FULL;
             }
             case SPECIAL -> {
                 com.provinggrounds.special.SpecialSlot.tryInsert(p, stack);
@@ -220,12 +221,21 @@ public final class HotbarRules {
     private static Result insertToHotbar(ServerPlayer p, ItemStack stack) {
         int before = stack.getCount();
         Inventory inv = p.getInventory();
+        net.minecraft.world.entity.EquipmentSlot armor = net.minecraft.world.entity.Mob.getEquipmentSlotForItem(stack);
+        if (armor.getType() == net.minecraft.world.entity.EquipmentSlot.Type.ARMOR && p.getItemBySlot(armor).isEmpty()) {
+            p.setItemSlot(armor, stack.split(1)); // 防具欄空著：直接穿上
+            return new Result(before - stack.getCount(), null);
+        }
         switch (kind(stack)) {
             case HEALING -> { merge(inv, stack, HEAL); putEmpty(inv, stack, HEAL); }
             case THROWABLE -> { merge(inv, stack, THROW); putEmpty(inv, stack, THROW); }
             case LARGE, PISTOL -> { if (!putEmpty(inv, stack, LARGE_A)) putEmpty(inv, stack, LARGE_B); }
             case MELEE -> { if (!putEmpty(inv, stack, PISTOL)) { for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i); } }
-            case BACKPACK -> Backpack.equipIfBetter(p, stack);
+            case BACKPACK -> {
+                if (!Backpack.equipIfBetter(p, stack)) {
+                    for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i);
+                }
+            }
             case SPECIAL -> com.provinggrounds.special.SpecialSlot.tryInsert(p, stack);
             case SHIELD -> {}
             case OTHER -> {
@@ -364,7 +374,6 @@ public final class HotbarRules {
             ItemStack s = inv.getItem(i);
             if (!allowedAt(p, i, s)) {
                 if (isGun(s)) why = MSG_GUN_SLOT;
-                else if (kind(s) == Kind.BACKPACK) why = MSG_BACKPACK_SLOT;
                 else if (kind(s) == Kind.SPECIAL) why = MSG_SPECIAL_ONLY;
                 break;
             }
