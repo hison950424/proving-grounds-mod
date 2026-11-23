@@ -38,6 +38,9 @@ public final class Tombstones {
         if (pos != null) level.setBlockAndUpdate(pos, PGBlocks.TOMBSTONE.get().defaultBlockState());
         if (pos == null || !(level.getBlockEntity(pos) instanceof TombstoneBlockEntity t)) {
             Backpack.dropEquipped(p);
+            ItemStack sp = com.provinggrounds.special.SpecialSlot.get(p).copy();
+            com.provinggrounds.special.SpecialSlot.clear(p);
+            if (!sp.isEmpty()) p.drop(sp, true, false);
             p.getInventory().dropAll();
             return false;
         }
@@ -51,6 +54,9 @@ public final class Tombstones {
         ItemStack pack = Backpack.container(p).getItem(0).copy();
         Backpack.clear(p);
         if (!pack.isEmpty() && !t.add(pack)) leftovers.add(pack);
+        ItemStack special = com.provinggrounds.special.SpecialSlot.get(p).copy(); // 特殊物品也進墓碑
+        com.provinggrounds.special.SpecialSlot.clear(p);
+        if (!special.isEmpty() && !t.add(special)) leftovers.add(special);
         for (ItemStack s : leftovers) HotbarRules.dropAtFeet(p, s); // 理論上不會發生（54 格 > 42 格）
         Ledger.get(level).add(pos);
         return true;

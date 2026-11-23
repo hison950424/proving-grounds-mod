@@ -20,16 +20,18 @@ public final class BackpackEvents {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer p) Backpack.load(p);
+        if (event.getEntity() instanceof ServerPlayer p) { Backpack.load(p); com.provinggrounds.special.SpecialSlot.load(p); }
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         Backpack.unload(event.getEntity());
+        com.provinggrounds.special.SpecialSlot.unload(event.getEntity());
     }
 
     @SubscribeEvent
     public static void onClone(PlayerEvent.Clone event) {
         Backpack.copyData(event.getOriginal(), event.getEntity());
+        com.provinggrounds.special.SpecialSlot.copyData(event.getOriginal(), event.getEntity());
     }
 }

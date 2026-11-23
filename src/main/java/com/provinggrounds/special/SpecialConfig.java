@@ -1,0 +1,134 @@
+package com.provinggrounds.special;
+
+import com.provinggrounds.config.PGConfig;
+import net.minecraftforge.common.ForgeConfigSpec;
+
+import java.util.List;
+
+/**
+ * 檔案: SpecialConfig.java
+ * 目的: 特殊物品的所有數值（計畫書 4），在伺服器設定檔的 [special] 區段。
+ *   標「占位」的是計畫書沒有指定、先用建議值的項目。
+ */
+public final class SpecialConfig {
+
+    public final ForgeConfigSpec.BooleanValue enabled;
+    public final ForgeConfigSpec.DoubleValue chance;
+    public final ForgeConfigSpec.IntValue useCooldownTicks;
+
+    // 共用引擎
+    public final ForgeConfigSpec.DoubleValue glowSeconds;
+    public final ForgeConfigSpec.DoubleValue shockRadius, shockCenterDamage, shockConcussSeconds, shockKnockback;
+    public final ForgeConfigSpec.DoubleValue concussStrength;
+    public final ForgeConfigSpec.DoubleValue mineTriggerRadius, mineDelaySeconds, mineEffectRadius;
+    public final ForgeConfigSpec.IntValue mineMaxPerPlayer;
+    public final ForgeConfigSpec.DoubleValue fakeCrateDamage, fakeCrateGlowSeconds, fakeCrateConcussSeconds;
+    public final ForgeConfigSpec.BooleanValue friendlyFire;
+
+    // 物品
+    public final ForgeConfigSpec.DoubleValue blindRange, blindSpeed, blindSeconds;
+    public final ForgeConfigSpec.DoubleValue adrenalineSeconds, adrenalineBonus;
+    public final ForgeConfigSpec.DoubleValue cloakSeconds, cloakBonus;
+    public final ForgeConfigSpec.DoubleValue springPower;
+    public final ForgeConfigSpec.DoubleValue snowRange, snowSeconds;
+    public final ForgeConfigSpec.IntValue snowHeight;
+    public final ForgeConfigSpec.IntValue shieldDurability;
+    public final ForgeConfigSpec.DoubleValue shieldChargeRange, shieldShockRadius;
+    public final ForgeConfigSpec.DoubleValue windShockRadius;
+    public final ForgeConfigSpec.DoubleValue landMineDamage, landMineSlowSeconds, fireMineSeconds, fireMineDamage;
+    public final ForgeConfigSpec.DoubleValue smokeRadius, smokeSeconds;
+    public final ForgeConfigSpec.DoubleValue totemSeconds;
+    public final ForgeConfigSpec.DoubleValue bubbleSeconds, bubbleAbsorption, bubbleSpeedBonus, bubbleSpeedSeconds;
+    public final ForgeConfigSpec.DoubleValue pearlRange, pearlSeconds, pearlSpeed;
+    public final ForgeConfigSpec.DoubleValue silentSeconds;
+    public final ForgeConfigSpec.DoubleValue gasSeconds, gasLingerSeconds, gasPoisonSeconds;
+    public final ForgeConfigSpec.DoubleValue selfReviveSeconds;
+    public final ForgeConfigSpec.DoubleValue armorPlusBonus;
+    public final ForgeConfigSpec.IntValue armorPlusMaxStacks;
+    public final ForgeConfigSpec.DoubleValue shelterSeconds, shelterBonus;
+    public final ForgeConfigSpec.DoubleValue radarRange, radarSeconds;
+    public final ForgeConfigSpec.DoubleValue gunshotRange, gunshotSeconds;
+    public final ForgeConfigSpec.ConfigValue<List<? extends String>> gunshotFallbackGuns;
+    public final ForgeConfigSpec.DoubleValue decoySeconds;
+
+    public SpecialConfig(ForgeConfigSpec.Builder b) {
+        b.comment("特殊物品（計畫書 4）：特殊物品欄 1 格，按「使用特殊物品」鍵（預設 G）使用，用完就消失").push("special");
+        enabled = b.comment("是否在箱子裡生成特殊物品").define("enabled", true);
+        chance = b.comment("每個箱子（低、中、高、空投都一樣）出現 1 件特殊物品的機率，0.1 = 約每 10 箱 1 件。出現哪一件依 data/br/loot_tables/special.json 的權重")
+            .defineInRange("chance", 0.1, 0.0, 1.0);
+        useCooldownTicks = b.comment("兩次使用特殊物品之間至少間隔幾 tick（防止連按）").defineInRange("use_cooldown_ticks", 10, 0, 200);
+
+        b.comment("共用引擎").push("engine");
+        glowSeconds = b.comment("發光持續秒數").defineInRange("glow_seconds", 5.0, 0.5, 120.0);
+        shockRadius = b.comment("衝擊波預設半徑（格）").defineInRange("shock_radius", 3.5, 0.5, 20.0);
+        shockCenterDamage = b.comment("衝擊波中心傷害（往外線性遞減到 0）").defineInRange("shock_center_damage", 20.0, 0.0, 1000.0);
+        shockConcussSeconds = b.comment("衝擊波附帶的震盪秒數").defineInRange("shock_concuss_seconds", 10.0, 0.0, 120.0);
+        shockKnockback = b.comment("衝擊波震飛力道（占位）").defineInRange("shock_knockback", 1.6, 0.0, 10.0);
+        concussStrength = b.comment("震盪：視角晃動的最大角度（度）").defineInRange("concuss_strength", 6.0, 0.0, 45.0);
+        mineTriggerRadius = b.comment("地雷：敵人進入幾格內觸發").defineInRange("mine_trigger_radius", 2.0, 0.5, 10.0);
+        mineDelaySeconds = b.comment("地雷：觸發後幾秒產生效果").defineInRange("mine_delay_seconds", 0.5, 0.0, 10.0);
+        mineEffectRadius = b.comment("地雷：效果半徑（格）").defineInRange("mine_effect_radius", 3.5, 0.5, 20.0);
+        mineMaxPerPlayer = b.comment("每人同時最多幾顆地雷，超過時最舊的消失（占位）").defineInRange("mine_max_per_player", 3, 1, 50);
+        fakeCrateDamage = b.comment("假箱：打開的人受到的傷害").defineInRange("fake_crate_damage", 10.0, 0.0, 1000.0);
+        fakeCrateGlowSeconds = b.comment("假箱：打開的人發光秒數（全體看得到、不上地圖）").defineInRange("fake_crate_glow_seconds", 5.0, 0.0, 120.0);
+        fakeCrateConcussSeconds = b.comment("假箱：打開的人震盪秒數").defineInRange("fake_crate_concuss_seconds", 5.0, 0.0, 120.0);
+        friendlyFire = b.comment("地雷、燃燒地雷的「所有人」包含隊友與自己").define("friendly_fire", true);
+        b.pop();
+
+        b.comment("各物品").push("items");
+        blindRange = b.comment("致盲珠：推進距離（格）").defineInRange("blind_range", 15.0, 1.0, 100.0);
+        blindSpeed = b.comment("致盲珠：推進速度（格/秒，占位）").defineInRange("blind_speed", 5.0, 0.5, 50.0);
+        blindSeconds = b.comment("致盲珠：致盲秒數").defineInRange("blind_seconds", 5.0, 0.5, 60.0);
+        adrenalineSeconds = b.comment("腎上腺素：持續秒數").defineInRange("adrenaline_seconds", 15.0, 1.0, 120.0);
+        adrenalineBonus = b.comment("腎上腺素：移動速度加成（0.75 = +75%，以 BR 基本速度為基準；不和拿刀疊加）").defineInRange("adrenaline_bonus", 0.75, 0.0, 5.0);
+        cloakSeconds = b.comment("隱形斗篷：持續秒數").defineInRange("cloak_seconds", 5.0, 1.0, 120.0);
+        cloakBonus = b.comment("隱形斗篷：移動速度加成（0.25 = +25%，以 BR 基本速度為基準；可和拿刀疊加）").defineInRange("cloak_bonus", 0.25, 0.0, 5.0);
+        springPower = b.comment("彈簧鞋：衝刺力道（占位，約 8 格）").defineInRange("spring_power", 1.3, 0.1, 10.0);
+        snowRange = b.comment("臨時雪牆：雪球最遠水平飛行距離（格）").defineInRange("snow_range", 15.0, 1.0, 100.0);
+        snowHeight = b.comment("臨時雪牆：雪牆最高幾格").defineInRange("snow_height", 4, 1, 16);
+        snowSeconds = b.comment("臨時雪牆：雪塊幾秒後消失").defineInRange("snow_seconds", 15.0, 1.0, 600.0);
+        shieldDurability = b.comment("擊退盾：耐久度（擋下的傷害會扣耐久）").defineInRange("shield_durability", 500, 1, 100000);
+        shieldChargeRange = b.comment("擊退盾：衝撞最遠距離（格）").defineInRange("shield_charge_range", 25.0, 1.0, 100.0);
+        shieldShockRadius = b.comment("擊退盾：衝撞的衝擊波半徑（格）").defineInRange("shield_shock_radius", 2.5, 0.5, 20.0);
+        windShockRadius = b.comment("擊退風暴彈：衝擊波半徑（格）").defineInRange("wind_shock_radius", 2.5, 0.5, 20.0);
+        landMineDamage = b.comment("地雷：中心傷害（越外圍越低）").defineInRange("land_mine_damage", 45.0, 0.0, 1000.0);
+        landMineSlowSeconds = b.comment("地雷：緩速秒數").defineInRange("land_mine_slow_seconds", 5.0, 0.0, 120.0);
+        fireMineSeconds = b.comment("燃燒地雷：燃燒秒數").defineInRange("fire_mine_seconds", 5.0, 0.0, 120.0);
+        fireMineDamage = b.comment("燃燒地雷：每秒燒傷").defineInRange("fire_mine_damage", 6.0, 0.0, 1000.0);
+        smokeRadius = b.comment("煙幕彈：煙霧半徑（格）").defineInRange("smoke_radius", 3.0, 0.5, 20.0);
+        smokeSeconds = b.comment("煙幕彈：煙霧持續秒數（占位）").defineInRange("smoke_seconds", 15.0, 1.0, 120.0);
+        totemSeconds = b.comment("不死圖騰：副手有圖騰的秒數").defineInRange("totem_seconds", 15.0, 1.0, 600.0);
+        bubbleSeconds = b.comment("護盾泡泡：等待受傷的秒數").defineInRange("bubble_seconds", 15.0, 1.0, 600.0);
+        bubbleAbsorption = b.comment("護盾泡泡：觸發時獲得的額外生命值（不會消失）").defineInRange("bubble_absorption", 25.0, 0.0, 1000.0);
+        bubbleSpeedBonus = b.comment("護盾泡泡：觸發後的移動速度加成（0.25 = +25%）").defineInRange("bubble_speed_bonus", 0.25, 0.0, 5.0);
+        bubbleSpeedSeconds = b.comment("護盾泡泡：加速秒數").defineInRange("bubble_speed_seconds", 10.0, 0.0, 120.0);
+        pearlRange = b.comment("傳送珠：最遠水平距離（格）").defineInRange("pearl_range", 35.0, 1.0, 200.0);
+        pearlSeconds = b.comment("傳送珠：最長飛行秒數").defineInRange("pearl_seconds", 15.0, 1.0, 120.0);
+        pearlSpeed = b.comment("傳送珠：飛行速度（格/tick，占位）").defineInRange("pearl_speed", 1.2, 0.1, 5.0);
+        silentSeconds = b.comment("靜音靴：持續秒數").defineInRange("silent_seconds", 15.0, 1.0, 600.0);
+        gasSeconds = b.comment("毒氣彈：毒氣本身持續秒數（占位）").defineInRange("gas_seconds", 10.0, 1.0, 120.0);
+        gasLingerSeconds = b.comment("毒氣彈：離開毒氣後效果殘留秒數").defineInRange("gas_linger_seconds", 5.0, 0.0, 120.0);
+        gasPoisonSeconds = b.comment("毒氣彈：中毒秒數").defineInRange("gas_poison_seconds", 5.0, 0.0, 120.0);
+        selfReviveSeconds = b.comment("急救針：自救讀條秒數").defineInRange("self_revive_seconds", 10.0, 1.0, 120.0);
+        armorPlusBonus = b.comment("強化護甲修復包：每次增加的耐久上限（0.5 = +50% 原始值，可疊加）").defineInRange("armor_plus_bonus", 0.5, 0.0, 10.0);
+        armorPlusMaxStacks = b.comment("強化護甲修復包：最多疊加幾次（0 = 不設上限）").defineInRange("armor_plus_max_stacks", 0, 0, 1000);
+        shelterSeconds = b.comment("圈外庇護：持續秒數").defineInRange("shelter_seconds", 15.0, 1.0, 600.0);
+        shelterBonus = b.comment("圈外庇護：在圈外時的移動速度加成（0.25 = +25%）").defineInRange("shelter_bonus", 0.25, 0.0, 5.0);
+        radarRange = b.comment("雷達脈衝：掃描半徑（格，含高低差）").defineInRange("radar_range", 40.0, 1.0, 500.0);
+        radarSeconds = b.comment("雷達脈衝：發光與地圖標點秒數").defineInRange("radar_seconds", 3.0, 0.5, 60.0);
+        gunshotRange = b.comment("假槍聲：最遠距離（格）").defineInRange("gunshot_range", 40.0, 1.0, 200.0);
+        gunshotSeconds = b.comment("假槍聲：持續秒數").defineInRange("gunshot_seconds", 6.0, 0.5, 60.0);
+        gunshotFallbackGuns = b.comment("假槍聲：手上沒有槍時，從這份清單隨機挑一把槍的聲音（TACZ 槍械 ID）")
+            .defineListAllowEmpty(List.of("gunshot_fallback_guns"), () -> List.of("tacz:ak47", "tacz:m4a1", "tacz:hk_mp5a5", "tacz:glock_17"),
+                o -> o instanceof String s && s.contains(":"));
+        decoySeconds = b.comment("殘影分身：存在秒數").defineInRange("decoy_seconds", 10.0, 1.0, 120.0);
+        b.pop();
+        b.pop();
+    }
+
+    public static SpecialConfig get() { return PGConfig.SERVER.special; }
+
+    public static int ticks(ForgeConfigSpec.DoubleValue seconds) {
+        return (int) Math.round(seconds.get() * 20);
+    }
+}

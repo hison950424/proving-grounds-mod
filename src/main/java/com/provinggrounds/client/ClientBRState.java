@@ -69,6 +69,8 @@ public final class ClientBRState {
     public static void clear() {
         state = BRStatePacket.none();
         com.provinggrounds.modes.br.Backpack.clearClient();
+        com.provinggrounds.special.SpecialSlot.clearClient();
+        com.provinggrounds.special.client.ClientSpecial.clear();
         synchronized (KILLS) { KILLS.clear(); }
     }
 }

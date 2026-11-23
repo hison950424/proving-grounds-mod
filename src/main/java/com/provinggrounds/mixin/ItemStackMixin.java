@@ -30,6 +30,13 @@ public abstract class ItemStackMixin {
         } catch (IllegalStateException e) {
             return; // 設定還沒載入（例如主畫面）：用原版耐久
         }
-        if (mult != 1.0) cir.setReturnValue((int) Math.round(cir.getReturnValue() * mult));
+        // 強化護甲修復包（計畫書 4 的 30 號）：每疊一次 +armor_plus_bonus 倍的原始值
+        net.minecraft.nbt.CompoundTag tag = self.getTag();
+        int stacks = tag == null ? 0 : tag.getInt(com.provinggrounds.special.SpecialUse.DURA_TAG);
+        double bonus = 0;
+        if (stacks > 0) {
+            try { bonus = stacks * PGConfig.SERVER.special.armorPlusBonus.get(); } catch (IllegalStateException e) { bonus = stacks * 0.5; }
+        }
+        if (mult != 1.0 || bonus != 0) cir.setReturnValue((int) Math.round(cir.getReturnValue() * mult * (1 + bonus)));
     }
 }

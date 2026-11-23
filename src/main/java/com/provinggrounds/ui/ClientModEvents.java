@@ -48,11 +48,16 @@ public final class ClientModEvents {
     @SubscribeEvent
     public static void onRegisterRenderers(net.minecraftforge.client.event.EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(com.provinggrounds.registry.PGBlocks.STATS_BOARD_BE.get(), StatsBoardRenderer::new);
+        // 特殊物品的實體（計畫書 4）
+        event.registerEntityRenderer(com.provinggrounds.special.SpecialRegistry.MINE.get(), com.provinggrounds.special.client.MineRenderer::new);
+        event.registerEntityRenderer(com.provinggrounds.special.SpecialRegistry.DECOY.get(), com.provinggrounds.special.client.DecoyRenderer::new);
+        event.registerEntityRenderer(com.provinggrounds.special.SpecialRegistry.PROJECTILE.get(), net.minecraft.client.renderer.entity.ThrownItemRenderer::new);
     }
 
     @SubscribeEvent
     public static void onRegisterKeys(RegisterKeyMappingsEvent event) {
         event.register(OPEN_MENU);
         event.register(PRONE);
+        event.register(com.provinggrounds.special.client.ClientSpecial.USE_KEY); // 使用特殊物品（預設 G）
     }
 }

@@ -267,6 +267,7 @@ public final class HUD {
     private static final int HP_HIGH = 0xFF4CC864; // 綠
     private static final int HP_MID  = 0xFFE8C040; // 黃
     private static final int HP_LOW  = 0xFFE04848; // 紅
+    private static final int HP_ABSORB = 0xFFF0D030; // 黃：額外生命值
 
     /**
      * 在原版愛心的位置（快捷欄左上方）畫數字血條：寬 81、高 9，中間顯示「目前 / 最大」。
@@ -282,11 +283,16 @@ public final class HUD {
 
         g.fill(x - 1, y - 1, x + bw + 1, y + bh + 1, HP_BG);
         g.fill(x, y, x + Math.round(bw * ratio), y + bh, color);
-        if (player.getAbsorptionAmount() > 0) { // 吸收血量：上緣一條金線
-            float abs = Math.min(1f, player.getAbsorptionAmount() / max);
-            g.fill(x, y, x + Math.round(bw * abs), y + 1, ACCENT);
+        float absorb = player.getAbsorptionAmount();
+        if (absorb > 0) { // 額外生命值（護盾泡泡等）：黃色，接在血量後面；超出的部分從頭疊上去
+            int start = Math.round(bw * ratio);
+            int len = Math.round(bw * Math.min(1f, absorb / max));
+            int end = Math.min(bw, start + len);
+            g.fill(x + start, y, x + end, y + bh, HP_ABSORB);
+            int over = start + len - bw;
+            if (over > 0) g.fill(x, y, x + Math.min(bw, over), y + bh, HP_ABSORB);
         }
-        String text = (int) Math.ceil(hp) + " / " + (int) Math.ceil(max);
+        String text = (int) Math.ceil(hp) + (absorb > 0 ? "+" + (int) Math.ceil(absorb) : "") + " / " + (int) Math.ceil(max);
         g.drawString(font, text, x + (bw - font.width(text)) / 2, y + 1, TEXT, true);
     }
 

@@ -28,5 +28,6 @@ public abstract class InventoryMenuMixin extends AbstractContainerMenu {
     @Inject(method = "<init>", at = @At("RETURN"), remap = false)
     private void provinggrounds$addBackpackSlot(Inventory inventory, boolean active, Player owner, CallbackInfo ci) {
         this.addSlot(new BackpackSlot(Backpack.container(owner)));
+        this.addSlot(new com.provinggrounds.special.SpecialSlot.MenuSlot(com.provinggrounds.special.SpecialSlot.container(owner))); // 第 47 格：特殊物品欄（計畫書 4 的 B1）
     }
 }

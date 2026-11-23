@@ -221,6 +221,38 @@ public class TaczGunAdapter implements GunAdapter {
         }
     }
 
+    // ── 假槍聲（第四份計畫書 33 號）────────────────────────────────────────────
+    // 用 TACZ 自己的封包 ServerMessageSound（槍 ID、聲音名稱 "shoot"）綁在一個實體上，送給追蹤那個實體的玩家。
+
+    @Override
+    public net.minecraft.resources.ResourceLocation gunId(net.minecraft.world.item.ItemStack stack) {
+        if (stack.isEmpty() || stack.getTag() == null || !stack.getTag().contains("GunId", 8)) return null;
+        return net.minecraft.resources.ResourceLocation.tryParse(stack.getTag().getString("GunId"));
+    }
+
+    private static java.lang.reflect.Constructor<?> soundCtor;
+    private static Method sendTracking;
+    private static boolean soundFailed;
+
+    @Override
+    public boolean playGunSound(net.minecraft.world.entity.Entity at, net.minecraft.resources.ResourceLocation gunId) {
+        if (at == null || soundFailed) return false;
+        try {
+            if (soundCtor == null) {
+                Class<?> msg = Class.forName("com.tacz.guns.network.message.ServerMessageSound");
+                soundCtor = msg.getConstructor(int.class, net.minecraft.resources.ResourceLocation.class, String.class, float.class, float.class, int.class);
+                sendTracking = Class.forName("com.tacz.guns.network.NetworkHandler").getMethod("sendToTrackingEntityAndSelf", net.minecraft.world.entity.Entity.class, Object.class);
+            }
+            Object packet = soundCtor.newInstance(at.getId(), gunId, "shoot", 1.0f, 0.9f + at.level().getRandom().nextFloat() * 0.2f, 96);
+            sendTracking.invoke(null, at, packet);
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            soundFailed = true;
+            ProvingGroundsMod.LOGGER.warn("TACZ adapter: gun sound packet not available ({}); fake gunshot uses vanilla sound.", e.toString());
+            return false;
+        }
+    }
+
     /** 找「回傳 LivingEntity、沒有參數」的方法（TACZ 1.1.x 是 getShooter）。 */
     private static Method findShooterGetter(Class<?> type) {
         try {

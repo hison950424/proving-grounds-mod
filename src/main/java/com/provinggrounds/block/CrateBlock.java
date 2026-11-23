@@ -51,6 +51,11 @@ public class CrateBlock extends BaseEntityBlock {
                                  InteractionHand hand, BlockHitResult hit) {
         if (level.isClientSide) return InteractionResult.SUCCESS;
         if (level.getBlockEntity(pos) instanceof CrateBlockEntity crate) {
+            if (crate.isFake() && player instanceof net.minecraft.server.level.ServerPlayer sp && level instanceof net.minecraft.server.level.ServerLevel sl) {
+                if (com.provinggrounds.special.ActionLock.blocksActions(sp)) return InteractionResult.FAIL;
+                com.provinggrounds.special.SpecialUse.triggerFakeCrate(sl, pos, sp, crate.fakeOwner()); // 假箱：觸發陷阱並銷毀
+                return InteractionResult.CONSUME;
+            }
             player.openMenu(crate);
             level.playSound(null, pos, SoundEvents.BARREL_OPEN, SoundSource.BLOCKS, 0.5f, 1.0f);
         }

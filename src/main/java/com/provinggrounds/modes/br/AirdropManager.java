@@ -72,6 +72,8 @@ public class AirdropManager {
     private boolean windowOpened = false;
     private int windowTicks = 0;
     @Nullable private Drop falling;
+    /** 信號槍召喚的空投（不計入每場空投上限，可以和一般空投同時掉）。 */
+    private final List<Drop> flares = new ArrayList<>();
 
     public AirdropManager(ServerLevel level) {
         this.level = level;
@@ -87,9 +89,11 @@ public class AirdropManager {
         List<MapPoint> list = new ArrayList<>();
         for (BlockPos pos : AirdropLedger.get(level.getServer()).entries()) {
             if (falling != null && pos.equals(falling.target)) continue;
+            if (flares.stream().anyMatch(f -> pos.equals(f.target))) continue;
             list.add(new MapPoint(pos.getX(), pos.getZ(), false));
         }
         if (falling != null) list.add(new MapPoint(falling.x, falling.z, true));
+        for (Drop f : flares) list.add(new MapPoint(f.x, f.z, true));
         return list;
     }
 
@@ -132,6 +136,7 @@ public class AirdropManager {
 
     public void tick(Circle circle) {
         if (falling != null) tickFalling();
+        tickFlares();
         if (!windowOpened) return;
         windowTicks++;
         // 時間到、且目前沒有空投在掉 → 投下（確保一次只掉一個）
@@ -178,6 +183,42 @@ public class AirdropManager {
         ProvingGroundsMod.LOGGER.info("Airdrop spawned at {} {} {} (target y={})", x, startY, z, target.getY());
     }
 
+    /**
+     * 信號槍（計畫書 4 的 18 號）：在玩家的 x、z 召喚一個空投，不計入每場空投上限，並通知全體玩家。
+     * 空投位置照常顯示在地圖上。
+     */
+    public void flareDrop(net.minecraft.server.level.ServerPlayer p) {
+        PGConfig c = PGConfig.SERVER;
+        int x = Mth.floor(p.getX()), z = Mth.floor(p.getZ());
+        level.setChunkForced(x >> 4, z >> 4, true);
+        BlockPos target = groundAt(x, z);
+        int startY = Math.max(target.getY() + 1, Math.min(c.brAirdropHeight.get(), level.getMaxBuildHeight() - 2));
+        AirdropLedger.get(level.getServer()).add(target);
+        Drop d = new Drop(x, startY, z, target);
+        d.display = createDisplay(x, startY, z);
+        flares.add(d);
+        broadcast(Component.literal("[空投] ").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
+            .append(Component.literal(String.format("有人發射了信號槍，正在召喚空投！座標：X=%d  Z=%d", x, z)).withStyle(ChatFormatting.YELLOW)));
+        for (net.minecraft.server.level.ServerPlayer o : level.getServer().getPlayerList().getPlayers()) {
+            o.playNotifySound(SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.MASTER, 1f, 1.2f);
+        }
+        level.sendParticles(ParticleTypes.FIREWORK, p.getX(), p.getY() + 2, p.getZ(), 40, 0.2, 3, 0.2, 0.05);
+    }
+
+    private void tickFlares() {
+        for (java.util.Iterator<Drop> it = flares.iterator(); it.hasNext(); ) {
+            Drop d = it.next();
+            d.y -= PGConfig.SERVER.brAirdropFallSpeed.get() / 20.0;
+            if (d.y <= d.target.getY()) {
+                it.remove();
+                land(d);
+                continue;
+            }
+            if (d.display != null && d.display.isAlive()) d.display.moveTo(d.x, d.y, d.z, 0, 0);
+            if (level.getGameTime() % 2 == 0) level.sendParticles(ParticleTypes.CLOUD, d.x + 0.5, d.y + 1.1, d.z + 0.5, 1, 0.15, 0.05, 0.15, 0.0);
+        }
+    }
+
     private void tickFalling() {
         Drop d = falling;
         if (d == null) return;
@@ -195,7 +236,7 @@ public class AirdropManager {
     }
 
     private void land(Drop d) {
-        falling = null;
+        if (falling == d) falling = null;
         if (d.display != null) d.display.discard();
 
         // 掉落期間地形可能改變，重新找一次落點

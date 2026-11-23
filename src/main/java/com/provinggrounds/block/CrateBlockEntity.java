@@ -24,6 +24,22 @@ public class CrateBlockEntity extends RandomizableContainerBlockEntity {
 
     private NonNullList<ItemStack> items = NonNullList.withSize(SIZE, ItemStack.EMPTY);
 
+    /** 假箱（計畫書 4 的 11～13 號）：外觀與同階真箱完全一樣，被打開時觸發陷阱並銷毀。 */
+    private boolean fake;
+    @javax.annotation.Nullable private java.util.UUID fakeOwner;
+
+    public void makeFake(java.util.UUID owner) {
+        fake = true;
+        fakeOwner = owner;
+        setLootTable(null, 0L);
+        setChanged();
+    }
+
+    public boolean isFake() { return fake; }
+
+    @javax.annotation.Nullable
+    public java.util.UUID fakeOwner() { return fakeOwner; }
+
     public CrateBlockEntity(BlockPos pos, BlockState state) {
         super(PGBlocks.CRATE_BE.get(), pos, state);
     }
@@ -73,6 +89,7 @@ public class CrateBlockEntity extends RandomizableContainerBlockEntity {
         boolean generating = lootTable != null && level != null && !level.isClientSide;
         super.unpackLootTable(player);
         if (generating) {
+            com.provinggrounds.special.SpecialLoot.maybeAdd(this, level); // 約每 10 箱 1 件特殊物品
             mergeStacks();
             com.provinggrounds.compat.AmmoCategories.addAmmoForGuns(this, level.getRandom());
             mergeStacks();
@@ -118,11 +135,15 @@ public class CrateBlockEntity extends RandomizableContainerBlockEntity {
         super.load(tag);
         items = NonNullList.withSize(SIZE, ItemStack.EMPTY);
         if (!tryLoadLootTable(tag)) ContainerHelper.loadAllItems(tag, items);
+        fake = tag.getBoolean("PgFake");
+        fakeOwner = tag.hasUUID("PgFakeOwner") ? tag.getUUID("PgFakeOwner") : null;
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         if (!trySaveLootTable(tag)) ContainerHelper.saveAllItems(tag, items);
+        if (fake) tag.putBoolean("PgFake", true);
+        if (fakeOwner != null) tag.putUUID("PgFakeOwner", fakeOwner);
     }
 }

@@ -54,7 +54,8 @@ public final class HotbarRules {
     public static final int LARGE_A = 0, LARGE_B = 1, PISTOL = 2, HEAL = 3, THROW = 4;
     public static final int OFFHAND = 40;
 
-    public enum Kind { LARGE, PISTOL, MELEE, HEALING, THROWABLE, BACKPACK, OTHER }
+    /** SPECIAL = 特殊物品（只能放特殊物品欄）；SHIELD = 穿戴中的擊退盾（佔用當時拿著的那一格快捷欄）。 */
+    public enum Kind { LARGE, PISTOL, MELEE, HEALING, THROWABLE, BACKPACK, SPECIAL, SHIELD, OTHER }
 
     public static final String MSG_LARGE = "無法拿取兩把以上的槍（可用替換的方式拿取）";
     public static final String MSG_PISTOL = "無法拿取兩把以上的手槍（可用替換的方式拿取）";
@@ -64,6 +65,8 @@ public final class HotbarRules {
     public static final String MSG_BACKPACK_HAVE = "已經裝著同等級或更高級的背包";
     private static final String MSG_BACKPACK_SLOT = "背包只能裝在物品欄的背包欄（副手格上方）";
     private static final String MSG_DROPPED = "放不下的物品已掉在腳邊";
+    public static final String MSG_SPECIAL_FULL = "特殊物品欄已經有物品，無法拿取";
+    private static final String MSG_SPECIAL_ONLY = "特殊物品只能放在特殊物品欄（背包欄上方）";
 
     private static final Map<UUID, Long> lastMessage = new HashMap<>();
 
@@ -73,6 +76,8 @@ public final class HotbarRules {
 
     public static Kind kind(ItemStack s) {
         if (s.getItem() instanceof com.provinggrounds.item.BackpackItem) return Kind.BACKPACK;
+        if (com.provinggrounds.special.SpecialSlot.isSpecial(s)) return Kind.SPECIAL;
+        if (s.is(com.provinggrounds.special.SpecialRegistry.SHIELD_HELD.get())) return Kind.SHIELD;
         GunClass g = GunCompat.classify(s);
         if (g == GunClass.LARGE) return Kind.LARGE;
         if (g == GunClass.PISTOL) return Kind.PISTOL;
@@ -113,6 +118,8 @@ public final class HotbarRules {
         if (slot >= 36 && slot <= 39) return true; // 防具欄不管
         Kind k = kind(s);
         if (k == Kind.BACKPACK) return false; // 背包只能在背包欄
+        if (k == Kind.SPECIAL) return false; // 特殊物品只能在特殊物品欄
+        if (k == Kind.SHIELD) return slot >= 0 && slot <= 8; // 擊退盾佔用穿戴時拿著的那一格
         return switch (slot) {
             case LARGE_A, LARGE_B -> k == Kind.LARGE || k == Kind.PISTOL; // 任何槍（含手槍）都放第 1、2 格
             case PISTOL -> k == Kind.MELEE;                                  // 第 3 格：近戰武器專用
@@ -161,6 +168,11 @@ public final class HotbarRules {
                 Backpack.equipIfBetter(p, stack); // 更高級就換上，舊的掉在腳邊
                 fail = MSG_BACKPACK_HAVE;
             }
+            case SPECIAL -> {
+                com.provinggrounds.special.SpecialSlot.tryInsert(p, stack);
+                fail = MSG_SPECIAL_FULL;
+            }
+            case SHIELD -> stack.setCount(0); // 擊退盾不會掉在地上，萬一出現就直接消失
             case OTHER -> insertOther(p, inv, stack);
         }
         int moved = before - stack.getCount();
@@ -214,6 +226,8 @@ public final class HotbarRules {
             case LARGE, PISTOL -> { if (!putEmpty(inv, stack, LARGE_A)) putEmpty(inv, stack, LARGE_B); }
             case MELEE -> { if (!putEmpty(inv, stack, PISTOL)) { for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i); } }
             case BACKPACK -> Backpack.equipIfBetter(p, stack);
+            case SPECIAL -> com.provinggrounds.special.SpecialSlot.tryInsert(p, stack);
+            case SHIELD -> {}
             case OTHER -> {
                 for (int i = 5; i <= 8 && !stack.isEmpty(); i++) merge(inv, stack, i);
                 for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i);
@@ -351,6 +365,7 @@ public final class HotbarRules {
             if (!allowedAt(p, i, s)) {
                 if (isGun(s)) why = MSG_GUN_SLOT;
                 else if (kind(s) == Kind.BACKPACK) why = MSG_BACKPACK_SLOT;
+                else if (kind(s) == Kind.SPECIAL) why = MSG_SPECIAL_ONLY;
                 break;
             }
         }

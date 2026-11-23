@@ -43,6 +43,7 @@ public class ProvingGroundsMod {
 
         // 方塊、物品、方塊實體（戰利品箱）
         PGBlocks.register(modBus);
+        com.provinggrounds.special.SpecialRegistry.register(modBus); // 特殊物品、效果、實體（計畫書 4）
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, PGConfig.SERVER_SPEC);
         ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, com.provinggrounds.config.PGClientConfig.SPEC); // 客戶端設定（介面中走動）

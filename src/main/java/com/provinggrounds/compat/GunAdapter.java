@@ -53,4 +53,14 @@ public interface GunAdapter {
 
     /** 這把槍能不能裝這個配件（只看能不能裝，不管槍上是不是已經裝了同類型）。兩端都可呼叫。 */
     default boolean canAttach(net.minecraft.world.item.ItemStack gun, net.minecraft.world.item.ItemStack attachment) { return false; }
+
+    /** 槍的 ID（例如 tacz:ak47）；不是槍時回傳 null。 */
+    @javax.annotation.Nullable
+    default net.minecraft.resources.ResourceLocation gunId(net.minecraft.world.item.ItemStack stack) { return null; }
+
+    /**
+     * 在實體的位置播放這把槍的射擊聲（伺服器端呼叫，附近的玩家都聽得到；假槍聲用）。
+     * @return 是否成功（失敗時呼叫端改用原版音效）
+     */
+    default boolean playGunSound(net.minecraft.world.entity.Entity at, net.minecraft.resources.ResourceLocation gunId) { return false; }
 }

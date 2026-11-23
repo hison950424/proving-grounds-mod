@@ -108,6 +108,8 @@ public class BattleRoyaleMode {
         int lastSkydiveToggle = -1000;   // 跳出飛機的 tick（跳出後 0.5 秒內按空白鍵不開傘）
         int boardTick = -1000;           // 登機的 tick（登機後 board_lock_seconds 秒內不能跳）
         int jumpGraceUntil = -1;         // 跳機後維持隱形與無敵到這個 tick（jump_invisible_seconds）
+        int selfReviveTicks = -1;        // 急救針自救讀條進度（-1 = 沒有在自救）
+        Vec3 selfRevivePos;              // 自救讀條時固定的位置（不能移動）
         boolean kitOnLanding = false;    // 祭壇復活：落地後才發基礎裝備
         int groundTicks = 0;
         @Nullable Entity carrier;
@@ -200,6 +202,12 @@ public class BattleRoyaleMode {
     // ═════════════════════════════════════════════════════════════════════════
 
     public Phase getPhase() { return phase; }
+    /** 目前的縮圈（沒有對局時是 null）。特殊物品用。 */
+    @Nullable public Circle circle() { return circle; }
+    /** 空投管理（沒有對局時是 null）。信號槍用。 */
+    @Nullable public AirdropManager airdrops() { return airdrops; }
+    /** 對局進行中（飛機或落地後）。 */
+    public boolean isInPlay() { return inPlay(); }
     public boolean isRunning() { return phase != Phase.IDLE; }
     @Nullable public MapRegistry.BRMap getMap() { return map; }
     /** 本局識別碼（沒有遊戲時為 0）。祭壇用它判斷冷卻是不是這一局的。 */
@@ -291,6 +299,7 @@ public class BattleRoyaleMode {
 
         AirdropManager.cleanupAll(level); // 清掉上一局（例如當機）殘留的空投
         com.provinggrounds.modes.br.Tombstones.cleanupAll(level); // 以及墓碑
+        com.provinggrounds.special.SpecialWorld.cleanup(level.getServer()); // 以及特殊物品（地雷、假箱、分身、雪牆…）
         // 上一局（含大廳）被子彈或爆炸打破的玻璃（原版與模組）全部修回去
         int glass = com.provinggrounds.data.GlassLedger.get(server).restoreAll(level);
         if (glass > 0) broadcast(Component.literal("已修復上一局被打破的玻璃 " + glass + " 塊。").withStyle(ChatFormatting.GRAY));
@@ -317,7 +326,7 @@ public class BattleRoyaleMode {
         GameManager.get().addPlayer(p);
         p.setGameMode(GameType.ADVENTURE); // 冒險模式：不能破壞／放置地圖方塊（同舊 Datapack），仍可開箱、用祭壇、開槍
         com.provinggrounds.modes.br.HotbarRules.clearKeepMelee(p); // 清空物品，但保留近戰武器（放第 3 格）
-        com.provinggrounds.modes.br.Backpack.clear(p);
+        com.provinggrounds.modes.br.Backpack.clear(p); com.provinggrounds.special.SpecialSlot.clear(p);
         p.removeAllEffects();
         applyMaxHealth(p);
         p.setHealth(p.getMaxHealth());
@@ -654,6 +663,7 @@ public class BattleRoyaleMode {
             if (!part.alive) continue;
             ServerPlayer p = player(part.id);
             if (p == null || !circle.isOutside(p.getX(), p.getZ())) continue;
+            if (p.hasEffect(com.provinggrounds.special.SpecialRegistry.ZONE_SHELTER.get())) continue; // 圈外庇護
             p.hurt(p.damageSources().outOfBorder(), damage);
             // 原版受傷後會把伺服器的移動速度強制送回客戶端（hurtMarked），每秒扣血一次就像被推一下：圈外傷害不送
             p.hurtMarked = false;
@@ -669,6 +679,11 @@ public class BattleRoyaleMode {
         if (amount <= 0 || !inPlay()) return;
         Participant vp = participants.get(victim.getUUID());
         if (vp != null) { vp.altarTicks = 0; vp.altarTarget = null; }
+        if (vp != null && vp.selfReviveTicks >= 0) { // 受擊就取消自救（不消耗急救針）
+            vp.selfReviveTicks = -1;
+            vp.progressKind = ClientBRState.PROGRESS_NONE;
+            victim.displayClientMessage(Component.literal("自救被打斷了（急救針沒有消耗）").withStyle(ChatFormatting.RED), true);
+        }
         if (!(source.getEntity() instanceof ServerPlayer attacker) || attacker == victim) return;
         if (!isAliveParticipant(victim.getUUID()) || !isParticipant(attacker.getUUID())) return;
         if (TeamManager.get().isSameTeam(attacker, victim)) return;
@@ -717,6 +732,7 @@ public class BattleRoyaleMode {
     // ═════════════════════════════════════════════════════════════════════════
 
     private void down(ServerPlayer victim, Participant part, DamageSource source) {
+        com.provinggrounds.special.KnockbackShield.restore(victim); // 擊退盾：先還回原本那格的物品
         PGConfig c = PGConfig.SERVER;
         ServerPlayer attacker = creditFrom(victim, source);
 
@@ -774,6 +790,7 @@ public class BattleRoyaleMode {
 
     /** 解除倒地狀態（扶起、死亡、遊戲結束時）。要先把 downed 設成 false 才能離開座椅。 */
     private void clearDowned(@Nullable ServerPlayer p, Participant part) {
+        part.selfReviveTicks = -1;
         if (!part.downed && part.seat == null) return;
         part.downed = false;
         part.reviveTicks = 0;
@@ -812,14 +829,11 @@ public class BattleRoyaleMode {
             ServerPlayer dp = player(d.id);
             if (dp == null) continue;
 
-            // 鎖住手持格（伺服器端沒辦法阻止客戶端切換，只能每 tick 改回來）
-            if (dp.getInventory().selected != d.lockedSlot) {
-                dp.getInventory().selected = d.lockedSlot;
-                dp.connection.send(new ClientboundSetCarriedItemPacket(d.lockedSlot));
-            }
+            // 倒地可以切換快捷欄，但手上的東西不能用（ActionLock；計畫書 4 的 C 章）
             // 坐姿：確保還坐著
             if (d.seat != null && d.seat.isAlive() && dp.getVehicle() != d.seat) dp.startRiding(d.seat, true);
 
+            if (d.selfReviveTicks >= 0) { tickSelfRevive(dp, d); continue; } // 急救針自救中
             ServerPlayer helper = findReviver(d, dp, busy);
             if (helper != null) {
                 busy.add(helper.getUUID());
@@ -843,6 +857,62 @@ public class BattleRoyaleMode {
                 }
             }
         }
+    }
+
+    // ── 急救針（計畫書 4 的 28 號）──────────────────────────────────────────
+
+    public boolean isSelfReviving(UUID id) {
+        Participant p = participants.get(id);
+        return p != null && p.selfReviveTicks >= 0;
+    }
+
+    /** 自己倒地時使用急救針：開始 self_revive_seconds 秒讀條（不能移動、受擊取消），完成後自救並回滿血。 */
+    public boolean startSelfRevive(ServerPlayer p) {
+        Participant d = participants.get(p.getUUID());
+        if (d == null || !d.alive || !d.downed || d.selfReviveTicks >= 0) return false;
+        d.selfReviveTicks = 0;
+        d.selfRevivePos = p.position();
+        p.displayClientMessage(Component.literal("自救中…受到攻擊會被打斷").withStyle(ChatFormatting.AQUA), true);
+        return true;
+    }
+
+    private void tickSelfRevive(ServerPlayer dp, Participant d) {
+        int total = Math.max(1, com.provinggrounds.special.SpecialConfig.ticks(com.provinggrounds.special.SpecialConfig.get().selfReviveSeconds));
+        d.selfReviveTicks++;
+        d.progressKind = ClientBRState.PROGRESS_BEING_REVIVED;
+        d.progress = d.selfReviveTicks / (float) total;
+        if (d.selfRevivePos != null && dp.position().distanceToSqr(d.selfRevivePos) > 0.01) { // 讀條中不能移動
+            dp.teleportTo(d.selfRevivePos.x, d.selfRevivePos.y, d.selfRevivePos.z);
+        }
+        if (d.selfReviveTicks < total) return;
+        // 完成：消耗急救針（還在特殊物品欄裡才算）
+        if (com.provinggrounds.special.SpecialItem.typeOf(com.provinggrounds.special.SpecialSlot.get(dp)) == com.provinggrounds.special.SpecialType.FIRST_AID_SHOT) {
+            com.provinggrounds.special.SpecialSlot.clear(dp);
+        }
+        clearDowned(dp, d);
+        d.downedBy = null;
+        d.progressKind = ClientBRState.PROGRESS_NONE;
+        damagers.remove(d.id);
+        dp.setHealth(dp.getMaxHealth());
+        title(dp, Component.literal("自救成功").withStyle(ChatFormatting.GREEN), Component.empty());
+        level.playSound(null, dp.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.6f, 1.4f);
+        notifyTeam(d.id, Component.literal(d.name + " 用急救針自救了").withStyle(ChatFormatting.GREEN), null);
+    }
+
+    /** 正在扶隊友（讀條中）時使用急救針：立刻扶起並回滿血。 */
+    public boolean instantRevive(ServerPlayer helper) {
+        for (Participant d : participants.values()) {
+            if (!d.alive || !d.downed || !helper.getUUID().equals(d.reviver) || d.reviveTicks <= 0) continue;
+            ServerPlayer dp = player(d.id);
+            if (dp == null) continue;
+            revive(dp, d, helper);
+            d.progressKind = ClientBRState.PROGRESS_NONE;
+            Participant hp = participants.get(helper.getUUID());
+            if (hp != null) hp.progressKind = ClientBRState.PROGRESS_NONE;
+            dp.setHealth(dp.getMaxHealth());
+            return true;
+        }
+        return false;
     }
 
     /** 倒地剩下的秒數（目前血量 ÷ 每秒流血量）。 */
@@ -898,6 +968,8 @@ public class BattleRoyaleMode {
     // ═════════════════════════════════════════════════════════════════════════
 
     private void eliminate(ServerPlayer victim, Participant part, @Nullable DamageSource source, Cause cause) {
+        com.provinggrounds.special.KnockbackShield.restore(victim); // 擊退盾：先還回原本那格的物品，再一起進墓碑
+        com.provinggrounds.special.Totem.remove(victim);
         boolean competitive = variant == Variant.COMPETITIVE;
         PGConfig c = PGConfig.SERVER;
         PlayerDataManager data = PlayerDataManager.get();
@@ -1232,8 +1304,7 @@ public class BattleRoyaleMode {
             }
             return true;
         }
-        Participant part = participants.get(player.getUUID());
-        return part != null && part.downed;
+        return false; // 倒地也可以吸取物品（計畫書 4 的 C 章）
     }
 
     /** 持有者倒地或死亡：持有的牌掉回地上，每個死者一個掉落物，沒有期限。 */
@@ -1405,7 +1476,7 @@ public class BattleRoyaleMode {
         if (v.getCamera() != v) v.setCamera(v);
         v.setGameMode(GameType.ADVENTURE);
         v.getInventory().clearContent();
-        com.provinggrounds.modes.br.Backpack.clear(v);
+        com.provinggrounds.modes.br.Backpack.clear(v); com.provinggrounds.special.SpecialSlot.clear(v);
         v.removeAllEffects();
         applyMaxHealth(v);
         healFull(v);
@@ -1513,6 +1584,7 @@ public class BattleRoyaleMode {
         releaseAll();
         AirdropManager.cleanupAll(level);
         com.provinggrounds.modes.br.Tombstones.cleanupAll(level);
+        com.provinggrounds.special.SpecialWorld.cleanup(level.getServer());
         airdrops = null;
         GameManager.get().endGame();
         loot = new LootSpawner(level, map, LootSpawner.Mode.CLEAR);
@@ -1656,7 +1728,7 @@ public class BattleRoyaleMode {
             new LootSpawner(level, map, LootSpawner.Mode.CLEAR).runToCompletion();
         }
         // 空投一律清掉（數量很少，同步處理不會卡），也順便解除強制載入的區塊
-        if (level != null) { AirdropManager.cleanupAll(level); com.provinggrounds.modes.br.Tombstones.cleanupAll(level); }
+        if (level != null) { AirdropManager.cleanupAll(level); com.provinggrounds.modes.br.Tombstones.cleanupAll(level); com.provinggrounds.special.SpecialWorld.cleanup(level.getServer()); }
         clearState();
         if (server != null) restoreAllOnline(server);
         PGNetwork.sendToAll(BRStatePacket.none());
@@ -1706,7 +1778,7 @@ public class BattleRoyaleMode {
         if (p.getCamera() != p) p.setCamera(p);
         BRMovement.remove(p);
         p.getInventory().clearContent();
-        com.provinggrounds.modes.br.Backpack.clear(p);
+        com.provinggrounds.modes.br.Backpack.clear(p); com.provinggrounds.special.SpecialSlot.clear(p);
         p.removeAllEffects();
         removeMaxHealth(p);
         healFull(p);

@@ -157,6 +157,9 @@
 | `InventoryMenuMixin` | `InventoryMenu` 建構子 | 加背包欄；Forge 沒有替原版物品欄加格子的事件，而且計畫書要求不依賴 Curios |
 | `SlotMixin` | `Slot.mayPlace` / `mayPickup` | 背包鎖格；所有畫面的主背包格都經過這裡 |
 | `PlayerPoseMixin` | `Player.updatePlayerPose` | 趴下／倒地強制趴下姿勢；TACZ 的匍匐功能每 tick 會清掉本地玩家的強制姿勢，沒有事件能在它之後、原版決定姿勢之前介入 |
+| `EntitySprintMixin` | `Entity.canSpawnSprintParticle` | 隱形的玩家跑步不產生粒子（計畫書 4 的 A2）；沒有事件可以攔截跑步粒子 |
+| `EntitySpecialMixin` | `Entity.isCurrentlyGlowing`、`playStepSound`、`playCombinationStepSounds`、`playMuffledStepSound`、`playSwimSound`、`doWaterSplashEffect` | 單向發光（只對指定觀眾畫外框，原版發光是全體可見）；靜音靴（腳步聲在 Level.playSound 時已經沒有實體資訊，事件無法分辨）。Forge 版本的 playCombinationStepSounds、playMuffledStepSound 多了 BlockPos 參數 |
+| `LivingSpecialMixin` | `LivingEntity.playBlockFallSound` | 靜音靴的落地聲 |
 
 所有 Mixin 都沒有 refmap。注入點同時寫開發名稱與 SRG 名稱（`remap = false`），並設 `defaultRequire = 0`。換版本時要重新核對 SRG 名稱，或改用新載入器的對應方式。
 

@@ -46,11 +46,22 @@ public final class GunCompat {
         return active == null ? GunClass.NONE : active.classify(stack);
     }
 
+    /** 槍的 ID；沒有槍械模組或不是槍時回傳 null。 */
+    @javax.annotation.Nullable
+    public static net.minecraft.resources.ResourceLocation gunId(net.minecraft.world.item.ItemStack stack) {
+        return active == null ? null : active.gunId(stack);
+    }
+
+    /** 在實體的位置播放槍聲；沒有槍械模組或失敗時回傳 false。 */
+    public static boolean playGunSound(net.minecraft.world.entity.Entity at, net.minecraft.resources.ResourceLocation gunId) {
+        return active != null && active.playGunSound(at, gunId);
+    }
+
     public static void init() {
         if (ModList.get().isLoaded("tacz")) {
             GunAdapter adapter = new TaczGunAdapter();
             active = adapter;
-            if (adapter.registerBlocker(BRDowned::cannotAct)) {
+            if (adapter.registerBlocker(com.provinggrounds.special.ActionLock::blocksActions)) {
                 ProvingGroundsMod.LOGGER.info("Gun adapter enabled: {}", adapter.name());
             }
             adapter.registerHitListener(ArmorEvents::recordHit); // 防彈：記錄爆頭

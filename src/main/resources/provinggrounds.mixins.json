@@ -10,7 +10,9 @@
     "InventoryMenuMixin",
     "SlotMixin",
     "PlayerPoseMixin",
-    "EntitySprintMixin"
+    "EntitySprintMixin",
+    "EntitySpecialMixin",
+    "LivingSpecialMixin"
   ],
   "injectors": {
     "defaultRequire": 0

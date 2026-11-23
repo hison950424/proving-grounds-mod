@@ -18,14 +18,15 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /**
  * 檔案: DownedEvents.java
- * 目的: 倒地中的玩家禁止所有動作：右鍵、左鍵攻擊、放置／破壞方塊、丟棄、開啟容器、使用物品、回血。
+ * 目的: 動作鎖定（ActionLock：倒地、隱形斗篷）時禁止的動作：右鍵、左鍵攻擊、放置／破壞方塊、開啟容器、使用物品；倒地不能回血。
  *       互動事件在客戶端與伺服器都會觸發，兩邊都取消才不會有手臂揮動或物品使用動畫。
- *       切換手持物由 BattleRoyaleMode 每 tick 鎖回原本的格子；開槍由槍械適配層（GunCompat）攔截。
+ *       可以丟棄、吸取物品、切換快捷欄（計畫書 4 的 C 章）；開槍由槍械適配層（GunCompat）攔截。
  */
 public class DownedEvents {
 
+    /** 動作鎖定中（倒地或隱形斗篷）。 */
     private static boolean downed(net.minecraft.world.entity.Entity e) {
-        return BRDowned.isDowned(e);
+        return com.provinggrounds.special.ActionLock.blocksActions(e);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -81,15 +82,16 @@ public class DownedEvents {
         if (downed(event.getEntity())) event.setCanceled(true);
     }
 
-    /** 丟棄：Forge 取消丟棄時物品已經從背包拿出來了，要放回去，否則會消失。 */
+    /** 丟棄：倒地、斗篷都可以丟（計畫書 4 的 C 章）。只有擊退盾不能丟（穿戴中的盾）；Forge 取消丟棄時物品已經拿出來了，要放回原位。 */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onToss(ItemTossEvent event) {
-        if (!(event.getPlayer() instanceof ServerPlayer p) || !downed(p)) return;
+        if (!(event.getPlayer() instanceof ServerPlayer p)) return;
+        ItemStack stack = event.getEntity().getItem();
+        if (!stack.is(com.provinggrounds.special.SpecialRegistry.SHIELD_HELD.get())) return;
         event.setCanceled(true);
-        ItemStack stack = event.getEntity().getItem().copy();
-        // 理論上不會滿（物品剛從背包拿出來）。萬一滿了用 spawnAtLocation 放地上，
-        // 不能用 p.drop()，那會再觸發一次丟棄事件而無限循環。
-        if (!p.getInventory().add(stack) && !stack.isEmpty()) p.spawnAtLocation(stack);
+        int slot = p.getInventory().selected;
+        if (p.getInventory().getItem(slot).isEmpty()) p.getInventory().setItem(slot, stack.copy());
+        else if (!p.getInventory().add(stack.copy())) p.spawnAtLocation(stack.copy());
         p.containerMenu.broadcastChanges();
     }
 
@@ -101,7 +103,7 @@ public class DownedEvents {
     /** 倒地不會自然回血（食物、藥水都一樣）。 */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onHeal(LivingHealEvent event) {
-        if (event.getEntity() instanceof ServerPlayer p && downed(p)) event.setCanceled(true);
+        if (event.getEntity() instanceof ServerPlayer p && BRDowned.isDowned(p)) event.setCanceled(true);
     }
 
     /** 坐姿倒地（downed_style = SIT）時不能蹲下離開座椅。 */

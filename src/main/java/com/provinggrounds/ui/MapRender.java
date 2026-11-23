@@ -154,6 +154,12 @@ public final class MapRender {
                 }
             }
         }
+        // 強力發光的目標（特殊物品）：閃爍的紅點，外圈白框
+        for (com.provinggrounds.network.GlowSyncPacket.Entry e : com.provinggrounds.special.client.ClientSpecial.mapTargets()) {
+            int sx = (int) v.px(e.x()), sz = (int) v.pz(e.z());
+            box(g, sx, sz, 3, 0xFFFFFFFF);
+            box(g, sx, sz, 2, (now / 250) % 2 == 0 ? 0xFFFF3030 : 0xFFB00000);
+        }
     }
 
     /** 自己：白色箭頭。 */

@@ -45,6 +45,16 @@ public final class BackpackOverlay {
             g.fill(x + 1, y + 1, x + 17, y + 17, 0xA08B8B8B); // 蓋一層讓圖示變淡
             g.pose().popPose();
         }
+        // 特殊物品欄（背包欄正上方，計畫書 4 的 B1）
+        int sx = screen.getGuiLeft() + com.provinggrounds.special.SpecialSlot.X - 1, sy = screen.getGuiTop() + com.provinggrounds.special.SpecialSlot.Y - 1;
+        g.fill(sx, sy, sx + 18, sy + 18, 0xFF373737);
+        g.fill(sx + 1, sy + 1, sx + 18, sy + 18, 0xFFFFFFFF);
+        g.fill(sx + 1, sy + 1, sx + 17, sy + 17, 0xFF8B8B8B);
+        if (mc.player != null && com.provinggrounds.special.SpecialSlot.get(mc.player).isEmpty()) {
+            com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+            g.blit(gui("slot_special"), sx + 1, sy + 1, 0, 0, 16, 16, 16, 16);
+            com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+        }
     }
 
     @SubscribeEvent

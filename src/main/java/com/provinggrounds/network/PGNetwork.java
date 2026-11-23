@@ -17,7 +17,7 @@ import java.util.Optional;
 public final class PGNetwork {
 
     /** 封包格式改變時要加 1，舊版客戶端連線時會直接顯示版本不符（7 = 跳傘改版）。 */
-    private static final String VERSION = "14";
+    private static final String VERSION = "15"; // 15 = 特殊物品系統
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ProvingGroundsMod.MOD_ID, "main"),
@@ -69,6 +69,15 @@ public final class PGNetwork {
         // 雙向：伺服器送地圖清單、客戶端送回選擇
         CHANNEL.registerMessage(id++, MapPickPacket.class, MapPickPacket::encode, MapPickPacket::decode,
             MapPickPacket::handle, Optional.empty());
+        // 特殊物品（計畫書 4）
+        CHANNEL.registerMessage(id++, SpecialSlotSyncPacket.class, SpecialSlotSyncPacket::encode, SpecialSlotSyncPacket::decode,
+            SpecialSlotSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, SpecialUsePacket.class, SpecialUsePacket::encode, SpecialUsePacket::decode,
+            SpecialUsePacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, GlowSyncPacket.class, GlowSyncPacket::encode, GlowSyncPacket::decode,
+            GlowSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, SpecialFxPacket.class, SpecialFxPacket::encode, SpecialFxPacket::decode,
+            SpecialFxPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     /** 客戶端 → 伺服器。 */

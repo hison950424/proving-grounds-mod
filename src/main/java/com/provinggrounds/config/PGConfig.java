@@ -131,6 +131,8 @@ public class PGConfig {
 
     // ── 防彈（所有模式通用） ───────────────────────────────────────────────────
     public final ForgeConfigSpec.DoubleValue armorDurabilityMultiplier;
+    /** 特殊物品的設定（[special] 區段）。 */
+    public final com.provinggrounds.special.SpecialConfig special;
     public final ForgeConfigSpec.BooleanValue bulletproofEnabled;
     public final ForgeConfigSpec.BooleanValue bulletproofHeadBodySplit;
     public final ForgeConfigSpec.DoubleValue bulletproofLeather;
@@ -404,6 +406,8 @@ public class PGConfig {
         ammoHeavyWeapon = ammoList(builder, "heavy_weapon", "重火力彈藥（榴彈、火箭）",
             "tacz:40mm", "suffuse:35x32mm", "tacz:rpg_rocket", "suffuse:120mm");
         builder.pop();
+
+        special = new com.provinggrounds.special.SpecialConfig(builder); // 特殊物品（計畫書 4）
     }
 
     private static ForgeConfigSpec.ConfigValue<List<? extends String>> ammoList(

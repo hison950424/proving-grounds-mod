@@ -64,7 +64,8 @@ public final class BRMovement {
     private static double targetMultiplier(ServerPlayer player) {
         PGConfig c = PGConfig.SERVER;
         boolean melee = player.getMainHandItem().is(com.provinggrounds.compat.GunCompat.MELEE);
-        return melee ? c.brMeleeSpeedMultiplier.get() : c.brSpeedMultiplier.get();
+        double base = c.brSpeedMultiplier.get();
+        return com.provinggrounds.special.SpecialSpeed.multiplier(player, base, melee ? c.brMeleeSpeedMultiplier.get() : base);
     }
 
     /** 移除所有 BR 速度修改（包含倒地緩速）。 */
