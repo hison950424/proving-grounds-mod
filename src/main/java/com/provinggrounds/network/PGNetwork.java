@@ -17,7 +17,7 @@ import java.util.Optional;
 public final class PGNetwork {
 
     /** 封包格式改變時要加 1，舊版客戶端連線時會直接顯示版本不符（7 = 跳傘改版）。 */
-    private static final String VERSION = "17"; // 15 = 特殊物品系統、16 = 大廳特殊物品開關、17 = 槍械模式
+    private static final String VERSION = "18"; // 15 = 特殊物品系統、16 = 大廳特殊物品開關、17 = 槍械模式、18 = 場地選擇
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ProvingGroundsMod.MOD_ID, "main"),

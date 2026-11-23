@@ -327,6 +327,7 @@ public class BattleRoyaleMode {
     private void join(ServerPlayer p) {
         com.provinggrounds.core.ProneManager.clear(p);
         com.provinggrounds.special.KnockbackShield.restore(p); // 大廳測試時舉著的擊退盾先還原
+        com.provinggrounds.venue.VenueManager.leave(p); // 離開場地系統（拿掉場地的血量加成）
         com.provinggrounds.special.Totem.remove(p);
         markForRestore(p);
         participants.put(p.getUUID(), new Participant(p));
@@ -1826,6 +1827,7 @@ public class BattleRoyaleMode {
         com.provinggrounds.modes.br.Backpack.clear(p); com.provinggrounds.special.SpecialSlot.clear(p);
         p.removeAllEffects();
         removeMaxHealth(p);
+        com.provinggrounds.venue.VenueManager.backToLobby(p); // 回到「大廳」場地（血量 100、恢復、飽食）
         healFull(p);
         p.setGameMode(mode);
         ServerLevel overworld = p.server.overworld();

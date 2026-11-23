@@ -44,7 +44,7 @@ public class MainMenuScreen extends Screen {
     private static final int SELECT   = 0x60E8D060;
     private static final int ROW_H = 11;
 
-    private enum View { HOME, LOBBY }
+    private enum View { HOME, MODES, VENUES, LOBBY }
 
     // 記住上次的畫面與選取（同一次遊戲啟動期間）
     private static View view = View.HOME;
@@ -78,18 +78,54 @@ public class MainMenuScreen extends Screen {
         top = (height - panelH) / 2;
         seenMenu = ClientMenuData.version();
         seenLobby = ClientLobbyData.version();
-        if (view == View.HOME) initHome(); else initLobby();
+        switch (view) {
+            case HOME -> initHome();
+            case MODES -> initModes();
+            case VENUES -> initVenues();
+            default -> initLobby();
+        }
     }
 
     // ── 首頁 ────────────────────────────────────────────────────────────────
 
+    /** 首頁：「開始遊戲」與「場地選擇」兩個大按鈕。 */
     private void initHome() {
+        int x = left + 14, w = panelW - 28;
+        addRenderableWidget(new PGButton(x, top + 40, w, 40, Component.literal("開始遊戲"), true, false,
+            () -> switchTo(View.MODES)));
+        addRenderableWidget(new PGButton(x, top + 88, w, 40, Component.literal("場地選擇"), false, false,
+            () -> switchTo(View.VENUES)));
+    }
+
+    /** 開始遊戲 → 選模式（大逃殺；其他模式之後加入）。 */
+    private void initModes() {
         int x = left + 14, w = panelW - 28;
         addRenderableWidget(new PGButton(x, top + 36, w, 36, Tr.c("mode.br"), true, false,
             () -> switchTo(View.LOBBY)));
         addModeStub(x, top + 80, w, Tr.t("mode.tdm"));
         addModeStub(x, top + 104, w, Tr.t("mode.dom"));
         addModeStub(x, top + 128, w, Tr.t("mode.gk"));
+        addRenderableWidget(new PGButton(x, top + panelH - 30, 80, 20, Tr.c("common.back"), false, false,
+            () -> switchTo(View.HOME)));
+    }
+
+    /** 場地選擇：伺服器設定裡的場地（大廳、訓練場、迷你死鬥、跑庫塔…），點了就傳送。 */
+    private void initVenues() {
+        int x = left + 14, w = panelW - 28;
+        MenuDataPacket menu = ClientMenuData.get();
+        List<String> venues = menu != null ? menu.venues() : List.of();
+        int cols = venues.size() > 4 ? 2 : 1;
+        int bw = cols == 2 ? (w - 6) / 2 : w;
+        for (int i = 0; i < venues.size(); i++) {
+            int col = i % cols, rowI = i / cols;
+            final int index = i;
+            addRenderableWidget(new PGButton(x + col * (bw + 6), top + 36 + rowI * 26, bw, 22, Component.literal(venues.get(i)), i == 0, false, () -> {
+                send(LobbyManager.Action.GOTO_VENUE, index);
+                onClose();
+            }));
+        }
+        addRenderableWidget(new PGButton(x, top + panelH - 30, 80, 20, Tr.c("common.back"), false, false,
+            () -> switchTo(View.HOME)));
     }
 
     private void addModeStub(int x, int y, int w, String name) {
@@ -212,7 +248,7 @@ public class MainMenuScreen extends Screen {
             addRenderableWidget(force);
         }
         addRenderableWidget(new PGButton(bx + 3 * (bw + 6), by, bw, 20, Tr.c("common.back"), false, false,
-            () -> switchTo(View.HOME)));
+            () -> switchTo(View.MODES)));
     }
 
     /** 設定列（畫面上要畫的文字）：label = 左邊的標籤；value = 只讀時畫的值（null = 這一列是按鈕）。 */
@@ -455,7 +491,12 @@ public class MainMenuScreen extends Screen {
         g.drawString(font, ver, left + panelW - font.width(ver) - 6, top + panelH - 10, 0xFF6A7384, false);
         g.fill(left + 10, top + 24, left + panelW - 10, top + 25, BORDER);
 
-        if (view == View.HOME) renderHomeFooter(g, menu); else renderLobby(g, mouseX, mouseY);
+        switch (view) {
+            case HOME -> renderHomeFooter(g, menu);
+            case MODES -> g.drawString(font, "開始遊戲", left + 14, top + 29, TEXT_DIM, false);
+            case VENUES -> g.drawString(font, "場地選擇", left + 14, top + 29, TEXT_DIM, false);
+            default -> renderLobby(g, mouseX, mouseY);
+        }
         super.render(g, mouseX, mouseY, partialTick);
     }
 

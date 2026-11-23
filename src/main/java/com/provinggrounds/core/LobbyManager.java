@@ -57,7 +57,8 @@ public final class LobbyManager {
         END_GAME,           // 管理員：強制結束進行中的遊戲、全員回大廳
         CLEAR_TEAMS,        // 管理員：所有人移出隊伍（變成未分隊）
         SET_SPECIAL,        // 管理員：特殊物品模式開（arg 1）／關（arg 0）
-        SET_WEAPON_MODE     // 管理員：槍械模式（arg = WeaponMode 的順序）
+        SET_WEAPON_MODE,    // 管理員：槍械模式（arg = WeaponMode 的順序）
+        GOTO_VENUE          // 自己：傳送到場地（arg = 場地選單的順序）
     }
 
     public static final String SPECTATOR_TAG = "pg_spectator";
@@ -163,6 +164,10 @@ public final class LobbyManager {
         boolean lobby = GameManager.get().isInLobby();
         ServerPlayer target = targetId != null ? server.getPlayerList().getPlayer(targetId) : null;
 
+        if (action == Action.GOTO_VENUE) { // 場地選擇：對局中沒參賽的人也可以用
+            com.provinggrounds.venue.VenueManager.goTo(sender, arg);
+            return;
+        }
         if (action == Action.JOIN_GAME) {
             joinGame(sender, lobby);
             return;

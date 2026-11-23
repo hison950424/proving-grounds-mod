@@ -153,6 +153,9 @@ public class PGConfig {
 
     // ── 槍械平衡（所有模式通用，GunBalance） ─────────────────────────────────
     public final ForgeConfigSpec.BooleanValue gunBalanceEnabled;
+    public final ForgeConfigSpec.ConfigValue<List<? extends String>> venueList;
+    public final ForgeConfigSpec.DoubleValue venueMaxHealth;
+    public final ForgeConfigSpec.ConfigValue<String> venueAmmoBox;
     public final ForgeConfigSpec.ConfigValue<List<? extends String>> weaponModeThrowables;
     public final ForgeConfigSpec.DoubleValue autoTtk, pistolTtk, shotgunShotDamage, sniperHeadMultiplier;
     public final ForgeConfigSpec.IntValue sniperBodyShots, sniperBoltRpm;
@@ -420,6 +423,19 @@ public class PGConfig {
         shotgunFalloffStart = builder.comment("霰彈槍：幾格內全額傷害").defineInRange("shotgun_falloff_start", 5.0, 0.0, 500.0);
         shotgunFalloffEnd = builder.comment("霰彈槍：到幾格時降到最低").defineInRange("shotgun_falloff_end", 15.0, 0.0, 500.0);
         shotgunFalloffMin = builder.comment("霰彈槍：最遠的傷害比例").defineInRange("shotgun_falloff_min", 0.3, 0.0, 1.0);
+        builder.pop();
+
+        builder.comment("場地選擇（M 選單 →「場地選擇」）。一行一個場地：ID|名稱|旗標|x y z; x y z; …（多個座標隨機選一個）",
+                "旗標：safe 安全區（玩家打不到彼此）、pvp 可以互打、ammo 給無限彈藥箱、clear 清槍與配件、clear_all 清所有戰鬥物品、respawn 死掉在場內重生、hidden 不顯示在選單",
+                "預設值是舊版資料包的座標（大廳、訓練場、迷你死鬥 13 個出生點、跑庫塔）").push("venues");
+        venueList = builder.defineListAllowEmpty(List.of("list"), () -> List.of(
+                "lobby|大廳|safe,clear_all|-3.51 32 -0.17",
+                "training|訓練場|safe,ammo|61.49 14 18.63",
+                "minidm|迷你死鬥|pvp,ammo,respawn|123.36 14 15.68; 117.42 16 0.59; 123.63 16 0.61; 147.39 14 9.37; 158.35 14 0.67; 166.58 14 5.55; "
+                    + "170.63 14 14.61; 128.32 14 24.36; 151.47 14 29.44; 175.62 14 23.38; 140.59 14 38.43; 132.37 14 33.41; 181.62 16 38.38",
+                "parkour|跑庫塔|clear|-27.43 -62 416.55"), o -> o instanceof String s && s.contains("|"));
+        venueMaxHealth = builder.comment("在場地裡的最大血量（舊版是 100）").defineInRange("max_health", 100.0, 1.0, 1024.0);
+        venueAmmoBox = builder.comment("旗標 ammo 給的無限彈藥箱（格式同 /give）").define("ammo_box", "tacz:ammo_box{AllTypeCreative:1b}");
         builder.pop();
 
         builder.comment("管理員工具物品（浮空文字、箱子生成點）").push("admin_tools");

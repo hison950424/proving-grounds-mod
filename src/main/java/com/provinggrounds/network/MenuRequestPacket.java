@@ -53,6 +53,7 @@ public record MenuRequestPacket() {
         }
         return new MenuDataPacket(s.kills, s.deaths, s.assists, s.wins, s.xp, level,
             PlayerDataManager.xpForNextLevel(level), player.hasPermissions(2),
-            GameManager.get().isInLobby(), status, maps);
+            GameManager.get().isInLobby(), status, maps,
+            com.provinggrounds.venue.VenueManager.visible().stream().map(com.provinggrounds.venue.Venue::name).toList());
     }
 }
