@@ -1303,9 +1303,12 @@ public class BattleRoyaleMode {
                 return true;
             }
             Participant holder = participants.get(player.getUUID());
-            if (holder == null || !holder.alive || holder.downed || !TeamManager.get().isSameTeam(holder.id, victimId)) {
-                return true;
+            if (holder == null || !holder.alive || holder.downed || !TeamManager.get().isSameTeam(holder.id, victimId)
+                    || !sameVanillaTeam(player, victimId)) {
+                return true; // 只有同隊（我們的隊伍與原版計分板隊伍都相同）站著的人吸得到
             }
+            ProvingGroundsMod.LOGGER.info("Revive card of {} picked up by {} (team {} / {})", card.victim, player.getGameProfile().getName(),
+                TeamManager.get().teamKey(holder.id), TeamManager.get().teamKey(victimId));
             groundCards.remove(victimId);
             removeCard(card);
             holder.heldCards.add(victimId);
@@ -1323,6 +1326,16 @@ public class BattleRoyaleMode {
             return true;
         }
         return false; // 倒地也可以吸取物品（計畫書 4 的 C 章）
+    }
+
+    /** 撿牌的人與死者在原版計分板上是不是同一隊（雙重確認，避免隊伍資料不同步時被敵人吸走）。 */
+    private boolean sameVanillaTeam(ServerPlayer player, UUID victimId) {
+        Participant v = participants.get(victimId);
+        if (v == null || level == null) return false;
+        net.minecraft.world.scores.PlayerTeam pt = player.getTeam() instanceof net.minecraft.world.scores.PlayerTeam t ? t : null;
+        net.minecraft.world.scores.PlayerTeam vt = level.getScoreboard().getPlayersTeam(v.name);
+        if (pt == null && vt == null) return true; // 兩邊都沒有原版隊伍：只看我們自己的隊伍
+        return pt != null && pt == vt;
     }
 
     /** 持有者倒地或死亡：持有的牌掉回地上，每個死者一個掉落物，沒有期限。 */
