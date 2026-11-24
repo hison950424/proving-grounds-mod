@@ -30,24 +30,46 @@ import java.util.List;
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
 public final class UiWalk {
 
-    private static boolean active; // 上一 tick 是否有接管（離開時要把按鍵放開）
+    private static boolean active; // 這一 tick 是否接管
+    /** 這一 tick 實際按著的前、後、左、右。 */
+    private static boolean up, down, left, right;
 
     private UiWalk() {}
 
+    /**
+     * 每 tick 開頭讀實際按鍵狀態。注意：Forge 把移動鍵設成「只在遊戲中有效」（KeyConflictContext.IN_GAME），
+     * 開著畫面時 KeyMapping.isDown() 一律是 false，所以不能只靠 setDown；改在 MovementInputUpdateEvent 直接寫進移動輸入（計畫書 6 A12）。
+     */
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.START) return;
         Minecraft mc = Minecraft.getInstance();
         Screen screen = mc.screen;
-        KeyMapping[] moves = { mc.options.keyUp, mc.options.keyDown, mc.options.keyLeft, mc.options.keyRight };
         if (mc.player == null || screen == null || !shouldWalk(screen)) {
-            if (active && screen != null) for (KeyMapping k : moves) k.setDown(false); // 剛停止接管：放開，避免一直往前走
             active = false;
             return;
         }
         long window = mc.getWindow().getWindow();
-        for (KeyMapping k : moves) k.setDown(isPhysicallyDown(window, k.getKey()));
+        up = isPhysicallyDown(window, mc.options.keyUp.getKey());
+        down = isPhysicallyDown(window, mc.options.keyDown.getKey());
+        left = isPhysicallyDown(window, mc.options.keyLeft.getKey());
+        right = isPhysicallyDown(window, mc.options.keyRight.getKey());
         active = true;
+    }
+
+    /** 原版算完移動輸入之後（開著畫面時是全部放開），把實際按著的方向鍵寫回去。 */
+    @SubscribeEvent
+    public static void onMovementInput(net.minecraftforge.client.event.MovementInputUpdateEvent event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!active || mc.screen == null || event.getEntity() != mc.player) return;
+        net.minecraft.client.player.Input in = event.getInput();
+        in.up = up;
+        in.down = down;
+        in.left = left;
+        in.right = right;
+        float slow = mc.player.isMovingSlowly() ? 0.3f : 1f; // 蹲下、趴下時跟原版一樣變慢
+        in.forwardImpulse = (up == down ? 0f : up ? 1f : -1f) * slow;
+        in.leftImpulse = (left == right ? 0f : left ? 1f : -1f) * slow;
     }
 
     private static boolean isPhysicallyDown(long window, InputConstants.Key key) {

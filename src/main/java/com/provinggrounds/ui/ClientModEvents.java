@@ -44,6 +44,7 @@ public final class ClientModEvents {
         event.registerAboveAll("item_wheel", ClientWheel.OVERLAY);
         event.registerAboveAll("compass", Compass.OVERLAY);
         event.registerAboveAll("damage_indicator", DamageIndicator.OVERLAY);
+        event.registerBelowAll("gas_haze", com.provinggrounds.special.client.ClientSpecial.GAS_OVERLAY); // 毒氣薄霧（在所有 HUD 下面）
         event.registerAboveAll("interact_hint", ClientInteract.HINT_OVERLAY); // 準星下方的 F 互動提示
         event.registerAboveAll("kill_hud", KillHud.OVERLAY); // 擊殺圖示與擊殺紀錄
         event.registerAboveAll("arena_world_hint", ArenaWorldRenderer.OVERLAY); // 據點箭頭、敵方重生區提示

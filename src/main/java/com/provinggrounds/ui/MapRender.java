@@ -115,26 +115,39 @@ public final class MapRender {
      * 效能（spark 實測）：GuiGraphics.fill() 平常每呼叫一次就送一次繪圖指令給顯示卡；圈是上千個小點，
      * 所以用 drawManaged 把整個圈合成一次送出。標記、自己的箭頭也一樣。
      */
-    public static void drawCircle(GuiGraphics g, View v, double cx, double cz, double r, int color, int thickness, boolean dashed) {
+    public static void drawCircle(GuiGraphics g, View v, double cx, double cz, double r, int color, float thickness, boolean dashed) {
         g.drawManaged(() -> drawCircle0(g, v, cx, cz, r, color, thickness, dashed));
     }
 
-    private static void drawCircle0(GuiGraphics g, View v, double cx, double cz, double r, int color, int thickness, boolean dashed) {
+    /**
+     * 用真正的螢幕像素畫圈（粗細可以是小數個介面像素，例如下一圈 = 白圈的 65%）。
+     * thickness：介面像素；dashed：虛線（每段約 6 個介面像素）。
+     */
+    private static void drawCircle0(GuiGraphics g, View v, double cx, double cz, double r, int color, float thickness, boolean dashed) {
         if (r <= 0) return;
         double pr = r / v.blocksPerPixel();
-        int n = (int) Math.max(48, Math.min(1440, pr * 2 * Math.PI / 1.5));
         double scx = v.px(cx), scz = v.pz(cz);
         // 整個圓都在視窗外（例如小地圖只看得到圈內一小塊）就不用畫
         if (scx + pr < v.x() || scx - pr > v.x() + v.w() || scz + pr < v.y() || scz - pr > v.y() + v.h()) return;
         if (pr > Math.hypot(v.w(), v.h()) + Math.hypot(scx - (v.x() + v.w() / 2.0), scz - (v.y() + v.h() / 2.0))) return; // 視窗整個在圓內
+        double gs = net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScale();
+        int tp = Math.max(1, (int) Math.round(thickness * gs)); // 螢幕像素的粗細
+        double prPx = pr * gs;
+        int n = (int) Math.max(48, Math.min(4000, prPx * 2 * Math.PI / Math.max(1.0, tp * 0.6)));
+        double dashPx = 6 * gs;
+        double vx0 = v.x() * gs - tp, vy0 = v.y() * gs - tp, vx1 = (v.x() + v.w()) * gs, vy1 = (v.y() + v.h()) * gs;
+        g.pose().pushPose();
+        g.pose().scale((float) (1 / gs), (float) (1 / gs), 1);
         for (int i = 0; i < n; i++) {
-            if (dashed && (i / 6) % 2 == 1) continue;
             double a = i * Math.PI * 2 / n;
-            int sx = (int) (scx + Math.cos(a) * pr), sz = (int) (scz + Math.sin(a) * pr);
+            if (dashed && ((int) (a * prPx / dashPx)) % 2 == 1) continue;
+            int sx = (int) Math.round((scx + Math.cos(a) * pr) * gs - tp / 2.0);
+            int sz = (int) Math.round((scz + Math.sin(a) * pr) * gs - tp / 2.0);
             // 只畫落在視窗裡的點（小地圖上大圈的大部分點都在外面，省下大量繪圖）
-            if (sx < v.x() - thickness || sx > v.x() + v.w() || sz < v.y() - thickness || sz > v.y() + v.h()) continue;
-            g.fill(sx, sz, sx + thickness, sz + thickness, color);
+            if (sx < vx0 || sx > vx1 || sz < vy0 || sz > vy1) continue;
+            g.fill(sx, sz, sx + tp, sz + tp, color);
         }
+        g.pose().popPose();
     }
 
     // ── 標記 ────────────────────────────────────────────────────────────────

@@ -57,7 +57,7 @@ public final class ArenaConfig {
         endSeconds = b.comment("比賽結束後幾秒回大廳").defineInRange("end_seconds", 10, 1, 120);
         ammoBox = b.comment("無限彈藥箱（格式同 /give）").define("ammo_box", "tacz:ammo_box{AllTypeCreative:1b}");
         antiCamp = b.comment("防蹲點：進入敵方重生點附近（水平距離 anti_camp_radius 格內）先警告，之後每秒受傷、緩速、發光").define("anti_camp", true);
-        antiCampRadius = b.comment("防蹲點範圍（格，水平距離）").defineInRange("anti_camp_radius", 18, 2, 128);
+        antiCampRadius = b.comment("防蹲點範圍（格，水平距離）。只在團隊死鬥有效。原本的鍵 anti_camp_radius（18）已停用，改名後預設 25（計畫書 6 A13）").defineInRange("anti_camp_radius_v2", 25, 2, 128);
         antiCampWarn = b.comment("進入後先警告幾秒才開始受傷").defineInRange("anti_camp_warn", 2, 0, 60);
         antiCampStart = b.comment("第一秒的傷害").defineInRange("anti_camp_start", 2, 0, 1000);
         antiCampStep = b.comment("之後每秒多扣多少（線性遞增）").defineInRange("anti_camp_step", 5, 0, 1000);

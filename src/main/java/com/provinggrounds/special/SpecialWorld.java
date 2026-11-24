@@ -59,6 +59,8 @@ public final class SpecialWorld {
     private static final Map<UUID, Burn> BURNS = new HashMap<>();
     private static final List<Cloud> BLIND = new ArrayList<>();
     private static final List<Area> SMOKES = new ArrayList<>();
+    /** 煙幕彈圓柱的高度（格）：比人高一點，站著蹲著都被遮住。 */
+    private static final double SMOKE_HEIGHT = 3.2;
     private static final List<Area> GASES = new ArrayList<>();
     private static final List<SnowTrail> SNOW = new ArrayList<>();
     private static final List<SnowColumn> COLUMNS = new ArrayList<>();
@@ -211,12 +213,12 @@ public final class SpecialWorld {
         ParticleOptions lr = smokeParticle();
         for (Area a : SMOKES) {
             RandomSource rnd = a.level().getRandom();
-            int n = Math.max(4, (int) Math.round(r * r * 0.5)); // 半徑越大，每 tick 的煙越多
+            int n = Math.max(4, (int) Math.round(r * r * 0.6)); // 面積越大，每 tick 的煙越多
             for (int i = 0; i < n; i++) {
-                // 圓球形：在半徑 r 的球裡均勻取點（下半部壓扁貼地，看起來是圓頂）
-                double dx = (rnd.nextDouble() * 2 - 1) * r, dy = (rnd.nextDouble() * 2 - 1) * r, dz = (rnd.nextDouble() * 2 - 1) * r;
-                if (dx * dx + dy * dy + dz * dz > r * r) continue;
-                dy = dy < 0 ? dy * 0.15 + 0.3 : dy + 0.3;
+                // 平放的圓柱（計畫書 6 A17）：水平方向在半徑 r 的圓裡均勻取點，高度貼地 0～SMOKE_HEIGHT 格，整片實心
+                double dx = (rnd.nextDouble() * 2 - 1) * r, dz = (rnd.nextDouble() * 2 - 1) * r;
+                if (dx * dx + dz * dz > r * r) continue;
+                double dy = 0.2 + rnd.nextDouble() * SMOKE_HEIGHT;
                 double x = a.center().x + dx, y = a.center().y + dy, z = a.center().z + dz;
                 if (lr != null) {
                     for (ServerPlayer p : a.level().players()) a.level().sendParticles(p, lr, true, x, y, z, 1, 0, 0, 0, 0);

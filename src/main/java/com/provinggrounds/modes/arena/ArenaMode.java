@@ -322,7 +322,8 @@ public abstract class ArenaMode {
     }
 
     /** 這個模式有沒有紅藍基地的防蹲點（槍王之王沒有）。 */
-    protected boolean usesAntiCamp() { return true; }
+    /** 敵方重生區懲罰只在團隊死鬥有效（計畫書 6 A13）。 */
+    protected boolean usesAntiCamp() { return kind() == GameManager.GameMode.TDM; }
 
     /** 在敵方重生區、而且設定不能開槍。 */
     public boolean blocksFire(UUID id) {

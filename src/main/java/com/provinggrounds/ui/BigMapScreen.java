@@ -140,7 +140,7 @@ public class BigMapScreen extends Screen {
         g.enableScissor(mapX, mapY, mapX + mapSize, mapY + mapSize);
         MapRender.drawTerrain(g, v);
         BRStatePacket s = ClientBRState.get();
-        if (s.nextRadius() >= 0) MapRender.drawCircle(g, v, s.nextCx(), s.nextCz(), s.nextRadius(), MapRender.NEXT_ZONE, 1, true);
+        if (s.nextRadius() >= 0) MapRender.drawCircle(g, v, s.nextCx(), s.nextCz(), s.nextRadius(), MapRender.NEXT_ZONE, 2 * 0.65f, true); // 下一圈 = 白圈粗度的 65%（計畫書 6 A11）
         MapRender.drawCircle(g, v, s.cx(), s.cz(), s.radius(), MapRender.ZONE, 2, false);
         MapRender.drawMarkers(g, font, v, true);
         Entity cam = Minecraft.getInstance().getCameraEntity();

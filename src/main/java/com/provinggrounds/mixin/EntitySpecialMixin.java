@@ -51,6 +51,13 @@ public abstract class EntitySpecialMixin {
         if (SpecialHooks.silent((Entity) (Object) this)) ci.cancel();
     }
 
+    /** 隱形斗篷（原版隱形）、靜音靴：奔跑時不畫腳步粒子（計畫書 6 A15；canSpawnSprintParticle = m_5843_）。 */
+    @Inject(method = { "canSpawnSprintParticle", "m_5843_" }, at = @At("HEAD"), cancellable = true, remap = false)
+    private void provinggrounds$noSprintParticle(CallbackInfoReturnable<Boolean> cir) {
+        Entity self = (Entity) (Object) this;
+        if (self instanceof net.minecraft.world.entity.player.Player && (self.isInvisible() || SpecialHooks.silent(self))) cir.setReturnValue(false);
+    }
+
     @Inject(method = { "doWaterSplashEffect", "m_5841_" }, at = @At("HEAD"), cancellable = true, remap = false)
     private void provinggrounds$silentSplash(CallbackInfo ci) {
         if (SpecialHooks.silent((Entity) (Object) this)) ci.cancel();

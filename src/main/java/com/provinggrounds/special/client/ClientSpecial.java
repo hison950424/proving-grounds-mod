@@ -49,7 +49,7 @@ import java.util.Set;
  *   - 發光：GlowSyncPacket 的清單 → 畫發光外框（EntitySpecialMixin）與地圖紅點（MapRender）；
  *           殘影分身對使用者與隊友帶淡色輪廓。
  *   - 震盪：視角不受控制地上下左右晃動，快結束時線性減弱。
- *   - 毒氣：視野模糊（原版 blur 後處理，模糊程度約 1.5 秒逐漸加深、效果結束後約 2 秒逐漸恢復清晰）、
+ *   - 毒氣：視野變模糊（濃霧拉到身邊＋淡綠色薄霧，約 1.5 秒逐漸加深、效果結束後約 2 秒逐漸恢復；不用後處理著色器，避免和優化模組一起時畫面變黑）、
  *           咳嗽（視角先上揚再往下）、失去方向感（每 3～5 秒換一個隨機方向與速度，視角持續慢慢往那邊偏，玩家可以用滑鼠拉回來）。
  *   - 雷達脈衝：一圈往外擴散的環。
  */
@@ -70,6 +70,8 @@ public final class ClientSpecial {
     private static float gasLevel;
     private static java.lang.reflect.Field passesField;
     private static final float BLUR_MAX_RADIUS = 9f, BLUR_IN_TICKS = 30f, BLUR_OUT_TICKS = 40f;
+    /** 毒氣最濃時的可見距離（格）。 */
+    private static final float GAS_FOG_FAR = 7f;
     private static long radarStart = -1;
     private static Vec3 radarCenter = Vec3.ZERO;
     private static int radarRadius;
@@ -145,6 +147,7 @@ public final class ClientSpecial {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
         if (p == null) { if (gasShader) stopGasShader(mc); clear(); gasLevel = 0; return; }
+        if (gasShader) stopGasShader(mc); // 舊版的模糊著色器：跟優化模組一起用會整個畫面變黑，不再使用
         while (USE_KEY.consumeClick()) {
             if (mc.screen == null) PGNetwork.sendToServer(new SpecialUsePacket());
         }
@@ -154,10 +157,43 @@ public final class ClientSpecial {
         // 毒氣：模糊程度逐漸加深／逐漸恢復
         boolean gassed = p.hasEffect(SpecialRegistry.GASSED.get());
         gasLevel = gassed ? Math.min(1f, gasLevel + 1f / BLUR_IN_TICKS) : Math.max(0f, gasLevel - 1f / BLUR_OUT_TICKS);
-        if (gasLevel > 0 && !gasShader) startGasShader(mc);
-        else if (gasLevel <= 0 && gasShader) stopGasShader(mc);
-        if (gasShader) setBlurRadius(mc, gasLevel * gasLevel * (3 - 2 * gasLevel) * BLUR_MAX_RADIUS); // 平滑曲線
+        // 視野效果改成濃霧＋淡綠色薄霧（不用後處理著色器，計畫書 6 A14），見 onFog／onFogColor／onGasOverlay
     }
+
+    /** 毒氣強度（0～1，平滑曲線）：霧與薄霧都用這個。 */
+    private static float gasAmount() {
+        float g = gasLevel;
+        return g * g * (3 - 2 * g);
+    }
+
+    /** 毒氣：霧拉到身邊（遠處看不清楚、像視線模糊）。Forge 要取消事件，改過的霧距離才會生效。 */
+    @SubscribeEvent
+    public static void onFog(net.minecraftforge.client.event.ViewportEvent.RenderFog event) {
+        float a = gasAmount();
+        if (a <= 0) return;
+        float far = event.getFarPlaneDistance(), near = event.getNearPlaneDistance();
+        event.setFarPlaneDistance(far + (GAS_FOG_FAR - far) * a);
+        event.setNearPlaneDistance(near + (-4f - near) * a);
+        event.setCanceled(true);
+    }
+
+    /** 毒氣：霧的顏色偏灰綠。 */
+    @SubscribeEvent
+    public static void onFogColor(net.minecraftforge.client.event.ViewportEvent.ComputeFogColor event) {
+        float a = gasAmount();
+        if (a <= 0) return;
+        event.setRed(event.getRed() + (0.48f - event.getRed()) * a);
+        event.setGreen(event.getGreen() + (0.55f - event.getGreen()) * a);
+        event.setBlue(event.getBlue() + (0.40f - event.getBlue()) * a);
+    }
+
+    /** 毒氣：整個畫面蓋一層很淡的灰綠色薄霧（最多 30%，不會看不見）。 */
+    public static final net.minecraftforge.client.gui.overlay.IGuiOverlay GAS_OVERLAY = (gui, g, partialTick, w, h) -> {
+        float a = gasAmount();
+        if (a <= 0) return;
+        int alpha = (int) (0x4C * a); // 最多約 30%
+        g.fill(0, 0, w, h, (alpha << 24) | 0x7A8C66);
+    };
 
     /** 設定模糊後處理兩個 pass 的 Radius（0 會讓著色器除以零，所以最小 0.01）。 */
     @SuppressWarnings("unchecked")
@@ -212,7 +248,7 @@ public final class ClientSpecial {
         if (e == null) { shakeYaw = shakePitch = 0; return; }
         double strength;
         try { strength = com.provinggrounds.config.PGConfig.SERVER.special.concussStrength.get(); }
-        catch (IllegalStateException ex) { strength = 6; }
+        catch (IllegalStateException ex) { strength = 12; }
         float fade = Math.min(1f, e.getDuration() / 60f); // 最後 3 秒線性減弱
         float t = p.tickCount;
         float targetYaw = (float) (strength * fade * (Math.sin(t * 0.21) * 0.6 + Math.sin(t * 0.53 + 1.3) * 0.4));

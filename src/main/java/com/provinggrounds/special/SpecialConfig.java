@@ -66,7 +66,7 @@ public final class SpecialConfig {
         shockCenterDamage = b.comment("衝擊波中心傷害（往外線性遞減到 0）").defineInRange("shock_center_damage", 20.0, 0.0, 1000.0);
         shockConcussSeconds = b.comment("衝擊波附帶的震盪秒數").defineInRange("shock_concuss_seconds", 10.0, 0.0, 120.0);
         shockKnockback = b.comment("衝擊波震飛力道（占位）").defineInRange("shock_knockback", 1.6, 0.0, 10.0);
-        concussStrength = b.comment("震盪：視角晃動的最大角度（度）").defineInRange("concuss_strength", 6.0, 0.0, 45.0);
+        concussStrength = b.comment("震盪：視角晃動的最大角度（度）。原本的鍵 concuss_strength（6）已停用，改名後預設 12（計畫書 6 A16：晃動 +100%）").defineInRange("concuss_strength_v2", 12.0, 0.0, 45.0);
         mineTriggerRadius = b.comment("地雷：敵人進入幾格內觸發").defineInRange("mine_trigger_radius", 2.0, 0.5, 10.0);
         mineDelaySeconds = b.comment("地雷：觸發後幾秒產生效果").defineInRange("mine_delay_seconds", 0.5, 0.0, 10.0);
         mineEffectRadius = b.comment("地雷：效果半徑（格）").defineInRange("mine_effect_radius", 3.5, 0.5, 20.0);
@@ -98,7 +98,7 @@ public final class SpecialConfig {
         landMineSlowSeconds = b.comment("地雷：緩速秒數").defineInRange("land_mine_slow_seconds", 5.0, 0.0, 120.0);
         fireMineSeconds = b.comment("燃燒地雷：燃燒秒數").defineInRange("fire_mine_seconds", 5.0, 0.0, 120.0);
         fireMineDamage = b.comment("燃燒地雷：每秒燒傷").defineInRange("fire_mine_damage", 6.0, 0.0, 1000.0);
-        smokeRadius = b.comment("煙幕彈：煙霧半徑（格），以自己為中心的圓球形").defineInRange("smoke_radius_v2", 5.0, 0.5, 20.0);
+        smokeRadius = b.comment("煙幕彈：煙霧半徑（格），以自己為中心的平放圓柱（高 SMOKE_HEIGHT 格）。原本的鍵 smoke_radius_v2（5）已停用，改名後預設 8（計畫書 6 A17）").defineInRange("smoke_radius_v3", 8.0, 0.5, 20.0);
         smokeSeconds = b.comment("煙幕彈：煙霧持續秒數（占位）").defineInRange("smoke_seconds", 15.0, 1.0, 120.0);
         totemSeconds = b.comment("不死圖騰：副手有圖騰的秒數").defineInRange("totem_seconds", 15.0, 1.0, 600.0);
         totemHeal = b.comment("不死圖騰：觸發後血量回到多少").defineInRange("totem_heal", 50.0, 1.0, 1000.0);
