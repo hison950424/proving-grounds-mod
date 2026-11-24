@@ -328,8 +328,8 @@ public class PGConfig {
             .defineInRange("bleed_per_second", 1.0, 0.05, 100.0);
         brDownedHealth = builder.comment("倒地時的血量（超過最大血量時以最大血量為準）。會隨時間流血，敵人也可以直接打掉")
             .defineInRange("downed_health", 100.0, 1.0, 1024.0);
-        brDownedSpeedPenalty = builder.comment("倒地時移動速度減少的比例（0.8 = 減少 80%）（占位）")
-            .defineInRange("speed_penalty", 0.8, 0.0, 1.0);
+        brDownedSpeedPenalty = builder.comment("倒地時移動速度減少的比例（0.7 = 減少 70%，剩原本的 30%）。v2：原本 0.8（剩 20%），倒地爬行加快 50%")
+            .defineInRange("speed_penalty_v2", 0.7, 0.0, 1.0);
         brReviveSeconds = builder.comment("隊友蹲下扶起需要的秒數")
             .defineInRange("revive_seconds", 10, 1, 60);
         brReviveRange = builder.comment("扶起距離（格）")
