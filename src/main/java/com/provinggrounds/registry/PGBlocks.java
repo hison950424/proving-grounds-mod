@@ -77,6 +77,16 @@ public final class PGBlocks {
     public static final RegistryObject<Item> ELEVATOR_ITEM = ITEMS.register("elevator",
         () -> new BlockItem(ELEVATOR.get(), new Item.Properties()));
 
+    /** 跑酷開始方塊、跑酷結束方塊（計畫書 6 D1；邏輯在 block/Parkour）。 */
+    public static final RegistryObject<Block> PARKOUR_START = BLOCKS.register("parkour_start", () -> new Block(
+        BlockBehaviour.Properties.of().mapColor(MapColor.EMERALD).strength(1.5f, 6f).sound(SoundType.METAL)));
+    public static final RegistryObject<Item> PARKOUR_START_ITEM = ITEMS.register("parkour_start",
+        () -> new BlockItem(PARKOUR_START.get(), new Item.Properties()));
+    public static final RegistryObject<Block> PARKOUR_END = BLOCKS.register("parkour_end", () -> new Block(
+        BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(1.5f, 6f).sound(SoundType.METAL)));
+    public static final RegistryObject<Item> PARKOUR_END_ITEM = ITEMS.register("parkour_end",
+        () -> new BlockItem(PARKOUR_END.get(), new Item.Properties()));
+
     public static final RegistryObject<Item> REVIVE_CARD = ITEMS.register("revive_card",
         () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
 
@@ -123,6 +133,8 @@ public final class PGBlocks {
                 out.accept(CRATE_LOW.get()); out.accept(CRATE_MID.get()); out.accept(CRATE_HIGH.get()); out.accept(CRATE_AIRDROP.get());
                 out.accept(ALTAR_ITEM.get());
                 out.accept(ELEVATOR_ITEM.get());
+                out.accept(PARKOUR_START_ITEM.get());
+                out.accept(PARKOUR_END_ITEM.get());
                 out.accept(BACKPACK_1.get()); out.accept(BACKPACK_2.get()); out.accept(BACKPACK_3.get());
                 out.accept(REVIVE_CARD.get());
                 // 特殊物品（計畫書 4）與擊退盾：本模組所有物品都可以在創造模式拿到
