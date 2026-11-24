@@ -42,7 +42,7 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
-- **計畫書 6（`docs/PLAN6.md`）**：A1～A21、B、C、D、E 全部完成並提交，建置與開發伺服器啟動通過（**都還沒在真正客戶端實測**）。發佈說明 `docs/NEXT_RELEASE_NOTES.md`、測試步驟 `docs/TESTING.md` 最上面已寫好。剩：A22（移除 variantbarrels，要先問使用者）與發佈 v0.28.0（先問伺服器、客戶端關了沒）。
+- **計畫書 6（`docs/PLAN6.md`）**：A1～A21、B、C、D、E 全部完成並提交，建置與開發伺服器啟動通過（**都還沒在真正客戶端實測**）。發佈說明 `docs/NEXT_RELEASE_NOTES.md`、測試步驟 `docs/TESTING.md` 最上面已寫好。A22 已移除 variantbarrels（jar 在伺服器與客戶端的 mods-backup），v0.28.0 已發佈，等使用者實測回饋。
 - v0.27.0 已發佈（比賽中調 HUD、子彈彈道、降落傘繩、圈外受傷聲、炸毀方塊開關、補品互換——互換已在計畫書 6 A2 拿掉）。
 - **介面大小 3 重新排版＋HUD 自訂畫面**：已完成並提交（0b85849，屬於未發佈的 v0.26.0），建置與開發伺服器啟動都通過，**還沒在真正客戶端看過**。內容：`ui/ClientGuiScale`（固定介面大小 3，設定 `[gui] force_gui_scale_v1`）、`ui/HudLayout`（15 個 HUD 元件的位置／大小／開關，存 `config/provinggrounds-hud.json`）、`ui/HudEditScreen`（主選單首頁「HUD 介面設定」）、主選單／大廳／商店／選地圖重新排版。測試項目 UI-1～5、HE-1～7 在 `docs/TESTING.md` 最上面。等使用者測完回饋。
 - **Spark 已移除**（2026-11-24，移到伺服器與客戶端的 mods-backup）。改裝 5 個優化模組：客戶端 Embeddium 0.3.31、ImmediatelyFast 1.5.5、Entity Culling 1.11.3、FerriteCore 6.0.1、ModernFix 5.27.91；伺服器只裝 FerriteCore、ModernFix（正式伺服器已實際開關一次正常）。使用者若回報畫面異常，先懷疑 Embeddium。FPS 報告分析：20% 在等 FPS 上限、地形繪製 33%、我們 HUD 6.5% 已改 drawManaged。
