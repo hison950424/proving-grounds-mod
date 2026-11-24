@@ -75,7 +75,7 @@ public final class HudLayout {
         ARENA_SCORE("比分", 1, Pivot.TOP_CENTER, (w, h) -> new Box(w / 2 - 130, 4, 260, 50)),
         KILL_FEED("擊殺紀錄", 1, Pivot.TOP_RIGHT, (w, h) -> new Box(w - 140, ClientArenaState.active() ? 4 : 40, 136, 72)),
         WALLET("金錢與戰績", 1, Pivot.BOTTOM_RIGHT, (w, h) -> new Box(w - 124, h - 64, 120, 39)),
-        SCOREBOARD("戰績面板", 1, Pivot.RIGHT, (w, h) -> new Box(w - 196, h / 2 - 60, 190, 120)),
+        SCOREBOARD("戰績面板", 2, Pivot.RIGHT, (w, h) -> new Box(w - 196, h / 2 - 60, 190, 120)),
         KILL_ICON("擊殺圖示", 2, Pivot.CENTER, (w, h) -> new Box(w / 2 - 36, h / 2 + 12, 72, 20)),
         INTERACT("互動提示", 2, Pivot.TOP_CENTER, (w, h) -> new Box(w / 2 - 40, h / 2 + 11, 80, 10)),
         TITLE("上方標題", 2, Pivot.TOP_CENTER, (w, h) -> new Box(w / 2 - 100, 58, 200, 22)),

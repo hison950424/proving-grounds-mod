@@ -41,7 +41,7 @@ public final class ScoreboardPanel {
     public static void onTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         while (KEY.consumeClick()) if (PGClientConfig.CLIENT.scoreboardToggle.get()) toggled = !toggled;
-        if (!ClientArenaState.active()) toggled = false;
+        if (!ClientArenaState.active() && !com.provinggrounds.client.ClientBRState.active()) toggled = false;
     }
 
     private static boolean showing() {
@@ -50,7 +50,11 @@ public final class ScoreboardPanel {
 
     private static void render(GuiGraphics g, int w, int h) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.screen != null || !ClientArenaState.active() || !showing()) return;
+        if (mc.player == null || mc.screen != null || !showing()) return;
+        if (!ClientArenaState.active()) {
+            if (com.provinggrounds.client.ClientBRState.active()) renderBr(g, w, h); // 大逃殺也可以開（計畫書 6 B1）
+            return;
+        }
         ArenaStatePacket s = ClientArenaState.get();
         Font font = mc.font;
         boolean money = s.board().stream().anyMatch(r -> r.money() >= 0);
@@ -86,6 +90,47 @@ public final class ScoreboardPanel {
                 String m = "$" + r.money();
                 g.drawString(font, m, cM - font.width(m), y, 0xFF4CC864, false);
             }
+            y += rowH;
+        }
+        g.pose().popPose();
+        g.flush();
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+    }
+
+    /** 大逃殺戰績：名字（隊伍顏色）、擊殺、狀態（存活／倒地／陣亡）、被祭壇救回的次數。 */
+    private static void renderBr(GuiGraphics g, int w, int h) {
+        Minecraft mc = Minecraft.getInstance();
+        var rows = com.provinggrounds.network.BRBoardPacket.latest();
+        if (rows.isEmpty() || !HudLayout.enabled(HudLayout.El.SCOREBOARD)) return;
+        Font font = mc.font;
+        int rowH = 10, pw = 200, ph = 16 + rows.size() * rowH;
+        float scale = PGClientConfig.CLIENT.hudScale.get().floatValue() * HudLayout.scale(HudLayout.El.SCOREBOARD);
+        HudLayout.Box box = HudLayout.box(HudLayout.El.SCOREBOARD, w, h);
+        float right = box.x() + box.w(), midY = box.y() + box.h() / 2f;
+        float alpha = HudLayout.alpha(HudLayout.El.SCOREBOARD);
+        if (alpha < 0.999f) com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
+        g.pose().pushPose();
+        g.pose().translate(right - pw * scale, Math.max(4, Math.min(h - ph * scale - 4, midY - ph * scale / 2)), 0);
+        g.pose().scale(scale, scale, 1);
+        g.fill(0, 0, pw, ph, 0xA00F141E);
+        int cK = pw - 92, cS = pw - 70, cA = pw - 6;
+        g.drawString(font, "大逃殺戰績", 6, 4, 0xFFE8D060, false);
+        g.drawString(font, "殺", cK, 4, 0xFFA0A8B8, false);
+        g.drawString(font, "狀態", cS, 4, 0xFFA0A8B8, false);
+        g.drawString(font, "祭壇", cA - font.width("祭壇"), 4, 0xFFA0A8B8, false);
+        int y = 15;
+        String me = mc.player.getGameProfile().getName();
+        for (var r : rows) {
+            if (r.name().equals(me)) g.fill(2, y - 1, pw - 2, y + rowH - 1, 0x30FFFFFF);
+            boolean dead = r.state() == com.provinggrounds.network.BRBoardPacket.DEAD;
+            int nameColor = dead ? 0xFF707070 : 0xFF000000 | r.color();
+            g.drawString(font, font.plainSubstrByWidth(r.name(), cK - 10), 6, y, nameColor, false);
+            g.drawString(font, String.valueOf(r.kills()), cK, y, 0xFFFFFFFF, false);
+            String st = dead ? "陣亡" : r.state() == com.provinggrounds.network.BRBoardPacket.DOWNED ? "倒地" : "存活";
+            int stColor = dead ? 0xFFE04848 : r.state() == com.provinggrounds.network.BRBoardPacket.DOWNED ? 0xFFE8C040 : 0xFF4CC864;
+            g.drawString(font, st, cS, y, stColor, false);
+            String alt = r.altarRevived() > 0 ? "已用 ×" + r.altarRevived() : "－";
+            g.drawString(font, alt, cA - font.width(alt), y, r.altarRevived() > 0 ? 0xFFE8D060 : 0xFF6A7384, false);
             y += rowH;
         }
         g.pose().popPose();

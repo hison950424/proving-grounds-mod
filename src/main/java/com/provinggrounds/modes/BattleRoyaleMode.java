@@ -127,6 +127,7 @@ public class BattleRoyaleMode {
         // 死亡 / 復活
         boolean finalDead = false;   // 確定死亡（不能再被復活）
         boolean usedAltar = false;   // 競技模式：已用掉祭壇復活機會
+        int altarRevived;            // 被復活祭壇救回來幾次（戰績面板顯示，計畫書 6 B1）
         final List<UUID> heldCards = new ArrayList<>(); // 身上持有的隊友復活牌（死者 UUID）
 
         // 祭壇
@@ -380,6 +381,7 @@ public class BattleRoyaleMode {
         }
 
         if (phase != Phase.IDLE && tickCount % 5 == 0) syncClients(server);
+        if (phase != Phase.IDLE && tickCount % 20 == 3) syncBoard(server); // 戰績面板（計畫書 6 B1）
         if ((phase == Phase.PLANE || phase == Phase.ACTIVE) && tickCount % 5 == 2) syncMarkers(server); // 地圖標記
     }
 
@@ -1619,6 +1621,7 @@ public class BattleRoyaleMode {
                 if (vp != null && isAwaiting(v) && player(v) != null) {
                     holder.heldCards.remove(v);
                     revived.add(vp);
+                    vp.altarRevived++;
                 }
             }
         }
@@ -1977,6 +1980,27 @@ public class BattleRoyaleMode {
     // ═════════════════════════════════════════════════════════════════════════
     // 客戶端同步
     // ═════════════════════════════════════════════════════════════════════════
+
+    /** 大逃殺戰績面板：每位參賽者的擊殺、存活／倒地／陣亡、被祭壇救回幾次。依隊伍、名字排好送給所有人。 */
+    private void syncBoard(MinecraftServer server) {
+        List<com.provinggrounds.network.BRBoardPacket.Row> rows = new ArrayList<>();
+        List<Participant> list = new ArrayList<>(participants.values());
+        list.sort(java.util.Comparator.comparing((Participant x) -> TeamManager.get().teamKey(x.id)).thenComparing(x -> x.name));
+        for (Participant x : list) {
+            byte st = !x.alive ? com.provinggrounds.network.BRBoardPacket.DEAD
+                : x.downed ? com.provinggrounds.network.BRBoardPacket.DOWNED : com.provinggrounds.network.BRBoardPacket.ALIVE;
+            ServerPlayer sp = player(x.id);
+            int color = 0xFFFFFF;
+            if (sp != null) {
+                var t = TeamManager.get().getTeam(sp).orElse(null);
+                Integer c = t != null ? t.color.getColor() : null;
+                if (c != null) color = c;
+            }
+            rows.add(new com.provinggrounds.network.BRBoardPacket.Row(x.name, color, x.stats.kills, st, x.altarRevived));
+        }
+        com.provinggrounds.network.BRBoardPacket pkt = new com.provinggrounds.network.BRBoardPacket(rows);
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) PGNetwork.sendTo(p, pkt);
+    }
 
     private void syncClients(MinecraftServer server) {
         if (map == null) return;
