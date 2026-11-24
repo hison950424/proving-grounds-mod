@@ -363,13 +363,32 @@ public final class HotbarRules {
                 }
                 if (slot.container == inv && menu instanceof InventoryMenu && slot.getContainerSlot() >= 9 && slot.getContainerSlot() <= 35) {
                     // 物品欄畫面：背包 → 快捷欄
-                    quickMove(slot, p, insertToHotbar(p, stack.copy()));
+                    Result r = insertToHotbar(p, stack.copy());
+                    if (r.moved() == 0 && swapDedicated(slot, stack, p, inv)) return true;
+                    quickMove(slot, p, r);
                     return true;
                 }
             }
         }
         out[0] = new Snapshot(menu, p);
         return false;
+    }
+
+    /**
+     * 補品、投擲物的專用格（第 4、5 格）已經放了別種（或同種但已滿）的物品時，Shift 點背包裡的補品／投擲物 = 互換：
+     * 點的那一堆放進專用格，原本專用格的那一堆放回背包被點的那一格。回傳 true = 已處理。
+     */
+    private static boolean swapDedicated(Slot slot, ItemStack stack, ServerPlayer p, Inventory inv) {
+        Kind k = kind(stack);
+        if (k != Kind.HEALING && k != Kind.THROWABLE) return false;
+        int target = k == Kind.HEALING ? HEAL : THROW;
+        ItemStack old = inv.getItem(target);
+        if (old.isEmpty() || !slot.mayPlace(old)) return false;
+        inv.setItem(target, stack.copy());
+        slot.set(old.copy());
+        inv.setChanged();
+        message(p, k == Kind.HEALING ? "已替換第 4 格的補品（原本的放回背包）" : "已替換第 5 格的投擲物（原本的放回背包）");
+        return true;
     }
 
     /** 防具互換：回傳 true = 已處理。身上那個部位空著時交給原本的流程（直接穿上）。 */
