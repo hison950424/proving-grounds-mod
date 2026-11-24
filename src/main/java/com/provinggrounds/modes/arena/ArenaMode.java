@@ -179,6 +179,7 @@ public abstract class ArenaMode {
         int red = 0, blue = 0;
         for (ServerPlayer p : participants) {
             ArenaPlayer ap = new ArenaPlayer(p.getUUID(), p.getGameProfile().getName());
+            if (usesClasses()) ap.cls = com.provinggrounds.core.LobbyManager.get().chosenClass(p.getUUID()); // 大廳預選的職業（計畫書 6 C1）
             players.put(p.getUUID(), ap);
             int t = tm.getTeam(p).map(x -> x.id).orElse(-1);
             if (t == RED) red++;

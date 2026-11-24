@@ -16,7 +16,7 @@ import java.util.function.Supplier;
  */
 public record ArenaActionPacket(Action action, int arg, UUID target) {
 
-    public enum Action { BUY, SET_CLASS, TRANSFER }
+    public enum Action { BUY, SET_CLASS, TRANSFER, OPEN_TRASH }
 
     private static final UUID NONE = new UUID(0, 0);
 
@@ -41,8 +41,20 @@ public record ArenaActionPacket(Action action, int arg, UUID target) {
                 case BUY -> m.buy(p, arg);
                 case SET_CLASS -> m.setClass(p, arg);
                 case TRANSFER -> m.transfer(p, target, arg);
+                case OPEN_TRASH -> openTrash(p);
             }
         });
         ctx.get().setPacketHandled(true);
+    }
+
+    /**
+     * 商店的垃圾桶（計畫書 6 B8）：一個 2 排的暫時箱子，把要丟的東西放進去；關掉畫面時裡面的東西才真的刪掉，
+     * 關掉之前都可以拿回來。箱子是臨時建立的（SimpleContainer），不存在世界裡，關掉就跟著消失。
+     */
+    private static void openTrash(ServerPlayer p) {
+        net.minecraft.world.SimpleContainer bin = new net.minecraft.world.SimpleContainer(18);
+        p.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inv, pl) ->
+            new net.minecraft.world.inventory.ChestMenu(net.minecraft.world.inventory.MenuType.GENERIC_9x2, id, inv, bin, 2),
+            net.minecraft.network.chat.Component.literal("垃圾桶（關閉後刪除裡面的東西）")));
     }
 }

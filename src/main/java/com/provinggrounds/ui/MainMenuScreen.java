@@ -316,6 +316,14 @@ public class MainMenuScreen extends Screen {
         }
         boolean special = lobby == null || lobby.special(); // 特殊物品模式：擊殺敵人掉落特殊物品（商店不賣）
         y = row(sx, y, sw, "特殊物品", special ? "開" : "關", canEdit, () -> send(LobbyManager.Action.SET_SPECIAL, special ? 0 : 1));
+        if (gm != GameManager.GameMode.GK) {
+            // 每個人自己選職業（開始前；計畫書 6 C1），點一下換下一個
+            LobbyStatePacket.Entry me = self(lobby);
+            com.provinggrounds.modes.arena.ArenaClass[] all = com.provinggrounds.modes.arena.ArenaClass.values();
+            com.provinggrounds.modes.arena.ArenaClass mine = all[Math.max(0, Math.min(all.length - 1, me != null ? me.cls() : 0))];
+            boolean canPick = me != null && !me.spectator() && lobby != null && lobby.inLobby();
+            y = row(sx, y, sw, "我的職業", mine.displayName, canPick, () -> send(LobbyManager.Action.SET_MY_CLASS, (mine.ordinal() + 1) % all.length));
+        }
         return y;
 
     }

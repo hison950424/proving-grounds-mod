@@ -26,7 +26,8 @@ public record LobbyStatePacket(
 ) {
 
     /** team：-1 = 未分隊（開局時是孤狼），0 = 孤狼，1… = 隊伍編號。 */
-    public record Entry(UUID id, String name, int team, boolean ready, boolean spectator, boolean joinPending, boolean op) {}
+    /** cls：大廳預選的職業（ArenaClass 的順序；團隊死鬥、佔點用）。 */
+    public record Entry(UUID id, String name, int team, boolean ready, boolean spectator, boolean joinPending, boolean op, int cls) {}
 
     public void encode(FriendlyByteBuf buf) {
         buf.writeBoolean(inLobby);
@@ -51,6 +52,7 @@ public record LobbyStatePacket(
             buf.writeVarInt(e.team());
             byte flags = (byte) ((e.ready() ? 1 : 0) | (e.spectator() ? 2 : 0) | (e.joinPending() ? 4 : 0) | (e.op() ? 8 : 0));
             buf.writeByte(flags);
+            buf.writeVarInt(e.cls());
         }
     }
 
@@ -70,7 +72,8 @@ public record LobbyStatePacket(
             String name = buf.readUtf(32);
             int team = buf.readVarInt();
             byte f = buf.readByte();
-            players.add(new Entry(id, name, team, (f & 1) != 0, (f & 2) != 0, (f & 4) != 0, (f & 8) != 0));
+            int cls = buf.readVarInt();
+            players.add(new Entry(id, name, team, (f & 1) != 0, (f & 2) != 0, (f & 4) != 0, (f & 8) != 0, cls));
         }
         return new LobbyStatePacket(inLobby, map, preset, variant, teamMode, teamCount, countdown, special, blockDamage, weapon, gameMode, arena, players);
     }

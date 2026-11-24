@@ -58,6 +58,7 @@ public final class LobbyManager {
         CLEAR_TEAMS,        // 管理員：所有人移出隊伍（變成未分隊）
         SET_SPECIAL,        // 管理員：特殊物品模式開（arg 1）／關（arg 0）
         SET_BLOCK_DAMAGE,   // 管理員：大逃殺爆炸破壞方塊開（arg 1）／關（arg 0）
+        SET_MY_CLASS,       // 自己：開始前先選職業（arg = ArenaClass 的順序；團隊死鬥、佔點用）
         SET_WEAPON_MODE,    // 管理員：槍械模式（arg = WeaponMode 的順序）
         GOTO_VENUE,         // 自己：傳送到場地（arg = 場地選單的順序）
         SET_GAME_MODE,      // 管理員：選模式（arg = GameManager.GameMode 的順序）
@@ -93,6 +94,13 @@ public final class LobbyManager {
 
     /** 槍械模式（這一場只出某一類的槍）。 */
     public WeaponMode weaponMode() { return weaponMode; }
+
+    /** 玩家在大廳預選的職業（沒選過 = 自由人）。 */
+    private final java.util.Map<UUID, com.provinggrounds.modes.arena.ArenaClass> classChoice = new java.util.HashMap<>();
+
+    public com.provinggrounds.modes.arena.ArenaClass chosenClass(UUID id) {
+        return classChoice.getOrDefault(id, com.provinggrounds.modes.arena.ArenaClass.FREELANCER);
+    }
 
     /** 團隊死鬥、佔點：固定紅藍兩隊，沒有孤狼（計畫書 6 A1）。 */
     public boolean twoTeams() {
@@ -258,6 +266,12 @@ public final class LobbyManager {
             case TOGGLE_READY -> {
                 if (isSpectator(sender)) return;
                 if (!ready.remove(sender.getUUID())) ready.add(sender.getUUID());
+            }
+            case SET_MY_CLASS -> {
+                // 計畫書 6 C1：開始遊戲前先選職業（開局時套用；比賽中在基地商店的「職業」可以再換）
+                com.provinggrounds.modes.arena.ArenaClass[] all = com.provinggrounds.modes.arena.ArenaClass.values();
+                if (arg < 0 || arg >= all.length) return;
+                classChoice.put(sender.getUUID(), all[arg]);
             }
             default -> {
                 if (!op) { deny(sender, "只有管理員可以這麼做。"); return; }
@@ -487,7 +501,8 @@ public final class LobbyManager {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             TeamManager.Team t = TeamManager.get().getTeam(p).orElse(null);
             players.add(new LobbyStatePacket.Entry(p.getUUID(), p.getGameProfile().getName(),
-                t == null ? -1 : t.id, ready.contains(p.getUUID()), isSpectator(p), isJoinPending(p), p.hasPermissions(2)));
+                t == null ? -1 : t.id, ready.contains(p.getUUID()), isSpectator(p), isJoinPending(p), p.hasPermissions(2),
+                chosenClass(p.getUUID()).ordinal()));
         }
         int map = mapId;
         if (MapRegistry.get(server).getMap(map) == null) {
