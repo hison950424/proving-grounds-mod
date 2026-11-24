@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-24（從「電腦2.0」對話交接）。
+> 最後更新：2026-11-24（實作改由「ui-scale3-redesign」對話負責）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -42,7 +42,7 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
-- **介面大小 3 重新排版＋大逃殺 HUD 自訂畫面**：新對話「ui-scale3-redesign」正在做。
+- **介面大小 3 重新排版＋HUD 自訂畫面**：已完成並提交（0b85849，屬於未發佈的 v0.26.0），建置與開發伺服器啟動都通過，**還沒在真正客戶端看過**。內容：`ui/ClientGuiScale`（固定介面大小 3，設定 `[gui] force_gui_scale_v1`）、`ui/HudLayout`（15 個 HUD 元件的位置／大小／開關，存 `config/provinggrounds-hud.json`）、`ui/HudEditScreen`（主選單首頁「HUD 介面設定」）、主選單／大廳／商店／選地圖重新排版。測試項目 UI-1～5、HE-1～7 在 `docs/TESTING.md` 最上面。等使用者測完回饋。
 - **Spark**：`spark-1.10.53-forge.jar` 還在伺服器與客戶端 mods 資料夾。使用者會回家自己量 FPS（要用 `/sparkc profiler start --timeout 60`，`/spark` 量的是伺服器），網址傳來後用內建瀏覽器打開分析。量完或發佈前移除。
 - **三個第三方資料包**（armored elytra、custom villager shops、elevators，在伺服器 `world/datapacks/`）每 tick 搜尋實體，佔伺服器 22.9%，建議移除，**還沒問使用者**。
 - 未做：掉線分身（H1）、大逃殺掉線保留、團隊模式倒地開關、擊殺的穿牆樣式、大逃殺戰績面板。
