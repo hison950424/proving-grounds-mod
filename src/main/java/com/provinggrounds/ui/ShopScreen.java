@@ -47,18 +47,18 @@ public final class ShopScreen extends Screen {
     @Override
     protected void init() {
         panelW = Math.min(460, width - 16);
-        panelH = Math.min(260, height - 16);
+        panelH = Math.min(280, height - 16);
         left = (width - panelW) / 2;
         top = (height - panelH) / 2;
         seen = ClientArenaState.version();
         ArenaStatePacket s = ClientArenaState.get();
-        int by = top + panelH - 26;
-        addRenderableWidget(new PGButton(left + 10, by, 70, 18, Component.literal("選單"), false, false, () -> {
+        int by = top + panelH - 23; // 介面大小 3 為基準：底部按鈕高 16
+        addRenderableWidget(new PGButton(left + 10, by, 64, 16, Component.literal("選單"), false, false, () -> {
             MainMenuScreen.openLobbyView();
             PGNetwork.sendToServer(new MenuRequestPacket());
             minecraft.setScreen(new MainMenuScreen());
         }));
-        addRenderableWidget(new PGButton(left + panelW - 80, by, 70, 18, Component.literal("關閉"), false, false, this::onClose));
+        addRenderableWidget(new PGButton(left + panelW - 74, by, 64, 16, Component.literal("關閉"), false, false, this::onClose));
         if (!s.shop()) return;
 
         List<String> tabs = new ArrayList<>(ArenaData.shopCategories());
@@ -66,14 +66,16 @@ public final class ShopScreen extends Screen {
         tabs.add(TAB_TRANSFER);
         if (!tabs.contains(tab)) tab = tabs.get(0);
         int tx = left + 10, ty = top + 30;
+        // 分類按鈕高 14、間距 4；分類太多放不下時自動縮小間距
+        int tabPitch = Math.max(15, Math.min(18, (panelH - 30 - 32) / Math.max(1, tabs.size())));
         for (String t : tabs) {
             final String name = t;
-            addRenderableWidget(new PGButton(tx, ty, 74, 15, Component.literal(t), t.equals(tab), false, () -> {
+            addRenderableWidget(new PGButton(tx, ty, 74, 14, Component.literal(t), t.equals(tab), false, () -> {
                 tab = name;
                 scroll = 0;
                 rebuildWidgets();
             }));
-            ty += 16;
+            ty += tabPitch;
         }
         gridX = left + 92;
         gridY = top + 30;
@@ -90,7 +92,7 @@ public final class ShopScreen extends Screen {
         int y = gridY;
         for (ArenaClass c : ArenaClass.values()) {
             boolean mine = c.ordinal() == s.classOrdinal();
-            PGButton b = new PGButton(gridX, y, 90, 20, Component.literal(c.displayName), mine, false,
+            PGButton b = new PGButton(gridX, y + 2, 90, 16, Component.literal(c.displayName), mine, false,
                 () -> PGNetwork.sendToServer(new ArenaActionPacket(ArenaActionPacket.Action.SET_CLASS, c.ordinal())));
             b.active = !mine && s.canShop();
             addRenderableWidget(b);

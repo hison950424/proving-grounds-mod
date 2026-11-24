@@ -25,7 +25,7 @@ import java.util.UUID;
 /**
  * 檔案: MainMenuScreen.java
  * 目的: 主選單（只在客戶端使用）。按 M 打開。CS2 / Valorant 深色風格。
- *   首頁：大逃殺（大按鈕）、團隊死鬥／據點爭奪／槍戰對決（即將推出，先停用）、底部戰績欄。
+ *   首頁：開始遊戲、場地選擇、HUD 介面設定（HudEditScreen）、底部戰績欄。以介面大小 3 排版（ClientGuiScale 固定）。
  *   大廳頁（所有人都看得到，資料由伺服器 LobbyStatePacket 即時同步）：
  *     左欄：地圖、縮圈、一般／競技、分隊方式、隊伍數、自動分隊、全部移出隊伍（只有管理員能改）
  *     右欄：各隊名單（✔ = 已準備）。點隊伍標題 = 加入那一隊；
@@ -43,7 +43,9 @@ public class MainMenuScreen extends Screen {
     private static final int WARN     = 0xFFE0A048;
     private static final int READY    = 0xFF4CC864;
     private static final int SELECT   = 0x60E8D060;
-    private static final int ROW_H = 11;
+    private static final int ROW_H = 12;
+    /** 介面大小 3 為基準：內容從標題列下方開始；設定列間距 20、按鈕高 16（按鈕之間留 4 格空隙）。 */
+    private static final int CONTENT_Y = 44, PITCH = 20, BTN_H = 16;
 
     private enum View { HOME, MODES, VENUES, LOBBY }
 
@@ -56,6 +58,9 @@ public class MainMenuScreen extends Screen {
 
     private int panelW, panelH, left, top;
     private int listX, listY, listW, listH, scroll;
+    /** 大廳頁左欄（設定）放不下時可以用滾輪捲動：可視範圍與內容高度。 */
+    private static int leftScroll;
+    private int leftW = 170, leftTop, leftBottom, leftContentH;
     private final List<Row> rows = new ArrayList<>();
     private int seenMenu = -1, seenLobby = -1;
 
@@ -73,8 +78,9 @@ public class MainMenuScreen extends Screen {
 
     @Override
     protected void init() {
-        panelW = Math.min(420, width - 16);
-        panelH = Math.min(256, height - 16);
+        // 介面大小 3（1920×1080 時畫面是 640×360）：面板 500×320；小視窗時縮到畫面內，放不下的部分可以捲動
+        panelW = Math.min(500, width - 24);
+        panelH = Math.min(320, height - 20);
         left = (width - panelW) / 2;
         top = (height - panelH) / 2;
         seenMenu = ClientMenuData.version();
@@ -89,58 +95,65 @@ public class MainMenuScreen extends Screen {
 
     // ── 首頁 ────────────────────────────────────────────────────────────────
 
-    /** 首頁：「開始遊戲」與「場地選擇」兩個大按鈕。 */
+    /** 首頁：「開始遊戲」「場地選擇」「HUD 介面設定」三個按鈕（置中、不佔滿整個寬度）。 */
     private void initHome() {
-        int x = left + 14, w = panelW - 28;
-        addRenderableWidget(new PGButton(x, top + 40, w, 40, Component.literal("開始遊戲"), true, false,
+        int w = Math.min(220, panelW - 28), x = left + (panelW - w) / 2;
+        addRenderableWidget(new PGButton(x, top + CONTENT_Y + 6, w, 22, Component.literal("開始遊戲"), true, false,
             () -> switchTo(View.MODES)));
-        addRenderableWidget(new PGButton(x, top + 88, w, 40, Component.literal("場地選擇"), false, false,
+        addRenderableWidget(new PGButton(x, top + CONTENT_Y + 38, w, 22, Component.literal("場地選擇"), false, false,
             () -> switchTo(View.VENUES)));
+        addRenderableWidget(new PGButton(x, top + CONTENT_Y + 70, w, 18, Component.literal("HUD 介面設定"), false, false,
+            () -> minecraft.setScreen(new HudEditScreen(this))));
     }
 
     /** 開始遊戲 → 選模式。管理員在大廳時點了就換成這個模式；其他人點了看目前的大廳。 */
     private void initModes() {
-        int x = left + 14, w = panelW - 28;
+        int w = Math.min(240, panelW - 28), x = left + (panelW - w) / 2;
         MenuDataPacket menu = ClientMenuData.get();
         LobbyStatePacket lobby = ClientLobbyData.get();
         boolean canEdit = menu != null && menu.isOp() && lobby != null && lobby.inLobby();
         int current = lobby != null ? lobby.gameModeOrdinal() : GameManager.GameMode.BATTLE_ROYALE.ordinal();
         GameManager.GameMode[] modes = { GameManager.GameMode.BATTLE_ROYALE, GameManager.GameMode.TDM, GameManager.GameMode.DOM, GameManager.GameMode.GK };
         String[] keys = { "mode.br", "mode.tdm", "mode.dom", "mode.gk" };
-        int y = top + 36;
+        int y = top + CONTENT_Y + 4;
         for (int i = 0; i < modes.length; i++) {
             GameManager.GameMode m = modes[i];
             boolean selected = m.ordinal() == current;
-            PGButton b = new PGButton(x, y, w, i == 0 ? 30 : 24, Tr.c(keys[i]), selected, false, () -> {
+            PGButton b = new PGButton(x, y, w, 20, Tr.c(keys[i]), selected, false, () -> {
                 if (canEdit && !selected) send(LobbyManager.Action.SET_GAME_MODE, m.ordinal());
                 switchTo(View.LOBBY);
             });
             if (selected) b.withTag("目前");
             else if (!canEdit) b.active = false;
             addRenderableWidget(b);
-            y += i == 0 ? 36 : 30;
+            y += 28;
         }
-        addRenderableWidget(new PGButton(x, top + panelH - 30, 80, 20, Tr.c("common.back"), false, false,
-            () -> switchTo(View.HOME)));
+        addBackButton(View.HOME);
+    }
+
+    /** 左下角「返回」（各頁共用的位置與大小）。 */
+    private void addBackButton(View to) {
+        addRenderableWidget(new PGButton(left + 12, top + panelH - 23, 72, BTN_H, Tr.c("common.back"), false, false,
+            () -> switchTo(to)));
     }
 
     /** 場地選擇：伺服器設定裡的場地（大廳、訓練場、迷你死鬥、跑庫塔…），點了就傳送。 */
     private void initVenues() {
-        int x = left + 14, w = panelW - 28;
         MenuDataPacket menu = ClientMenuData.get();
         List<String> venues = menu != null ? menu.venues() : List.of();
         int cols = venues.size() > 4 ? 2 : 1;
-        int bw = cols == 2 ? (w - 6) / 2 : w;
-        for (int i = 0; i < venues.size(); i++) {
+        int bw = Math.min(200, (panelW - 28 - (cols - 1) * 10) / cols);
+        int x = left + (panelW - (cols * bw + (cols - 1) * 10)) / 2;
+        int maxRows = Math.max(1, (panelH - CONTENT_Y - 34) / 26); // 放不下的場地不顯示（場地通常不多）
+        for (int i = 0; i < venues.size() && i / cols < maxRows; i++) {
             int col = i % cols, rowI = i / cols;
             final int index = i;
-            addRenderableWidget(new PGButton(x + col * (bw + 6), top + 36 + rowI * 26, bw, 22, Component.literal(venues.get(i)), i == 0, false, () -> {
+            addRenderableWidget(new PGButton(x + col * (bw + 10), top + CONTENT_Y + 4 + rowI * 26, bw, 18, Component.literal(venues.get(i)), i == 0, false, () -> {
                 send(LobbyManager.Action.GOTO_VENUE, index);
                 onClose();
             }));
         }
-        addRenderableWidget(new PGButton(x, top + panelH - 30, 80, 20, Tr.c("common.back"), false, false,
-            () -> switchTo(View.HOME)));
+        addBackButton(View.HOME);
     }
 
     // ── 大廳頁 ──────────────────────────────────────────────────────────────
@@ -153,7 +166,10 @@ public class MainMenuScreen extends Screen {
         LobbyStatePacket.Entry me = self(lobby);
 
         // 左欄：設定（簡化版：「標籤 ＋ 值」一列一項；管理員在大廳時值是按鈕，點一下切換；其他人只看文字）
-        int sx = left + 12, sw = 150, y = top + 40;
+        leftW = Math.min(184, (int) (panelW * 0.38));
+        leftTop = top + CONTENT_Y;
+        leftBottom = top + panelH - 36;
+        int sx = left + 12, sw = leftW, y = leftTop - leftScroll; // 左欄可以捲動：y 先減掉捲動量
         settingRows.clear();
         sections.clear();
         sectionNames.clear();
@@ -168,7 +184,7 @@ public class MainMenuScreen extends Screen {
 
         GameManager.GameMode gm = lobby != null ? GameManager.GameMode.values()[lobby.gameModeOrdinal()] : GameManager.GameMode.BATTLE_ROYALE;
         section(sx, y, "比賽");
-        y += 11;
+        y += 12;
         if (gm != GameManager.GameMode.BATTLE_ROYALE) {
             y = arenaRows(sx, y, sw, gm, lobby, canEdit, teamMode);
         } else {
@@ -185,9 +201,9 @@ public class MainMenuScreen extends Screen {
         y = row(sx, y, sw, "特殊物品", special ? "開" : "關", canEdit,
             () -> send(LobbyManager.Action.SET_SPECIAL, special ? 0 : 1));
         }
-        y += 4;
+        y += 6;
         section(sx, y, "隊伍");
-        y += 11;
+        y += 12;
         boolean twoTeams = gm == GameManager.GameMode.TDM || gm == GameManager.GameMode.DOM;
         if (twoTeams) {
             y = row(sx, y, sw, "分隊", teamMode.displayName, canEdit,
@@ -195,21 +211,24 @@ public class MainMenuScreen extends Screen {
             y = row(sx, y, sw, "隊伍", "紅藍兩隊", false, () -> {});
             if (canEdit) {
                 setting(sx, y, sw, Tr.t("lobby.auto_balance"), true, () -> send(LobbyManager.Action.AUTO_BALANCE, 0));
-                y += 20;
+                y += PITCH + 2;
             }
         } else {
         y = row(sx, y, sw, "分隊", teamMode.displayName, canEdit,
             () -> send(LobbyManager.Action.SET_TEAM_MODE, (teamMode.ordinal() + 1) % LobbyManager.TeamMode.values().length));
         if (canEdit) {
+            // 隊數：－ 值 ＋（值置中在兩個按鈕之間，「全體孤狼」也放得下）
             settingRows.add(new SettingRow(sx, y, "隊數", null));
-            setting(sx + LABEL_W, y, 18, "－", teamCount > 0, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount - 1));
-            settingRows.add(new SettingRow(sx + LABEL_W + 20, y, null, teamCount == 0 ? "全體孤狼" : String.valueOf(teamCount)));
-            setting(sx + LABEL_W + 46, y, 18, "＋", teamCount < LobbyManager.MAX_TEAMS, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount + 1));
-            y += 18;
-            int half = (sw - 2) / 2;
+            setting(sx + LABEL_W, y, 16, "－", teamCount > 0, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount - 1));
+            String tc = teamCount == 0 ? "全體孤狼" : String.valueOf(teamCount);
+            int vx = sx + LABEL_W + 18, vw = sw - LABEL_W - 36;
+            settingRows.add(new SettingRow(vx + Math.max(0, (vw - font.width(tc)) / 2), y, null, tc));
+            setting(sx + sw - 16, y, 16, "＋", teamCount < LobbyManager.MAX_TEAMS, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount + 1));
+            y += PITCH;
+            int half = (sw - 6) / 2;
             setting(sx, y, half, Tr.t("lobby.auto_balance"), true, () -> send(LobbyManager.Action.AUTO_BALANCE, 0));
             setting(sx + sw - half, y, half, Tr.t("lobby.clear_teams"), true, () -> send(LobbyManager.Action.CLEAR_TEAMS, 0));
-            y += 20;
+            y += PITCH + 2;
         } else {
             y = row(sx, y, sw, "隊數", String.valueOf(teamCount), false, () -> {});
         }
@@ -218,21 +237,24 @@ public class MainMenuScreen extends Screen {
         // 管理員：選取玩家後可以取消選取（移動玩家改用拖移或「點玩家 → 點隊伍標題」）
         LobbyStatePacket.Entry sel = find(lobby, selected);
         if (op && sel != null) {
-            setting(sx, y + 2, sw, Tr.t("lobby.deselect"), true, () -> { selected = null; rebuildWidgets(); });
+            setting(sx, y, sw, Tr.t("lobby.deselect"), true, () -> { selected = null; rebuildWidgets(); });
+            y += PITCH;
         }
+        leftContentH = y + leftScroll - leftTop;
+        if (leftScroll > maxLeftScroll()) { leftScroll = maxLeftScroll(); rebuildWidgets(); return; } // 內容變少了：捲回來
 
-        // 右欄：名單
-        listX = sx + sw + 10;
-        listY = top + 40;
+        // 右欄：名單（下方留兩行給提示文字，底部按鈕不會蓋到提示）
+        listX = sx + sw + 12;
+        listY = top + CONTENT_Y;
         listW = left + panelW - 12 - listX;
-        listH = panelH - 40 - 46;
+        listH = Math.max(ROW_H * 3, (top + panelH - 60 - listY) / ROW_H * ROW_H);
         buildRows(lobby);
 
-        // 底部按鈕
-        int by = top + panelH - 30, bw = (panelW - 24 - 18) / 4, bx = left + 12;
+        // 底部按鈕（小一點、間距 8；最寬 84）
+        int by = top + panelH - 23, bw = Math.min(84, (panelW - 24 - 24) / 4), bx = left + 12;
         boolean inLobby = lobby != null && lobby.inLobby();
         if (me != null && me.spectator()) {
-            PGButton join = new PGButton(bx, by, bw, 20,
+            PGButton join = new PGButton(bx, by, bw, BTN_H,
                 Tr.c(me.joinPending() ? "lobby.join_pending" : inLobby ? "lobby.join_game" : "lobby.join_after"), true, false,
                 () -> send(LobbyManager.Action.JOIN_GAME, 0));
             join.active = !me.joinPending();
@@ -241,7 +263,7 @@ public class MainMenuScreen extends Screen {
             // 登機倒數期間（已開局、還沒上飛機）也能按「取消準備」退出這一局
             boolean preparing = ClientBRState.get().phase() == ClientBRState.PHASE_PREPARING;
             boolean ready = me != null && (me.ready() || preparing);
-            PGButton r = new PGButton(bx, by, bw, 20, Tr.c(ready ? "lobby.unready" : "lobby.ready"), !ready, false,
+            PGButton r = new PGButton(bx, by, bw, BTN_H, Tr.c(ready ? "lobby.unready" : "lobby.ready"), !ready, false,
                 () -> send(LobbyManager.Action.TOGGLE_READY, 0));
             r.active = (inLobby || preparing) && me != null;
             addRenderableWidget(r);
@@ -250,7 +272,7 @@ public class MainMenuScreen extends Screen {
         if (op && lobby != null && !inLobby) {
             // 遊戲進行中：開始鍵換成「結束遊戲」，要按兩次（3 秒內）才會執行
             boolean confirming = System.currentTimeMillis() < endConfirmUntil;
-            PGButton end = new PGButton(bx + (bw + 6), by, bw, 20, Tr.c(confirming ? "lobby.end_confirm" : "lobby.end"), true, false, () -> {
+            PGButton end = new PGButton(bx + (bw + 8), by, bw, BTN_H, Tr.c(confirming ? "lobby.end_confirm" : "lobby.end"), true, false, () -> {
                 if (System.currentTimeMillis() < endConfirmUntil) {
                     endConfirmUntil = 0;
                     send(LobbyManager.Action.END_GAME, 0);
@@ -261,18 +283,18 @@ public class MainMenuScreen extends Screen {
             });
             addRenderableWidget(end);
         } else if (op) {
-            PGButton start = new PGButton(bx + (bw + 6), by, bw, 20, Tr.c("lobby.start"), true, false,
+            PGButton start = new PGButton(bx + (bw + 8), by, bw, BTN_H, Tr.c("lobby.start"), true, false,
                 () -> send(LobbyManager.Action.START, 0));
             start.active = canEdit && !counting;
             addRenderableWidget(start);
         }
         if (op) {
-            PGButton force = new PGButton(bx + 2 * (bw + 6), by, bw, 20, Tr.c(counting ? "lobby.cancel_countdown" : "lobby.force_start"), false, false,
+            PGButton force = new PGButton(bx + 2 * (bw + 8), by, bw, BTN_H, Tr.c(counting ? "lobby.cancel_countdown" : "lobby.force_start"), false, false,
                 () -> send(counting ? LobbyManager.Action.CANCEL_COUNTDOWN : LobbyManager.Action.FORCE_START, 0));
             force.active = canEdit;
             addRenderableWidget(force);
         }
-        addRenderableWidget(new PGButton(bx + 3 * (bw + 6), by, bw, 20, Tr.c("common.back"), false, false,
+        addRenderableWidget(new PGButton(bx + 3 * (bw + 8), by, bw, BTN_H, Tr.c("common.back"), false, false,
             () -> switchTo(View.MODES)));
     }
 
@@ -298,11 +320,11 @@ public class MainMenuScreen extends Screen {
     private int stepper(int x, int y, int w, String label, String value, boolean editable, int step, int current, LobbyManager.Action action) {
         if (!editable) return row(x, y, w, label, value, false, () -> {});
         settingRows.add(new SettingRow(x, y, label, null));
-        int bw = 18, vx = x + LABEL_W + bw + 2, vw = w - LABEL_W - 2 * bw - 4;
+        int bw = 16, vx = x + LABEL_W + bw + 2, vw = w - LABEL_W - 2 * bw - 4;
         setting(x + LABEL_W, y, bw, "－", true, () -> send(action, current - step));
-        settingRows.add(new SettingRow(vx, y, null, value));
+        settingRows.add(new SettingRow(vx + Math.max(0, (vw - font.width(value)) / 2), y, null, value)); // 值置中
         setting(x + w - bw, y, bw, "＋", true, () -> send(action, current + step));
-        return y + 18;
+        return y + PITCH;
     }
 
     /** 設定列（畫面上要畫的文字）：label = 左邊的標籤；value = 只讀時畫的值（null = 這一列是按鈕）。 */
@@ -310,7 +332,7 @@ public class MainMenuScreen extends Screen {
     private final List<SettingRow> settingRows = new ArrayList<>();
     private final List<int[]> sections = new ArrayList<>();
     private final List<String> sectionNames = new ArrayList<>();
-    private static final int LABEL_W = 46;
+    private static final int LABEL_W = 52;
 
     private void section(int x, int y, String name) {
         if (sections.size() == sectionNames.size() && sectionNames.contains(name)) {
@@ -330,7 +352,7 @@ public class MainMenuScreen extends Screen {
         } else {
             settingRows.add(new SettingRow(x, y, label, value));
         }
-        return y + 18;
+        return y + PITCH;
     }
 
     /** 縮圈方案的估計時間（分鐘，以半徑 400 的地圖估算；數值由伺服器設定同步）。 */
@@ -339,9 +361,19 @@ public class MainMenuScreen extends Screen {
     }
 
     private void setting(int x, int y, int w, String label, boolean active, Runnable action) {
-        PGButton b = new PGButton(x, y, w, 18, Component.literal(label), false, false, action);
+        PGButton b = new PGButton(x, y, w, BTN_H, Component.literal(label), false, false, action);
         b.active = active;
+        b.visible = leftVisible(y, BTN_H); // 左欄捲動：超出可視範圍的按鈕不畫、不能按
         addRenderableWidget(b);
+    }
+
+    /** 左欄這一段（y ～ y+h）是否完整落在可視範圍內。 */
+    private boolean leftVisible(int y, int h) {
+        return y >= leftTop && y + h <= leftBottom;
+    }
+
+    private int maxLeftScroll() {
+        return Math.max(0, leftContentH - (leftBottom - leftTop));
     }
 
     /** 依隊伍排好名單：1..N 隊 → 孤狼 → 未分隊 → 觀戰。 */
@@ -485,6 +517,12 @@ public class MainMenuScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
+        if (view == View.LOBBY && mx >= left && mx < listX - 4 && my >= leftTop && my < leftBottom && maxLeftScroll() > 0) {
+            // 左欄（設定）捲動：每格 20（一列）
+            int next = Math.max(0, Math.min(maxLeftScroll(), leftScroll - (int) Math.signum(delta) * PITCH));
+            if (next != leftScroll) { leftScroll = next; rebuildWidgets(); }
+            return true;
+        }
         if (view == View.LOBBY && mx >= listX && mx < listX + listW) {
             int max = Math.max(0, rows.size() - listH / ROW_H);
             scroll = Math.max(0, Math.min(max, scroll - (int) Math.signum(delta) * 2));
@@ -575,16 +613,28 @@ public class MainMenuScreen extends Screen {
         String modeKey = gmo == GameManager.GameMode.TDM.ordinal() ? "mode.tdm" : gmo == GameManager.GameMode.DOM.ordinal() ? "mode.dom"
             : gmo == GameManager.GameMode.GK.ordinal() ? "mode.gk" : "mode.br";
         g.drawString(font, Tr.t(modeKey), left + 14, top + 29, TEXT_DIM, false);
+        g.fill(left + 10, top + panelH - 30, left + panelW - 10, top + panelH - 29, BORDER); // 底部按鈕上方的分隔線
         for (int i = 0; i < sections.size(); i++) {
             int[] sp = sections.get(i);
+            if (!leftVisible(sp[1], 9)) continue;
             g.drawString(font, sectionNames.get(i), sp[0], sp[1], ACCENT, false);
-            g.fill(sp[0] + font.width(sectionNames.get(i)) + 4, sp[1] + 4, sp[0] + 150, sp[1] + 5, BORDER);
+            g.fill(sp[0] + font.width(sectionNames.get(i)) + 4, sp[1] + 4, sp[0] + leftW, sp[1] + 5, BORDER);
+        }
+        if (maxLeftScroll() > 0) {
+            // 左欄捲軸（在左欄右邊緣）
+            int trackH = leftBottom - leftTop, total = leftContentH;
+            int barH = Math.max(10, trackH * trackH / Math.max(1, total));
+            int barY = leftTop + (trackH - barH) * leftScroll / Math.max(1, maxLeftScroll());
+            int bx = left + 12 + leftW + 4;
+            g.fill(bx, leftTop, bx + 2, leftBottom, 0x40FFFFFF);
+            g.fill(bx, barY, bx + 2, barY + barH, ACCENT);
         }
         for (SettingRow r : settingRows) {
-            if (r.label() != null) g.drawString(font, r.label(), r.x(), r.y() + 5, TEXT_DIM, false);
+            if (!leftVisible(r.y(), BTN_H)) continue;
+            if (r.label() != null) g.drawString(font, r.label(), r.x(), r.y() + 4, TEXT_DIM, false);
             if (r.value() != null) {
                 int vx = r.label() != null ? r.x() + LABEL_W : r.x();
-                g.drawString(font, r.value(), vx, r.y() + 5, TEXT, false);
+                g.drawString(font, r.value(), vx, r.y() + 4, TEXT, false);
             }
         }
 
@@ -633,7 +683,13 @@ public class MainMenuScreen extends Screen {
 
         // 名單下方提示（靠右，在名單正下方）
         String hint = lobbyHint(lobby, menu);
-        if (hint != null) g.drawString(font, hint, left + panelW - 12 - font.width(hint), top + panelH - 42, WARN, false);
+        if (hint != null) {
+            // 名單正下方，最多兩行（太長自動換行）；底部按鈕在更下面，不會蓋住
+            var lines = font.split(Component.literal(hint), listW);
+            for (int i = 0; i < Math.min(2, lines.size()); i++) {
+                g.drawString(font, lines.get(i), listX, listY + listH + 4 + i * 10, WARN, false);
+            }
+        }
     }
 
     @Nullable

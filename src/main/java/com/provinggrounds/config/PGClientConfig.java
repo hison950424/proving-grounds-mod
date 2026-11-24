@@ -43,6 +43,7 @@ public final class PGClientConfig {
     public final ForgeConfigSpec.BooleanValue interactHint, killIconEnabled, killFeedEnabled, killSoundEnabled, domBeacon, antiCampWall;
     public final ForgeConfigSpec.DoubleValue hudScale, killSoundVolume;
     public final ForgeConfigSpec.BooleanValue scoreboardToggle;
+    public final ForgeConfigSpec.BooleanValue forceGuiScale;
 
     private PGClientConfig(ForgeConfigSpec.Builder builder) {
         builder.push("ui_walk");
@@ -52,6 +53,12 @@ public final class PGClientConfig {
                 "不接管移動鍵的畫面類別名稱（可寫完整名稱或只寫類別名稱）。",
                 "有輸入框正在輸入、按鍵設定、聊天、死亡、載入、斷線畫面本來就不會接管。")
             .defineListAllowEmpty(List.of("ui_walk_excluded_screens"), List::of, o -> o instanceof String);
+        builder.pop();
+
+        builder.comment("介面大小").push("gui");
+        forceGuiScale = builder.comment("固定把原版「介面大小」設成 3（本模組的介面都以 3 為基準排版）。",
+                "視窗太小放不下 3 時會用能放下的最大值。關掉後可以自己在 選項 → 顯示設定 改")
+            .define("force_gui_scale_v1", true);
         builder.pop();
 
         builder.comment("遊戲畫面中的縮圈牆（不影響小地圖、大地圖上畫的圈）").push("circle");

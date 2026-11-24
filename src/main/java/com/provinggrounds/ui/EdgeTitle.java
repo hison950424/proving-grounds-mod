@@ -79,7 +79,9 @@ public final class EdgeTitle {
         String a = title == null ? "" : title.getString(), b = sub == null ? "" : sub.getString();
         if (a.isEmpty() && b.isEmpty()) return;
         float scale = PGClientConfig.CLIENT.hudScale.get().floatValue();
-        int y = 56; // 在團隊模式 HUD 與指北針下面，離準星很遠
+        int y = 62; // 在團隊模式 HUD、指北針與圈外警告下面，離準星很遠
+        int sh = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+        if (!HudLayout.push(g, HudLayout.El.TITLE, w, sh)) return; // 自訂位置、大小、開關（HUD 介面設定）
         int tw = Math.max(font.width(title == null ? Component.empty() : title), (int) (font.width(b) * 0.8f));
         int bg = ((int) (0x70 * alpha) << 24);
         int textA = Math.max(4, (int) (0xFF * alpha)) << 24;
@@ -101,5 +103,6 @@ public final class EdgeTitle {
             g.pose().popPose();
         }
         g.pose().popPose();
+        HudLayout.pop(g);
     }
 }

@@ -57,8 +57,13 @@ public final class ScoreboardPanel {
         int rowH = 10, pw = money ? 190 : 150;
         int ph = 16 + s.board().size() * rowH;
         float scale = PGClientConfig.CLIENT.hudScale.get().floatValue();
+        if (!HudLayout.enabled(HudLayout.El.SCOREBOARD)) return; // 位置、大小可在「HUD 介面設定」自訂
+        // 面板高度跟人數有關：以自訂方框的右邊、垂直中心為準
+        HudLayout.Box box = HudLayout.box(HudLayout.El.SCOREBOARD, w, h);
+        scale *= HudLayout.scale(HudLayout.El.SCOREBOARD);
+        float right = box.x() + box.w(), midY = box.y() + box.h() / 2f;
         g.pose().pushPose();
-        g.pose().translate(w - 6 - pw * scale, Math.max(60, h / 2f - ph * scale / 2), 0);
+        g.pose().translate(right - pw * scale, Math.max(4, Math.min(h - ph * scale - 4, midY - ph * scale / 2)), 0);
         g.pose().scale(scale, scale, 1);
         g.fill(0, 0, pw, ph, 0xA00F141E);
         int cK = money ? pw - 82 : pw - 44, cD = money ? pw - 58 : pw - 20, cM = pw - 6;

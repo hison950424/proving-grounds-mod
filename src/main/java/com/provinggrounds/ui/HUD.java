@@ -38,12 +38,13 @@ public final class HUD {
         if (s.phase() == ClientBRState.PHASE_NONE) return;
         Font font = mc.font;
 
-        int minimapBottom = renderMinimap(g, font, s, mc);
-        renderZone(g, font, s, minimapBottom);
-        int aliveBottom = renderAlive(g, font, s, w);
-        renderKillFeed(g, font, w, aliveBottom);
-        renderOutsideWarning(g, font, s, mc.player, w);
-        renderHint(g, font, s, w, h);
+        // 每個元件照原本的位置畫，HudLayout 負責玩家自訂的位置、大小、開關（主選單「HUD 介面設定」）
+        renderMinimap(g, font, s, mc, w, h);
+        if (HudLayout.push(g, HudLayout.El.ZONE, w, h)) { renderZone(g, font, s, 82); HudLayout.pop(g); }
+        if (HudLayout.push(g, HudLayout.El.ALIVE, w, h)) { renderAlive(g, font, s, w); HudLayout.pop(g); }
+        if (HudLayout.push(g, HudLayout.El.BR_FEED, w, h)) { renderKillFeed(g, font, w, 36); HudLayout.pop(g); }
+        if (HudLayout.push(g, HudLayout.El.OUTSIDE, w, h)) { renderOutsideWarning(g, font, s, mc.player, w); HudLayout.pop(g); }
+        if (HudLayout.push(g, HudLayout.El.HINT, w, h)) { renderHint(g, font, s, w, h); HudLayout.pop(g); }
     }
 
     // ── 右上：存活人數 ──────────────────────────────────────────────────────
@@ -80,15 +81,19 @@ public final class HUD {
     private static final double MINIMAP_SPAN = 192; // 小地圖顯示的範圍（格）
 
     /** 遊戲中（飛機、進行中）在左上角畫小地圖，北方朝上、自己在中間。回傳下方可用的 y。 */
-    private static int renderMinimap(GuiGraphics g, Font font, BRStatePacket s, Minecraft mc) {
-        if (s.phase() != ClientBRState.PHASE_PLANE && s.phase() != ClientBRState.PHASE_ACTIVE) return 8;
+    private static void renderMinimap(GuiGraphics g, Font font, BRStatePacket s, Minecraft mc, int sw, int sh) {
+        if (s.phase() != ClientBRState.PHASE_PLANE && s.phase() != ClientBRState.PHASE_ACTIVE) return;
+        if (!HudLayout.enabled(HudLayout.El.MINIMAP)) return;
         net.minecraft.world.entity.Entity cam = mc.getCameraEntity();
-        if (cam == null) return 8;
-        int x = 2, y = 2; // 外框 2 像素：整塊貼齊螢幕左上角
-        g.fill(x - 2, y - 2, x + MINIMAP + 2, y + MINIMAP + 2, BG);
-        MapRender.View v = new MapRender.View(x, y, MINIMAP, MINIMAP,
+        if (cam == null) return;
+        // 小地圖用了裁切範圍（scissor，不吃平移縮放），所以直接用自訂後的方框算出位置與邊長
+        HudLayout.Box box = HudLayout.box(HudLayout.El.MINIMAP, sw, sh);
+        int x = box.x() + 2, y = box.y() + 2; // 外框 2 像素：預設整塊貼齊螢幕左上角
+        int size = Math.max(16, box.w() - 4);
+        g.fill(x - 2, y - 2, x + size + 2, y + size + 2, BG);
+        MapRender.View v = new MapRender.View(x, y, size, size,
             cam.getX() - MINIMAP_SPAN / 2, cam.getZ() - MINIMAP_SPAN / 2, MINIMAP_SPAN);
-        g.enableScissor(x, y, x + MINIMAP, y + MINIMAP);
+        g.enableScissor(x, y, x + size, y + size);
         MapRender.drawTerrain(g, v);
         if (s.nextRadius() >= 0) MapRender.drawCircle(g, v, s.nextCx(), s.nextCz(), s.nextRadius(), MapRender.NEXT_ZONE, 1, true);
         MapRender.drawCircle(g, v, s.cx(), s.cz(), s.radius(), MapRender.ZONE, 1, false);
@@ -98,8 +103,7 @@ public final class HUD {
         }
         g.disableScissor();
         String north = Tr.t("hud.north");
-        g.drawString(font, north, x + (MINIMAP - font.width(north)) / 2, y + 2, ACCENT, true);
-        return y + MINIMAP + 6;
+        g.drawString(font, north, x + (size - font.width(north)) / 2, y + 2, ACCENT, true);
     }
 
     /** 左上、小地圖下方：縮圈時間（準備階段顯示登機倒數）。 */
@@ -149,7 +153,7 @@ public final class HUD {
         if (dist <= 0) return;
         String msg = Tr.t("hud.outside", (int) Math.ceil(dist));
         int boxW = font.width(msg) + PAD * 2;
-        int x = (w - boxW) / 2, y = 8;
+        int x = (w - boxW) / 2, y = 36; // 指北針下方
         // 閃爍的紅色邊條
         boolean blink = (System.currentTimeMillis() / 400) % 2 == 0;
         g.fill(x, y, x + boxW, y + 20, BG);

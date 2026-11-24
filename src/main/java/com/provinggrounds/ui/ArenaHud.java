@@ -30,9 +30,12 @@ public final class ArenaHud {
         if (mc.options.hideGui || mc.player == null || !ClientArenaState.active()) return;
         ArenaStatePacket s = ClientArenaState.get();
         Font font = mc.font;
-        if (s.kind() == 3) renderList(g, font, s, w);
-        else renderVersus(g, font, s, w);
-        renderWallet(g, font, s, w, h);
+        if (HudLayout.push(g, HudLayout.El.ARENA_SCORE, w, h)) { // 位置、大小、開關可在「HUD 介面設定」自訂
+            if (s.kind() == 3) renderList(g, font, s, w);
+            else renderVersus(g, font, s, w);
+            HudLayout.pop(g);
+        }
+        if (HudLayout.push(g, HudLayout.El.WALLET, w, h)) { renderWallet(g, font, s, w, h); HudLayout.pop(g); }
     }
 
     /** 兩隊對戰：紅 [分數條] 計時 [分數條] 藍。 */

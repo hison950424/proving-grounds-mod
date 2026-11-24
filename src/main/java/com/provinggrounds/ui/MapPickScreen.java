@@ -24,7 +24,7 @@ public class MapPickScreen extends Screen {
     private final AdminToolItem.Tool tool;
     private final List<MapPickPacket.Entry> maps;
     private int selected = -1;
-    private int left, top, w, h;
+    private int left, top, w, h, rows, scroll;
 
     private MapPickScreen(AdminToolItem.Tool tool, List<MapPickPacket.Entry> maps) {
         super(Component.literal(tool == AdminToolItem.Tool.MAP_PAINTER ? "地圖繪畫" : "箱子轉換"));
@@ -39,19 +39,27 @@ public class MapPickScreen extends Screen {
     @Override
     protected void init() {
         w = Math.min(300, width - 20);
-        int rows = Math.min(maps.size(), Math.max(1, (height - 110) / ROW_H));
+        rows = Math.min(maps.size(), Math.max(1, (height - 110) / ROW_H));
+        scroll = Math.max(0, Math.min(scroll, maps.size() - rows)); // 地圖太多放不下：滾輪捲動
         h = 52 + rows * ROW_H + 30;
         left = (width - w) / 2;
         top = (height - h) / 2;
         for (int i = 0; i < rows; i++) {
-            MapPickPacket.Entry e = maps.get(i);
-            int idx = i;
+            int idx = scroll + i;
+            MapPickPacket.Entry e = maps.get(idx);
             String label = "#" + e.id() + (e.name().isEmpty() ? "" : "  " + e.name()) + "（生成點 " + e.points() + " 個）";
             addRenderableWidget(new PGButton(left + 10, top + 44 + i * ROW_H, w - 20, 18, Component.literal(label), false, false,
                 () -> selected = idx));
         }
-        addRenderableWidget(new PGButton(left + w - 140, top + h - 26, 60, 18, Component.literal("確認"), true, false, this::confirm));
-        addRenderableWidget(new PGButton(left + w - 74, top + h - 26, 64, 18, Component.literal("取消"), false, false, this::onClose));
+        addRenderableWidget(new PGButton(left + w - 136, top + h - 24, 60, 16, Component.literal("確認"), true, false, this::confirm));
+        addRenderableWidget(new PGButton(left + w - 70, top + h - 24, 60, 16, Component.literal("取消"), false, false, this::onClose));
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double delta) {
+        int next = Math.max(0, Math.min(maps.size() - rows, scroll - (int) Math.signum(delta)));
+        if (next != scroll) { scroll = next; rebuildWidgets(); }
+        return true;
     }
 
     private void confirm() {
@@ -75,8 +83,12 @@ public class MapPickScreen extends Screen {
             ? "重新繪製這張地圖的大地圖／小地圖圖片（需要一點時間）"
             : "把這張地圖範圍內舊資料包的箱子標記轉換成生成點";
         g.drawString(font, hint, left + 10, top + 22, DIM, false);
-        if (selected >= 0) {
-            int y = top + 44 + selected * ROW_H;
+        if (maps.size() > rows) {
+            String more = (scroll + 1) + "～" + (scroll + rows) + "／" + maps.size() + "（滾輪捲動）";
+            g.drawString(font, more, left + 10, top + h - 20, DIM, false);
+        }
+        if (selected >= scroll && selected < scroll + rows) {
+            int y = top + 44 + (selected - scroll) * ROW_H;
             g.fill(left + 8, y - 2, left + w - 8, y + 20, SELECT);
         }
         super.render(g, mouseX, mouseY, partial);

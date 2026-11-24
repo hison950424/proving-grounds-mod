@@ -45,9 +45,9 @@ public final class Compass {
 
     private Compass() {}
 
-    public static final IGuiOverlay OVERLAY = (gui, g, partialTick, width, height) -> render(g, partialTick, width);
+    public static final IGuiOverlay OVERLAY = (gui, g, partialTick, width, height) -> render(g, partialTick, width, height);
 
-    private static void render(GuiGraphics g, float partial, int width) {
+    private static void render(GuiGraphics g, float partial, int width, int height) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.player == null || mc.player.isSpectator()) return;
         if (!ClientBRState.active() || mc.screen instanceof BigMapScreen) return;
@@ -70,6 +70,7 @@ public final class Compass {
         double bearing = ((yaw + 180.0) % 360 + 360) % 360; // 0～360，北 = 0
 
         Font font = mc.font;
+        if (!HudLayout.push(g, HudLayout.El.COMPASS, width, height)) return; // 自訂位置、大小（HUD 介面設定）
         g.pose().pushPose();
         g.pose().translate(width / 2.0, yOffset, 0); // 貼齊螢幕最上方
         g.pose().scale((float) scale, (float) scale, 1);
@@ -98,5 +99,6 @@ public final class Compass {
         String num = NUMBERS[shown == 0 ? 360 : shown];
         g.drawString(font, num, -font.width(num) / 2 + 1, triY + 5, ACCENT, true);
         g.pose().popPose();
+        HudLayout.pop(g);
     }
 }

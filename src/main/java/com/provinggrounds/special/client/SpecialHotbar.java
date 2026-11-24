@@ -39,6 +39,11 @@ public final class SpecialHotbar {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
         if (p == null || mc.options.hideGui || p.isSpectator() || !modeOn()) return;
+        if (!com.provinggrounds.ui.HudLayout.push(g, com.provinggrounds.ui.HudLayout.El.SPECIAL, w, h)) return; // 自訂位置、大小（HUD 介面設定）
+        try { draw(g, mc, p, w, h); } finally { com.provinggrounds.ui.HudLayout.pop(g); }
+    }
+
+    private static void draw(GuiGraphics g, Minecraft mc, LocalPlayer p, int w, int h) {
         int x = w / 2 + 91 + 8, y = h - 22; // 原版快捷欄右邊，隔 8 像素
         RenderSystem.enableBlend();
         g.blit(WIDGETS, x, y, 0, 0, 21, 22);       // 一格的左邊框與格子

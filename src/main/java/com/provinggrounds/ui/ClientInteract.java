@@ -151,12 +151,14 @@ public final class ClientInteract {
         if (!"F".equalsIgnoreCase(key)) hint = key + hint.substring(1); // 改過按鍵就顯示新的鍵
         float scale = (float) (0.8 * PGClientConfig.CLIENT.hudScale.get());
         int tw = mc.font.width(hint);
+        HudLayout.apply(g, HudLayout.El.INTERACT, w, h); // 自訂位置、大小（開關 = interact_hint，只影響空手）
         g.pose().pushPose();
         g.pose().translate(w / 2f, h / 2f + 12, 0);
         g.pose().scale(scale, scale, 1);
         g.fill(-tw / 2 - 3, -1, tw / 2 + 3, 9, 0x60000000);
         g.drawString(mc.font, hint, -tw / 2, 0, 0xE0FFFFFF, false);
         g.pose().popPose();
+        HudLayout.pop(g);
     }
 
     // ── 點狀準心（空手時；拿槍時 TACZ 會自己畫並取消原版準星）──────────────────

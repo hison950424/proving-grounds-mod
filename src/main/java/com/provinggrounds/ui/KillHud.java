@@ -72,8 +72,12 @@ public final class KillHud {
         if (mc.options.hideGui || mc.player == null) return;
         long now = System.currentTimeMillis();
         float scale = PGClientConfig.CLIENT.hudScale.get().floatValue();
-        if (PGClientConfig.CLIENT.killIconEnabled.get() && icon != null && now - iconTime < ICON_MS) renderIcon(g, mc.font, w, h, now, scale);
-        if (PGClientConfig.CLIENT.killFeedEnabled.get()) renderFeed(g, mc.font, w, now, scale);
+        // 開關、位置、大小：HudLayout（開關沿用 [hud] kill_icon / kill_feed）
+        if (icon != null && now - iconTime < ICON_MS && HudLayout.push(g, HudLayout.El.KILL_ICON, w, h)) {
+            renderIcon(g, mc.font, w, h, now, scale);
+            HudLayout.pop(g);
+        }
+        if (HudLayout.push(g, HudLayout.El.KILL_FEED, w, h)) { renderFeed(g, mc.font, w, now, scale); HudLayout.pop(g); }
     }
 
     private static void renderIcon(GuiGraphics g, Font font, int w, int h, long now, float scale) {
