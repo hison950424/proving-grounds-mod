@@ -1,6 +1,7 @@
 # 檔案: make_cough_sound.py
 # 目的: 用程式合成原創的咳嗽聲（不取樣任何錄音），給毒氣彈用。
-#   v2（使用者回饋「太像噴氣」）：以「聲帶發聲」為主、氣流聲為輔：
+#   v3（回饋：v1「太像噴氣」、v2「有咚咚咚的敲門聲」）：聲帶振動提高到 170～220 Hz 並拿掉「隔一下變弱」的氣泡音，
+#   濾掉 180 Hz 以下的低頻悶響，氣流聲介於 v1、v2 之間：
 #     1. 爆發：聲門突然打開，約 20 毫秒的短促爆破（低通過的噪音，不尖）；
 #     2. 喉音：聲帶振動（Rosenberg 聲門脈衝，基頻約 95～150 Hz 往下滑），
 #        加上每次振動的細微不規則（jitter／shimmer）與「氣泡音」的粗糙感（隔一次振動變弱），聽起來沙啞；
@@ -31,6 +32,19 @@ class Biquad:
         return y
 
 
+class HighPass:
+    """一階高通（去掉低頻的「咚」）。"""
+    def __init__(self, freq):
+        rc = 1 / (2 * math.pi * freq)
+        self.a = rc / (rc + 1 / SR)
+        self.y = self.x = 0.0
+
+    def __call__(self, x):
+        self.y = self.a * (self.y + x - self.x)
+        self.x = x
+        return self.y
+
+
 class LowPass:
     """一階低通。"""
     def __init__(self, freq):
@@ -59,7 +73,7 @@ def cough(seed, length, f0_start, f0_end, formants, burst_ms, tau_ms, noise_amou
     voice_f = [(Biquad(f, q), g) for f, q, g in formants]
     noise_f = [(Biquad(f, q * 0.7), g) for f, q, g in formants]
     burst_lp = LowPass(1800)
-    out_lp = LowPass(3500)
+    out_lp = LowPass(4500)
     out_lp2 = LowPass(5000)
     vs, bs, ns = [], [], []
     phase, period_amp, period_idx = 0.0, 1.0, 0
@@ -69,7 +83,7 @@ def cough(seed, length, f0_start, f0_end, formants, burst_ms, tau_ms, noise_amou
         ms = t * 1000
         attack = min(1.0, ms / 3.0)
         # 喉音包絡：很快到最大，維持一小段，然後衰減
-        hold = 35
+        hold = 20
         venv = attack if ms < hold else math.exp(-(ms - hold) / tau_ms)
         # 聲帶振動：每個週期重新抽一次不規則量；氣泡音＝隔一次振動變弱
         f0 = (f0_start + (f0_end - f0_start) * min(1.0, t / length)) * f0_jit
@@ -77,8 +91,8 @@ def cough(seed, length, f0_start, f0_end, formants, burst_ms, tau_ms, noise_amou
         if phase >= 1:
             phase -= 1
             period_idx += 1
-            f0_jit = 1 + rnd.uniform(-0.05, 0.05)
-            period_amp = (1 + rnd.uniform(-0.2, 0.2)) * (0.6 if period_idx % 2 else 1.0)
+            f0_jit = 1 + rnd.uniform(-0.02, 0.02)
+            period_amp = 1 + rnd.uniform(-0.08, 0.08)
         src = glottal(phase) * period_amp
         vs.append(sum(f(src) * g for f, g in voice_f) * venv)
         w = rnd.uniform(-1, 1)
@@ -89,7 +103,8 @@ def cough(seed, length, f0_start, f0_end, formants, burst_ms, tau_ms, noise_amou
         m = max(abs(x) for x in a) or 1
         return [x / m for x in a]
     vs, bs, ns = norm(vs), norm(bs), norm(ns)
-    out = [out_lp2(out_lp(v + 0.45 * b + noise_amount * x)) for v, b, x in zip(vs, bs, ns)]
+    hp, hp2 = HighPass(180), HighPass(180)
+    out = [out_lp2(out_lp(hp2(hp(v + 0.35 * b + noise_amount * x)))) for v, b, x in zip(vs, bs, ns)]
     fade = int(SR * 0.02)
     for k in range(fade):
         out[-1 - k] *= k / fade
@@ -107,9 +122,9 @@ def write_wav(path, samples):
 
 VARIANTS = [
     # 種子, 長度(秒), 基頻起, 基頻終, 共振峰 [(頻率, Q, 增益)], 爆發毫秒, 衰減毫秒, 氣流量
-    (11, 0.30, 150, 115, [(650, 4.0, 1.0), (1150, 5.0, 0.6), (2450, 6.0, 0.25)], 20, 70, 0.25),
-    (23, 0.26, 135, 105, [(700, 4.0, 1.0), (1200, 5.0, 0.55), (2500, 6.0, 0.22)], 18, 60, 0.2),
-    (37, 0.36, 120, 95, [(620, 4.5, 1.0), (1100, 5.0, 0.65), (2400, 6.0, 0.28)], 22, 85, 0.3),
+    (11, 0.30, 220, 180, [(650, 4.0, 1.0), (1150, 5.0, 0.6), (2450, 6.0, 0.25)], 20, 70, 0.55),
+    (23, 0.26, 210, 175, [(700, 4.0, 1.0), (1200, 5.0, 0.55), (2500, 6.0, 0.22)], 18, 60, 0.5),
+    (37, 0.34, 200, 170, [(620, 4.5, 1.0), (1100, 5.0, 0.65), (2400, 6.0, 0.28)], 22, 80, 0.6),
 ]
 
 if __name__ == '__main__':
