@@ -30,6 +30,6 @@ public abstract class LevelSetBlockMixin {
     private void provinggrounds$beforeSetBlock(BlockPos pos, BlockState state, int flags, int depth, CallbackInfoReturnable<Boolean> cir) {
         Level self = (Level) (Object) this;
         if (BlockProtection.blocks(self, pos, state)) { cir.setReturnValue(false); return; }
-        if (BlockLedger.recording()) BlockLedger.beforeSet(self, pos);
+        if (BlockLedger.recording()) BlockLedger.beforeSet(self, pos, state);
     }
 }

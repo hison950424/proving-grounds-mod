@@ -122,8 +122,32 @@ public final class LobbyManager {
 
     // ── 每 tick ─────────────────────────────────────────────────────────────
 
+    private boolean wasAllReady;
+
+    /** 所有參賽者都按了準備（至少 1 人）。 */
+    private boolean allReady(MinecraftServer server) {
+        List<ServerPlayer> ps = participants(server);
+        if (ps.isEmpty()) return false;
+        for (ServerPlayer p : ps) if (!ready.contains(p.getUUID())) return false;
+        return true;
+    }
+
     public void tick(MinecraftServer server) {
+        // 大廳裡所有參賽者都準備好 → 直接開始，不用再按「開始遊戲」
+        if (GameManager.get().isInLobby() && countdownTicks < 0) {
+            boolean all = allReady(server);
+            if (all && !wasAllReady) {
+                String error = doStart(server);
+                if (error != null) broadcastChat(server, Component.literal("[PG] 全員已準備，但無法開始：" + error).withStyle(ChatFormatting.RED));
+                else broadcastChat(server, Component.literal("[PG] 全員已準備，開始遊戲！").withStyle(ChatFormatting.GREEN));
+                dirty = true;
+            }
+            wasAllReady = all;
+        } else {
+            wasAllReady = false;
+        }
         if (countdownTicks >= 0) {
+
             if (!GameManager.get().isInLobby()) {
                 countdownTicks = -1;
                 dirty = true;

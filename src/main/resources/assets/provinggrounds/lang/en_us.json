@@ -63,7 +63,7 @@
   "provinggrounds.lobby.loading": "正在向伺服器取得資料…",
   "provinggrounds.lobby.countdown": "強制開始倒數：%s 秒",
   "provinggrounds.lobby.in_game": "遊戲進行中：%s",
-  "provinggrounds.lobby.ready_count": "已準備 %s / %s",
+  "provinggrounds.lobby.ready_count": "已準備 %s / %s（全員準備就自動開始）",
   "provinggrounds.lobby.hint_admin": "｜拖移玩家名字換隊（或點名字再點隊伍）",
   "provinggrounds.lobby.hint_admin_selected": "｜點隊伍標題把選取的玩家移過去（或直接拖移）",
   "provinggrounds.lobby.hint_free": "｜點隊伍標題加入該隊",

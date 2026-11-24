@@ -99,16 +99,23 @@ public class BlockLedger extends SavedData {
 
     public static boolean recording() { return scope != null; }
 
-    /** LevelSetBlockMixin：主世界的方塊即將被改。 */
-    public static void beforeSet(Level level, BlockPos pos) {
+    /** 物資箱（各種等級、空投都是 CrateBlock）：由戰利品系統自己生成和清理，還原不碰。 */
+    private static boolean isCrate(BlockState s) {
+        return s.getBlock() instanceof com.provinggrounds.block.CrateBlock;
+    }
+
+    /** LevelSetBlockMixin：主世界的方塊即將被改成 newState。 */
+    public static void beforeSet(Level level, BlockPos pos, BlockState newState) {
         Predicate<BlockPos> s = scope;
         if (s == null || restoring || level.isClientSide || !(level instanceof ServerLevel sl) || sl.dimension() != Level.OVERWORLD) return;
         BlockLedger l = cached;
         if (l == null || !s.test(pos)) return;
         long key = pos.asLong();
         if (l.original.containsKey(key)) return;
+        BlockState old = level.getBlockState(pos);
+        if (isCrate(old) || isCrate(newState)) return; // 放物資箱、物資箱被打掉都不記錄
         BlockEntity be = level.getBlockEntity(pos);
-        l.original.put(key, new Entry(level.getBlockState(pos), be != null ? be.saveWithFullMetadata() : null));
+        l.original.put(key, new Entry(old, be != null ? be.saveWithFullMetadata() : null));
         l.setDirty();
     }
 
@@ -151,7 +158,9 @@ public class BlockLedger extends SavedData {
                 BlockPos pos = BlockPos.of(e.getKey());
                 level.getChunk(pos.getX() >> 4, pos.getZ() >> 4);
                 Entry en = e.getValue();
+                if (isCrate(level.getBlockState(pos)) || isCrate(en.state())) continue; // 物資箱不還原
                 if (level.getBlockState(pos) != en.state()) {
+
                     level.removeBlockEntity(pos); // 舊的方塊實體（例如被放上去的箱子）先拿掉，不掉內容物
                     level.setBlock(pos, en.state(), flags);
                     restored++;
