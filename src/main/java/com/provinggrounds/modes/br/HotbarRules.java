@@ -197,13 +197,17 @@ public final class HotbarRules {
         return new Result(moved, moved == 0 ? fail : null);
     }
 
-    /** 一般物品：先疊到第 6～9 格與背包同種物品上，再放第 6～9 格空格，最後放背包空格。 */
+    /**
+     * 一般物品（不是有專用格的槍、近戰、補品、投擲物、特殊物品，也不是裝備）：優先放背包，背包放不下才放快捷欄第 6～9 格。
+     * 順序：疊到背包同種物品上 → 背包空格 → 疊到第 6～9 格同種物品上 → 第 6～9 格空格。
+     */
     private static void insertOther(ServerPlayer p, Inventory inv, ItemStack stack) {
-        for (int i = 5; i <= 8 && !stack.isEmpty(); i++) merge(inv, stack, i);
         for (int i = 9; i <= 35 && !stack.isEmpty(); i++) if (backpackUsable(p, i)) merge(inv, stack, i);
-        for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i);
         for (int i = 9; i <= 35 && !stack.isEmpty(); i++) if (backpackUsable(p, i)) putEmpty(inv, stack, i);
+        for (int i = 5; i <= 8 && !stack.isEmpty(); i++) merge(inv, stack, i);
+        for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i);
     }
+
 
     /**
      * 清空玩家身上物品，但保留一把近戰武器放到第 3 格（開局加入時、登機時呼叫）。

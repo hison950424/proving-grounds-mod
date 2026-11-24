@@ -69,22 +69,35 @@ public final class Hitbox {
         double hScale = s.height() / (32 * PX); // 模型高度縮放到碰撞箱高度
         double y0 = s.y();
         double body = Math.toRadians(s.bodyYaw()), head = Math.toRadians(s.headYaw());
-        double depth = crouch ? 8 : 4; // 蹲下時身體前傾，前後比較厚
+        double[][] parts = parts(crouch);
+        for (int i = 0; i < parts.length - 1; i++) {
+            if (segmentHitsBox(a, b, s.x(), y0, s.z(), body, parts[i], hScale, tol)) return true;
+        }
+        return segmentHitsBox(a, b, s.x(), y0, s.z(), head, parts[parts.length - 1], hScale, tol);
+    }
 
-        // 各部位：{中心 x（往右）, 底 y, 中心 z（往前）, 半寬, 高, 半厚}，單位像素
-        double[][] bodyParts = {
+    /**
+     * 各部位：{中心 x（往右）, 底 y, 中心 z（往前）, 半寬, 高, 半厚}，單位像素。前 5 個跟著身體轉，最後一個（頭）跟著頭轉。
+     * 客戶端的除錯畫框（HitboxDebugRenderer）也用這份資料，畫出來的框就是伺服器實際的判定。
+     */
+    public static double[][] parts(boolean crouch) {
+        double depth = crouch ? 8 : 4; // 蹲下時身體前傾，前後比較厚
+        return new double[][] {
             { -2, 0, 0, 2, 12, depth / 2 },  // 左腳
             { 2, 0, 0, 2, 12, depth / 2 },   // 右腳
             { 0, 12, 0, 4, 12, depth / 2 },  // 身體
             { -6, 12, 0, 2, 12, 2 },         // 左手
             { 6, 12, 0, 2, 12, 2 },          // 右手
+            { 0, 24, 0, 4, 8, 4 },           // 頭
         };
-        for (double[] part : bodyParts) {
-            if (segmentHitsBox(a, b, s.x(), y0, s.z(), body, part, hScale, tol)) return true;
-        }
-        double[] headPart = { 0, 24, 0, 4, 8, 4 };
-        return segmentHitsBox(a, b, s.x(), y0, s.z(), head, headPart, hScale, tol);
     }
+
+    /** 一像素（格）。 */
+    public static double pixel() { return PX; }
+
+    /** 模型高度縮放到碰撞箱高度。 */
+    public static double heightScale(float bbHeight) { return bbHeight / (32 * PX); }
+
 
     /** 把線段轉到部位自己的座標（繞垂直軸旋轉），再做 AABB 與線段的相交測試。 */
     private static boolean segmentHitsBox(Vec3 a, Vec3 b, double ox, double oy, double oz, double yaw,

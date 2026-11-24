@@ -203,7 +203,7 @@ public class MainMenuScreen extends Screen {
         if (canEdit) {
             settingRows.add(new SettingRow(sx, y, "隊數", null));
             setting(sx + LABEL_W, y, 18, "－", teamCount > 0, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount - 1));
-            settingRows.add(new SettingRow(sx + LABEL_W + 20, y, null, teamCount == 0 ? "0 孤狼" : String.valueOf(teamCount)));
+            settingRows.add(new SettingRow(sx + LABEL_W + 20, y, null, teamCount == 0 ? "全體孤狼" : String.valueOf(teamCount)));
             setting(sx + LABEL_W + 46, y, 18, "＋", teamCount < LobbyManager.MAX_TEAMS, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount + 1));
             y += 18;
             int half = (sw - 2) / 2;

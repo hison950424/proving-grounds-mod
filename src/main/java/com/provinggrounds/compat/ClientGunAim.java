@@ -112,7 +112,21 @@ public final class ClientGunAim {
      * 點狀準心（計畫書 5 的 B4）：拿槍時的準星由 TACZ 畫（含命中標記），所以把 TACZ 的準星種類設成 DOT_1。
      * 只在第一次套用；之後玩家在 TACZ 設定改成別的會保留。crosshair_dot 關掉時不動 TACZ。
      */
+    /** 隱藏 TACZ 持槍時畫面中間的「按 [鍵] 互動」字樣（我們有自己的 F 互動提示）。每次啟動都設定。 */
+    public static void hideTaczInteractText() {
+        if (!ModList.get().isLoaded("tacz")) return;
+        try {
+            Object value = Class.forName("com.tacz.guns.config.client.RenderConfig").getField("DISABLE_INTERACT_HUD_TEXT").get(null);
+            if (Boolean.TRUE.equals(value.getClass().getMethod("get").invoke(value))) return;
+            value.getClass().getMethod("set", Object.class).invoke(value, Boolean.TRUE);
+            value.getClass().getMethod("save").invoke(value);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+            ProvingGroundsMod.LOGGER.warn("Could not hide TACZ interact text: {}", e.toString());
+        }
+    }
+
     public static void applyDotCrosshairOnce() {
+
         var cfg = com.provinggrounds.config.PGClientConfig.CLIENT;
         if (!cfg.crosshairDot.get() || cfg.crosshairDotTaczApplied.get() || !ModList.get().isLoaded("tacz")) return;
         try {

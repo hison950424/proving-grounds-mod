@@ -82,6 +82,7 @@ public final class ClientKeyDefaults {
             applyDirectionalAudio(mc);
             applyKeysV2(mc);
             com.provinggrounds.compat.ClientGunAim.applyDotCrosshairOnce();
+            com.provinggrounds.compat.ClientGunAim.hideTaczInteractText(); // 不顯示 TACZ 的「按 [鍵] 互動」
             if (PGClientConfig.CLIENT.defaultKeysApplied.get()) return;
         } catch (IllegalStateException e) {
             checked = false; // 設定還沒載入，下個 tick 再試
