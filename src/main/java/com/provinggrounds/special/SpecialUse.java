@@ -95,13 +95,17 @@ public final class SpecialUse {
         long now = p.server.getTickCount();
         Long last = LAST_USE.get(p.getUUID());
         if (last != null && now - last < SpecialConfig.get().useCooldownTicks.get()) return;
+        keepItem = false;
         if (!use(p, type)) return;
         LAST_USE.put(p.getUUID(), now);
-        if (type != SpecialType.FIRST_AID_SHOT || !BattleRoyaleMode.get().isSelfReviving(p.getUUID())) {
+        if (!keepItem && (type != SpecialType.FIRST_AID_SHOT || !BattleRoyaleMode.get().isSelfReviving(p.getUUID()))) {
             SpecialSlot.clear(p); // 使用後銷毀（急救針自救要讀條完成才消耗）
         }
         p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.5f, 1.6f);
     }
+
+    /** 這次使用後物品留著（回溯點第一次使用只記錄位置）。 */
+    private static boolean keepItem;
 
     /** 使用一個特殊物品。回傳 false = 沒有用掉（已提示原因）。 */
     private static boolean use(ServerPlayer p, SpecialType type) {
@@ -212,6 +216,22 @@ public final class SpecialUse {
                 SpecialWorld.addGunfire(p, at, gun);
             }
             case DECOY -> level.addFreshEntity(DecoyEntity.create(level, p));
+            // ── 計畫書 6 E 章（邏輯在 NewSpecials） ──
+            case BRAINWASH -> NewSpecials.brainwash(p);
+            case ROOT_ORB -> SpecialProjectile.throwFrom(p, SpecialType.ROOT_ORB, 1.3f);
+            case FIRE_DRILL -> SpecialProjectile.throwFrom(p, SpecialType.FIRE_DRILL, 1.2f);
+            case RECALL, RECALL_PLUS -> {
+                int r = NewSpecials.recall(p, type);
+                if (r < 0) return false;
+                keepItem = r == 0;
+            }
+            case GAMBLER_ROD -> NewSpecials.gamble(p, false);
+            case GAMBLER_ROD_PLUS -> NewSpecials.gamble(p, true);
+            case THOR_HAMMER -> NewSpecials.thor(p, false);
+            case THOR_HAMMER_PLUS -> NewSpecials.thor(p, true);
+            case RESKYDIVE, RESKYDIVE_GROUP, RESKYDIVE_TARGET -> {
+                if (!NewSpecials.reSkydive(p, type)) return false;
+            }
         }
         return true;
     }

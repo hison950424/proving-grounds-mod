@@ -1677,6 +1677,7 @@ public class BattleRoyaleMode {
         v.getInventory().clearContent();
         com.provinggrounds.modes.br.Backpack.clear(v); com.provinggrounds.special.SpecialSlot.clear(v);
         v.removeAllEffects();
+        com.provinggrounds.special.NewSpecials.clearGamble(v); // 賭徒釣竿的最大生命增減：復活後重新算
         applyMaxHealth(v);
         healFull(v);
         v.getFoodData().setSaturation(5f);
@@ -1688,6 +1689,27 @@ public class BattleRoyaleMode {
         v.fallDistance = 0;
         BRMovement.apply(v);
         title(v, Component.literal("已復活").withStyle(ChatFormatting.GREEN), Component.empty()); // 跳傘提示由 HUD 顯示
+    }
+
+    /**
+     * 重新跳傘（計畫書 6 E10～E12）：傳送到 (x, 起點高度 + 300, z)，進入跟跳機一樣的鞘翅滑翔。
+     * 只有大逃殺進行中、存活、沒倒地、不在飛機上的參賽者有效。回傳 false = 這個人不能重新跳傘。
+     */
+    public boolean reSkydive(ServerPlayer v, double x, double baseY, double z) {
+        Participant vp = participants.get(v.getUUID());
+        if (level == null || !inPlay() || vp == null || !vp.alive || vp.downed || vp.state == PlayerState.PLANE) return false;
+        if (v.level() != level) return false;
+        if (v.isPassenger()) v.stopRiding();
+        vp.state = PlayerState.GLIDE;
+        vp.lastSkydiveToggle = tickCount;
+        vp.groundTicks = 0;
+        SkydiveWings.equip(v);
+        v.startFallFlying();
+        double y = Math.min(baseY + 300, level.getMaxBuildHeight() - 2);
+        v.teleportTo(level, x, y, z, v.getYRot(), 0);
+        v.fallDistance = 0;
+        BRMovement.apply(v);
+        return true;
     }
 
     // ═════════════════════════════════════════════════════════════════════════

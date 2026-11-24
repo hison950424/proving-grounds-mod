@@ -27,6 +27,16 @@ public final class ActionLock {
         return e instanceof LivingEntity l && l.hasEffect(SpecialRegistry.CLOAK.get());
     }
 
+    /** 洗腦（計畫書 6 E1）：不能開物品欄、不能按 F 互動、不能切換快捷欄。 */
+    public static boolean brainwashed(Entity e) {
+        return e instanceof LivingEntity l && l.hasEffect(SpecialRegistry.BRAINWASH.get());
+    }
+
+    /** 定身（計畫書 6 E2）：不能移動、跳（可以轉視角）。 */
+    public static boolean rooted(Entity e) {
+        return e instanceof LivingEntity l && l.hasEffect(SpecialRegistry.ROOTED.get());
+    }
+
     /** 不能使用一般物品、攻擊、開槍、放置破壞方塊、開箱子。 */
     public static boolean blocksActions(Entity e) {
         return BRDowned.cannotAct(e) || cloaked(e);

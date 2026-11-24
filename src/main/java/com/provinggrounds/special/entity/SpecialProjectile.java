@@ -27,10 +27,16 @@ import javax.annotation.Nullable;
  *   毒氣彈：落地處形成 3×3×3 毒氣（SpecialWorld）。
  *   傳送珠：不受重力；超過最遠距離、飛太久、或使用者再按一次使用鍵時，傳送到「目前位置正下方第一個方塊」上；
  *           中途撞到方塊就在撞擊點傳送；傳送沒有摔傷；找不到下方方塊（虛空）就取消並退還物品。
+ *   定身球（計畫書 6 E2）：落地處半徑 2.5 格所有玩家定身 3 秒。
+ *   火焰鑽頭（計畫書 6 E3）：不受重力、會穿過玩家；10 秒沒碰到方塊就消失；碰到方塊就黏住 7 秒，
+ *           每秒讓方塊後方扇形範圍內的玩家灼燒（NewSpecials.drillBurn）。
  */
 public class SpecialProjectile extends ThrowableItemProjectile {
 
     private Vec3 start;
+    /** 火焰鑽頭：黏住後經過的 tick（-1 = 還在飛）、撞到的表面位置與飛來的方向。 */
+    private int stuckTicks = -1;
+    private Vec3 drillAt, drillDir;
 
     public SpecialProjectile(EntityType<? extends SpecialProjectile> type, Level level) {
         super(type, level);
@@ -55,7 +61,8 @@ public class SpecialProjectile extends ThrowableItemProjectile {
 
     @Override
     protected float getGravity() {
-        return kind() == SpecialType.WARP_PEARL ? 0f : 0.03f;
+        SpecialType k = kind();
+        return k == SpecialType.WARP_PEARL || k == SpecialType.FIRE_DRILL ? 0f : 0.03f;
     }
 
     @Override
@@ -72,6 +79,21 @@ public class SpecialProjectile extends ThrowableItemProjectile {
         } else if (k == SpecialType.GAS_GRENADE) {
             level.sendParticles(new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(0.4f, 0.8f, 0.1f), 1f),
                 getX(), getY(), getZ(), 1, 0, 0, 0, 0);
+        } else if (k == SpecialType.FIRE_DRILL) {
+            if (stuckTicks < 0) {
+                level.sendParticles(ParticleTypes.FLAME, getX(), getY(), getZ(), 1, 0.02, 0.02, 0.02, 0.005);
+                if (tickCount >= NewSpecials.DRILL_FLY_TICKS) { discard(); return; }
+            } else {
+                setDeltaMovement(Vec3.ZERO);
+                if (stuckTicks % 20 == 0) {
+                    NewSpecials.drillBurn(level, drillAt, drillDir, getOwner() instanceof ServerPlayer o ? o : null);
+                    level.playSound(null, getX(), getY(), getZ(), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.6f, 0.7f);
+                }
+                if (stuckTicks % 2 == 0) NewSpecials.drillParticles(level, drillAt, drillDir);
+                if (++stuckTicks >= NewSpecials.DRILL_STUCK_TICKS) { discard(); return; }
+            }
+        } else if (k == SpecialType.ROOT_ORB) {
+            level.sendParticles(ParticleTypes.END_ROD, getX(), getY(), getZ(), 1, 0, 0, 0, 0);
         }
         if (getY() < level.getMinBuildHeight() - 16) {
             if (k == SpecialType.WARP_PEARL) refund("傳送珠掉出世界，已退還");
@@ -81,6 +103,18 @@ public class SpecialProjectile extends ThrowableItemProjectile {
 
     @Override
     protected void onHit(HitResult hit) {
+        SpecialType k0 = kind();
+        if (k0 == SpecialType.FIRE_DRILL) { // 火焰鑽頭：穿過玩家，碰到方塊才黏住
+            if (stuckTicks >= 0 || !(hit instanceof BlockHitResult bh) || !(level() instanceof ServerLevel lv)) return;
+            Vec3 v = getDeltaMovement();
+            drillDir = v.lengthSqr() < 1e-6 ? Vec3.atLowerCornerOf(bh.getDirection().getOpposite().getNormal()) : v.normalize();
+            drillAt = bh.getLocation();
+            stuckTicks = 0;
+            setDeltaMovement(Vec3.ZERO);
+            setPos(drillAt.subtract(drillDir.scale(0.1)));
+            lv.playSound(null, drillAt.x, drillAt.y, drillAt.z, SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1f, 0.6f);
+            return;
+        }
         super.onHit(hit);
         if (!(level() instanceof ServerLevel level) || isRemoved()) return;
         ServerPlayer owner = getOwner() instanceof ServerPlayer p ? p : null;
@@ -91,6 +125,9 @@ public class SpecialProjectile extends ThrowableItemProjectile {
             discard();
         } else if (k == SpecialType.GAS_GRENADE) {
             SpecialWorld.addGas(level, at, owner);
+            discard();
+        } else if (k == SpecialType.ROOT_ORB) {
+            NewSpecials.rootBurst(level, at);
             discard();
         } else if (k == SpecialType.WARP_PEARL) {
             if (hit instanceof BlockHitResult bh) {

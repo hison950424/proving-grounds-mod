@@ -158,6 +158,7 @@ public final class SpecialWorld {
         tickGas(server, now);
         tickSnow(server, now);
         tickGunfire(now);
+        NewSpecials.tick(server);
         if (now % 20 == 0) {
             NO_FALL.values().removeIf(t -> t < now);
             for (ServerLevel l : server.getAllLevels()) expireSnow(l);
@@ -362,6 +363,7 @@ public final class SpecialWorld {
         GlowManager.clearAll(server);
         KnockbackShield.restoreAll(server);
         SpecialUse.reset();
+        NewSpecials.cleanup(server);
         for (ServerLevel level : server.getAllLevels()) {
             Ledger l = Ledger.getIfLoaded(level);
             if (l != null) {

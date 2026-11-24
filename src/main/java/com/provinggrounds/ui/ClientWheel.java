@@ -89,6 +89,7 @@ public final class ClientWheel {
     /** BR 進行中自己在地面存活（沒倒地），或團隊模式中（計畫書 6 C2），而且不是創造／旁觀模式時能開。 */
     private static boolean allowed(Minecraft mc) {
         if (mc.player.isCreative() || mc.player.isSpectator()) return false;
+        if (com.provinggrounds.special.ActionLock.brainwashed(mc.player)) return false; // 洗腦中不能切換（計畫書 6 E1）
         return ClientBRState.get().selfState() == ClientBRState.SELF_ALIVE
             || (com.provinggrounds.client.ClientArenaState.active() && mc.player.isAlive());
     }

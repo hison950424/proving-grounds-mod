@@ -39,15 +39,34 @@ public final class SkydiveWings {
         return !s.isEmpty() && s.getTag() != null && s.getTag().getBoolean(TAG);
     }
 
-    /** 穿上翼裝。胸甲欄原本有東西（例如管理員手動給的）就先放回背包，放不下掉在腳邊。 */
+    /** 暫存胸甲的玩家資料標籤（計畫書 6 E10～E12 重新跳傘：身上穿著護甲時）。 */
+    private static final String SAVED_CHEST = "pg_skydive_saved_chest";
+
+    /** 穿上翼裝。胸甲欄原本有東西（例如重新跳傘時穿著的護甲）就先暫存，拿掉翼裝時自動穿回去。 */
     public static void equip(ServerPlayer p) {
         ItemStack chest = p.getItemBySlot(EquipmentSlot.CHEST);
         if (!chest.isEmpty() && !isWings(chest)) {
             ItemStack moved = chest.copy();
             p.setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
-            if (!p.getInventory().add(moved) && !moved.isEmpty()) p.drop(moved, false);
+            CompoundTag data = p.getPersistentData();
+            if (data.contains(SAVED_CHEST)) { // 已經有暫存的（不應該發生）：舊的放回背包
+                ItemStack old = ItemStack.of(data.getCompound(SAVED_CHEST));
+                if (!p.getInventory().add(old) && !old.isEmpty()) p.drop(old, false);
+            }
+            data.put(SAVED_CHEST, moved.save(new CompoundTag()));
         }
         p.setItemSlot(EquipmentSlot.CHEST, create());
+    }
+
+    /** 把暫存的胸甲穿回去（胸甲欄有東西就放背包，放不下掉在腳邊）。 */
+    private static void restoreChest(ServerPlayer p) {
+        CompoundTag data = p.getPersistentData();
+        if (!data.contains(SAVED_CHEST)) return;
+        ItemStack saved = ItemStack.of(data.getCompound(SAVED_CHEST));
+        data.remove(SAVED_CHEST);
+        if (saved.isEmpty()) return;
+        if (p.getItemBySlot(EquipmentSlot.CHEST).isEmpty()) p.setItemSlot(EquipmentSlot.CHEST, saved);
+        else if (!p.getInventory().add(saved) && !saved.isEmpty()) p.drop(saved, false);
     }
 
     /** 移除身上（含背包、游標）所有翼裝。 */
@@ -57,5 +76,6 @@ public final class SkydiveWings {
             if (isWings(inv.getItem(i))) inv.setItem(i, ItemStack.EMPTY);
         }
         if (isWings(p.containerMenu.getCarried())) p.containerMenu.setCarried(ItemStack.EMPTY);
+        restoreChest(p);
     }
 }

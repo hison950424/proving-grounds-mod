@@ -173,6 +173,66 @@
           "type": "minecraft:item",
           "name": "provinggrounds:decoy",
           "weight": 6
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:brainwash",
+          "weight": 5
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:root_orb",
+          "weight": 8
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:fire_drill",
+          "weight": 7
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:recall",
+          "weight": 7
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:gambler_rod",
+          "weight": 6
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:recall_plus",
+          "weight": 4
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:gambler_rod_plus",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:thor_hammer",
+          "weight": 5
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:thor_hammer_plus",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:reskydive",
+          "weight": 6
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:reskydive_group",
+          "weight": 4
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:reskydive_target",
+          "weight": 3
         }
       ]
     }

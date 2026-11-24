@@ -31,6 +31,7 @@ public record WheelSelectPacket(int target, int fromSlot) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer p = ctx.get().getSender();
             if (p == null || !HotbarRules.active(p)) return;
+            if (com.provinggrounds.special.ActionLock.brainwashed(p)) return; // 洗腦中不能切換（計畫書 6 E1）
             // fromSlot = -1：輪盤剛打開，只中斷手上正在使用的補品／投擲物（不觸發放開，投擲物不會被丟出去）
             if (fromSlot == OPENED) { p.stopUsingItem(); return; }
             HotbarRules.wheelSelect(p, target, fromSlot);

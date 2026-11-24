@@ -66,7 +66,8 @@ public final class ClientInteract {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
         while (INTERACT.consumeClick()) {
-            if (mc.player != null && mc.screen == null && mc.gameMode != null) interact(mc, mc.player);
+            if (mc.player != null && mc.screen == null && mc.gameMode != null
+                && !com.provinggrounds.special.ActionLock.brainwashed(mc.player)) interact(mc, mc.player); // 洗腦中不能互動（計畫書 6 E1）
         }
     }
 

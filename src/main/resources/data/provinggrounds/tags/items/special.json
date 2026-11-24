@@ -34,6 +34,18 @@
     "provinggrounds:zone_shelter",
     "provinggrounds:radar_pulse",
     "provinggrounds:fake_gunshot",
-    "provinggrounds:decoy"
+    "provinggrounds:decoy",
+    "provinggrounds:brainwash",
+    "provinggrounds:root_orb",
+    "provinggrounds:fire_drill",
+    "provinggrounds:recall",
+    "provinggrounds:gambler_rod",
+    "provinggrounds:recall_plus",
+    "provinggrounds:gambler_rod_plus",
+    "provinggrounds:thor_hammer",
+    "provinggrounds:thor_hammer_plus",
+    "provinggrounds:reskydive",
+    "provinggrounds:reskydive_group",
+    "provinggrounds:reskydive_target"
   ]
 }

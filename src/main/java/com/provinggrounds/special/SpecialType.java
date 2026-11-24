@@ -41,7 +41,20 @@ public enum SpecialType {
     ZONE_SHELTER("zone_shelter", "圈外庇護", "Zone Shelter", "15 秒內不受圈外傷害，在圈外時移動速度 +25%", 0xC0F0C0),
     RADAR_PULSE("radar_pulse", "雷達脈衝", "Radar Pulse", "掃描 40 格內的敵人，讓他們發光並顯示在地圖上 3 秒（只有你看得到）", 0x40F0A0),
     FAKE_GUNSHOT("fake_gunshot", "假槍聲", "Fake Gunshot", "在準星指的位置連續發出 6 秒槍聲（手上那把槍的聲音，要拿著槍才能用）", 0x606060),
-    DECOY("decoy", "殘影分身", "Decoy", "產生一個跟你一模一樣的分身，往前奔跑 10 秒", 0xA0A0F0);
+    DECOY("decoy", "殘影分身", "Decoy", "產生一個跟你一模一樣的分身，往前奔跑 10 秒", 0xA0A0F0),
+    // ── 計畫書 6 E 章 ──
+    BRAINWASH("brainwash", "不可控的洗腦工具", "Uncontrollable Brainwasher", "自身半徑 25 格內所有玩家（包括自己）15 秒內不能開物品欄、不能按 F 互動、不能切換快捷欄", 0xC040C0),
+    ROOT_ORB("root_orb", "定身球", "Root Orb", "投出，落地後半徑 2.5 格內所有玩家（包括自己）3 秒不能移動（可以轉視角）", 0x50E0B0),
+    FIRE_DRILL("fire_drill", "火焰鑽頭", "Fire Drill", "投出、不受重力，10 秒沒碰到方塊就消失；鑽進方塊 7 秒，方塊後方扇形範圍內所有玩家每秒灼燒 5 點（持續 3 秒）", 0xF07020),
+    RECALL("recall", "回溯點", "Recall Point", "第一次使用：記錄位置（不消耗）；60 秒內再用一次回到記錄的位置。60 秒沒用自動消失", 0x40C0F0),
+    GAMBLER_ROD("gambler_rod", "賭徒釣竿", "Gambler's Rod", "各 25%：掉 1 個特殊物品＋最大生命 +5｜掉 2 個＋最大生命 +10｜受 25 傷害、最大生命 -5、震盪 5 秒｜受 75 傷害、最大生命 -10、震盪 5 秒", 0xD0A040),
+    RECALL_PLUS("recall_plus", "回溯點加強版", "Recall Point+", "同回溯點，另外記錄血量：回去時血量恢復成記錄時的值", 0x2080F0),
+    GAMBLER_ROD_PLUS("gambler_rod_plus", "沒救的賭徒釣竿", "Hopeless Gambler's Rod", "各 25%：掉 2 個特殊物品＋最大生命 +10｜掉 4 個＋最大生命 +20｜受 50 傷害、最大生命 -10、震盪 5 秒｜受 100 傷害、最大生命 -20、震盪 5 秒", 0xB02020),
+    THOR_HAMMER("thor_hammer", "雷神錘", "Thor's Hammer", "準心指的地點水平半徑 5 格內隨機落雷，每 0.2 秒一道，持續 5 秒（包括自己）", 0x80A0FF),
+    THOR_HAMMER_PLUS("thor_hammer_plus", "雷神錘加強版", "Thor's Hammer+", "準心指的地點水平半徑 5 格內的所有玩家，每 0.5 秒被雷打中一次，持續 5 秒（包括自己）", 0x4060FF),
+    RESKYDIVE("reskydive", "重新跳傘器", "Re-Skydiver", "（大逃殺）把自己傳送到目前位置上方 300 格，重新跳傘", 0x60B0E0),
+    RESKYDIVE_GROUP("reskydive_group", "多人重新跳傘器", "Group Re-Skydiver", "（大逃殺）自身半徑 3 格內所有玩家（包括自己）傳送到你上方 300 格，重新跳傘", 0x3090C0),
+    RESKYDIVE_TARGET("reskydive_target", "多人重新跳傘指定器", "Targeted Re-Skydiver", "（大逃殺）準心指的地點水平半徑 3 格內所有玩家傳送到你上方 300 格，重新跳傘", 0x2070A0);
 
     public final String id, zh, en, desc;
     public final int color;

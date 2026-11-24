@@ -33,6 +33,7 @@ public record InteractKeyPacket(boolean done, boolean interacted, int entityId) 
         ctx.get().enqueueWork(() -> {
             ServerPlayer p = ctx.get().getSender();
             if (p == null) return;
+            if (com.provinggrounds.special.ActionLock.brainwashed(p)) return; // 洗腦中不能互動（計畫書 6 E1）
             if (!done) InteractEvents.markKey(p);
             else InteractEvents.onKeyDone(p, interacted, entityId);
         });
