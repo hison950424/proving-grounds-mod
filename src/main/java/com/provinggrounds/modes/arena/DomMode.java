@@ -286,7 +286,10 @@ public final class DomMode extends ArenaMode {
 
     private void checkWipe() {
         if (phase != Phase.ROUND) return;
+        // 單人測試：有一隊根本沒有人時不判全滅（不然回合一開始就結束），回合照佔點／時間結束
+        if (online(RED).isEmpty() || online(BLUE).isEmpty()) return;
         int red = aliveCount(RED), blue = aliveCount(BLUE);
+
         if (red == 0 && blue == 0) resolveByLead("雙方同時全滅！");
         else if (red == 0) roundWon(BLUE, "敵方全員陣亡！", "我方全員陣亡！");
         else if (blue == 0) roundWon(RED, "敵方全員陣亡！", "我方全員陣亡！");

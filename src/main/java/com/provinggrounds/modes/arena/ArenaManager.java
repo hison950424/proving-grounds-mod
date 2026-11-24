@@ -54,7 +54,7 @@ public final class ArenaManager {
             default -> null;
         };
         if (m == null) return "不支援的模式：" + mode;
-        if (mode != GameManager.GameMode.GK && participants.size() < 2) return "團隊模式至少要 2 個人。";
+        // 任何模式 1 個人就能開始（方便測試）
         current = m;
         String error = m.start(participants);
         if (error != null) current = null;
