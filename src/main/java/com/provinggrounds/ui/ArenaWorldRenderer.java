@@ -25,7 +25,7 @@ import org.joml.Matrix4f;
 /**
  * 檔案: ArenaWorldRenderer.java
  * 目的: 團隊模式在世界裡畫的提示（只在客戶端；用頂點色直接畫，不放方塊或實體，不影響伺服器效能）。
- *   佔點（計畫書 5 的 I）：開放中的據點中心往上拉一道細的半透明光柱（穿牆可見），地面畫範圍框（站進去變粗），
+ *   佔點（計畫書 5 的 I；計畫書 6 C4 改版）：不畫光柱，只畫佔領範圍的邊框（穿牆可見、面向鏡頭，站多遠看起來都一樣粗；站進去變粗），
  *     上方顯示字母與距離；據點在視野外時，畫面左右邊緣顯示指向它的小箭頭。
  *     顏色：無人＝白、紅隊領先＝紅、藍隊領先＝藍、爭奪中＝黃色閃爍。關掉 [hud] dom_beacon 就完全不畫。
  *   防蹲點（計畫書 5 的 H2）：接近敵方重生區（範圍外 10 格內）時，只在自己附近畫一段半透明紅色弧形牆；
@@ -94,13 +94,22 @@ public final class ArenaWorldRenderer {
             for (ArenaStatePacket.Marker k : s.markers()) {
                 if (k.kind() != 0) continue;
                 int color = k.contested() && !flash ? 0xFFFFFF : k.color();
-                double y0 = k.y() - 0.9;
-                quadV(b, m, k.x() - BEAM_W, k.z(), k.x() + BEAM_W, k.z(), y0, y0 + BEAM_H, color, 0.28f);
-                quadV(b, m, k.x(), k.z() - BEAM_W, k.x(), k.z() + BEAM_W, y0, y0 + BEAM_H, color, 0.28f);
+                double y0 = k.y() - 0.9 + 0.05;
+                // 計畫書 6 C4：不畫光柱，只畫佔領範圍的邊框；邊框一律面向鏡頭、寬度跟距離成正比 → 站多遠看起來都一樣粗
                 boolean inside = Math.abs(mc.player.getX() - k.x()) <= k.radius() + 0.5 && Math.abs(mc.player.getZ() - k.z()) <= k.radius() + 0.5;
-                float edge = inside ? 0.25f : 0.1f;
                 double r = k.radius() + 0.5;
-                square(b, m, k.x(), y0 + 0.05, k.z(), r, edge, color, inside ? 0.6f : 0.4f);
+                double px = inside ? 0.009 : 0.006; // 邊框粗細（弧度，約 5～8 個螢幕像素）
+                float a = inside ? 0.75f : 0.55f;
+                double[][] corners = { { k.x() - r, k.z() - r }, { k.x() + r, k.z() - r }, { k.x() + r, k.z() + r }, { k.x() - r, k.z() + r } };
+                for (int e = 0; e < 4; e++) {
+                    double[] p0 = corners[e], p1 = corners[(e + 1) % 4];
+                    int seg = 16; // 分段：每段用自己到鏡頭的距離算寬度
+                    for (int i = 0; i < seg; i++) {
+                        double t0 = i / (double) seg, t1 = (i + 1) / (double) seg;
+                        ribbon(b, m, c, p0[0] + (p1[0] - p0[0]) * t0, y0, p0[1] + (p1[1] - p0[1]) * t0,
+                            p0[0] + (p1[0] - p0[0]) * t1, y0, p0[1] + (p1[1] - p0[1]) * t1, px, color, a);
+                    }
+                }
             }
             BufferUploader.drawWithShader(b.end());
             RenderSystem.enableDepthTest();
@@ -144,6 +153,27 @@ public final class ArenaWorldRenderer {
         b.vertex(m, (float) x1, (float) y, (float) z0).color(r, g, bl, al).endVertex();
         b.vertex(m, (float) x1, (float) y, (float) z1).color(r, g, bl, al).endVertex();
         b.vertex(m, (float) x0, (float) y, (float) z1).color(r, g, bl, al).endVertex();
+    }
+
+    /**
+     * 一段面向鏡頭的線（像畫筆畫的線）：寬度 = 這段到鏡頭的距離 × px，所以在螢幕上的粗細固定。
+     * 寬的方向 = 線的方向 × 視線方向（外積），永遠朝著鏡頭攤開。
+     */
+    private static void ribbon(BufferBuilder b, Matrix4f m, Vec3 cam, double x0, double y0, double z0, double x1, double y1, double z1,
+                               double px, int rgb, float a) {
+        double mx = (x0 + x1) / 2 - cam.x, my = (y0 + y1) / 2 - cam.y, mz = (z0 + z1) / 2 - cam.z;
+        double dist = Math.sqrt(mx * mx + my * my + mz * mz);
+        double dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
+        double sx = dy * mz - dz * my, sy = dz * mx - dx * mz, sz = dx * my - dy * mx; // 線方向 × 視線
+        double len = Math.sqrt(sx * sx + sy * sy + sz * sz);
+        if (len < 1e-6 || dist < 1e-3) return;
+        double half = dist * px / 2 / len;
+        sx *= half; sy *= half; sz *= half;
+        int r = rgb >> 16 & 255, g = rgb >> 8 & 255, bl = rgb & 255, al = (int) (a * 255);
+        b.vertex(m, (float) (x0 - sx), (float) (y0 - sy), (float) (z0 - sz)).color(r, g, bl, al).endVertex();
+        b.vertex(m, (float) (x1 - sx), (float) (y1 - sy), (float) (z1 - sz)).color(r, g, bl, al).endVertex();
+        b.vertex(m, (float) (x1 + sx), (float) (y1 + sy), (float) (z1 + sz)).color(r, g, bl, al).endVertex();
+        b.vertex(m, (float) (x0 + sx), (float) (y0 + sy), (float) (z0 + sz)).color(r, g, bl, al).endVertex();
     }
 
     /** 地面方形外框（寬 w）。 */
