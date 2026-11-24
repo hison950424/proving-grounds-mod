@@ -4,7 +4,8 @@
     "sounds": [
       { "name": "provinggrounds:gas/cough1", "volume": 1.0 },
       { "name": "provinggrounds:gas/cough2", "volume": 1.0 },
-      { "name": "provinggrounds:gas/cough3", "volume": 1.0 }
+      { "name": "provinggrounds:gas/cough3", "volume": 1.0 },
+      { "name": "provinggrounds:gas/cough4", "volume": 1.0 }
     ]
   }
 }

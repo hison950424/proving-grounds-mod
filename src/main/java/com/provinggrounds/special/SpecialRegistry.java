@@ -74,7 +74,7 @@ public final class SpecialRegistry {
         return EFFECTS.register(name, () -> new MobEffect(cat, color) {});
     }
 
-    /** 音效（assets/provinggrounds/sounds.json）。毒氣咳嗽：tools/make_cough_sound.py 合成的原創咳嗽聲（3 種，隨機）。 */
+    /** 音效（assets/provinggrounds/sounds.json）。毒氣咳嗽：公眾領域的咳嗽錄音切出 4 聲並過濾雜音（tools/extract_cough_clips.py，來源見 docs/CREDITS.md）。 */
     public static final DeferredRegister<net.minecraft.sounds.SoundEvent> SOUNDS = DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, ProvingGroundsMod.MOD_ID);
     public static final RegistryObject<net.minecraft.sounds.SoundEvent> GAS_COUGH = SOUNDS.register("gas_cough",
         () -> net.minecraft.sounds.SoundEvent.createVariableRangeEvent(new net.minecraft.resources.ResourceLocation(ProvingGroundsMod.MOD_ID, "gas_cough")));
