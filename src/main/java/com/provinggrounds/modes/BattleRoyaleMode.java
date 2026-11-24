@@ -541,7 +541,7 @@ public class BattleRoyaleMode {
                 // 收傘 → 自由落體（原版掉落，不改任何數值）
                 part.state = PlayerState.FREEFALL;
                 part.lastSkydiveToggle = tickCount;
-                level.playSound(null, p.blockPosition(), SoundEvents.ARMOR_EQUIP_LEATHER, SoundSource.PLAYERS, 1f, 1.3f);
+                playChuteSound(p, false);
             }
             default -> {}
         }
@@ -558,9 +558,27 @@ public class BattleRoyaleMode {
         p.stopFallFlying();
         SkydiveWings.removeAll(p);
         p.fallDistance = 0;
-        level.playSound(null, p.blockPosition(), SoundEvents.ARMOR_EQUIP_ELYTRA, SoundSource.PLAYERS, 1f, 1f);
+        playChuteSound(p, true);
         if (auto) p.displayClientMessage(Component.literal("降落傘已自動打開").withStyle(ChatFormatting.AQUA), true);
     }
+
+    /**
+     * 開傘／收傘音效（原版音效疊在一起，附近的人也聽得到）：
+     *   開傘：大翅膀拍動（傘衣「啪」一聲展開）＋布料＋裝備聲；收傘：短促的拍動＋布料收起＋皮甲聲。
+     */
+    private void playChuteSound(ServerPlayer p, boolean open) {
+        double x = p.getX(), y = p.getY() + 1.5, z = p.getZ();
+        if (open) {
+            level.playSound(null, x, y, z, SoundEvents.ENDER_DRAGON_FLAP, SoundSource.PLAYERS, 0.7f, 1.5f);
+            level.playSound(null, x, y, z, SoundEvents.WOOL_PLACE, SoundSource.PLAYERS, 1.0f, 0.7f);
+            level.playSound(null, x, y, z, SoundEvents.ARMOR_EQUIP_ELYTRA, SoundSource.PLAYERS, 1.0f, 1.0f);
+        } else {
+            level.playSound(null, x, y, z, SoundEvents.PHANTOM_FLAP, SoundSource.PLAYERS, 0.8f, 1.6f);
+            level.playSound(null, x, y, z, SoundEvents.WOOL_BREAK, SoundSource.PLAYERS, 1.0f, 1.2f);
+            level.playSound(null, x, y, z, SoundEvents.ARMOR_EQUIP_LEATHER, SoundSource.PLAYERS, 1.0f, 1.3f);
+        }
+    }
+
 
     /** 腳下到地面（任何有碰撞的方塊，含樹葉）或水面的距離；超過 maxDist 回傳 maxDist。 */
     private static double heightAboveGround(ServerPlayer p, double maxDist) {
