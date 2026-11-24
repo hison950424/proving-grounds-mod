@@ -209,6 +209,15 @@ public class BattleRoyaleMode {
     /** 對局進行中（飛機或落地後）。 */
     public boolean isInPlay() { return inPlay(); }
     public boolean isRunning() { return phase != Phase.IDLE; }
+
+    /** 方塊能不能被爆炸、子彈、火破壞：只有大逃殺進行中、而且在這場地圖圓圈外加 64 格內（BlockProtection 用）。 */
+    public boolean allowsBlockDamage(net.minecraft.core.BlockPos pos) {
+        MapRegistry.BRMap m = map;
+        if (phase == Phase.IDLE || m == null) return false;
+        double r = m.radius + 64, dx = pos.getX() + 0.5 - m.centerX, dz = pos.getZ() + 0.5 - m.centerZ;
+        return dx * dx + dz * dz <= r * r;
+    }
+
     @Nullable public MapRegistry.BRMap getMap() { return map; }
     /** 本局識別碼（沒有遊戲時為 0）。祭壇用它判斷冷卻是不是這一局的。 */
     public long currentGameId() { return gameId; }

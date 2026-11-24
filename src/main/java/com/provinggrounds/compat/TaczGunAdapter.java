@@ -151,12 +151,17 @@ public class TaczGunAdapter implements GunAdapter {
                     if (getLevel.invoke(event) instanceof net.minecraft.world.level.Level level
                             && getState.invoke(event) instanceof net.minecraft.world.level.block.state.BlockState state
                             && getHit.invoke(event) instanceof net.minecraft.world.phys.BlockHitResult hit) {
+                        // 大逃殺以外：這次事件期間不讓這一格被打破（TACZ 的 DestroyGlassBlock 在之後的優先度處理）
+                        com.provinggrounds.core.BlockProtection.beginBulletHit(level, hit.getBlockPos());
                         listener.onBlockHit(level, hit.getBlockPos(), state);
                     }
                 } catch (ReflectiveOperationException | RuntimeException ignored) {
                     // 取不到資料就不記錄
                 }
             });
+            // 事件處理完（含被取消的）就解除
+            MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, true, type, event -> com.provinggrounds.core.BlockProtection.endBulletHit());
+
             ProvingGroundsMod.LOGGER.info("TACZ adapter: block hit listener hooked.");
             return true;
         } catch (ClassNotFoundException | NoSuchMethodException e) {
