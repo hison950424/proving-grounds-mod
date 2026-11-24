@@ -539,7 +539,29 @@ public class TaczGunAdapter implements GunAdapter {
     }
 
     /** 找「回傳 LivingEntity、沒有參數」的方法（TACZ 1.1.x 是 getShooter）。 */
+    @Override
+    public boolean registerShootListener(java.util.function.Consumer<LivingEntity> listener) {
+        try {
+            Class<?> raw = Class.forName(EVENTS[0]);
+            Method shooterGetter = findShooterGetter(raw);
+            if (shooterGetter == null || !Event.class.isAssignableFrom(raw)) return false;
+            @SuppressWarnings("unchecked")
+            Class<Event> type = (Class<Event>) raw;
+            MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, false, type, event -> {
+                try {
+                    if (shooterGetter.invoke(event) instanceof LivingEntity living) listener.accept(living);
+                } catch (ReflectiveOperationException ignored) {
+                    // 取不到開槍者就不通知
+                }
+            });
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
     private static Method findShooterGetter(Class<?> type) {
+
         try {
             Method m = type.getMethod("getShooter");
             if (LivingEntity.class.isAssignableFrom(m.getReturnType())) return m;

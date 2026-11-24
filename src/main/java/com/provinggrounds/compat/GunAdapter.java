@@ -112,4 +112,8 @@ public interface GunAdapter {
      * @return 是否成功（失敗時呼叫端改用原版音效）
      */
     default boolean playGunSound(net.minecraft.world.entity.Entity at, net.minecraft.world.item.ItemStack gun) { return false; }
+
+    /** 註冊「真的開了一槍」的通知（沒被取消才算；兩端都會觸發）。@return 是否成功掛上 */
+    default boolean registerShootListener(java.util.function.Consumer<LivingEntity> listener) { return false; }
 }
+

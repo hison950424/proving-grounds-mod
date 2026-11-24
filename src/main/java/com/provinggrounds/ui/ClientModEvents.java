@@ -44,6 +44,8 @@ public final class ClientModEvents {
         event.registerAboveAll("item_wheel", ClientWheel.OVERLAY);
         event.registerAboveAll("compass", Compass.OVERLAY);
         event.registerAboveAll("damage_indicator", DamageIndicator.OVERLAY);
+        event.registerAboveAll("interact_hint", ClientInteract.HINT_OVERLAY); // 準星下方的 F 互動提示
+
         event.registerAbove(net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.HOTBAR.id(), "special_hotbar", com.provinggrounds.special.client.SpecialHotbar.OVERLAY); // 特殊物品快捷欄
     }
 
@@ -68,5 +70,6 @@ public final class ClientModEvents {
         event.register(PRONE);
         event.register(com.provinggrounds.special.client.ClientSpecial.USE_KEY); // 使用特殊物品（預設 Q）
         event.register(ClientMovement.QUIET_WALK); // 靜走（預設 Shift）
+        event.register(ClientInteract.INTERACT); // 互動（預設 F；計畫書 5）
     }
 }

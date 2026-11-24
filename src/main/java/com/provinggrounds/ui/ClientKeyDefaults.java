@@ -50,6 +50,28 @@ public final class ClientKeyDefaults {
         ProvingGroundsMod.LOGGER.info("Enabled directional audio (HRTF).");
     }
 
+    /**
+     * 第二批預設按鍵（計畫書 5）：互動鍵 F；原本綁在 F 的 TACZ 槍托近戰改到 X、原版主副手交換不綁定。
+     * 只做一次；玩家之後自己改的都保留。
+     */
+    private static void applyKeysV2(Minecraft mc) {
+        if (PGClientConfig.CLIENT.defaultKeysV2Applied.get()) return;
+        InputConstants.Key f = InputConstants.getKey("key.keyboard.f");
+        for (KeyMapping km : mc.options.keyMappings) {
+            switch (km.getName()) {
+                case "key.provinggrounds.interact" -> km.setKeyModifierAndCode(KeyModifier.NONE, f);
+                case "key.tacz.melee.desc" -> { if (km.getKey().equals(f)) km.setKeyModifierAndCode(KeyModifier.NONE, InputConstants.getKey("key.keyboard.x")); }
+                case "key.swapOffhand" -> { if (km.getKey().equals(f)) km.setKeyModifierAndCode(KeyModifier.NONE, InputConstants.UNKNOWN); }
+                default -> { }
+            }
+        }
+        KeyMapping.resetMapping();
+        mc.options.save();
+        PGClientConfig.CLIENT.defaultKeysV2Applied.set(true);
+        PGClientConfig.CLIENT.defaultKeysV2Applied.save();
+        ProvingGroundsMod.LOGGER.info("Applied Proving Grounds default key bindings v2 (interact = F).");
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (checked || event.phase != TickEvent.Phase.END) return;
@@ -58,6 +80,8 @@ public final class ClientKeyDefaults {
         checked = true;
         try {
             applyDirectionalAudio(mc);
+            applyKeysV2(mc);
+            com.provinggrounds.compat.ClientGunAim.applyDotCrosshairOnce();
             if (PGClientConfig.CLIENT.defaultKeysApplied.get()) return;
         } catch (IllegalStateException e) {
             checked = false; // 設定還沒載入，下個 tick 再試
@@ -75,7 +99,8 @@ public final class ClientKeyDefaults {
         want.put("key.sprint", "key.keyboard.unknown");               // 自動奔跑，不需要疾跑鍵
         // 避免撞鍵
         want.put("key.tacz.crawl.desc", "key.keyboard.unknown");
-        want.put("key.tacz.melee.desc", "key.keyboard.f");
+        want.put("key.tacz.melee.desc", "key.keyboard.x");
+
         want.put("key.swapOffhand", "key.keyboard.unknown");
         want.put("key.playerlist", "key.keyboard.grave.accent");
 

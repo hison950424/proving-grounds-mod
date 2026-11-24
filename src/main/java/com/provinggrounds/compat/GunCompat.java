@@ -82,7 +82,18 @@ public final class GunCompat {
         return active != null && active.playGunSound(at, gun);
     }
 
+    private static final java.util.List<java.util.function.Consumer<net.minecraft.world.entity.LivingEntity>> SHOOT_LISTENERS = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    /** 每次真的開槍時通知（兩端都會呼叫，用 instanceof ServerPlayer 分辨伺服器端）。 */
+    public static void onShoot(java.util.function.Consumer<net.minecraft.world.entity.LivingEntity> listener) { SHOOT_LISTENERS.add(listener); }
+
+    /** 主手拿的是不是槍。 */
+    public static boolean holdsGun(net.minecraft.world.entity.LivingEntity e) {
+        return classify(e.getMainHandItem()) != GunClass.NONE;
+    }
+
     public static void init() {
+
         if (ModList.get().isLoaded("tacz")) {
             GunAdapter adapter = new TaczGunAdapter();
             active = adapter;
@@ -97,6 +108,7 @@ public final class GunCompat {
                 return com.provinggrounds.core.Hitbox.hitsModel(target, bullet.position().subtract(v), bullet.position().add(v));
             });
             adapter.registerBlockHitListener(com.provinggrounds.events.GlassEvents::onBulletHit); // 記錄被子彈打破的玻璃
+            adapter.registerShootListener(shooter -> { for (var l : SHOOT_LISTENERS) l.accept(shooter); }); // 開槍通知（中斷讀條等）
 
         } else {
             ProvingGroundsMod.LOGGER.info("No supported gun mod loaded; gun adapter disabled.");

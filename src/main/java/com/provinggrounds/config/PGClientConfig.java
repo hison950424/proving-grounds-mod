@@ -38,6 +38,10 @@ public final class PGClientConfig {
     public final ForgeConfigSpec.DoubleValue compatHighlightOpacity;
     public final ForgeConfigSpec.BooleanValue damageIndicatorEnabled;
     public final ForgeConfigSpec.DoubleValue damageIndicatorSeconds;
+    // 計畫書 5：準星、互動提示、戰鬥提示
+    public final ForgeConfigSpec.BooleanValue crosshairDot, crosshairDotTaczApplied, defaultKeysV2Applied;
+    public final ForgeConfigSpec.BooleanValue interactHint, killIconEnabled, killFeedEnabled, killSoundEnabled, domBeacon, antiCampWall;
+    public final ForgeConfigSpec.DoubleValue hudScale, killSoundVolume;
 
     private PGClientConfig(ForgeConfigSpec.Builder builder) {
         builder.push("ui_walk");
@@ -61,6 +65,8 @@ public final class PGClientConfig {
             .define("default_keys_applied_v1", false);
         directionalAudioApplied = builder.comment("是否已經幫你打開過原版的「方向性音訊」（HRTF，戴耳機時聲音方向更準）。改成 false 會在下次開遊戲時再打開一次")
             .define("directional_audio_applied_v1", false);
+        defaultKeysV2Applied = builder.comment("內部用：是否已套用第二批預設按鍵（互動 F、槍托近戰改 X）").define("default_keys_applied_v2", false);
+
         builder.pop();
 
         builder.comment("音效").push("sound");
@@ -83,6 +89,20 @@ public final class PGClientConfig {
         builder.comment("受擊方向指示器：受傷時在螢幕邊緣對應攻擊方向的位置顯示紅色方塊（上 = 前方、下 = 後方）").push("damage_indicator");
         damageIndicatorEnabled = builder.comment("是否啟用").define("damage_indicator_enabled", true);
         damageIndicatorSeconds = builder.comment("顯示幾秒後淡出").defineInRange("damage_indicator_seconds", 1.5, 0.3, 10.0);
+        builder.pop();
+
+        builder.comment("戰鬥提示（計畫書 5）：所有提示都放在畫面邊緣、小字、短時間淡出，不擋視野").push("hud");
+        hudScale = builder.comment("提示文字大小倍率（互動提示、擊殺圖示、擊殺紀錄、戰績面板）").defineInRange("hud_scale", 1.0, 0.5, 2.0);
+        crosshairDot = builder.comment("點狀準心（拿槍、空手都是點；關掉 = 原版準星）").define("crosshair_dot", true);
+        crosshairDotTaczApplied = builder.comment("內部用：是否已把 TACZ 的槍械準星設成點狀（只做一次，之後在 TACZ 設定改的會保留）")
+            .define("crosshair_dot_tacz_applied_v1", false);
+        interactHint = builder.comment("準星下方顯示「F 開啟」「F 扶起」等互動提示（拿槍時一定顯示；這裡關掉只影響空手）").define("interact_hint", true);
+        killIconEnabled = builder.comment("擊殺時準星附近的小圖示").define("kill_icon", true);
+        killFeedEnabled = builder.comment("右上角擊殺紀錄（團隊死鬥／佔點／槍王之王）").define("kill_feed", true);
+        killSoundEnabled = builder.comment("擊殺音效").define("kill_sound", true);
+        killSoundVolume = builder.comment("擊殺音效音量").defineInRange("kill_sound_volume", 0.8, 0.0, 1.0);
+        domBeacon = builder.comment("佔點：據點光柱、地面範圍環、螢幕上的據點字母與距離").define("dom_beacon", true);
+        antiCampWall = builder.comment("接近敵方重生區時顯示的半透明紅色邊界").define("anti_camp_wall", true);
         builder.pop();
     }
 }

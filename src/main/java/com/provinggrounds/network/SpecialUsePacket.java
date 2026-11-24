@@ -18,7 +18,7 @@ public record SpecialUsePacket() {
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ServerPlayer p = ctx.get().getSender();
-        ctx.get().enqueueWork(() -> { if (p != null) com.provinggrounds.special.SpecialUse.onKey(p); });
+        ctx.get().enqueueWork(() -> { if (p != null) { com.provinggrounds.modes.BattleRoyaleMode.get().interruptProgress(p); com.provinggrounds.special.SpecialUse.onKey(p); } });
         ctx.get().setPacketHandled(true);
     }
 }

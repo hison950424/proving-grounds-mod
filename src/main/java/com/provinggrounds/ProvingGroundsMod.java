@@ -65,6 +65,7 @@ public class ProvingGroundsMod {
     private void setup(final FMLCommonSetupEvent event) {
         event.enqueueWork(PGNetwork::register);
         event.enqueueWork(GunCompat::init); // 槍械適配層：倒地時不能開槍
+        event.enqueueWork(com.provinggrounds.events.InteractEvents::register); // 開槍中斷扶人／祭壇讀條
         LOGGER.info("Proving Grounds setup complete.");
     }
 

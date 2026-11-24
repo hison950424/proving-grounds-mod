@@ -132,8 +132,8 @@ public class BattleRoyaleMode {
         // 祭壇
         @Nullable BlockPos altarTarget;
         int altarTicks;
-        @Nullable BlockPos altarUsePos;
-        int lastAltarUse = -1000;
+        @Nullable BlockPos altarIntent;     // 按 F（或空手右鍵）後自動讀條的祭壇；中斷就清掉
+        @Nullable UUID reviveIntent;        // 按 F 後要扶的隊友；中斷就清掉
 
         // 本場統計（B4）
         final com.provinggrounds.modes.br.MatchStats stats = new com.provinggrounds.modes.br.MatchStats();
@@ -963,8 +963,62 @@ public class BattleRoyaleMode {
     private boolean canRevive(Participant d, ServerPlayer dp, ServerPlayer hp, double range, Set<UUID> busy) {
         Participant h = participants.get(hp.getUUID());
         return h != null && h.alive && !h.downed && h.state == PlayerState.GROUND && !busy.contains(h.id)
-            && TeamManager.get().isSameTeam(h.id, d.id) && hp.isShiftKeyDown() && !hp.isSpectator()
-            && hp.distanceTo(dp) <= range;
+            && TeamManager.get().isSameTeam(h.id, d.id) && d.id.equals(h.reviveIntent) && !hp.isSpectator()
+            && inReviveRange(h, hp, dp, range);
+    }
+
+    /** 超出扶起範圍就中斷（要重新按 F）。 */
+    private boolean inReviveRange(Participant h, ServerPlayer hp, ServerPlayer dp, double range) {
+        if (hp.distanceTo(dp) <= range) return true;
+        h.reviveIntent = null;
+        hp.displayClientMessage(Component.literal("離太遠，扶起中斷").withStyle(ChatFormatting.GRAY), true);
+        return false;
+    }
+
+    // ── F 互動鍵（計畫書 5 的 B2）：按一下自動讀條，超出範圍、使用物品、受傷就中斷 ──
+
+    /** 按 F：準星指著倒地隊友就扶他；allowNearest 時沒指著也找範圍內最近的倒地隊友。成功開始回傳 true。 */
+    public boolean startReviveByKey(ServerPlayer helper, @Nullable Entity looked, boolean allowNearest) {
+        Participant h = participants.get(helper.getUUID());
+        if (h == null || !h.alive || h.downed || !inPlay()) return false;
+        double range = PGConfig.SERVER.brReviveRange.get();
+        Participant target = null;
+        if (looked instanceof ServerPlayer lp) {
+            Participant d = participants.get(lp.getUUID());
+            if (d != null && d.alive && d.downed && TeamManager.get().isSameTeam(h.id, d.id) && helper.distanceTo(lp) <= range) target = d;
+        }
+        if (target == null && allowNearest) {
+            double best = Double.MAX_VALUE;
+            for (Participant d : participants.values()) {
+                ServerPlayer dp = d.alive && d.downed ? player(d.id) : null;
+                if (dp == null || d == h || !TeamManager.get().isSameTeam(h.id, d.id)) continue;
+                double dist = helper.distanceTo(dp);
+                if (dist <= range && dist < best) { best = dist; target = d; }
+            }
+        }
+        if (target == null) return false;
+        h.reviveIntent = target.id;
+        h.altarIntent = null;
+        return true;
+    }
+
+    /** 按 F：在祭壇範圍內就開始讀條。 */
+    public boolean startAltarByKey(ServerPlayer p) {
+        if (level == null) return false;
+        BlockPos pos = nearestAltar(p, PGConfig.SERVER.brAltarRange.get());
+        if (pos == null) return false;
+        onAltarUse(p, pos);
+        return true;
+    }
+
+    /** 使用物品、開槍、受傷：中斷扶人與祭壇讀條。 */
+    public void interruptProgress(ServerPlayer p) {
+        Participant part = participants.get(p.getUUID());
+        if (part == null || (part.reviveIntent == null && part.altarIntent == null)) return;
+        part.reviveIntent = null;
+        part.altarIntent = null;
+        resetAltar(part);
+        p.displayClientMessage(Component.literal("讀條中斷，再按 F 重新開始").withStyle(ChatFormatting.GRAY), true);
     }
 
     private void revive(ServerPlayer dp, Participant d, ServerPlayer helper) {
@@ -973,7 +1027,7 @@ public class BattleRoyaleMode {
         damagers.remove(d.id);
         dp.setHealth((float) Math.min(PGConfig.SERVER.brReviveHealth.get(), dp.getMaxHealth()));
         Participant hp = participants.get(helper.getUUID());
-        if (hp != null) hp.stats.revives++;
+        if (hp != null) { hp.stats.revives++; hp.reviveIntent = null; }
         String helperName = helper.getGameProfile().getName();
         title(dp, Component.literal("已被扶起").withStyle(ChatFormatting.GREEN),
             Component.literal(helperName + " 把你扶起來了").withStyle(ChatFormatting.WHITE));
@@ -1392,12 +1446,14 @@ public class BattleRoyaleMode {
     // 祭壇
     // ═════════════════════════════════════════════════════════════════════════
 
-    /** 玩家對祭壇按右鍵（按住時每 4 tick 一次）。 */
+    /** 對祭壇按 F（或空手右鍵）：按一下就開始自動讀條（計畫書 5 的 B2）。 */
     public void onAltarUse(ServerPlayer p, BlockPos lowerPos) {
         Participant part = participants.get(p.getUUID());
         if (part == null || !part.alive || part.downed || !inPlay()) return;
-        part.lastAltarUse = tickCount;
-        part.altarUsePos = lowerPos.immutable();
+        if (lowerPos.equals(part.altarIntent)) return; // 已經在讀這座
+        part.altarIntent = lowerPos.immutable();
+        part.reviveIntent = null;
+        resetAltar(part);
     }
 
     private void tickAltars() {
@@ -1409,22 +1465,27 @@ public class BattleRoyaleMode {
             ServerPlayer p = part.alive ? player(part.id) : null;
             if (p == null || part.downed || part.state != PlayerState.GROUND) { resetAltar(part); continue; }
 
-            boolean using = part.altarUsePos != null && tickCount - part.lastAltarUse <= 6;
-            BlockPos target = using ? part.altarUsePos : p.isShiftKeyDown() ? nearestAltar(p, range) : null;
-            if (target != null && !nearAltar(p, target, range)) target = null;
+            BlockPos target = part.altarIntent;
+            boolean using = target != null;
+            if (target != null && !nearAltar(p, target, range)) {
+                p.displayClientMessage(Component.literal("離開祭壇範圍，讀條中斷").withStyle(ChatFormatting.GRAY), true);
+                target = null;
+            }
             AltarBlockEntity altar = target != null && level.getBlockEntity(target) instanceof AltarBlockEntity a ? a : null;
-            if (altar == null) { resetAltar(part); continue; }
+            if (altar == null) { part.altarIntent = null; resetAltar(part); continue; }
 
             // 復活牌全隊共用：隊伍裡任何一個活著（沒倒地）的隊友撿到，其他存活隊友都可以到祭壇復活
             boolean holding = teamCards(part) > 0;
             if (!holding) {
                 if (using) p.displayClientMessage(Component.literal("隊伍裡沒有人撿到復活牌").withStyle(ChatFormatting.GRAY), true);
+                part.altarIntent = null;
                 resetAltar(part);
                 continue;
             }
             if (!altar.isReady()) {
                 p.displayClientMessage(Component.literal("祭壇冷卻中，還要 " + altar.cooldownSecondsLeft() + " 秒")
                     .withStyle(ChatFormatting.GRAY), true);
+                part.altarIntent = null;
                 resetAltar(part);
                 continue;
             }
@@ -1434,7 +1495,9 @@ public class BattleRoyaleMode {
             part.progress = part.altarTicks / (float) need;
             if (part.altarTicks >= need) {
                 activateAltar(p, part, target, altar);
+                part.altarIntent = null;
                 resetAltar(part);
+
             }
         }
     }

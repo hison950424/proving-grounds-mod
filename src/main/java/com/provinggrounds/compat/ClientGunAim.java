@@ -97,7 +97,40 @@ public final class ClientGunAim {
         wasDrawing = draw;
     }
 
+    /** 現在是不是正在開鏡（互動提示在開鏡時不顯示）。 */
+    public static boolean aiming() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || !init()) return false;
+        try {
+            return Boolean.TRUE.equals(isAim.invoke(fromLocal.invoke(null, mc.player)));
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return false;
+        }
+    }
+
+    /**
+     * 點狀準心（計畫書 5 的 B4）：拿槍時的準星由 TACZ 畫（含命中標記），所以把 TACZ 的準星種類設成 DOT_1。
+     * 只在第一次套用；之後玩家在 TACZ 設定改成別的會保留。crosshair_dot 關掉時不動 TACZ。
+     */
+    public static void applyDotCrosshairOnce() {
+        var cfg = com.provinggrounds.config.PGClientConfig.CLIENT;
+        if (!cfg.crosshairDot.get() || cfg.crosshairDotTaczApplied.get() || !ModList.get().isLoaded("tacz")) return;
+        try {
+            Object value = Class.forName("com.tacz.guns.config.client.RenderConfig").getField("CROSSHAIR_TYPE").get(null);
+            Class<?> type = Class.forName("com.tacz.guns.client.renderer.crosshair.CrosshairType");
+            Object dot = type.getField("DOT_1").get(null);
+            value.getClass().getMethod("set", Object.class).invoke(value, dot);
+            value.getClass().getMethod("save").invoke(value);
+            ProvingGroundsMod.LOGGER.info("Set TACZ crosshair to DOT_1.");
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+            ProvingGroundsMod.LOGGER.warn("Could not set TACZ crosshair: {}", e.toString());
+        }
+        cfg.crosshairDotTaczApplied.set(true);
+        cfg.crosshairDotTaczApplied.save();
+    }
+
     private static boolean physicallyDown(Minecraft mc, InputConstants.Key key) {
+
         long win = mc.getWindow().getWindow();
         if (key.getType() == InputConstants.Type.MOUSE) return GLFW.glfwGetMouseButton(win, key.getValue()) == GLFW.GLFW_PRESS;
         if (key.getType() == InputConstants.Type.KEYSYM) return InputConstants.isKeyDown(win, key.getValue());
