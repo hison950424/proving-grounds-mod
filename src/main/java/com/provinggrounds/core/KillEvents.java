@@ -106,6 +106,23 @@ public final class KillEvents {
         if (lost >= STREAK_ANNOUNCE) announceEnded(victim, victim.getGameProfile().getName(), lost, killer != null ? killer.getGameProfile().getName() : "");
     }
 
+    /**
+     * 其他所有生物（計畫書 6 A5）：玩家殺死任何生物（動物、怪物、訓練假人…）也有擊殺圖示與音效。
+     * 玩家被殺時，大逃殺、團隊模式、迷你死鬥已經各自處理，這裡只處理不在這些模式裡的玩家。
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onAnyDeath(LivingDeathEvent event) {
+        if (event.isCanceled() || event.getEntity().level().isClientSide) return;
+        if (!(event.getSource().getEntity() instanceof ServerPlayer killer) || killer == event.getEntity()) return;
+        net.minecraft.world.entity.LivingEntity victim = event.getEntity();
+        if (victim instanceof ServerPlayer vp) {
+            if (inMiniDm(vp) || com.provinggrounds.modes.BattleRoyaleMode.get().isParticipant(vp.getUUID())
+                || com.provinggrounds.modes.arena.ArenaManager.isParticipant(vp.getUUID())) return;
+        }
+        PGNetwork.sendTo(killer, new KillNoticePacket(false, true, killer.getGameProfile().getName(), 0xFFFFFF,
+            victim.getName().getString(), 0xFFFFFF, killer.getMainHandItem().copyWithCount(1), false, 0));
+    }
+
     /** 離開迷你死鬥（換場地、離線）就歸零。 */
     public static void resetMiniDm(UUID id) { MINIDM_STREAK.remove(id); }
 }

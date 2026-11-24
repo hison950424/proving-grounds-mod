@@ -384,7 +384,9 @@ public class MainMenuScreen extends Screen {
         rows.clear();
         if (lobby == null) return;
         for (int t = 1; t <= lobby.teamCount(); t++) addGroup(lobby, t);
-        addGroup(lobby, 0);
+        int gmo = lobby.gameModeOrdinal();
+        boolean twoTeams = gmo == GameManager.GameMode.TDM.ordinal() || gmo == GameManager.GameMode.DOM.ordinal();
+        if (!twoTeams) addGroup(lobby, 0); // 團隊死鬥、佔點沒有孤狼
         List<LobbyStatePacket.Entry> unassigned = lobby.players().stream().filter(e -> !e.spectator() && e.team() < 0).toList();
         if (!unassigned.isEmpty()) {
             rows.add(new Row(-1, Tr.t("lobby.unassigned"), TEXT_DIM, null));

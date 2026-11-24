@@ -179,6 +179,9 @@ public final class HotbarRules {
                 putEmpty(inv, stack, target);
                 for (int i = 9; i <= 35 && !stack.isEmpty(); i++) if (backpackUsable(p, i)) merge(inv, stack, i);
                 for (int i = 9; i <= 35 && !stack.isEmpty(); i++) if (backpackUsable(p, i)) putEmpty(inv, stack, i);
+                // 專用格有東西、背包也滿了：放快捷欄第 6～9 格（計畫書 6 A2）
+                for (int i = 5; i <= 8 && !stack.isEmpty(); i++) merge(inv, stack, i);
+                for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i);
                 fail = MSG_FULL;
             }
             case BACKPACK -> {
@@ -248,8 +251,14 @@ public final class HotbarRules {
             return new Result(before - stack.getCount(), null);
         }
         switch (kind(stack)) {
-            case HEALING -> { merge(inv, stack, HEAL); putEmpty(inv, stack, HEAL); }
-            case THROWABLE -> { merge(inv, stack, THROW); putEmpty(inv, stack, THROW); }
+            case HEALING, THROWABLE -> {
+                int target = kind(stack) == Kind.HEALING ? HEAL : THROW;
+                merge(inv, stack, target);
+                putEmpty(inv, stack, target);
+                // 專用格放不下：放快捷欄第 6～9 格
+                for (int i = 5; i <= 8 && !stack.isEmpty(); i++) merge(inv, stack, i);
+                for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i);
+            }
             case LARGE, PISTOL -> { if (!putEmpty(inv, stack, LARGE_A)) putEmpty(inv, stack, LARGE_B); }
             case MELEE -> { if (!putEmpty(inv, stack, PISTOL)) { for (int i = 5; i <= 8 && !stack.isEmpty(); i++) putEmpty(inv, stack, i); } }
             case BACKPACK -> {
@@ -363,32 +372,13 @@ public final class HotbarRules {
                 }
                 if (slot.container == inv && menu instanceof InventoryMenu && slot.getContainerSlot() >= 9 && slot.getContainerSlot() <= 35) {
                     // 物品欄畫面：背包 → 快捷欄
-                    Result r = insertToHotbar(p, stack.copy());
-                    if (r.moved() == 0 && swapDedicated(slot, stack, p, inv)) return true;
-                    quickMove(slot, p, r);
+                    quickMove(slot, p, insertToHotbar(p, stack.copy()));
                     return true;
                 }
             }
         }
         out[0] = new Snapshot(menu, p);
         return false;
-    }
-
-    /**
-     * 補品、投擲物的專用格（第 4、5 格）已經放了別種（或同種但已滿）的物品時，Shift 點背包裡的補品／投擲物 = 互換：
-     * 點的那一堆放進專用格，原本專用格的那一堆放回背包被點的那一格。回傳 true = 已處理。
-     */
-    private static boolean swapDedicated(Slot slot, ItemStack stack, ServerPlayer p, Inventory inv) {
-        Kind k = kind(stack);
-        if (k != Kind.HEALING && k != Kind.THROWABLE) return false;
-        int target = k == Kind.HEALING ? HEAL : THROW;
-        ItemStack old = inv.getItem(target);
-        if (old.isEmpty() || !slot.mayPlace(old)) return false;
-        inv.setItem(target, stack.copy());
-        slot.set(old.copy());
-        inv.setChanged();
-        message(p, k == Kind.HEALING ? "已替換第 4 格的補品（原本的放回背包）" : "已替換第 5 格的投擲物（原本的放回背包）");
-        return true;
     }
 
     /** 防具互換：回傳 true = 已處理。身上那個部位空著時交給原本的流程（直接穿上）。 */

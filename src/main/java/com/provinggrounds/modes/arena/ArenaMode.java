@@ -593,7 +593,8 @@ public abstract class ArenaMode {
         endTicks = cfg.endSeconds.get() * 20;
         GameManager.get().endGame();
         broadcastTitle(headline, Component.literal(scoreSummary()).withStyle(ChatFormatting.WHITE), 100);
-        playAll(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+        // 團隊死鬥、佔點的獲勝音效音量 50%（計畫書 6 A3）
+        playAll(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, kind() == GameManager.GameMode.GK ? 1f : 0.5f, 1f);
         server.getPlayerList().broadcastSystemMessage(Component.literal("[PG] ").withStyle(ChatFormatting.GOLD)
             .append(headline.copy()).append(Component.literal("　" + scoreSummary()).withStyle(ChatFormatting.GRAY)), false);
         // 擊殺榜前三

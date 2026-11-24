@@ -93,6 +93,11 @@ public final class LobbyManager {
 
     /** 槍械模式（這一場只出某一類的槍）。 */
     public WeaponMode weaponMode() { return weaponMode; }
+
+    /** 團隊死鬥、佔點：固定紅藍兩隊，沒有孤狼（計畫書 6 A1）。 */
+    public boolean twoTeams() {
+        return gameMode == GameManager.GameMode.TDM || gameMode == GameManager.GameMode.DOM;
+    }
     private final Set<UUID> ready = new HashSet<>();
     private int countdownTicks = -1; // 強制開始倒數，-1 = 沒在倒數
     private boolean dirty = true;
@@ -233,6 +238,7 @@ public final class LobbyManager {
                 if (isSpectator(sender)) { deny(sender, "觀戰中不能選隊，請先按「加入遊戲」。"); return; }
                 if (teamMode == TeamMode.ASSIGN && !op) { deny(sender, "目前由管理員分隊。"); return; }
                 if (arg < 0 || arg > teamCount) return;
+                if (arg == 0 && twoTeams()) { deny(sender, "團隊死鬥、佔點沒有孤狼，請選紅隊或藍隊。"); return; }
                 TeamManager.get().assignTeam(sender, TeamManager.Team.of(arg));
             }
             case TOGGLE_READY -> {
@@ -274,7 +280,12 @@ public final class LobbyManager {
                 GameManager.GameMode[] modes = GameManager.GameMode.values();
                 if (arg <= 0 || arg >= modes.length) return false; // 0 = NONE
                 gameMode = modes[arg];
-                if (gameMode == GameManager.GameMode.TDM || gameMode == GameManager.GameMode.DOM) teamCount = 2; // 紅藍兩隊
+                if (twoTeams()) {
+                    teamCount = 2; // 紅藍兩隊；孤狼、第 3 隊以後的人改回未分隊
+                    for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                        TeamManager.get().getTeam(p).ifPresent(t -> { if (t.id == 0 || t.id > 2) TeamManager.get().unassign(p); });
+                    }
+                }
             }
             case SET_TDM_KILLS -> tdmKills = Math.max(10, Math.min(10_000, arg));
             case SET_TDM_MINUTES -> tdmMinutes = Math.max(1, Math.min(120, arg));
@@ -295,6 +306,7 @@ public final class LobbyManager {
             case SET_PLAYER_TEAM -> {
                 // arg：1.. 隊伍、0 孤狼、-1 未分隊。觀戰者被拖到隊伍裡 → 先結束觀戰再分隊
                 if (target == null || arg < -1 || arg > teamCount) return false;
+                if (arg == 0 && twoTeams()) return false; // 團隊死鬥、佔點沒有孤狼
                 if (isSpectator(target)) leaveSpectate(target);
                 if (arg == -1) TeamManager.get().unassign(target);
                 else TeamManager.get().assignTeam(target, TeamManager.Team.of(arg));

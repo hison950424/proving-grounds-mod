@@ -339,6 +339,9 @@ public final class DomMode extends ArenaMode {
             boolean won = players.get(p.getUUID()).team == winner;
             p.sendSystemMessage(Component.literal("[系統] " + (won ? winMsg + "本回合勝利 +" + cfg.domRoundScore.get() + " 分" : loseMsg + "本回合失敗"))
                 .withStyle(won ? ChatFormatting.GREEN : ChatFormatting.RED, ChatFormatting.BOLD));
+            // 回合勝負音效（計畫書 6 A4）：贏＝明亮的升級聲、輸＝低沉的號角
+            if (won) p.playNotifySound(SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.MASTER, 0.8f, 1.2f);
+            else p.playNotifySound(SoundEvents.RAID_HORN.value(), net.minecraft.sounds.SoundSource.MASTER, 0.5f, 0.7f);
         }
         int win = ArenaConfig.at(cfg.domWinMoney.get(), winStreak[winner]);
         int loss = ArenaConfig.at(cfg.domLossMoney.get(), lossStreak[loser]);
@@ -351,6 +354,7 @@ public final class DomMode extends ArenaMode {
 
     private void roundTie(String why) {
         broadcast(Component.literal("[系統] " + why + "佔領平手，本回合平局").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
+        playAll(SoundEvents.NOTE_BLOCK_BELL.value(), 0.7f, 0.8f); // 平局音效
         addMoneyTeam(RED, cfg.domTieMoney.get(), "本回合平局", true);
         addMoneyTeam(BLUE, cfg.domTieMoney.get(), "本回合平局", true);
         for (ServerPlayer p : online()) {
