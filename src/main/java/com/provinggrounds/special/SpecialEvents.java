@@ -52,6 +52,9 @@ public final class SpecialEvents {
         SpecialWorld.tick(event.getServer());
     }
 
+    /** 正在咳的玩家 → 這一陣還剩幾聲。 */
+    private static final java.util.Map<java.util.UUID, Integer> COUGH_FITS = new java.util.HashMap<>();
+
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer p)) return;
@@ -62,12 +65,19 @@ public final class SpecialEvents {
         if (p.hasEffect(SpecialRegistry.GASSED.get())) {
             var r = p.getRandom();
             if (r.nextInt(45) == 0) { // 不定時劇烈咳嗽：大家都聽得到，本人視角先上揚再往下
-                p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.PANDA_SNEEZE, SoundSource.PLAYERS, 1f, 0.55f + r.nextFloat() * 0.15f);
+                COUGH_FITS.put(p.getUUID(), 1 + r.nextInt(3)); // 一陣咳 1～3 聲（咳、咳咳）
                 PGNetwork.sendTo(p, SpecialFxPacket.of(SpecialFxPacket.COUGH, 0, 0));
             }
-            if (r.nextInt(60) == 0) { // 失去方向感：被強制往前／後／左／右移動一段時間
-                PGNetwork.sendTo(p, SpecialFxPacket.of(SpecialFxPacket.DISORIENT, r.nextInt(4), 12 + r.nextInt(18)));
-            }
+            // 失去方向感：客戶端在毒氣效果期間自己處理（每 3～5 秒換一個方向讓視角慢慢偏），不用伺服器通知
+        }
+        // 一陣咳嗽：每 5 tick 咳一聲
+        Integer left = COUGH_FITS.get(p.getUUID());
+        if (left != null && p.tickCount % 5 == 0) {
+            var r = p.getRandom();
+            p.level().playSound(null, p.getX(), p.getEyeY(), p.getZ(), SpecialRegistry.GAS_COUGH.get(), SoundSource.PLAYERS, 1f, 0.9f + r.nextFloat() * 0.2f);
+            if (left <= 1) COUGH_FITS.remove(p.getUUID());
+            else COUGH_FITS.put(p.getUUID(), left - 1);
+
         }
     }
 

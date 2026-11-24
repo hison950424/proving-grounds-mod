@@ -49,7 +49,8 @@ import java.util.Set;
  *   - 發光：GlowSyncPacket 的清單 → 畫發光外框（EntitySpecialMixin）與地圖紅點（MapRender）；
  *           殘影分身對使用者與隊友帶淡色輪廓。
  *   - 震盪：視角不受控制地上下左右晃動，快結束時線性減弱。
- *   - 毒氣：畫面像素化（原版 bits 後處理）、咳嗽（視角先上揚再往下）、失去方向感（強制往某方向移動）。
+ *   - 毒氣：視野模糊（原版 blur 後處理，模糊程度約 1.5 秒逐漸加深、效果結束後約 2 秒逐漸恢復清晰）、
+ *           咳嗽（視角先上揚再往下）、失去方向感（每 3～5 秒換一個隨機方向與速度，視角持續慢慢往那邊偏，玩家可以用滑鼠拉回來）。
  *   - 雷達脈衝：一圈往外擴散的環。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
@@ -62,7 +63,13 @@ public final class ClientSpecial {
     private static volatile List<GlowSyncPacket.Entry> mapTargets = List.of();
 
     private static int coughTicks = -1;
-    private static int disorientDir, disorientTicks;
+    // 失去方向感：這一段的方向（弧度）、速度（度／秒）、剩下幾秒
+    private static double driftAngle, driftSpeed, driftLeft;
+    private static long lastFrameNanos;
+    // 毒氣模糊：0 = 清晰、1 = 最模糊
+    private static float gasLevel;
+    private static java.lang.reflect.Field passesField;
+    private static final float BLUR_MAX_RADIUS = 9f, BLUR_IN_TICKS = 30f, BLUR_OUT_TICKS = 40f;
     private static long radarStart = -1;
     private static Vec3 radarCenter = Vec3.ZERO;
     private static int radarRadius;
@@ -76,7 +83,8 @@ public final class ClientSpecial {
         SpecialHooks.CLIENT_GLOWING.clear();
         mapTargets = List.of();
         coughTicks = -1;
-        disorientTicks = 0;
+        driftLeft = 0;
+        gasLevel = 0;
         SpecialHotbar.pearlFlying = false;
         radarStart = -1;
     }
@@ -107,7 +115,7 @@ public final class ClientSpecial {
         switch (fx.kind()) {
             case SpecialFxPacket.COUGH -> coughTicks = 0;
             case SpecialFxPacket.PEARL -> SpecialHotbar.pearlFlying = fx.a() != 0;
-            case SpecialFxPacket.DISORIENT -> { disorientDir = fx.a(); disorientTicks = fx.b(); }
+            case SpecialFxPacket.DISORIENT -> { } // 舊版伺服器的通知：現在由客戶端在毒氣效果期間自己處理
             case SpecialFxPacket.RADAR -> {
                 radarStart = System.currentTimeMillis();
                 radarCenter = new Vec3(fx.x(), fx.y(), fx.z());
@@ -136,18 +144,66 @@ public final class ClientSpecial {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
-        if (p == null) { if (gasShader) stopGasShader(mc); clear(); return; }
+        if (p == null) { if (gasShader) stopGasShader(mc); clear(); gasLevel = 0; return; }
         while (USE_KEY.consumeClick()) {
             if (mc.screen == null) PGNetwork.sendToServer(new SpecialUsePacket());
         }
         if (p.tickCount % 10 == 0) rebuildGlowing();
         tickConcussion(p);
         tickCough(p);
-        if (disorientTicks > 0) disorientTicks--;
-        // 毒氣：畫面像素化
+        // 毒氣：模糊程度逐漸加深／逐漸恢復
         boolean gassed = p.hasEffect(SpecialRegistry.GASSED.get());
-        if (gassed && !gasShader) startGasShader(mc);
-        else if (!gassed && gasShader) stopGasShader(mc);
+        gasLevel = gassed ? Math.min(1f, gasLevel + 1f / BLUR_IN_TICKS) : Math.max(0f, gasLevel - 1f / BLUR_OUT_TICKS);
+        if (gasLevel > 0 && !gasShader) startGasShader(mc);
+        else if (gasLevel <= 0 && gasShader) stopGasShader(mc);
+        if (gasShader) setBlurRadius(mc, gasLevel * gasLevel * (3 - 2 * gasLevel) * BLUR_MAX_RADIUS); // 平滑曲線
+    }
+
+    /** 設定模糊後處理兩個 pass 的 Radius（0 會讓著色器除以零，所以最小 0.01）。 */
+    @SuppressWarnings("unchecked")
+    private static void setBlurRadius(Minecraft mc, float radius) {
+        PostChain chain = mc.gameRenderer.currentEffect();
+        if (chain == null || !chain.getName().contains("blur")) return;
+        try {
+            if (passesField == null) passesField = ObfuscationReflectionHelper.findField(PostChain.class, "f_110009_");
+            for (net.minecraft.client.renderer.PostPass pass : (List<net.minecraft.client.renderer.PostPass>) passesField.get(chain)) {
+                pass.getEffect().safeGetUniform("Radius").set(Math.max(0.01f, radius));
+            }
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // 取不到就維持預設模糊
+        }
+    }
+
+    /**
+     * 失去方向感（毒氣效果期間）：每段 3～5 秒，隨機一個方向（上下左右任意角度）與速度（每秒 10～28 度），
+     * 視角持續慢慢往那邊偏；一段結束還在毒氣效果中就換新的方向與速度。每一幀依經過時間平滑套用，
+     * 只加上偏移量，玩家自己的滑鼠操作照樣有效，可以拉回來。上下的偏移只有左右的一半，避免一直看天或看地。
+     */
+    @SubscribeEvent
+    public static void onRenderTick(TickEvent.RenderTickEvent event) {
+        if (event.phase != TickEvent.Phase.START) return;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer p = mc.player;
+        long now = System.nanoTime();
+        double dt = lastFrameNanos == 0 ? 0 : Math.min(0.1, (now - lastFrameNanos) / 1e9);
+        lastFrameNanos = now;
+        if (p == null || mc.isPaused() || !p.hasEffect(SpecialRegistry.GASSED.get())) { driftLeft = 0; return; }
+        if (driftLeft <= 0) {
+            var r = p.getRandom();
+            driftAngle = r.nextDouble() * Math.PI * 2;
+            driftSpeed = 10 + r.nextDouble() * 18;
+            driftLeft = 3 + r.nextDouble() * 2;
+        }
+        driftLeft -= dt;
+        double ramp = Math.min(1, gasLevel * 1.5); // 剛進毒氣時慢慢加強
+        double yaw = Math.cos(driftAngle) * driftSpeed * dt * ramp;
+        double pitch = Math.sin(driftAngle) * driftSpeed * 0.5 * dt * ramp;
+        float newPitch = (float) (p.getXRot() + pitch);
+        if (newPitch > 80 || newPitch < -80) { driftAngle = -driftAngle; newPitch = Math.max(-80, Math.min(80, newPitch)); } // 快看到正上或正下就反彈
+        p.setYRot((float) (p.getYRot() + yaw));
+        p.setXRot(newPitch);
+        p.yRotO = p.getYRot();
+        p.xRotO = p.getXRot();
     }
 
     /** 震盪：視角不受控制地晃動（真的改變視角，會影響瞄準），快結束時線性減弱。 */
@@ -176,18 +232,7 @@ public final class ClientSpecial {
         if (++coughTicks >= 10) coughTicks = -1;
     }
 
-    /** 失去方向感：覆寫移動輸入（0 前、1 後、2 左、3 右）。 */
-    @SubscribeEvent
-    public static void onMovementInput(MovementInputUpdateEvent event) {
-        if (disorientTicks <= 0) return;
-        var in = event.getInput();
-        in.up = disorientDir == 0;
-        in.down = disorientDir == 1;
-        in.left = disorientDir == 2;
-        in.right = disorientDir == 3;
-        in.forwardImpulse = disorientDir == 0 ? 1 : disorientDir == 1 ? -1 : 0;
-        in.leftImpulse = disorientDir == 2 ? 1 : disorientDir == 3 ? -1 : 0;
-    }
+    // 失去方向感改由 onRenderTick 處理（視角偏移，不再強制移動）
 
     /** 動作鎖定：倒地、隱形斗篷時，在客戶端就先擋掉左右鍵（伺服器也會擋）。 */
     @SubscribeEvent
@@ -200,7 +245,7 @@ public final class ClientSpecial {
 
     // ── 毒氣的像素化畫面（原版 shaders/post/bits.json） ────────────────────
 
-    private static final ResourceLocation BITS = new ResourceLocation("shaders/post/bits.json");
+    private static final ResourceLocation BITS = new ResourceLocation("shaders/post/blur.json"); // 模糊（強度由 setBlurRadius 逐漸調整）
     private static Method loadEffect;
 
     private static void startGasShader(Minecraft mc) {
@@ -217,7 +262,8 @@ public final class ClientSpecial {
     private static void stopGasShader(Minecraft mc) {
         gasShader = false;
         PostChain cur = mc.gameRenderer.currentEffect();
-        if (cur != null && cur.getName().contains("bits")) mc.gameRenderer.shutdownEffect();
+        if (cur != null && cur.getName().contains("blur")) mc.gameRenderer.shutdownEffect();
+
     }
 
     // ── 雷達脈衝的擴散環 ─────────────────────────────────────────────────────
