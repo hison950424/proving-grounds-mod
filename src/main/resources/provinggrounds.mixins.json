@@ -20,7 +20,8 @@
   ],
   "client": [
     "HumanoidArmsMixin",
-    "DamageSoundMixin"
+    "DamageSoundMixin",
+    "ContainerScreenBgMixin"
   ],
   "injectors": {
     "defaultRequire": 0
