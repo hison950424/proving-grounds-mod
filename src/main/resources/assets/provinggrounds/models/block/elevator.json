@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "provinggrounds:block/elevator_top",
+    "bottom": "provinggrounds:block/elevator_top",
+    "side": "provinggrounds:block/elevator_side"
+  }
+}

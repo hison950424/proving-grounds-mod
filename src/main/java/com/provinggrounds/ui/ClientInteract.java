@@ -47,7 +47,7 @@ import javax.annotation.Nullable;
  *   - 互動鍵（預設 F，可在按鍵設定改）：按一下就和準星指著的門、箱子、墓碑、祭壇…互動，或開始扶倒地隊友。
  *   - 拿槍時右鍵不和方塊、實體互動（只開鏡）；空手時右鍵照原版。
  *   - 準星下方小字提示「F 開啟」「F 扶起」…；開鏡時不顯示。
- *   - 點狀準心：空手時由這裡畫，拿槍時由 TACZ 畫（已把 TACZ 準星設成點，見 ClientGunAim）。
+ *   - 點狀準心：空手、拿槍都由這裡畫（TACZ 準星設成 EMPTY，見 ClientGunAim；開鏡時不畫）。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
 public final class ClientInteract {
@@ -163,16 +163,39 @@ public final class ClientInteract {
 
     // ── 點狀準心（空手時；拿槍時 TACZ 會自己畫並取消原版準星）──────────────────
 
-    @SubscribeEvent(priority = EventPriority.LOW)
+    /**
+     * 點狀準心：空手時取消原版準星改畫點；拿槍時 TACZ 已經取消原版準星（它只畫命中標記，準星種類被設成 EMPTY），
+     * 這裡一樣畫同一個點（開鏡時不畫）。receiveCanceled：TACZ 先取消了也要收到事件。
+     */
+    @SubscribeEvent(priority = EventPriority.LOW, receiveCanceled = true)
     public static void onCrosshair(RenderGuiOverlayEvent.Pre event) {
-        if (event.getOverlay() != VanillaGuiOverlay.CROSSHAIR.type() || event.isCanceled()) return;
+        if (event.getOverlay() != VanillaGuiOverlay.CROSSHAIR.type()) return;
         Minecraft mc = Minecraft.getInstance();
-        if (!PGClientConfig.CLIENT.crosshairDot.get() || mc.player == null || GunCompat.holdsGun(mc.player)) return;
-        event.setCanceled(true);
+        if (!PGClientConfig.CLIENT.crosshairDot.get() || mc.player == null) return;
+        boolean gun = GunCompat.holdsGun(mc.player);
+        if (gun) {
+            if (!ClientGunAim.taczCrosshairEmpty() || ClientGunAim.aiming()) return; // 玩家在 TACZ 選了別的準星：交給 TACZ
+        } else {
+            if (event.isCanceled()) return; // 其他模組已經接手
+            event.setCanceled(true);
+        }
         if (!mc.options.getCameraType().isFirstPerson() || mc.player.isSpectator() || mc.options.renderDebug) return;
-        int cx = event.getWindow().getGuiScaledWidth() / 2, cy = event.getWindow().getGuiScaledHeight() / 2;
-        GuiGraphics g = event.getGuiGraphics();
-        g.fill(cx - 2, cy - 2, cx + 2, cy + 2, 0x70000000);
-        g.fill(cx - 1, cy - 1, cx + 1, cy + 1, 0xF0FFFFFF);
+        drawDot(event.getGuiGraphics(), event.getWindow());
+    }
+
+    /**
+     * 畫點狀準心（用真正的螢幕像素畫，才能做出比 1 個介面像素更細的大小）：
+     * 白點約 1.3 個介面像素（介面大小 3 時 4×4 像素，原本的 65%），外面一圈 2 像素、幾乎不透明的黑框（原本 44% 透明的淡黑）。
+     */
+    static void drawDot(GuiGraphics g, com.mojang.blaze3d.platform.Window win) {
+        double s = win.getGuiScale();
+        int core = Math.max(2, (int) Math.round(1.3 * s)), edge = Math.max(2, (int) Math.round(0.65 * s));
+        int cx = win.getWidth() / 2, cy = win.getHeight() / 2;
+        int c0 = cx - core / 2, c1 = c0 + core, r0 = cy - core / 2, r1 = r0 + core;
+        g.pose().pushPose();
+        g.pose().scale((float) (1 / s), (float) (1 / s), 1);
+        g.fill(c0 - edge, r0 - edge, c1 + edge, r1 + edge, 0xD8000000);
+        g.fill(c0, r0, c1, r1, 0xFFFFFFFF);
+        g.pose().popPose();
     }
 }

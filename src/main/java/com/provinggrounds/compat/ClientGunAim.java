@@ -125,22 +125,47 @@ public final class ClientGunAim {
         }
     }
 
+    /**
+     * 拿槍時的點狀準心改由本模組自己畫（大小、黑框跟空手一致，見 ClientInteract.drawDot）：
+     * 把 TACZ 的準星種類設成 EMPTY（不畫準星，命中標記照常）。只做一次（crosshair_dot_tacz_applied_v2）：
+     * TACZ 目前是 DOT_1（舊版設的）或還沒被舊版設定過才改；玩家自己選了別的準星就不動。
+     */
     public static void applyDotCrosshairOnce() {
-
         var cfg = com.provinggrounds.config.PGClientConfig.CLIENT;
-        if (!cfg.crosshairDot.get() || cfg.crosshairDotTaczApplied.get() || !ModList.get().isLoaded("tacz")) return;
+        if (!cfg.crosshairDot.get() || cfg.crosshairDotTaczV2Applied.get() || !ModList.get().isLoaded("tacz")) return;
         try {
             Object value = Class.forName("com.tacz.guns.config.client.RenderConfig").getField("CROSSHAIR_TYPE").get(null);
             Class<?> type = Class.forName("com.tacz.guns.client.renderer.crosshair.CrosshairType");
-            Object dot = type.getField("DOT_1").get(null);
-            value.getClass().getMethod("set", Object.class).invoke(value, dot);
-            value.getClass().getMethod("save").invoke(value);
-            ProvingGroundsMod.LOGGER.info("Set TACZ crosshair to DOT_1.");
+            Object now = value.getClass().getMethod("get").invoke(value);
+            String name = now instanceof Enum<?> e ? e.name() : "";
+            if (name.equals("DOT_1") || !cfg.crosshairDotTaczApplied.get()) {
+                value.getClass().getMethod("set", Object.class).invoke(value, type.getField("EMPTY").get(null));
+                value.getClass().getMethod("save").invoke(value);
+                ProvingGroundsMod.LOGGER.info("Set TACZ crosshair to EMPTY (Proving Grounds draws the dot).");
+            }
         } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
             ProvingGroundsMod.LOGGER.warn("Could not set TACZ crosshair: {}", e.toString());
         }
         cfg.crosshairDotTaczApplied.set(true);
         cfg.crosshairDotTaczApplied.save();
+        cfg.crosshairDotTaczV2Applied.set(true);
+        cfg.crosshairDotTaczV2Applied.save();
+    }
+
+    private static Object crosshairValue;
+    private static boolean crosshairFailed;
+
+    /** TACZ 的準星種類目前是不是 EMPTY（是的話拿槍時由本模組畫點狀準心）。 */
+    public static boolean taczCrosshairEmpty() {
+        if (crosshairFailed || !ModList.get().isLoaded("tacz")) return false;
+        try {
+            if (crosshairValue == null) crosshairValue = Class.forName("com.tacz.guns.config.client.RenderConfig").getField("CROSSHAIR_TYPE").get(null);
+            Object now = ((net.minecraftforge.common.ForgeConfigSpec.ConfigValue<?>) crosshairValue).get();
+            return now instanceof Enum<?> e && e.name().equals("EMPTY");
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+            crosshairFailed = true;
+            return false;
+        }
     }
 
     private static boolean physicallyDown(Minecraft mc, InputConstants.Key key) {

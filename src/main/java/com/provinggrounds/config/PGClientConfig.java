@@ -39,7 +39,7 @@ public final class PGClientConfig {
     public final ForgeConfigSpec.BooleanValue damageIndicatorEnabled;
     public final ForgeConfigSpec.DoubleValue damageIndicatorSeconds;
     // 計畫書 5：準星、互動提示、戰鬥提示
-    public final ForgeConfigSpec.BooleanValue crosshairDot, crosshairDotTaczApplied, defaultKeysV2Applied;
+    public final ForgeConfigSpec.BooleanValue crosshairDot, crosshairDotTaczApplied, crosshairDotTaczV2Applied, defaultKeysV2Applied;
     public final ForgeConfigSpec.BooleanValue interactHint, killIconEnabled, killFeedEnabled, killSoundEnabled, domBeacon, antiCampWall;
     public final ForgeConfigSpec.DoubleValue hudScale, killSoundVolume;
     public final ForgeConfigSpec.BooleanValue scoreboardToggle;
@@ -104,6 +104,8 @@ public final class PGClientConfig {
         crosshairDot = builder.comment("點狀準心（拿槍、空手都是點；關掉 = 原版準星）").define("crosshair_dot", true);
         crosshairDotTaczApplied = builder.comment("內部用：是否已把 TACZ 的槍械準星設成點狀（只做一次，之後在 TACZ 設定改的會保留）")
             .define("crosshair_dot_tacz_applied_v1", false);
+        crosshairDotTaczV2Applied = builder.comment("內部用：是否已把 TACZ 的槍械準星改成 EMPTY、改由本模組畫點狀準心（只做一次）")
+            .define("crosshair_dot_tacz_applied_v2", false);
         interactHint = builder.comment("準星下方顯示「F 開啟」「F 扶起」等互動提示（拿槍時一定顯示；這裡關掉只影響空手）").define("interact_hint", true);
         killIconEnabled = builder.comment("擊殺時準星附近的小圖示").define("kill_icon", true);
         killFeedEnabled = builder.comment("右上角擊殺紀錄（團隊死鬥／佔點／槍王之王）").define("kill_feed", true);

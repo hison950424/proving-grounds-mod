@@ -71,6 +71,12 @@ public final class PGBlocks {
         BLOCK_ENTITIES.register("stats_board", () -> BlockEntityType.Builder.of(com.provinggrounds.block.StatsBoardBlockEntity::new, STATS_BOARD.get()).build(null));
 
     /** 復活牌（只會以掉落物形式存在；撿起後轉成玩家身上的資料，不進背包）。 */
+    /** 電梯方塊：站在上面跳躍 = 傳送到正上方的電梯、蹲下 = 傳送到正下方的電梯（邏輯在 block/ElevatorEvents）。 */
+    public static final RegistryObject<Block> ELEVATOR = BLOCKS.register("elevator", () -> new Block(
+        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.5f, 6f).sound(SoundType.METAL)));
+    public static final RegistryObject<Item> ELEVATOR_ITEM = ITEMS.register("elevator",
+        () -> new BlockItem(ELEVATOR.get(), new Item.Properties()));
+
     public static final RegistryObject<Item> REVIVE_CARD = ITEMS.register("revive_card",
         () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
 
@@ -116,6 +122,7 @@ public final class PGBlocks {
                 out.accept(STATS_BOARD_ITEM.get());
                 out.accept(CRATE_LOW.get()); out.accept(CRATE_MID.get()); out.accept(CRATE_HIGH.get()); out.accept(CRATE_AIRDROP.get());
                 out.accept(ALTAR_ITEM.get());
+                out.accept(ELEVATOR_ITEM.get());
                 out.accept(BACKPACK_1.get()); out.accept(BACKPACK_2.get()); out.accept(BACKPACK_3.get());
                 out.accept(REVIVE_CARD.get());
                 // 特殊物品（計畫書 4）與擊退盾：本模組所有物品都可以在創造模式拿到
@@ -150,6 +157,7 @@ public final class PGBlocks {
             event.accept(CRATE_AIRDROP);
             event.accept(ALTAR_ITEM);
             event.accept(STATS_BOARD_ITEM);
+            event.accept(ELEVATOR_ITEM);
         }
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(BACKPACK_1);
