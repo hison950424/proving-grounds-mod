@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
+import com.provinggrounds.network.ArenaStatePacket;
 import java.util.*;
 
 /**
@@ -291,8 +292,33 @@ public final class DomMode extends ArenaMode {
         else if (blue == 0) roundWon(RED, "敵方全員陣亡！", "我方全員陣亡！");
     }
 
+    /** 開放中的據點：光柱顏色 無人＝白、紅領先＝紅、藍領先＝藍、爭奪中＝黃（客戶端閃爍）。 */
+    @Override
+    protected List<ArenaStatePacket.Marker> markers(ArenaPlayer viewer) {
+        List<ArenaStatePacket.Marker> out = super.markers(viewer);
+        for (Point pt : points) {
+            if (!pt.open) continue;
+            boolean contested = pt.red > 0 && pt.blue > 0;
+            int color = contested ? 0xFFD030 : pt.progress > 0 ? 0xFF4040 : pt.progress < 0 ? 0x4080FF : 0xFFFFFF;
+            out.add(new ArenaStatePacket.Marker((byte) 0, pt.name, pt.center.x, pt.center.y, pt.center.z, pt.radius, color, contested));
+        }
+        return out;
+    }
+
+    @Override
+    public String debug(String action, String arg, int n) {
+
+        if (action.equals("skipround")) {
+            if (phase != Phase.ROUND) return "現在不是戰鬥階段";
+            resolveByLead("管理員結束回合");
+            return "已結束本回合";
+        }
+        return super.debug(action, arg, n);
+    }
+
     /** 依開放據點的領先數判定（時間到、同時全滅）；一樣多就平手。 */
     private void resolveByLead(String why) {
+
         int red = 0, blue = 0;
         for (Point pt : points) {
             if (!pt.open) continue;
@@ -360,7 +386,10 @@ public final class DomMode extends ArenaMode {
 
     // ── HUD ─────────────────────────────────────────────────────────────────
 
-    @Override protected Vec3 spawnOf(ArenaPlayer ap) { return teamSpawn(ap.team); }
+    @Override protected Vec3 spawnOf(ArenaPlayer ap) { return randomTeamSpawn(ap.team); }
+
+    /** 佔點回合中死亡是旁觀到下一回合，不用重生倒數。 */
+    @Override protected int respawnDelaySeconds() { return 0; }
 
     @Override
     protected List<ScoreLine> scoreLines(ArenaPlayer viewer) {

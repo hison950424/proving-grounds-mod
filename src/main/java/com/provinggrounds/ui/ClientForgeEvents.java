@@ -206,6 +206,7 @@ public final class ClientForgeEvents {
         com.provinggrounds.client.ClientMapData.clear();
         ClientBRState.clear();
         com.provinggrounds.client.ClientArenaState.clear();
+        KillHud.clear();
         com.provinggrounds.client.ClientProneData.clear();
         ClientStatsBoard.clear();
         SpawnPointRenderer.clear();

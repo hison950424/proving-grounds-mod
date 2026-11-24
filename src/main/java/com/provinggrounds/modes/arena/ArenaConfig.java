@@ -20,7 +20,11 @@ public final class ArenaConfig {
     public final ForgeConfigSpec.ConfigValue<List<? extends String>> barriers, supplyChests;
     public final ForgeConfigSpec.IntValue baseRadius, startMoney, transferCooldown, endSeconds;
     public final ForgeConfigSpec.ConfigValue<String> ammoBox;
-    public final ForgeConfigSpec.BooleanValue antiCamp;
+    public final ForgeConfigSpec.BooleanValue antiCamp, antiCampNoFire;
+    // 計畫書 5
+    public final ForgeConfigSpec.IntValue respawnDelay, disconnectTimeout, spawnProtect, antiCampRadius, antiCampWarn,
+        antiCampStart, antiCampStep, antiCampMax;
+    public final ForgeConfigSpec.ConfigValue<List<? extends String>> redSpawnsExtra, blueSpawnsExtra;
 
     // 團隊死鬥
     public final ForgeConfigSpec.IntValue tdmKills, tdmMinutes, tdmKillMoney, tdmDeathMoney, tdmLoserBonus;
@@ -49,10 +53,22 @@ public final class ArenaConfig {
             .defineListAllowEmpty(List.of("supply_chests"), () -> List.of("193 14 -84", "129 14 -12", "193 14 -85", "129 14 -11"), ArenaConfig::isString);
         baseRadius = b.comment("基地範圍：重生點周圍幾格（水平）。在基地裡才能買東西、換職業").defineInRange("base_radius", 8, 1, 64);
         startMoney = b.comment("開局金錢").defineInRange("start_money", 5, 0, 1_000_000);
-        transferCooldown = b.comment("轉帳冷卻（秒）").defineInRange("transfer_cooldown", 45, 0, 3600);
+        transferCooldown = b.comment("轉帳冷卻（秒；0 = 沒有冷卻）").defineInRange("transfer_cooldown_v2", 0, 0, 3600); // 計畫書 5 改名：舊的 45 秒不會蓋掉新預設
         endSeconds = b.comment("比賽結束後幾秒回大廳").defineInRange("end_seconds", 10, 1, 120);
         ammoBox = b.comment("無限彈藥箱（格式同 /give）").define("ammo_box", "tacz:ammo_box{AllTypeCreative:1b}");
-        antiCamp = b.comment("防蹲點：踩到敵方基地的羊毛（紅隊基地＝紅羊毛）會緩速、不能跳、受傷、發光").define("anti_camp", true);
+        antiCamp = b.comment("防蹲點：進入敵方重生點附近（水平距離 anti_camp_radius 格內）先警告，之後每秒受傷、緩速、發光").define("anti_camp", true);
+        antiCampRadius = b.comment("防蹲點範圍（格，水平距離）").defineInRange("anti_camp_radius", 18, 2, 128);
+        antiCampWarn = b.comment("進入後先警告幾秒才開始受傷").defineInRange("anti_camp_warn", 2, 0, 60);
+        antiCampStart = b.comment("第一秒的傷害").defineInRange("anti_camp_start", 2, 0, 1000);
+        antiCampStep = b.comment("之後每秒多扣多少（線性遞增）").defineInRange("anti_camp_step", 5, 0, 1000);
+        antiCampMax = b.comment("每秒傷害上限").defineInRange("anti_camp_max", 100, 1, 1000);
+        antiCampNoFire = b.comment("在敵方重生區內不能開槍").define("anti_camp_no_fire", false);
+        spawnProtect = b.comment("重生保護秒數（無敵但不能攻擊；開槍或時間到就結束；0 = 關閉）").defineInRange("spawn_protect", 5, 0, 60);
+        redSpawnsExtra = b.comment("紅隊額外的重生點（x y z），重生時從 red_spawn 和這些點隨機選一個").defineListAllowEmpty(List.of("red_spawns_extra"), List::of, ArenaConfig::isString);
+        blueSpawnsExtra = b.comment("藍隊額外的重生點（x y z）").defineListAllowEmpty(List.of("blue_spawns_extra"), List::of, ArenaConfig::isString);
+        respawnDelay = b.comment("團隊死鬥、槍王之王：死亡後幾秒才重生（倒數期間是旁觀）").defineInRange("respawn_delay", 3, 0, 60);
+        disconnectTimeout = b.comment("掉線超過幾秒就移出比賽與隊伍（所有模式；移出前都算隊伍人數）").defineInRange("disconnect_timeout", 300, 10, 86400);
+
 
         b.comment("團隊死鬥").push("tdm");
         tdmKills = b.comment("預設目標擊殺數（大廳可以調）").defineInRange("target_kills", 100, 1, 100_000);

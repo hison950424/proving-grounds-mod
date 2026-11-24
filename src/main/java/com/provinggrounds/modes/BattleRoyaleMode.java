@@ -1087,8 +1087,13 @@ public class BattleRoyaleMode {
         PGNetwork.sendToAll(new KillFeedPacket(
             killer != null ? killer.getGameProfile().getName() : "", killer != null ? colorOf(killer.getUUID()) : 0xFFFFFF,
             part.name, colorOf(victim.getUUID()), false));
+        if (killer != null && !TeamManager.get().isSameTeam(killer, victim)) { // 擊殺圖示與音效（計畫書 5 的 E3）
+            Participant kpart = participants.get(killer.getUUID());
+            com.provinggrounds.core.KillEvents.brKill(killer, victim, source, kpart != null ? kpart.stats.kills : 1);
+        }
 
         // 屍體位置：掉進虛空時用最後站穩的位置
+
         Vec3 corpse = safePos(victim, part);
         clearDowned(victim, part);
         dropHeldCards(victim, part, corpse);

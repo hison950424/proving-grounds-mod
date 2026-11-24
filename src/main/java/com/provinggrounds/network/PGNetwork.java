@@ -84,7 +84,10 @@ public final class PGNetwork {
             ArenaStatePacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, ArenaActionPacket.class, ArenaActionPacket::encode, ArenaActionPacket::decode,
             ArenaActionPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, KillNoticePacket.class, KillNoticePacket::encode, KillNoticePacket::decode,
+            KillNoticePacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, InteractKeyPacket.class, InteractKeyPacket::encode, InteractKeyPacket::decode,
+
             InteractKeyPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
 
     }

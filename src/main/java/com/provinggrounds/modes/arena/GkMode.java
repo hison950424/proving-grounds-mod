@@ -33,7 +33,7 @@ public final class GkMode extends ArenaMode {
     private static final class Progress {
         final String key, label;
         final int color;
-        int stage = 1, kills, needed, members;
+        int stage = 1, kills;
         Progress(String key, String label, int color) { this.key = key; this.label = label; this.color = color; }
     }
 
@@ -71,9 +71,59 @@ public final class GkMode extends ArenaMode {
             players.put(p.getUUID(), ap);
             Progress pr = progress.computeIfAbsent(ap.teamKey, k -> new Progress(k,
                 t == TeamManager.Team.SOLO ? ap.name : t.displayName, rgb(t == TeamManager.Team.SOLO ? ChatFormatting.GRAY : t.color)));
-            pr.members++;
         }
-        for (Progress pr : progress.values()) pr.needed = Math.max(1, pr.members * multiplier);
+    }
+
+    /**
+     * 晉級門檻 ＝ 目前隊伍人數 × 倍率（計畫書 5 的 C4）。掉線的人在被移出比賽前都算人數；
+     * 人數一變（移出、換隊）門檻就跟著變。
+     */
+    private int needed(Progress pr) {
+        int members = 0;
+        for (ArenaPlayer ap : players.values()) if (ap.teamKey.equals(pr.key)) members++;
+        return Math.max(1, members * multiplier);
+    }
+
+    /** 擊殺數到門檻就晉級一階；多出來的擊殺帶到下一階段（同一刻兩個擊殺不會被吃掉）。回傳是否結束比賽。 */
+    private boolean checkAdvance(Progress pr) {
+        int need = needed(pr);
+        if (pr.kills < need || isEnding()) return false;
+        pr.kills -= need;
+        return advance(pr);
+    }
+
+    @Override
+    protected void onRemoved(ArenaPlayer ap) {
+        // 人數變少：門檻在下一次 tick 的 checkAdvance 重算，已經達到就立刻晉級
+    }
+
+    @Override
+    protected boolean usesAntiCamp() { return false; }
+
+    // ── 測試指令（/pg arena debug）──
+
+    @Override
+    public String debug(String action, String arg, int n) {
+        return switch (action) {
+            case "advance" -> debugAdvance(arg) ? "已讓 " + arg + " 晉級" : "找不到隊伍 " + arg + "（可用隊伍名稱或孤狼玩家名）";
+            case "addkills" -> debugAddKills(arg, n) ? "已加 " + n + " 擊殺給 " + arg : "找不到隊伍 " + arg;
+            default -> super.debug(action, arg, n);
+        };
+    }
+
+    public boolean debugAdvance(String teamKeyOrName) {
+
+        for (Progress pr : progress.values()) {
+            if (pr.key.equalsIgnoreCase(teamKeyOrName) || pr.label.equalsIgnoreCase(teamKeyOrName)) { pr.kills = 0; advance(pr); return true; }
+        }
+        return false;
+    }
+
+    public boolean debugAddKills(String teamKeyOrName, int n) {
+        for (Progress pr : progress.values()) {
+            if (pr.key.equalsIgnoreCase(teamKeyOrName) || pr.label.equalsIgnoreCase(teamKeyOrName)) { pr.kills += n; return true; }
+        }
+        return false;
     }
 
     @Override
@@ -156,6 +206,7 @@ public final class GkMode extends ArenaMode {
 
     @Override
     protected void tickRules() {
+        for (Progress pr : new ArrayList<>(progress.values())) if (checkAdvance(pr)) return;
         if (ticks % 20 != 0) return;
         // 投擲物階段：用完補 1 個
         for (ServerPlayer p : online()) {
@@ -176,14 +227,17 @@ public final class GkMode extends ArenaMode {
         Progress pr = progress.get(k.teamKey);
         if (pr == null) return;
         pr.kills++;
-        if (pr.kills < pr.needed) return;
-        pr.kills = 0;
+        checkAdvance(pr);
+    }
+
+    /** 晉級一階（整隊換武器）；完成最後階段就獲勝。回傳是否結束比賽。 */
+    private boolean advance(Progress pr) {
         pr.stage++;
         if (pr.stage > stages()) {
             Set<UUID> winners = new HashSet<>();
             for (ArenaPlayer ap : players.values()) if (ap.teamKey.equals(pr.key)) winners.add(ap.id);
             endMatch(Component.literal(pr.label + " 成為槍王！").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), winners);
-            return;
+            return true;
         }
         String cat = order.get(pr.stage - 1).name();
         for (ServerPlayer p : online()) {
@@ -194,12 +248,14 @@ public final class GkMode extends ArenaMode {
             p.displayClientMessage(Component.literal("晉級！第 " + pr.stage + " 階段：" + cat).withStyle(ChatFormatting.GOLD), true);
         }
         broadcast(Component.literal("[槍王] " + pr.label + " 晉級到第 " + pr.stage + "／" + stages() + " 階段（" + cat + "）").withStyle(ChatFormatting.YELLOW));
+        return false;
     }
 
     /** 重生：隨機重生點、血量 100、補彈藥箱與醫療包（武器 keepInventory 保留）。 */
     @Override
-    protected void respawn(ServerPlayer p, ArenaPlayer ap) {
-        super.respawn(p, ap);
+    protected void doRespawn(ServerPlayer p, ArenaPlayer ap) {
+        super.doRespawn(p, ap);
+
         if (!hasGun(p) && count(p, RespawnKit.parse("lrtactical:melee")) == 0) giveStage(p, ap);
     }
 
@@ -213,7 +269,7 @@ public final class GkMode extends ArenaMode {
     @Override
     protected List<ScoreLine> scoreLines(ArenaPlayer viewer) {
         List<Progress> list = new ArrayList<>(progress.values());
-        list.sort((a, b) -> a.stage != b.stage ? Integer.compare(b.stage, a.stage) : Integer.compare(b.kills * a.needed, a.kills * b.needed));
+        list.sort((a, b) -> a.stage != b.stage ? Integer.compare(b.stage, a.stage) : Integer.compare(b.kills * needed(a), a.kills * needed(b)));
         List<ScoreLine> out = new ArrayList<>();
         Progress mine = progress.get(viewer.teamKey);
         for (int i = 0; i < list.size() && out.size() < 6; i++) out.add(line(list.get(i)));
@@ -223,7 +279,7 @@ public final class GkMode extends ArenaMode {
 
     private ScoreLine line(Progress pr) {
         String cat = stages() == 0 ? "" : order.get(Math.min(stages() - 1, pr.stage - 1)).name();
-        return new ScoreLine(pr.color, pr.label, pr.stage, stages(), cat + " " + pr.kills + "/" + pr.needed);
+        return new ScoreLine(pr.color, pr.label, pr.stage, stages(), cat + " " + pr.kills + "/" + needed(pr));
     }
 
     @Override
@@ -231,7 +287,7 @@ public final class GkMode extends ArenaMode {
         Progress pr = progress.get(viewer.teamKey);
         if (pr == null || stages() == 0) return "";
         String next = pr.stage < stages() ? "　下一階段：" + order.get(pr.stage).name() : "　最後一階段！";
-        return "第 " + pr.stage + "／" + stages() + " 階段：" + order.get(pr.stage - 1).name() + "　擊殺 " + pr.kills + "/" + pr.needed + next;
+        return "第 " + pr.stage + "／" + stages() + " 階段：" + order.get(pr.stage - 1).name() + "　擊殺 " + pr.kills + "/" + needed(pr) + next;
     }
 
     @Override

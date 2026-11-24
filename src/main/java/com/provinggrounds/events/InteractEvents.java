@@ -112,7 +112,7 @@ public final class InteractEvents {
     /** 開槍：由 GunCompat 通知（只在伺服器端處理）。 */
     public static void register() {
         GunCompat.onShoot(shooter -> {
-            if (shooter instanceof ServerPlayer sp) BattleRoyaleMode.get().interruptProgress(sp);
+            if (shooter instanceof ServerPlayer sp) { BattleRoyaleMode.get().interruptProgress(sp); com.provinggrounds.modes.arena.ArenaManager.onShoot(sp); }
         });
     }
 }

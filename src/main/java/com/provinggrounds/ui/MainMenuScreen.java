@@ -289,7 +289,10 @@ public class MainMenuScreen extends Screen {
             case GK -> y = stepper(sx, y, sw, "擊殺倍率", "×" + a.gkMultiplier(), canEdit, 1, a.gkMultiplier(), LobbyManager.Action.SET_GK_MULTIPLIER);
             default -> {}
         }
+        boolean special = lobby == null || lobby.special(); // 特殊物品模式：擊殺敵人掉落特殊物品（商店不賣）
+        y = row(sx, y, sw, "特殊物品", special ? "開" : "關", canEdit, () -> send(LobbyManager.Action.SET_SPECIAL, special ? 0 : 1));
         return y;
+
     }
 
     private int stepper(int x, int y, int w, String label, String value, boolean editable, int step, int current, LobbyManager.Action action) {

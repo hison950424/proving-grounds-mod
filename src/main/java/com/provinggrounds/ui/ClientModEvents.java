@@ -45,6 +45,9 @@ public final class ClientModEvents {
         event.registerAboveAll("compass", Compass.OVERLAY);
         event.registerAboveAll("damage_indicator", DamageIndicator.OVERLAY);
         event.registerAboveAll("interact_hint", ClientInteract.HINT_OVERLAY); // 準星下方的 F 互動提示
+        event.registerAboveAll("kill_hud", KillHud.OVERLAY); // 擊殺圖示與擊殺紀錄
+        event.registerAboveAll("arena_world_hint", ArenaWorldRenderer.OVERLAY); // 據點箭頭、敵方重生區提示
+        event.registerAboveAll("scoreboard", ScoreboardPanel.OVERLAY); // 戰績面板（Caps Lock）
 
         event.registerAbove(net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.HOTBAR.id(), "special_hotbar", com.provinggrounds.special.client.SpecialHotbar.OVERLAY); // 特殊物品快捷欄
     }
@@ -71,5 +74,6 @@ public final class ClientModEvents {
         event.register(com.provinggrounds.special.client.ClientSpecial.USE_KEY); // 使用特殊物品（預設 Q）
         event.register(ClientMovement.QUIET_WALK); // 靜走（預設 Shift）
         event.register(ClientInteract.INTERACT); // 互動（預設 F；計畫書 5）
+        event.register(ScoreboardPanel.KEY); // 戰績面板（預設 Caps Lock）
     }
 }

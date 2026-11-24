@@ -172,10 +172,20 @@ public final class MapRender {
         g.fill(x - 2, z - 1, x + 3, z, c);
     }
 
-    /** 自己：白色箭頭。 */
+    /** 自己：綠色箭頭、四周加黑色邊框（計畫書 5 的 E1，比較好認）。 */
     public static void drawSelf(GuiGraphics g, Font font, View v, double x, double z, float yaw) {
-        arrow(g, font, (int) v.px(x), (int) v.pz(z), yaw, 0xFFFFFFFF);
+        int sx = (int) v.px(x), sz = (int) v.pz(z);
+        g.pose().pushPose();
+        g.pose().translate(sx, sz, 0);
+        g.pose().mulPose(Axis.ZP.rotationDegrees(yaw + 180));
+        int ox = -font.width("▲") / 2;
+        for (int[] d : new int[][] {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {1, 1}, {-1, 1}, {1, -1}}) {
+            g.drawString(font, "▲", ox + d[0], -4 + d[1], 0xFF000000, false); // 黑色邊框
+        }
+        g.drawString(font, "▲", ox, -4, 0xFF3CE05A, false);
+        g.pose().popPose();
     }
+
 
     /** 箭頭（▲ 字元旋轉）：yaw 0 = 朝南（畫面下方）。 */
     private static void arrow(GuiGraphics g, Font font, int sx, int sz, float yaw, int color) {

@@ -61,8 +61,40 @@ public final class ArenaManager {
         return error;
     }
 
+    private static int speed = 1;
+
+    public static void setSpeed(int n) { speed = Math.max(1, Math.min(20, n)); }
+    public static int speed() { return speed; }
+
     public static void tick() {
-        if (current != null) current.tick();
+        for (int i = 0; i < speed && current != null; i++) current.tick();
+        if (current == null) speed = 1; // 測試加速只在這一場有效
+    }
+
+    /** 敵方重生區內不能開槍（anti_camp_no_fire）。給 GunCompat 的開槍攔截用。 */
+    public static boolean blocksFire(net.minecraft.world.entity.LivingEntity e) {
+        return current != null && e instanceof ServerPlayer p && current.blocksFire(p.getUUID());
+    }
+
+    /** 開槍：結束重生保護。 */
+    public static void onShoot(net.minecraft.world.entity.LivingEntity e) {
+        if (current != null && e instanceof ServerPlayer p) current.endProtection(p.getUUID());
+    }
+
+    @SubscribeEvent
+    public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (current != null && event.getEntity() instanceof ServerPlayer p) current.handleLogout(p);
+    }
+
+    /** 重生保護：被保護的人不會受傷，也不能攻擊別人（計畫書 5 的 H2）。 */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void onAttack(net.minecraftforge.event.entity.living.LivingAttackEvent event) {
+        if (current == null || !(event.getEntity() instanceof ServerPlayer victim)) return;
+        if (current.isProtected(victim.getUUID()) && !event.getSource().is(net.minecraft.world.damagesource.DamageTypes.FELL_OUT_OF_WORLD)) {
+            event.setCanceled(true);
+            return;
+        }
+        if (event.getSource().getEntity() instanceof ServerPlayer attacker && current.isProtected(attacker.getUUID())) event.setCanceled(true);
     }
 
     /** 管理員強制結束、或重置：立刻還原（finish 會呼叫 GameManager.reset）。 */
@@ -83,6 +115,7 @@ public final class ArenaManager {
     public static void onDeath(LivingDeathEvent event) {
         if (current == null || event.isCanceled() || !(event.getEntity() instanceof ServerPlayer victim)) return;
         ServerPlayer killer = event.getSource().getEntity() instanceof ServerPlayer k ? k : null;
+        com.provinggrounds.core.KillEvents.setSource(event.getSource());
         current.handleDeath(victim, killer);
     }
 
@@ -96,6 +129,12 @@ public final class ArenaManager {
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (current == null || !(event.getEntity() instanceof ServerPlayer p)) return;
         if (current.isParticipant(p.getUUID())) current.handleLogin(p);
+        else if (current.wasRemoved(p.getUUID())) { // 掉線過久被移出：回來只能旁觀
+            p.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("你因掉線過久被移出比賽，這場只能旁觀。")
+                .withStyle(net.minecraft.ChatFormatting.GRAY));
+        }
+
     }
 
     /** 不能丟的東西（裝備）立刻放回背包。 */

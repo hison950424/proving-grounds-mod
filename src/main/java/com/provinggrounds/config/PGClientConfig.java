@@ -42,6 +42,7 @@ public final class PGClientConfig {
     public final ForgeConfigSpec.BooleanValue crosshairDot, crosshairDotTaczApplied, defaultKeysV2Applied;
     public final ForgeConfigSpec.BooleanValue interactHint, killIconEnabled, killFeedEnabled, killSoundEnabled, domBeacon, antiCampWall;
     public final ForgeConfigSpec.DoubleValue hudScale, killSoundVolume;
+    public final ForgeConfigSpec.BooleanValue scoreboardToggle;
 
     private PGClientConfig(ForgeConfigSpec.Builder builder) {
         builder.push("ui_walk");
@@ -103,6 +104,7 @@ public final class PGClientConfig {
         killSoundVolume = builder.comment("擊殺音效音量").defineInRange("kill_sound_volume", 0.8, 0.0, 1.0);
         domBeacon = builder.comment("佔點：據點光柱、地面範圍環、螢幕上的據點字母與距離").define("dom_beacon", true);
         antiCampWall = builder.comment("接近敵方重生區時顯示的半透明紅色邊界").define("anti_camp_wall", true);
+        scoreboardToggle = builder.comment("戰績面板改成按一下開、再按一下關（Caps Lock 放開事件不可靠時用）").define("scoreboard_toggle", false);
         builder.pop();
     }
 }

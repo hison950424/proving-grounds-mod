@@ -38,7 +38,30 @@ public final class TdmMode extends ArenaMode {
 
     private int mult() { return ArenaConfig.at(cfg.tdmStageMultiplier.get(), stage); }
 
-    private int elapsed() { return ticks / 20; }
+    private int timeOffset; // 測試指令 skipstage 往後跳的秒數
+
+    private int elapsed() { return ticks / 20 + timeOffset; }
+
+    @Override
+    public String debug(String action, String arg, int n) {
+        switch (action) {
+            case "addkills" -> {
+                int team = arg.toLowerCase().startsWith("b") || arg.contains("藍") ? BLUE : RED;
+                if (team == RED) redKills += n; else blueKills += n;
+                if (redKills >= targetKills) win(RED, "達到目標擊殺數！");
+                else if (blueKills >= targetKills) win(BLUE, "達到目標擊殺數！");
+                return "已加 " + n + " 擊殺給" + teamName(team);
+            }
+            case "skipstage" -> {
+                int e = elapsed();
+                int next = stage == 0 ? totalSeconds / 3 : stage == 1 ? totalSeconds * 2 / 3 : totalSeconds;
+                timeOffset += Math.max(0, next - e);
+                return "跳到下一階段";
+            }
+            default -> { return super.debug(action, arg, n); }
+        }
+    }
+
 
     @Override
     protected void onStart() {
@@ -105,7 +128,7 @@ public final class TdmMode extends ArenaMode {
         refillConsumables(p, ap, false);
     }
 
-    @Override protected Vec3 spawnOf(ArenaPlayer ap) { return teamSpawn(ap.team); }
+    @Override protected Vec3 spawnOf(ArenaPlayer ap) { return randomTeamSpawn(ap.team); }
 
     @Override
     protected List<ScoreLine> scoreLines(ArenaPlayer viewer) {

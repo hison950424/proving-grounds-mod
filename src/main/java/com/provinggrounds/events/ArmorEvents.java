@@ -77,6 +77,9 @@ public class ArmorEvents {
         if (reduction > 0) event.setAmount((float) (event.getAmount() * (1.0 - reduction)));
     }
 
+    /** 給擊殺提示用：這次傷害是不是爆頭（沒有紀錄回傳 null）。 */
+    public static Boolean wasHeadshot(LivingEntity target, DamageSource source) { return lookupHeadshot(target, source); }
+
     /** 這次傷害是不是爆頭；沒有對應的命中紀錄就回傳 null。 */
     private static Boolean lookupHeadshot(LivingEntity target, DamageSource source) {
         Hit hit = HITS.get(target.getId());

@@ -97,7 +97,7 @@ public final class GunCompat {
         if (ModList.get().isLoaded("tacz")) {
             GunAdapter adapter = new TaczGunAdapter();
             active = adapter;
-            if (adapter.registerBlocker(com.provinggrounds.special.ActionLock::blocksActions)) {
+            if (adapter.registerBlocker(e -> com.provinggrounds.special.ActionLock.blocksActions(e) || com.provinggrounds.modes.arena.ArenaManager.blocksFire(e))) {
                 ProvingGroundsMod.LOGGER.info("Gun adapter enabled: {}", adapter.name());
             }
             adapter.registerHitListener(ArmorEvents::recordHit); // 防彈：記錄爆頭

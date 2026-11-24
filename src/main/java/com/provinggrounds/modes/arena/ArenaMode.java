@@ -71,6 +71,13 @@ public abstract class ArenaMode {
         public int stillTicks;             // 哨兵：蹲著不動的 tick 數
         public int pointEarn;              // 佔點：本回合佔點收入
         @Nullable public Vec3 lastPos;
+        // 計畫書 5
+        @Nullable public Vec3 deathPos;     // 死亡位置（重生倒數時在這裡旁觀）
+        public int respawnAt = -1;          // 倒數結束的 tick；-1 = 沒在倒數
+        public int protectUntil;            // 重生保護到哪個 tick
+        public int campTicks;               // 在敵方重生區裡待了幾 tick
+        public int offlineSince = -1;       // 掉線的 tick；-1 = 在線
+        public int streak;                  // 連殺數
 
         ArenaPlayer(UUID id, String name) { this.id = id; this.name = name; }
     }
@@ -239,13 +246,19 @@ public abstract class ArenaMode {
             endMatch(Component.literal("沒有參賽者了"), Set.of());
             return;
         }
+        if (ticks % 20 == 0) removeTimedOut();
         for (ServerPlayer p : online()) {
             ArenaPlayer ap = players.get(p.getUUID());
+            if (ap.respawnAt > 0) {
+                if (ticks >= ap.respawnAt) { ap.respawnAt = -1; doRespawn(p, ap); }
+                else if (ticks % 10 == 0) p.displayClientMessage(Component.literal((ap.respawnAt - ticks + 19) / 20 + " 秒後重生").withStyle(ChatFormatting.GRAY), true);
+                continue;
+            }
             if (ap.respawnKitTicks > 0 && --ap.respawnKitTicks == 0) {
                 ap.respawnKitTicks = -1;
                 onRespawned(p, ap);
             }
-            if (cfg.antiCamp.get() && p.gameMode.getGameModeForPlayer() == GameType.ADVENTURE) antiCamp(p, ap);
+            if (ticks % 10 == 0 && usesAntiCamp() && cfg.antiCamp.get() && p.gameMode.getGameModeForPlayer() == GameType.ADVENTURE && p.isAlive()) antiCamp(p, ap);
             if (ticks % 20 == 0 && p.isAlive() && !p.isSpectator()) {
                 ensureOne(p, cfg.ammoBox.get());
                 removeLooseAmmo(p);
@@ -273,18 +286,94 @@ public abstract class ArenaMode {
         }
     }
 
-    /** 防蹲點：踩在敵方基地羊毛上（紅隊基地＝紅羊毛）。 */
+    /**
+     * 防蹲點（計畫書 5 的 H2；每 10 tick 一次）：和敵方重生點的水平距離（平方比較，不掃方塊）在範圍內 →
+     * 先警告 anti_camp_warn 秒，之後每秒受傷（start、start+step、…，上限 max），並緩速、發光；離開就歸零。
+     */
     private void antiCamp(ServerPlayer p, ArenaPlayer ap) {
-        if (ap.team != RED && ap.team != BLUE) return;
-        BlockState below = level.getBlockState(BlockPos.containing(p.getX(), p.getY() - 0.1, p.getZ()));
-        boolean enemyBase = ap.team == BLUE ? below.is(Blocks.RED_WOOL) : below.is(Blocks.BLUE_WOOL);
-        if (!enemyBase) return;
-        p.displayClientMessage(Component.literal("[警告] 偵測到入侵！請立即撤出敵方基地！").withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
-        p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20, 3, false, false, true));
-        p.addEffect(new MobEffectInstance(MobEffects.JUMP, 20, 200, false, false, true)); // 等級 200 的跳躍提升＝跳不起來
-        p.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20, 0, false, false, true));
-        p.hurt(p.damageSources().magic(), 20f);
+        if (!inEnemySpawn(p, ap)) { ap.campTicks = 0; return; }
+        ap.campTicks += 10;
+        int warn = cfg.antiCampWarn.get() * 20;
+        if (ap.campTicks <= warn) {
+            int left = (warn - ap.campTicks + 19) / 20 + 1;
+            p.displayClientMessage(Component.literal("敵方重生區！" + left + " 秒後開始受傷").withStyle(ChatFormatting.RED), true);
+            return;
+        }
+        int after = ap.campTicks - warn; // 10、20、30…
+        p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 2, false, false, true));
+        p.addEffect(new MobEffectInstance(MobEffects.GLOWING, 30, 0, false, false, true));
+        if ((after - 10) % 20 != 0) return; // 每秒一次
+        int n = (after - 10) / 20;
+        int dmg = Math.min(cfg.antiCampMax.get(), cfg.antiCampStart.get() + cfg.antiCampStep.get() * n);
+        p.displayClientMessage(Component.literal("離開敵方重生區！-" + dmg).withStyle(ChatFormatting.RED), true);
+        p.hurt(p.damageSources().magic(), dmg);
     }
+
+    /** 在敵方任一個重生點的防蹲點範圍內（水平距離；高度差 8 格內）。 */
+    public boolean inEnemySpawn(ServerPlayer p, ArenaPlayer ap) {
+        if (ap.team != RED && ap.team != BLUE) return false;
+        double r = cfg.antiCampRadius.get();
+        for (Vec3 s : teamSpawns(ap.team == RED ? BLUE : RED)) {
+            double dx = p.getX() - s.x, dz = p.getZ() - s.z;
+            if (dx * dx + dz * dz <= r * r && Math.abs(p.getY() - s.y) <= 8) return true;
+        }
+        return false;
+    }
+
+    /** 這個模式有沒有紅藍基地的防蹲點（槍王之王沒有）。 */
+    protected boolean usesAntiCamp() { return true; }
+
+    /** 在敵方重生區、而且設定不能開槍。 */
+    public boolean blocksFire(UUID id) {
+        ArenaPlayer ap = players.get(id);
+        return ap != null && cfg.antiCampNoFire.get() && ap.campTicks > 0;
+    }
+
+    // ── 重生保護（計畫書 5 的 H2）：無敵但不能攻擊，開槍或時間到結束 ──
+
+    public boolean isProtected(UUID id) {
+        ArenaPlayer ap = players.get(id);
+        return ap != null && ap.protectUntil > ticks;
+    }
+
+    public void endProtection(UUID id) {
+        ArenaPlayer ap = players.get(id);
+        if (ap != null) ap.protectUntil = 0;
+    }
+
+    // ── 掉線（計畫書 5 的 C4）：超過 disconnect_timeout 才移出比賽與隊伍，之前都算隊伍人數 ──
+
+    private final Set<UUID> removed = new HashSet<>();
+
+    public boolean wasRemoved(UUID id) { return removed.contains(id); }
+
+    public void handleLogout(ServerPlayer p) {
+        ArenaPlayer ap = players.get(p.getUUID());
+        if (ap != null) ap.offlineSince = ticks;
+    }
+
+    private void removeTimedOut() {
+        int limit = cfg.disconnectTimeout.get() * 20;
+        for (ArenaPlayer ap : new ArrayList<>(players.values())) {
+            if (ap.offlineSince < 0 || ticks - ap.offlineSince < limit) continue;
+            players.remove(ap.id);
+            removed.add(ap.id);
+            for (ServerPlayer mate : online()) {
+                ArenaPlayer m = players.get(mate.getUUID());
+                if (m != null && sameSide(m, ap)) mate.sendSystemMessage(Component.literal(ap.name + " 因掉線過久被移出").withStyle(ChatFormatting.GRAY));
+            }
+            onRemoved(ap);
+        }
+    }
+
+    /** 掉線過久被移出後（槍王之王重算門檻）。 */
+    protected void onRemoved(ArenaPlayer ap) {}
+
+    /** 測試指令（/pg arena debug；計畫書 5 的 C7）。各模式覆寫自己支援的動作。 */
+    public String debug(String action, String arg, int n) {
+        return "這個模式不支援 " + action;
+    }
+
 
     private void removeLooseAmmo(ServerPlayer p) {
         Inventory inv = p.getInventory();
@@ -300,12 +389,29 @@ public abstract class ArenaMode {
         ArenaPlayer v = players.get(victim.getUUID());
         if (v == null || endTicks >= 0) return;
         v.deaths++;
+        v.deathPos = victim.position();
+        v.campTicks = 0;
+        int lostStreak = v.streak;
+        v.streak = 0;
         onDeath(victim, v);
-        if (killer == null || killer == victim) return;
-        ArenaPlayer k = players.get(killer.getUUID());
-        if (k == null || sameSide(k, v)) return;
-        k.kills++;
+        ArenaPlayer k = killer == null || killer == victim ? null : players.get(killer.getUUID());
+        boolean counted = k != null && !sameSide(k, v);
+        if (counted) {
+            k.kills++;
+            k.streak++;
+        }
+        com.provinggrounds.core.KillEvents.arenaKill(this, counted ? killer : null, counted ? k : null, victim, v, lostStreak);
+        if (!counted) return;
         onKill(killer, k, victim, v);
+        if (com.provinggrounds.special.SpecialConfig.enabledSafe()) { // 特殊物品模式（大廳開關）：擊殺掉落特殊物品
+            ItemStack sp = com.provinggrounds.special.SpecialLoot.roll(level);
+            if (!sp.isEmpty()) victim.spawnAtLocation(sp);
+        }
+    }
+
+    /** 隊伍顏色（RGB）：給擊殺紀錄用。 */
+    public int colorOf(ArenaPlayer ap) {
+        return rgb(teamColor(ap.team));
     }
 
     public final void handleRespawn(ServerPlayer p) {
@@ -315,17 +421,38 @@ public abstract class ArenaMode {
         respawn(p, ap);
     }
 
-    /** 重生：預設傳回重生點、10 tick 後發職業消耗品。佔點覆寫（回合中變旁觀）。 */
+    /** 重生：死亡後先在死亡位置旁觀 respawn_delay 秒（計畫書 5），再傳回重生點。佔點覆寫（回合中變旁觀）。 */
     protected void respawn(ServerPlayer p, ArenaPlayer ap) {
+        int delay = respawnDelaySeconds();
+        if (delay > 0 && ap.deathPos != null) {
+            ap.respawnAt = ticks + delay * 20;
+            p.setGameMode(GameType.SPECTATOR);
+            teleport(p, ap.deathPos.add(0, 1.5, 0));
+            ap.deathPos = null;
+            return;
+        }
+        ap.deathPos = null;
+        doRespawn(p, ap);
+    }
+
+    /** 真正重生：冒險模式、傳回重生點、10 tick 後發職業消耗品、重生保護。 */
+    protected void doRespawn(ServerPlayer p, ArenaPlayer ap) {
         p.setGameMode(GameType.ADVENTURE);
         teleport(p, spawnOf(ap));
         prepare(p, ap, false);
         ap.respawnKitTicks = 10;
+        int protect = cfg.spawnProtect.get();
+        if (protect > 0) ap.protectUntil = ticks + protect * 20;
     }
+
+    protected int respawnDelaySeconds() { return cfg.respawnDelay.get(); }
 
     public void handleLogin(ServerPlayer p) {
         ArenaPlayer ap = players.get(p.getUUID());
         if (ap == null) return;
+        ap.offlineSince = -1;
+        ap.respawnAt = -1;
+        ap.deathPos = null;
         GameManager.get().addPlayer(p);
         TeamManager.get().syncVanillaTeams(server, online());
         respawn(p, ap);
@@ -373,11 +500,13 @@ public abstract class ArenaMode {
     }
 
     public boolean inBase(ServerPlayer p, ArenaPlayer ap) {
-        if (ap.team != RED && ap.team != BLUE) return false;
-        Vec3 s = spawnOf(ap);
+        if (!usesShop() || (ap.team != RED && ap.team != BLUE)) return false;
         int r = cfg.baseRadius.get();
-        return Math.abs(p.getX() - s.x) <= r + 0.5 && Math.abs(p.getZ() - s.z) <= r + 0.5
-            && p.getY() >= s.y - 1 && p.getY() <= s.y + 4;
+        for (Vec3 s : teamSpawns(ap.team)) {
+            if (Math.abs(p.getX() - s.x) <= r + 0.5 && Math.abs(p.getZ() - s.z) <= r + 0.5
+                && p.getY() >= s.y - 1 && p.getY() <= s.y + 4) return true;
+        }
+        return false;
     }
 
     public boolean canShop(ServerPlayer p, ArenaPlayer ap) {
@@ -520,7 +649,30 @@ public abstract class ArenaMode {
 
     // ── HUD ─────────────────────────────────────────────────────────────────
 
+    /** 世界標記（計畫書 5）：預設是敵方重生區（防蹲點邊界）；佔點再加開放中的據點。 */
+    protected List<ArenaStatePacket.Marker> markers(ArenaPlayer viewer) {
+        List<ArenaStatePacket.Marker> out = new ArrayList<>();
+        if (!usesAntiCamp() || !cfg.antiCamp.get() || (viewer.team != RED && viewer.team != BLUE)) return out;
+        int enemy = viewer.team == RED ? BLUE : RED;
+        for (Vec3 s : teamSpawns(enemy)) {
+            out.add(new ArenaStatePacket.Marker((byte) 1, "", s.x, s.y, s.z, cfg.antiCampRadius.get(), 0xFF3030, false));
+        }
+        return out;
+    }
+
+    /** 戰績面板：所有參賽者（擊殺多的在前）。 */
+    private List<ArenaStatePacket.Row> board() {
+        List<ArenaPlayer> all = new ArrayList<>(players.values());
+        all.sort((a, b) -> a.team != b.team ? Integer.compare(a.team, b.team) : b.kills != a.kills ? Integer.compare(b.kills, a.kills) : Integer.compare(a.deaths, b.deaths));
+        List<ArenaStatePacket.Row> out = new ArrayList<>();
+        for (ArenaPlayer a : all) {
+            out.add(new ArenaStatePacket.Row(a.name, colorOf(a), a.kills, a.deaths, usesShop() ? a.money : -1, a.offlineSince < 0));
+        }
+        return out;
+    }
+
     protected void syncHud() {
+        List<ArenaStatePacket.Row> board = board();
         for (ServerPlayer p : online()) {
             ArenaPlayer ap = players.get(p.getUUID());
             List<ArenaStatePacket.Mate> mates = new ArrayList<>();
@@ -530,7 +682,8 @@ public abstract class ArenaMode {
             long wait = Math.max(0, ap.lastTransferTick + cfg.transferCooldown.get() * 20L - ticks);
             PGNetwork.sendTo(p, new ArenaStatePacket(kindByte(), title(), timerSeconds(), timerLabel(), statusLine(ap),
                 scoreLines(ap), ap.money, ap.cls.ordinal(), usesShop(), usesClasses(), canShop(p, ap), ap.team,
-                (int) ((wait + 19) / 20), ap.kills, ap.deaths, mates));
+                (int) ((wait + 19) / 20), ap.kills, ap.deaths, mates, markers(ap), board));
+
         }
     }
 
@@ -559,6 +712,24 @@ public abstract class ArenaMode {
         Vec3 v = ArenaConfig.vec(team == BLUE ? cfg.blueSpawn.get() : cfg.redSpawn.get());
         return v != null ? v : Vec3.atBottomCenterOf(level.getSharedSpawnPos());
     }
+
+    /** 這隊所有重生點（主重生點＋額外的；計畫書 5 的 H2）。 */
+    public List<Vec3> teamSpawns(int team) {
+        List<Vec3> out = new ArrayList<>();
+        out.add(teamSpawn(team));
+        for (String s : team == BLUE ? cfg.blueSpawnsExtra.get() : cfg.redSpawnsExtra.get()) {
+            Vec3 v = ArenaConfig.vec(s);
+            if (v != null) out.add(v);
+        }
+        return out;
+    }
+
+    /** 隨機一個重生點。 */
+    protected Vec3 randomTeamSpawn(int team) {
+        List<Vec3> all = teamSpawns(team);
+        return all.get(level.random.nextInt(all.size()));
+    }
+
 
     protected void teleport(ServerPlayer p, Vec3 pos) {
         if (p.isPassenger()) p.stopRiding();
