@@ -138,14 +138,21 @@ public final class LobbyManager {
         return true;
     }
 
+    /** 全員準備後倒數幾秒開始（所有模式；計畫書 6 A20）。 */
+    public static final int ALL_READY_SECONDS = 10;
+
     public void tick(MinecraftServer server) {
-        // 大廳裡所有參賽者都準備好 → 直接開始，不用再按「開始遊戲」
-        if (GameManager.get().isInLobby() && countdownTicks < 0) {
+        // 大廳裡所有參賽者都準備好 → 倒數 10 秒開始；倒數中有人取消準備就停止倒數
+        if (GameManager.get().isInLobby()) {
             boolean all = allReady(server);
-            if (all && !wasAllReady) {
-                String error = doStart(server);
-                if (error != null) broadcastChat(server, Component.literal("[PG] 全員已準備，但無法開始：" + error).withStyle(ChatFormatting.RED));
-                else broadcastChat(server, Component.literal("[PG] 全員已準備，開始遊戲！").withStyle(ChatFormatting.GREEN));
+            if (all && !wasAllReady && countdownTicks < 0) {
+                countdownTicks = ALL_READY_SECONDS * 20;
+                broadcastChat(server, Component.literal("[PG] 全員已準備，" + ALL_READY_SECONDS + " 秒後開始遊戲！").withStyle(ChatFormatting.GREEN));
+                dirty = true;
+            } else if (!all && countdownTicks >= 0) {
+                countdownTicks = -1;
+                broadcastChat(server, Component.literal("[PG] 有人取消準備，開始倒數停止。").withStyle(ChatFormatting.YELLOW));
+                clearTitles(server);
                 dirty = true;
             }
             wasAllReady = all;
@@ -162,7 +169,7 @@ public final class LobbyManager {
                 if (countdownTicks == 0) {
                     countdownTicks = -1;
                     String error = doStart(server);
-                    if (error != null) notifyOps(server, "強制開始失敗：" + error);
+                    if (error != null) broadcastChat(server, Component.literal("[PG] 無法開始：" + error).withStyle(ChatFormatting.RED));
                 }
                 if (countdownTicks > 0) countdownTicks--;
                 if (countdownTicks % 20 == 0) dirty = true; // 每秒更新選單上的倒數
@@ -171,6 +178,13 @@ public final class LobbyManager {
         if (dirty) {
             dirty = false;
             for (ServerPlayer p : server.getPlayerList().getPlayers()) PGNetwork.sendTo(p, buildPacket(server));
+        }
+    }
+
+    private static void clearTitles(MinecraftServer server) {
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            p.connection.send(new ClientboundSetTitleTextPacket(Component.empty()));
+            p.connection.send(new ClientboundSetSubtitleTextPacket(Component.empty()));
         }
     }
 
@@ -336,26 +350,23 @@ public final class LobbyManager {
             case START -> {
                 List<String> notReady = notReady(server, sender);
                 if (!notReady.isEmpty()) {
-                    deny(sender, "還有人沒準備：" + String.join("、", notReady) + "。要直接開始請按「強制開始」。");
+                    deny(sender, "還有人沒準備：" + String.join("、", notReady) + "。要直接開始請按「強制全員準備」。");
                     return false;
                 }
                 String error = doStart(server);
                 if (error != null) { deny(sender, error); return false; }
             }
             case FORCE_START -> {
+                // 計畫書 6 A20：強制開始改成「強制所有人準備」，接著跟一般全員準備一樣倒數 10 秒
                 if (countdownTicks >= 0) return false;
-                int sec = PGConfig.SERVER.forceStartSeconds.get();
-                countdownTicks = sec * 20;
-                broadcastChat(server, Component.literal("[PG] 管理員強制開始！" + sec + " 秒後開始遊戲。").withStyle(ChatFormatting.GOLD));
+                for (ServerPlayer p : participants(server)) ready.add(p.getUUID());
+                broadcastChat(server, Component.literal("[PG] 管理員讓所有人進入準備狀態。").withStyle(ChatFormatting.GOLD));
             }
             case CANCEL_COUNTDOWN -> {
                 if (countdownTicks < 0) return false;
                 countdownTicks = -1;
                 broadcastChat(server, Component.literal("[PG] 管理員取消了開始倒數。").withStyle(ChatFormatting.YELLOW));
-                for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                    p.connection.send(new ClientboundSetTitleTextPacket(Component.empty()));
-                    p.connection.send(new ClientboundSetSubtitleTextPacket(Component.empty()));
-                }
+                clearTitles(server);
             }
             default -> { return false; }
         }

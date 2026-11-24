@@ -15,7 +15,8 @@
     "LivingSpecialMixin",
     "CreativeSlotMixin",
     "LevelSetBlockMixin",
-    "ExplosionHitPlayersMixin"
+    "ExplosionHitPlayersMixin",
+    "FlashShieldMixin"
   ],
   "client": [
     "HumanoidArmsMixin",

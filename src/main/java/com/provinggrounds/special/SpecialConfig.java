@@ -44,6 +44,7 @@ public final class SpecialConfig {
     public final ForgeConfigSpec.DoubleValue silentSeconds;
     public final ForgeConfigSpec.DoubleValue gasSeconds, gasLingerSeconds, gasPoisonSeconds;
     public final ForgeConfigSpec.DoubleValue selfReviveSeconds;
+    public final ForgeConfigSpec.BooleanValue flashShieldHalved;
     public final ForgeConfigSpec.DoubleValue armorPlusBonus;
     public final ForgeConfigSpec.IntValue armorPlusMaxStacks;
     public final ForgeConfigSpec.DoubleValue shelterSeconds, shelterBonus;
@@ -117,6 +118,8 @@ public final class SpecialConfig {
         gasLingerSeconds = b.comment("毒氣彈：離開毒氣後效果殘留秒數").defineInRange("gas_linger_seconds", 5.0, 0.0, 120.0);
         gasPoisonSeconds = b.comment("毒氣彈：中毒秒數").defineInRange("gas_poison_seconds", 5.0, 0.0, 120.0);
         selfReviveSeconds = b.comment("急救針：自救讀條秒數").defineInRange("self_revive_seconds", 10.0, 1.0, 120.0);
+        flashShieldHalved = b.comment("內部用：是否已把 lrtactical 閃光盾的耐久（flash_shield_max_durability）減半過（計畫書 6 A21，只做一次）。改成 false 會在下次開服再減半一次")
+            .define("flash_shield_durability_halved_v1", false);
         armorPlusBonus = b.comment("強化護甲修復包：每次增加的耐久上限（0.5 = +50% 原始值，可疊加）").defineInRange("armor_plus_bonus", 0.5, 0.0, 10.0);
         armorPlusMaxStacks = b.comment("強化護甲修復包：最多疊加幾次（0 = 不設上限）").defineInRange("armor_plus_max_stacks", 0, 0, 1000);
         shelterSeconds = b.comment("圈外庇護：持續秒數").defineInRange("shelter_seconds", 15.0, 1.0, 600.0);

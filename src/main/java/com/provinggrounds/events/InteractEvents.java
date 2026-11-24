@@ -104,10 +104,7 @@ public final class InteractEvents {
         if (event.getEntity() instanceof ServerPlayer sp) BattleRoyaleMode.get().interruptProgress(sp);
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onHurt(LivingHurtEvent event) {
-        if (event.getAmount() > 0 && event.getEntity() instanceof ServerPlayer sp) BattleRoyaleMode.get().interruptProgress(sp);
-    }
+    // 受傷不再中斷扶人與祭壇讀條（計畫書 6 A19：只要準心還對著就繼續）
 
     /** 開槍：由 GunCompat 通知（只在伺服器端處理）。 */
     public static void register() {

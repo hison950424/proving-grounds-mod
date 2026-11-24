@@ -1001,7 +1001,38 @@ public class BattleRoyaleMode {
         Participant h = participants.get(hp.getUUID());
         return h != null && h.alive && !h.downed && h.state == PlayerState.GROUND && !busy.contains(h.id)
             && TeamManager.get().isSameTeam(h.id, d.id) && d.id.equals(h.reviveIntent) && !hp.isSpectator()
-            && inReviveRange(h, hp, dp, range);
+            && inReviveRange(h, hp, dp, range) && aimingAt(h, hp, dp, range);
+    }
+
+    /** 準心離開倒地隊友就中斷（受傷、移動不會中斷，只要準心還對著；計畫書 6 A19）。 */
+    private boolean aimingAt(Participant h, ServerPlayer hp, ServerPlayer dp, double range) {
+        if (aimsAtEntity(hp, dp, range)) return true;
+        h.reviveIntent = null;
+        hp.displayClientMessage(Component.literal("準心離開隊友，扶起中斷").withStyle(ChatFormatting.GRAY), true);
+        return false;
+    }
+
+    /** 準心是否對著這個實體：視線射線碰到它的碰撞箱（稍微放大，倒地的人比較好瞄），中間沒有方塊擋住。 */
+    private boolean aimsAtEntity(ServerPlayer p, Entity target, double range) {
+        Vec3 eye = p.getEyePosition(), end = eye.add(p.getLookAngle().scale(range + 1.5));
+        java.util.Optional<Vec3> hit = target.getBoundingBox().inflate(0.35).clip(eye, end);
+        if (hit.isEmpty()) return false;
+        net.minecraft.world.phys.BlockHitResult bh = p.level().clip(new net.minecraft.world.level.ClipContext(eye, hit.get(),
+            net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, p));
+        return bh.getType() == net.minecraft.world.phys.HitResult.Type.MISS;
+    }
+
+    /** 準心指著的祭壇（下半部位置）；沒有指著祭壇回傳 null。 */
+    @Nullable
+    private BlockPos aimedAltar(ServerPlayer p, double range) {
+        Vec3 eye = p.getEyePosition(), end = eye.add(p.getLookAngle().scale(range + 1.5));
+        net.minecraft.world.phys.BlockHitResult bh = p.level().clip(new net.minecraft.world.level.ClipContext(eye, end,
+            net.minecraft.world.level.ClipContext.Block.OUTLINE, net.minecraft.world.level.ClipContext.Fluid.NONE, p));
+        if (bh.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK) return null;
+        BlockPos hit = bh.getBlockPos();
+        if (level.getBlockEntity(hit) instanceof AltarBlockEntity) return hit;
+        if (level.getBlockEntity(hit.below()) instanceof AltarBlockEntity) return hit.below();
+        return null;
     }
 
     /** 超出扶起範圍就中斷（要重新按 F）。 */
@@ -1024,15 +1055,7 @@ public class BattleRoyaleMode {
             Participant d = participants.get(lp.getUUID());
             if (d != null && d.alive && d.downed && TeamManager.get().isSameTeam(h.id, d.id) && helper.distanceTo(lp) <= range) target = d;
         }
-        if (target == null && allowNearest) {
-            double best = Double.MAX_VALUE;
-            for (Participant d : participants.values()) {
-                ServerPlayer dp = d.alive && d.downed ? player(d.id) : null;
-                if (dp == null || d == h || !TeamManager.get().isSameTeam(h.id, d.id)) continue;
-                double dist = helper.distanceTo(dp);
-                if (dist <= range && dist < best) { best = dist; target = d; }
-            }
-        }
+        // 計畫書 6 A19：一定要準心對著倒地隊友按 F 才開始（不再自動找最近的）
         if (target == null) return false;
         h.reviveIntent = target.id;
         h.altarIntent = null;
@@ -1042,8 +1065,9 @@ public class BattleRoyaleMode {
     /** 按 F：在祭壇範圍內就開始讀條。 */
     public boolean startAltarByKey(ServerPlayer p) {
         if (level == null) return false;
-        BlockPos pos = nearestAltar(p, PGConfig.SERVER.brAltarRange.get());
-        if (pos == null) return false;
+        double range = PGConfig.SERVER.brAltarRange.get();
+        BlockPos pos = aimedAltar(p, range); // 計畫書 6 A19：準心對著祭壇按 F 才開始
+        if (pos == null || !nearAltar(p, pos, range)) return false;
         onAltarUse(p, pos);
         return true;
     }
@@ -1513,6 +1537,9 @@ public class BattleRoyaleMode {
             boolean using = target != null;
             if (target != null && !nearAltar(p, target, range)) {
                 p.displayClientMessage(Component.literal("離開祭壇範圍，讀條中斷").withStyle(ChatFormatting.GRAY), true);
+                target = null;
+            } else if (target != null && !target.equals(aimedAltar(p, range))) {
+                p.displayClientMessage(Component.literal("準心離開祭壇，讀條中斷").withStyle(ChatFormatting.GRAY), true);
                 target = null;
             }
             AltarBlockEntity altar = target != null && level.getBlockEntity(target) instanceof AltarBlockEntity a ? a : null;
