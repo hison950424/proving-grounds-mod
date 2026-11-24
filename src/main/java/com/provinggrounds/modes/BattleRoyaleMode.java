@@ -305,9 +305,15 @@ public class BattleRoyaleMode {
         AirdropManager.cleanupAll(level); // 清掉上一局（例如當機）殘留的空投
         com.provinggrounds.modes.br.Tombstones.cleanupAll(level); // 以及墓碑
         com.provinggrounds.special.SpecialWorld.cleanup(level.getServer()); // 以及特殊物品（地雷、假箱、分身、雪牆…）
-        // 上一局（含大廳）被子彈或爆炸打破的玻璃（原版與模組）全部修回去
-        int glass = com.provinggrounds.data.GlassLedger.get(server).restoreAll(level);
-        if (glass > 0) broadcast(Component.literal("已修復上一局被打破的玻璃 " + glass + " 塊。").withStyle(ChatFormatting.GRAY));
+        // 方塊還原：大廳被打破的玻璃、上一局沒來得及還原的方塊（例如中途當機）先修回去，
+        // 再開始記錄這張地圖（圓圈外加 64 格）裡所有方塊的變化，比賽結束時還原
+        int fixed = com.provinggrounds.data.BlockLedger.get(server).restoreAll(level);
+        if (fixed > 0) broadcast(Component.literal("已還原上一局被破壞的方塊 " + fixed + " 個。").withStyle(ChatFormatting.GRAY));
+        final double mcx = m.centerX, mcz = m.centerZ, mr = m.radius + 64;
+        com.provinggrounds.data.BlockLedger.beginMatch(server, pos -> {
+            double dx = pos.getX() + 0.5 - mcx, dz = pos.getZ() + 0.5 - mcz;
+            return dx * dx + dz * dz <= mr * mr;
+        });
         airdrops = new AirdropManager(level);
         loot = new LootSpawner(level, m, LootSpawner.Mode.SPAWN);
         phase = Phase.PREPARING;
@@ -1819,6 +1825,7 @@ public class BattleRoyaleMode {
         java.util.List<UUID> resultViewers = new ArrayList<>(participants.keySet());
         clearState();
         if (server != null) restoreAllOnline(server);
+        if (server != null) com.provinggrounds.data.BlockLedger.endMatch(server); // 地圖方塊還原
         PGNetwork.sendToAll(BRStatePacket.none());
         GameManager.get().reset();
         // 回到大廳後才開啟本場數據畫面（參與者），觀戰者可以用 /pg result 看
@@ -1845,8 +1852,10 @@ public class BattleRoyaleMode {
         if (level != null) { AirdropManager.cleanupAll(level); com.provinggrounds.modes.br.Tombstones.cleanupAll(level); com.provinggrounds.special.SpecialWorld.cleanup(level.getServer()); }
         clearState();
         if (server != null) restoreAllOnline(server);
+        if (server != null) com.provinggrounds.data.BlockLedger.endMatch(server); // 地圖方塊還原
         PGNetwork.sendToAll(BRStatePacket.none());
         ProvingGroundsMod.LOGGER.info("BR force-stopped (cleanLoot={}).", cleanLoot);
+
     }
 
     private void clearState() {

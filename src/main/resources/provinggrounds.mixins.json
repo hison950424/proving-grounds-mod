@@ -13,7 +13,8 @@
     "EntitySprintMixin",
     "EntitySpecialMixin",
     "LivingSpecialMixin",
-    "CreativeSlotMixin"
+    "CreativeSlotMixin",
+    "LevelSetBlockMixin"
   ],
   "injectors": {
     "defaultRequire": 0

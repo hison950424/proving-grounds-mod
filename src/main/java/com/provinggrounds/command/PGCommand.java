@@ -62,14 +62,19 @@ public class PGCommand {
                 // 被打破的玻璃：查看數量／立刻修復（平常每局開始會自動修）
                 .then(Commands.literal("glass").requires(OP)
                     .executes(ctx -> {
-                        int n = com.provinggrounds.data.GlassLedger.get(ctx.getSource().getServer()).size();
-                        ok(ctx.getSource(), "目前記錄了 " + n + " 塊被打破的玻璃，下一局開始時會修回去。", false);
+                        int n = com.provinggrounds.data.BlockLedger.get(ctx.getSource().getServer()).size();
+                        ok(ctx.getSource(), "目前記錄了 " + n + " 個要還原的方塊（比賽結束或下一局開始時會還原）。", false);
                         return n;
                     })
+                    .then(Commands.literal("record").executes(ctx -> { // 測試用：手動開始記錄整個主世界（restore 停止並還原）
+                        com.provinggrounds.data.BlockLedger.beginMatch(ctx.getSource().getServer(), pos -> true);
+                        ok(ctx.getSource(), "開始記錄主世界所有方塊變化；/pg glass restore 停止並還原。", true);
+                        return 1;
+                    }))
                     .then(Commands.literal("restore").executes(ctx -> {
-                        int n = com.provinggrounds.data.GlassLedger.get(ctx.getSource().getServer())
-                            .restoreAll(ctx.getSource().getServer().overworld());
-                        ok(ctx.getSource(), "已修復 " + n + " 塊玻璃。", true);
+                        int n = com.provinggrounds.data.BlockLedger.endMatch(ctx.getSource().getServer());
+
+                        ok(ctx.getSource(), "已還原 " + n + " 個方塊。", true);
                         return n;
                     })))
                 // 彈藥分類檢查

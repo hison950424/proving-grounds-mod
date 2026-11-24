@@ -146,6 +146,7 @@ public abstract class ArenaMode {
         rules.getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(true, server);
         GameManager.get().startGame(kind());
         TeamManager.get().syncVanillaTeams(server, participants);
+        beginBlockLedger();
         for (ServerPlayer p : participants) {
             ArenaPlayer ap = players.get(p.getUUID());
             GameManager.get().addPlayer(p);
@@ -619,11 +620,28 @@ public abstract class ArenaMode {
     protected abstract String scoreSummary();
 
     /** 還原所有參賽者、回大廳。 */
+    /**
+     * 方塊還原：記錄對戰場地（兩隊重生點、槍王之王重生點的範圍外加 48 格）裡所有方塊的變化，結束時還原。
+     * 不記整個主世界，管理員在別處蓋東西不會被還原。
+     */
+    private void beginBlockLedger() {
+        List<Vec3> pts = new ArrayList<>(teamSpawns(RED));
+        pts.addAll(teamSpawns(BLUE));
+        pts.addAll(ArenaData.gkSpawns());
+        double minX = Double.MAX_VALUE, minZ = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
+        for (Vec3 v : pts) { minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x); minZ = Math.min(minZ, v.z); maxZ = Math.max(maxZ, v.z); }
+        final double x0 = minX - 48, x1 = maxX + 48, z0 = minZ - 48, z1 = maxZ + 48;
+        com.provinggrounds.data.BlockLedger.get(server).restoreAll(level); // 上一場沒還原到的先修回去
+        com.provinggrounds.data.BlockLedger.beginMatch(server, pos -> pos.getX() >= x0 && pos.getX() <= x1 && pos.getZ() >= z0 && pos.getZ() <= z1);
+    }
+
     public final void finish() {
         GameRules rules = server.getGameRules();
         rules.getRule(GameRules.RULE_KEEPINVENTORY).set(savedKeepInventory, server);
         rules.getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(savedImmediateRespawn, server);
         onFinish();
+        com.provinggrounds.data.BlockLedger.endMatch(server); // 場地方塊還原
+
         for (ServerPlayer p : online()) restorePlayer(p);
         ArenaManager.clear(this);
         GameManager.get().reset();
