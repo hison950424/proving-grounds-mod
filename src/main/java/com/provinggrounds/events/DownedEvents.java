@@ -87,7 +87,7 @@ public class DownedEvents {
     public void onToss(ItemTossEvent event) {
         if (!(event.getPlayer() instanceof ServerPlayer p)) return;
         ItemStack stack = event.getEntity().getItem();
-        if (!stack.is(com.provinggrounds.special.SpecialRegistry.SHIELD_HELD.get())) return;
+        if (!stack.is(com.provinggrounds.special.SpecialRegistry.SHIELD_HELD.get()) && !com.provinggrounds.item.ParachuteItem.is(stack)) return; // 擊退盾、降落傘不能丟
         event.setCanceled(true);
         int slot = p.getInventory().selected;
         if (p.getInventory().getItem(slot).isEmpty()) p.getInventory().setItem(slot, stack.copy());

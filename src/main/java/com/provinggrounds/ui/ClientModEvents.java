@@ -65,7 +65,13 @@ public final class ClientModEvents {
     public static void onClientSetup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {
         event.enqueueWork(() -> net.minecraft.client.gui.screens.MenuScreens.register(
             com.provinggrounds.registry.PGBlocks.TOMBSTONE_MENU.get(), TombstoneScreen::new)); // 墓碑畫面
+        // 降落傘打開時手上的傘包改用看不見的模型（models/item/parachute.json 的 overrides）
+        event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(
+            com.provinggrounds.registry.PGBlocks.PARACHUTE.get(),
+            new net.minecraft.resources.ResourceLocation(com.provinggrounds.ProvingGroundsMod.MOD_ID, "open"),
+            (stack, level, entity, seed) -> com.provinggrounds.item.ParachuteItem.isOpen(stack) ? 1f : 0f));
     }
+
 
     @SubscribeEvent
     public static void onRegisterKeys(RegisterKeyMappingsEvent event) {

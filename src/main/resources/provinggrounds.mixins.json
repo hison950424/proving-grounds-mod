@@ -17,6 +17,9 @@
     "LevelSetBlockMixin",
     "ExplosionHitPlayersMixin"
   ],
+  "client": [
+    "HumanoidArmsMixin"
+  ],
   "injectors": {
     "defaultRequire": 0
   }

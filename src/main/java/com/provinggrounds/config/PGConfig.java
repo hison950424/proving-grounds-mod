@@ -50,7 +50,7 @@ public class PGConfig {
     public final ForgeConfigSpec.IntValue boardLockSeconds;
     public final ForgeConfigSpec.IntValue jumpInvisibleSeconds;
     // 跳傘（計畫書 B1）
-    public final ForgeConfigSpec.DoubleValue skydiveAutoChuteHeight, chuteSink, chuteHorizontal, glidePitchUpMax;
+    public final ForgeConfigSpec.DoubleValue skydiveAutoChuteHeight, chuteSink, chuteHorizontal, glidePitchUpMax, chuteDrift;
     public final ForgeConfigSpec.BooleanValue hotbarRulesEnabled;
     public final ForgeConfigSpec.DoubleValue wheelHoldSeconds;
     public final ForgeConfigSpec.BooleanValue uiWalkAllowed;
@@ -239,7 +239,10 @@ public class PGConfig {
             .defineInRange("chute_sink", 5.0, 0.5, 50.0);
         chuteHorizontal = builder.comment("開傘後用移動鍵操控的最大水平速度（格/秒）")
             .defineInRange("chute_horizontal", 12.0, 0.0, 50.0);
+        chuteDrift = builder.comment("開傘後不按方向鍵時，自動往面向的方向前進的速度（格/秒；按後退可以抵銷）")
+            .defineInRange("chute_drift", 4.0, 0.0, 50.0);
         builder.pop();
+
 
         builder.comment("快捷欄規則：第 1、2 格大型槍，第 3 格手槍，第 4 格補品，第 5 格投擲物（只對 BR 進行中的參賽者生效）。").push("hotbar");
         hotbarRulesEnabled = builder.comment("是否啟用快捷欄規則")

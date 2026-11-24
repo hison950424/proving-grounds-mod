@@ -28,10 +28,35 @@ public final class ClientSkydive {
 
     private ClientSkydive() {}
 
+    /** 上飛機到落地：快捷欄鎖在第 9 格（降落傘）。 */
+    public static boolean hotbarLocked() {
+        byte self = ClientBRState.get().selfState();
+        return self == ClientBRState.SELF_PLANE || self == ClientBRState.SELF_GLIDE
+            || self == ClientBRState.SELF_FREEFALL || self == ClientBRState.SELF_CHUTE;
+    }
+
+    /** 鎖住時：數字鍵換格無效、選在第 9 格（伺服器也會再強制一次）。 */
+    @SubscribeEvent
+    public static void onClientTickStart(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.START) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || !hotbarLocked()) return;
+        for (var key : mc.options.keyHotbarSlots) while (key.consumeClick()) { /* 吃掉 */ }
+        mc.player.getInventory().selected = com.provinggrounds.item.ParachuteItem.SLOT;
+    }
+
+    /** 鎖住時：滑鼠滾輪不能換格。 */
+    @SubscribeEvent
+    public static void onScroll(net.minecraftforge.client.event.InputEvent.MouseScrollingEvent event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && mc.screen == null && hotbarLocked()) event.setCanceled(true);
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
+
         // 坐上飛機時原版會在快捷欄上方顯示「按下 蹲下 離開」，但飛機上要按空白鍵跳、不能蹲下離開：
         // 搭機期間每 tick 清掉那一行（我們自己的「按 空白鍵 跳傘」提示是 HUD 另外畫的，不受影響）
         if (mc.player != null && mc.player.isPassenger() && ClientBRState.get().selfState() == ClientBRState.SELF_PLANE) {
@@ -70,10 +95,11 @@ public final class ClientSkydive {
         if (event.phase != TickEvent.Phase.START) return;
         if (ClientBRState.get().selfState() != ClientBRState.SELF_CHUTE) return;
         if (p.onGround() || p.isInWater()) return;
-        double sink = 5, horiz = 12;
+        double sink = 5, horiz = 12, drift = 4;
         try {
             sink = PGConfig.SERVER.chuteSink.get();
             horiz = PGConfig.SERVER.chuteHorizontal.get();
+            drift = PGConfig.SERVER.chuteDrift.get();
         } catch (IllegalStateException ignored) {
             // 設定還沒同步過來：用預設值
         }
@@ -83,7 +109,11 @@ public final class ClientSkydive {
         double vx = fx * fwd + fz * left, vz = fz * fwd - fx * left; // 左方 = 面向逆時針轉 90 度
         double len = Math.sqrt(vx * vx + vz * vz);
         if (len > 1) { vx /= len; vz /= len; }
-        p.setDeltaMovement(vx * horiz / 20.0, -sink / 20.0, vz * horiz / 20.0);
+        // 降落傘打開時一直緩緩往前飄（不按方向鍵也會）；按方向鍵再加上去，總速度不超過 chute_horizontal
+        double sx = vx * horiz + fx * drift, sz = vz * horiz + fz * drift;
+        double speed = Math.sqrt(sx * sx + sz * sz), cap = Math.max(horiz, drift);
+        if (speed > cap) { sx = sx / speed * cap; sz = sz / speed * cap; }
+        p.setDeltaMovement(sx / 20.0, -sink / 20.0, sz / 20.0);
         p.fallDistance = 0;
     }
 }

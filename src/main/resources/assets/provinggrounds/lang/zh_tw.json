@@ -21,6 +21,8 @@
   "provinggrounds.backpack.tooltip": "裝在背包欄（副手格上方）：主背包開放 %s 格",
   "key.categories.provinggrounds": "試煉場",
   "key.provinggrounds.menu": "打開主選單 / 大地圖",
+  "item.provinggrounds.parachute": "降落傘",
+  "item.provinggrounds.parachute_canopy": "傘衣（模型）",
   "key.provinggrounds.interact": "互動（開門、開箱、扶起隊友、祭壇）",
   "key.provinggrounds.scoreboard": "戰績面板（按住顯示）",
   "key.provinggrounds.prone":
@@ -91,7 +93,7 @@
   "provinggrounds.hud.hint.plane_locked": "%s 秒後可跳傘",
   "provinggrounds.hud.hint.glide": "鞘翅滑翔｜按%s開傘（離地 50 格自動開傘）",
   "provinggrounds.hud.hint.freefall": "自由落體｜按%s開傘",
-  "provinggrounds.hud.hint.chute": "已開傘｜用移動鍵控制方向，按%s收傘（自由落體）",
+  "provinggrounds.hud.hint.chute": "已開傘｜會自動往前飄，用移動鍵控制方向，按%s收傘（自由落體）",
   "provinggrounds.hud.hint.downed": "倒地中｜流血 %s｜等待隊友扶起",
   "provinggrounds.hud.hint.card_ground": "已淘汰｜復活牌剩 %s，等待隊友撿起",
   "provinggrounds.hud.hint.card_ground_nolimit": "已淘汰｜你的復活牌掉在地上，等待隊友撿起",

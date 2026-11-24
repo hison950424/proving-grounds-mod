@@ -1,0 +1,14 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "provinggrounds:item/parachute"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "provinggrounds:open": 1
+      },
+      "model": "provinggrounds:item/parachute_open"
+    }
+  ]
+}

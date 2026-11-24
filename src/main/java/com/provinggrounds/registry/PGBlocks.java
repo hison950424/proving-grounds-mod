@@ -74,7 +74,14 @@ public final class PGBlocks {
     public static final RegistryObject<Item> REVIVE_CARD = ITEMS.register("revive_card",
         () -> new Item(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
 
+    /** 降落傘（跳傘時固定在第 9 格）與只用來畫在頭上的傘衣模型（不會出現在遊戲裡）。 */
+    public static final RegistryObject<Item> PARACHUTE = ITEMS.register("parachute",
+        () -> new com.provinggrounds.item.ParachuteItem(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> PARACHUTE_CANOPY = ITEMS.register("parachute_canopy",
+        () -> new Item(new Item.Properties().stacksTo(1)));
+
     /** 一～三級背包（計畫書 B3）。 */
+
     public static final RegistryObject<Item> BACKPACK_1 = ITEMS.register("backpack_1",
         () -> new com.provinggrounds.item.BackpackItem(1, new Item.Properties()));
     public static final RegistryObject<Item> BACKPACK_2 = ITEMS.register("backpack_2",

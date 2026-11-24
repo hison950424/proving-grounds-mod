@@ -457,6 +457,7 @@ public class BattleRoyaleMode {
             if (p == null || !part.alive) continue;
             level.getChunk((int) Math.floor(planeStart.x) >> 4, (int) Math.floor(planeStart.z) >> 4);
             com.provinggrounds.modes.br.HotbarRules.clearKeepMelee(p); // 登機時再清一次，只留近戰武器（第 3 格）
+            com.provinggrounds.item.ParachuteItem.enforce(p, false); // 第 9 格放降落傘，快捷欄鎖在第 9 格（到落地為止）
             p.teleportTo(level, planeStart.x, planeStart.y, planeStart.z, yaw, 0);
             Display.ItemDisplay carrier = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, level);
             carrier.moveTo(planeStart.x, planeStart.y, planeStart.z, yaw, 0);
@@ -494,6 +495,7 @@ public class BattleRoyaleMode {
             if (part.carrier != null && part.carrier.isAlive()) {
                 part.carrier.moveTo(pos.x, pos.y, pos.z, part.carrier.getYRot(), 0);
             }
+            com.provinggrounds.item.ParachuteItem.enforce(p, false);
             boolean stillRiding = part.carrier != null && p.getVehicle() == part.carrier;
             if (!stillRiding || end) {
                 jump(p, part);
@@ -623,6 +625,7 @@ public class BattleRoyaleMode {
             if (p == null) continue;
 
             p.fallDistance = 0;
+            com.provinggrounds.item.ParachuteItem.enforce(p, part.state == PlayerState.CHUTE); // 開傘中 = 傘衣打開
             if (part.state == PlayerState.GLIDE && !landed(p)) {
                 // 鞘翅滑翔中：離地夠近就自動開傘；萬一滑翔被中斷（例如撞到東西）就重新開始滑翔
                 double auto = PGConfig.SERVER.skydiveAutoChuteHeight.get();
@@ -635,6 +638,7 @@ public class BattleRoyaleMode {
                     p.fallDistance = 0;
                     p.stopFallFlying();
                     SkydiveWings.removeAll(p); // 落地：移除鞘翅（沒開傘就落地時也會清掉）
+                    com.provinggrounds.item.ParachuteItem.removeAll(p); // 落地：收回降落傘，快捷欄解鎖
                     if (part.kitOnLanding) { part.kitOnLanding = false; RespawnKit.give(p); } // 祭壇復活：落地才發裝備
                 }
             } else {
@@ -1115,6 +1119,7 @@ public class BattleRoyaleMode {
 
         // 不噴裝：身上所有物品（含背包欄）收進屍體位置的墓碑，然後變成觀察者
         SkydiveWings.removeAll(victim);
+        com.provinggrounds.item.ParachuteItem.removeAll(victim);
         com.provinggrounds.modes.br.Tombstones.place(victim, corpse);
         discardCarrier(part);
         victim.stopRiding();
@@ -1242,7 +1247,8 @@ public class BattleRoyaleMode {
 
     /** 玩家登入：倒數期間加入參賽；遊戲中變觀察者；沒有遊戲但有還原標記就還原。 */
     public void onLogin(ServerPlayer p) {
-        if (!isAirborne(p.getUUID())) SkydiveWings.removeAll(p); // 不在跳傘中卻有翼裝（例如跳傘時斷線）就清掉
+        if (!isAirborne(p.getUUID())) { SkydiveWings.removeAll(p); com.provinggrounds.item.ParachuteItem.removeAll(p); } // 不在跳傘中卻有翼裝、降落傘（例如跳傘時斷線）就清掉
+
         CompoundTag tag = p.getPersistentData().getCompound(RESTORE_TAG);
         boolean sameGame = tag.contains("game") && tag.getLong("game") == gameId && phase != Phase.IDLE;
 
@@ -1906,6 +1912,7 @@ public class BattleRoyaleMode {
 
         p.stopRiding();
         SkydiveWings.removeAll(p);
+        com.provinggrounds.item.ParachuteItem.removeAll(p);
         p.setForcedPose(null);
         if (p.getCamera() != p) p.setCamera(p);
         BRMovement.remove(p);
