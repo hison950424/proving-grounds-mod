@@ -91,9 +91,26 @@ public final class HotbarRules {
         return GunCompat.classify(s) != GunClass.NONE;
     }
 
-    /** 規則是否對這個玩家生效。 */
+    /**
+     * 規則是否對這個玩家生效：大逃殺，以及團隊死鬥／佔點／槍王之王（計畫書 5 的 A2：槍械放置規則同大逃殺）。
+     * 團隊模式沒有背包系統，背包格的鎖定只看 activeBr（Backpack 用）。
+     */
     public static boolean active(Player p) {
+        if (activeBr(p)) return true;
+        if (!(p instanceof ServerPlayer sp) || !com.provinggrounds.modes.arena.ArenaManager.isParticipant(sp.getUUID())) return false;
+        try {
+            if (!PGConfig.SERVER.hotbarRulesEnabled.get()) return false;
+        } catch (IllegalStateException e) {
+            return false;
+        }
+        GameType mode = sp.gameMode.getGameModeForPlayer();
+        return mode != GameType.CREATIVE && mode != GameType.SPECTATOR && sp.isAlive();
+    }
+
+    /** 大逃殺中（背包系統只在大逃殺）。 */
+    public static boolean activeBr(Player p) {
         if (!(p instanceof ServerPlayer sp)) return false;
+
         try {
             if (!PGConfig.SERVER.hotbarRulesEnabled.get()) return false;
         } catch (IllegalStateException e) {

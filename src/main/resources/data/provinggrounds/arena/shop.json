@@ -16,11 +16,131 @@
  ],
  "items": [
   {
+   "auto": true,
+   "id": "hk_mk23",
+   "name": "HK Mk23 進攻型手槍",
+   "price": 50,
+   "free": 40,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:hk_mk23\",GunFireMode:\"BURST\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "lifecard",
+   "name": "LifeCard 單發折疊手槍",
+   "price": 50,
+   "free": 40,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:lifecard\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "trapper50cal",
+   "name": "Traditions Trapper 50口徑 火帽槍",
+   "price": 50,
+   "free": 40,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:trapper50cal\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "taurus943",
+   "name": ".22 M943轉輪手槍",
+   "price": 60,
+   "free": 48,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:taurus943\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "python",
+   "name": "Python Colt “蟒蛇” 左輪手槍",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:python\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "tt33",
+   "name": "TT-33 手槍",
+   "price": 90,
+   "free": 72,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:tt33\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "webley1913",
+   "name": "Webley Mk. 1 自動裝填手槍",
+   "price": 90,
+   "free": 72,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:webley1913\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "glock_17",
+   "name": "格洛克 17",
+   "price": 90,
+   "free": 72,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:glock_17\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "m9a4",
+   "name": "貝瑞塔M9A4",
+   "price": 90,
+   "free": 72,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m9a4\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
    "id": "tec9",
    "name": "Tec-9",
    "price": 100,
    "free": 80,
    "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:tec9\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "viper2011",
+   "name": "Viper 2011 “蝰蛇” 手槍",
+   "price": 100,
+   "free": 80,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:viper2011\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "usp45",
+   "name": "HK USP45 手槍 沙色款",
+   "price": 110,
+   "free": 88,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:usp45\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "usp45_black",
+   "name": "HK USP45 手槍 黑色款",
+   "price": 110,
+   "free": 88,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:usp45_black\",GunFireMode:\"SEMI\"}",
    "count": 1,
    "cat": "手槍"
   },
@@ -52,6 +172,16 @@
    "cat": "手槍"
   },
   {
+   "auto": true,
+   "id": "np762",
+   "name": "北方工業 NP762型 自動手槍",
+   "price": 120,
+   "free": 96,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:np762\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
    "id": "tti2011",
    "name": "TTI 2011",
    "price": 130,
@@ -70,11 +200,41 @@
    "cat": "手槍"
   },
   {
+   "auto": true,
+   "id": "timeless50",
+   "name": "Timeless .50 Z型",
+   "price": 140,
+   "free": 112,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:timeless50\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "deagle",
+   "name": "沙漠之鷹 .50",
+   "price": 140,
+   "free": 112,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:deagle\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
    "id": "rhino357",
    "name": "Rhino 357",
    "price": 150,
    "free": 120,
    "item": "tacz:modern_kinetic_gun{GunId:\"tacz:rhino357\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "cz75",
+   "name": "CZ 75 手槍",
+   "price": 160,
+   "free": 128,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:cz75\",GunFireMode:\"AUTO\"}",
    "count": 1,
    "cat": "手槍"
   },
@@ -106,6 +266,36 @@
    "cat": "手槍"
   },
   {
+   "auto": true,
+   "id": "sw_686",
+   "name": "史密斯威森 686 左輪",
+   "price": 370,
+   "free": 296,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:sw_686\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "手槍"
+  },
+  {
+   "auto": true,
+   "id": "mas38",
+   "name": "MAS-38型 沖鋒槍",
+   "price": 170,
+   "free": 136,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:mas38\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "衝鋒槍"
+  },
+  {
+   "auto": true,
+   "id": "uzi",
+   "name": "烏茲衝鋒槍",
+   "price": 250,
+   "free": 200,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:uzi\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "衝鋒槍"
+  },
+  {
    "id": "hk_mp5a5",
    "name": "HK MP5A5",
    "price": 270,
@@ -120,6 +310,16 @@
    "price": 290,
    "free": 232,
    "item": "tacz:modern_kinetic_gun{GunId:\"tacz:vector45\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "衝鋒槍"
+  },
+  {
+   "auto": true,
+   "id": "ump45",
+   "name": "UMP45 沖鋒槍",
+   "price": 300,
+   "free": 240,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:ump45\",GunFireMode:\"AUTO\"}",
    "count": 1,
    "cat": "衝鋒槍"
   },
@@ -147,6 +347,16 @@
    "price": 380,
    "free": 304,
    "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qcq171\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "衝鋒槍"
+  },
+  {
+   "auto": true,
+   "id": "p90",
+   "name": "FN P90個人防衛武器",
+   "price": 420,
+   "free": 336,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:p90\",GunFireMode:\"AUTO\"}",
    "count": 1,
    "cat": "衝鋒槍"
   },
@@ -196,11 +406,41 @@
    "cat": "散彈槍"
   },
   {
+   "auto": true,
+   "id": "qba221",
+   "name": "QBA-221式 全自動霰彈槍",
+   "price": 330,
+   "free": 264,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qba221\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "散彈槍"
+  },
+  {
+   "auto": true,
+   "id": "spas12",
+   "name": "弗蘭基 SPAS-12 多用途霰彈槍",
+   "price": 350,
+   "free": 280,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:spas12\",GunFireMode:\"BURST\"}",
+   "count": 1,
+   "cat": "散彈槍"
+  },
+  {
    "id": "m1014",
    "name": "M1014",
    "price": 380,
    "free": 304,
    "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m1014\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "散彈槍"
+  },
+  {
+   "auto": true,
+   "id": "gen12",
+   "name": "TTI Gen-12 全自動霰彈槍",
+   "price": 380,
+   "free": 304,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:gen12\",GunFireMode:\"AUTO\"}",
    "count": 1,
    "cat": "散彈槍"
   },
@@ -250,11 +490,61 @@
    "cat": "步槍"
   },
   {
+   "auto": true,
+   "id": "m16a4",
+   "name": "M16A4突擊步槍",
+   "price": 320,
+   "free": 256,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m16a4\",GunFireMode:\"BURST\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "sks_tactical",
+   "name": "SKS 戰術版步槍",
+   "price": 320,
+   "free": 256,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:sks_tactical\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "mpdr",
+   "name": "馬蓋普 PDR 個人防衛武器",
+   "price": 360,
+   "free": 288,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:mpdr\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "hk_g3",
+   "name": "HK G3戰鬥步槍",
+   "price": 370,
+   "free": 296,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:hk_g3\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
    "id": "scar_l",
    "name": "SCAR-L",
    "price": 370,
    "free": 296,
    "item": "tacz:modern_kinetic_gun{GunId:\"tacz:scar_l\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "aks74u",
+   "name": "AKs74u 突擊步槍",
+   "price": 380,
+   "free": 304,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:aks74u\",GunFireMode:\"AUTO\"}",
    "count": 1,
    "cat": "步槍"
   },
@@ -268,11 +558,141 @@
    "cat": "步槍"
   },
   {
+   "auto": true,
+   "id": "an94",
+   "name": "AN94 突擊步槍",
+   "price": 390,
+   "free": 312,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:an94\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "qbz191",
+   "name": "QBZ-191 突擊步槍",
+   "price": 390,
+   "free": 312,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qbz191\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "qbz951",
+   "name": "QBZ-95-1 突擊步槍",
+   "price": 390,
+   "free": 312,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qbz951\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "kacpdw",
+   "name": "KAC PDW 個人防衛武器",
+   "price": 400,
+   "free": 320,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:kacpdw\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
    "id": "m16a1",
    "name": "M16A1",
    "price": 400,
    "free": 320,
    "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m16a1\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "qbz951s",
+   "name": "QBZ-95-1 赤霄戰術改件 突擊步槍",
+   "price": 400,
+   "free": 320,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qbz951s\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "m4a1",
+   "name": "M4A1卡賓槍",
+   "price": 410,
+   "free": 328,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m4a1\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "qbz951b",
+   "name": "QBZ-95B-1 短突擊步槍",
+   "price": 410,
+   "free": 328,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qbz951b\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "aug",
+   "name": "Steyr AUG 突擊步槍",
+   "price": 410,
+   "free": 328,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:aug\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "type_81",
+   "name": "81-1式自動步槍",
+   "price": 420,
+   "free": 336,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:type_81\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "qbz_95",
+   "name": "95式自動步槍",
+   "price": 420,
+   "free": 336,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:qbz_95\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "qbz192",
+   "name": "QBZ-192 短突擊步槍",
+   "price": 420,
+   "free": 336,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qbz192\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "mk47",
+   "name": "CMMG Mk47 Mutant 突擊步槍",
+   "price": 430,
+   "free": 344,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:mk47\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "l119a2",
+   "name": "L119A2 突擊步槍",
+   "price": 430,
+   "free": 344,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:l119a2\",GunFireMode:\"AUTO\"}",
    "count": 1,
    "cat": "步槍"
   },
@@ -286,11 +706,51 @@
    "cat": "步槍"
   },
   {
+   "auto": true,
+   "id": "saddam_golden_ak",
+   "name": "薩達姆的§e§l黃金AK§r",
+   "price": 430,
+   "free": 344,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:saddam_golden_ak\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
    "id": "g36k",
    "name": "G36K",
    "price": 450,
    "free": 360,
    "item": "tacz:modern_kinetic_gun{GunId:\"tacz:g36k\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "qbu191",
+   "name": "QBU-191 精確射手步槍",
+   "price": 470,
+   "free": 376,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qbu191\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "spr15hb",
+   "name": "SPR-15 HB “射手座”",
+   "price": 500,
+   "free": 400,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:spr15hb\",GunFireMode:\"BURST\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "m1895",
+   "name": "馬林 M1895 杠桿步槍",
+   "price": 510,
+   "free": 408,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:m1895\",GunFireMode:\"SEMI\"}",
    "count": 1,
    "cat": "步槍"
   },
@@ -313,11 +773,31 @@
    "cat": "步槍"
   },
   {
+   "auto": true,
+   "id": "rm277",
+   "name": "RM277 突擊步槍",
+   "price": 600,
+   "free": 480,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:rm277\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
    "id": "mk14",
    "name": "MK14 EBR",
    "price": 620,
    "free": 496,
    "item": "tacz:modern_kinetic_gun{GunId:\"tacz:mk14\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "xm7",
+   "name": "SIG XM7 突擊步槍",
+   "price": 760,
+   "free": 608,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:xm7\",GunFireMode:\"AUTO\"}",
    "count": 1,
    "cat": "步槍"
   },
@@ -338,6 +818,46 @@
    "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:ash12\",GunFireMode:\"AUTO\"}",
    "count": 1,
    "cat": "步槍"
+  },
+  {
+   "auto": true,
+   "id": "qjb951",
+   "name": "QJB-95-1 班用機槍",
+   "price": 470,
+   "free": 376,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qjb951\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "機槍"
+  },
+  {
+   "auto": true,
+   "id": "mk3",
+   "name": "FN 米尼米 MK3 班用機槍",
+   "price": 510,
+   "free": 408,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:mk3\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "機槍"
+  },
+  {
+   "auto": true,
+   "id": "qjb_201",
+   "name": "QJB-201式 班用機槍",
+   "price": 520,
+   "free": 416,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qjb_201\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "機槍"
+  },
+  {
+   "auto": true,
+   "id": "type81_lmg",
+   "name": "81式 班用機槍",
+   "price": 530,
+   "free": 424,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:type81_lmg\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "機槍"
   },
   {
    "id": "m249",
@@ -376,6 +896,16 @@
    "cat": "機槍"
   },
   {
+   "auto": true,
+   "id": "mg338",
+   "name": "SIG MG-338 通用機槍",
+   "price": 690,
+   "free": 552,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:mg338\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "機槍"
+  },
+  {
    "id": "minigun",
    "name": "Minigun",
    "price": 1100,
@@ -392,6 +922,46 @@
    "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qjz171\",GunFireMode:\"AUTO\"}",
    "count": 1,
    "cat": "機槍"
+  },
+  {
+   "auto": true,
+   "id": "springfield1873",
+   "name": "春田M1873步槍",
+   "price": 250,
+   "free": 200,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:springfield1873\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "auto": true,
+   "id": "svd",
+   "name": "德拉貢諾夫 SVD 狙擊步槍",
+   "price": 290,
+   "free": 232,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:svd\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "auto": true,
+   "id": "cslr4",
+   "name": "CS/LR4型 狙擊步槍",
+   "price": 320,
+   "free": 256,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:cslr4\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "auto": true,
+   "id": "qbu88",
+   "name": "QBU-88式 狙擊步槍",
+   "price": 440,
+   "free": 352,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qbu88\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
   },
   {
    "id": "m700",
@@ -421,11 +991,61 @@
    "cat": "狙擊槍"
   },
   {
+   "auto": true,
+   "id": "l115a3",
+   "name": "L115A3 狙擊槍",
+   "price": 670,
+   "free": 536,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:l115a3\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "auto": true,
+   "id": "gm6",
+   "name": "GM6 Lynx “山貓” 反器材狙擊步槍",
+   "price": 680,
+   "free": 544,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:gm6\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "auto": true,
+   "id": "ai_awp",
+   "name": "精密國際AWM",
+   "price": 700,
+   "free": 560,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:ai_awp\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
    "id": "dvl10",
    "name": "DVL-10",
    "price": 800,
    "free": 640,
    "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:dvl10\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "auto": true,
+   "id": "axmc",
+   "name": "精密國際 AXMC 狙擊步槍",
+   "price": 800,
+   "free": 640,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:axmc\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "狙擊槍"
+  },
+  {
+   "auto": true,
+   "id": "m95",
+   "name": "巴雷特M95 .50口徑反器材狙擊步槍",
+   "price": 900,
+   "free": 720,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m95\",GunFireMode:\"SEMI\"}",
    "count": 1,
    "cat": "狙擊槍"
   },
@@ -464,6 +1084,96 @@
    "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:ptrd41\",GunFireMode:\"SEMI\"}",
    "count": 1,
    "cat": "狙擊槍"
+  },
+  {
+   "auto": true,
+   "id": "m320",
+   "name": "HK M320榴彈發射器",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:m320\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "重武器"
+  },
+  {
+   "auto": true,
+   "id": "m203",
+   "name": "M203 榴彈發射器",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:m203\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "重武器"
+  },
+  {
+   "auto": true,
+   "id": "m79",
+   "name": "M79 40毫米 榴彈發射器",
+   "price": 80,
+   "free": 64,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:m79\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "重武器"
+  },
+  {
+   "auto": true,
+   "id": "rpg7",
+   "name": "RPG-7 火箭推進榴彈發射器",
+   "price": 120,
+   "free": 96,
+   "item": "tacz:modern_kinetic_gun{GunId:\"tacz:rpg7\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "重武器"
+  },
+  {
+   "auto": true,
+   "id": "m32a1",
+   "name": "米爾科 M32A1 轉輪連發式榴彈發射器",
+   "price": 120,
+   "free": 96,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:m32a1\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "重武器"
+  },
+  {
+   "auto": true,
+   "id": "aiyasinrpg",
+   "name": "RPG-7 亞辛 105毫米 火箭發射器",
+   "price": 360,
+   "free": 288,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:aiyasinrpg\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "重武器"
+  },
+  {
+   "auto": true,
+   "id": "qlu11",
+   "name": "QLU-11 狙擊榴彈發射器",
+   "price": 450,
+   "free": 360,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qlu11\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "重武器"
+  },
+  {
+   "auto": true,
+   "id": "pf98a",
+   "name": "PF-98A 120毫米 火箭發射器",
+   "price": 460,
+   "free": 368,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:pf98a\",GunFireMode:\"SEMI\"}",
+   "count": 1,
+   "cat": "重武器"
+  },
+  {
+   "auto": true,
+   "id": "qlz87",
+   "name": "QLZ-87式 自動榴彈發射器",
+   "price": 640,
+   "free": 512,
+   "item": "tacz:modern_kinetic_gun{GunId:\"suffuse:qlz87\",GunFireMode:\"AUTO\"}",
+   "count": 1,
+   "cat": "重武器"
   },
   {
    "id": "lonetrail",

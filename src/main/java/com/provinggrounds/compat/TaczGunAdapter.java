@@ -351,6 +351,13 @@ public class TaczGunAdapter implements GunAdapter {
     private volatile java.util.Map<String, java.util.List<net.minecraft.resources.ResourceLocation>> byType;
 
     @Override
+    public java.util.Set<String> allGunIds() {
+        gunsOfType(""); // 先建好索引
+        java.util.Set<String> out = new java.util.HashSet<>();
+        if (byType != null) byType.values().forEach(l -> l.forEach(id -> out.add(id.toString())));
+        return out;
+    }
+
     public java.util.List<net.minecraft.resources.ResourceLocation> gunsOfType(String type) {
         if (byType == null) {
             java.util.Map<String, java.util.List<net.minecraft.resources.ResourceLocation>> map = new java.util.HashMap<>();

@@ -75,6 +75,7 @@ public class ProvingGroundsMod {
         com.provinggrounds.command.RandomCommand.register(event.getDispatcher()); // 移植 1.20.2 的 /random
         com.provinggrounds.command.CircleCommand.register(event.getDispatcher()); // /pg circle：管理員自訂縮圈數值
         com.provinggrounds.command.ArenaCommand.register(event.getDispatcher()); // /pg arena：團隊死鬥／佔點／槍王之王
+        com.provinggrounds.venue.Parkour.register(event.getDispatcher()); // /pg parkour：跑庫塔起點、終點、排行榜
         LOGGER.info("Proving Grounds commands registered.");
     }
 }

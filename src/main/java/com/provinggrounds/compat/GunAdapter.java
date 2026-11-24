@@ -57,6 +57,9 @@ public interface GunAdapter {
      */
     boolean registerBlockHitListener(BlockHitListener listener);
 
+    /** 目前載入的所有槍 ID（字串）。 */
+    default java.util.Set<String> allGunIds() { return java.util.Set.of(); }
+
     /** 判斷物品是不是槍、是手槍還是大型槍（兩端都可呼叫）。 */
     default GunClass classify(net.minecraft.world.item.ItemStack stack) { return GunClass.NONE; }
 

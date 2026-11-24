@@ -113,7 +113,7 @@ public final class Backpack {
 
     private static boolean rulesActive(Player p) {
         if (p.level().isClientSide) return clientRulesActive && !p.isCreative() && !p.isSpectator();
-        return HotbarRules.active(p);
+        return HotbarRules.activeBr(p); // 團隊模式沒有背包系統，所有背包格都能用
     }
 
     /** 主背包第 slot 格（Inventory 9～35）是否鎖定。 */

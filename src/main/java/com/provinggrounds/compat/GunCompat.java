@@ -58,6 +58,8 @@ public final class GunCompat {
 
     public static java.util.List<net.minecraft.resources.ResourceLocation> gunsOfType(String type) { return active == null ? java.util.List.of() : active.gunsOfType(type); }
 
+    public static java.util.Set<String> allGunIds() { return active == null ? java.util.Set.of() : active.allGunIds(); }
+
     public static net.minecraft.world.item.ItemStack createGun(net.minecraft.resources.ResourceLocation id) { return active == null ? net.minecraft.world.item.ItemStack.EMPTY : active.createGun(id); }
 
     /** 上好子彈的槍（團隊死鬥／佔點／槍王之王發槍用）。 */

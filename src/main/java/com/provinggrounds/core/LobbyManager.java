@@ -257,7 +257,7 @@ public final class LobbyManager {
                 teamMode = all[arg];
             }
             case SET_TEAM_COUNT -> {
-                teamCount = Math.max(1, Math.min(MAX_TEAMS, arg));
+                teamCount = Math.max(0, Math.min(MAX_TEAMS, arg)); // 0 = 全員孤狼（計畫書 5 的 F）
                 // 編號超過隊伍數的人改回未分隊
                 for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                     TeamManager.get().getTeam(p).ifPresent(t -> { if (t.id > teamCount) TeamManager.get().unassign(p); });
@@ -275,8 +275,9 @@ public final class LobbyManager {
                 broadcastChat(server, Component.literal("[PG] 管理員已把所有人移出隊伍。").withStyle(ChatFormatting.YELLOW));
             }
             case AUTO_BALANCE -> {
-                TeamManager.get().balance(participants(server), teamCount);
-                broadcastChat(server, Component.literal("[PG] 管理員已自動分成 " + teamCount + " 隊。").withStyle(ChatFormatting.YELLOW));
+                if (teamCount == 0) TeamManager.get().clearAssignments(); // 隊伍數 0：全員孤狼
+                else TeamManager.get().balance(participants(server), teamCount);
+                broadcastChat(server, Component.literal(teamCount == 0 ? "[PG] 隊伍數 0：全員孤狼。" : "[PG] 管理員已自動分成 " + teamCount + " 隊。").withStyle(ChatFormatting.YELLOW));
             }
             case SET_SPECTATOR -> {
                 if (target == null) return false;

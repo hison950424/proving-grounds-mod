@@ -126,14 +126,36 @@ public final class GkMode extends ArenaMode {
         return false;
     }
 
+    /** TACZ 目前載入的所有槍 ID（拿不到就是空集合，不做過濾）。 */
+    private static java.util.Set<String> knownGuns() {
+        return com.provinggrounds.compat.GunCompat.allGunIds();
+    }
+
     @Override
     protected void onStart() {
         Random rand = new Random();
+
         order.addAll(ArenaData.gkCategories());
         Collections.shuffle(order, rand);
         Map<String, List<String>> pools = ArenaData.gkAttachments();
-        for (ArenaData.GkCategory c : order) {
-            weapons.add(c.items().get(rand.nextInt(c.items().size())));
+        java.util.Set<String> known = knownGuns();
+        for (ArenaData.GkCategory c : new ArrayList<>(order)) {
+            // 武器清單裡有 TACZ 沒有的槍（槍包沒裝或改名）：略過並寫 log，不要崩潰（計畫書 5 的 C6）
+            List<ArenaData.GkEntry> ok = new ArrayList<>();
+            for (ArenaData.GkEntry e : c.items()) {
+                if (e.gun() != null && !known.isEmpty() && !known.contains(e.gun())) {
+                    com.provinggrounds.ProvingGroundsMod.LOGGER.warn("GK: unknown gun id {} in category {}, skipped.", e.gun(), c.name());
+                    continue;
+                }
+                ok.add(e);
+            }
+            if (ok.isEmpty()) {
+                com.provinggrounds.ProvingGroundsMod.LOGGER.warn("GK: category {} has no usable weapon, removed from this match.", c.name());
+                order.remove(c);
+                continue;
+            }
+            weapons.add(ok.get(rand.nextInt(ok.size())));
+
             List<String> att = new ArrayList<>();
             if (c.takesAttachments()) {
                 for (String type : ATTACH_TYPES) {
