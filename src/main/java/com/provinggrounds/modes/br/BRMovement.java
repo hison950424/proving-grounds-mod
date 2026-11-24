@@ -20,7 +20,7 @@ import java.util.UUID;
  * 目的: BR 移動規則。
  *       速度：移動速度屬性的暫時性修改（transient，不寫進玩家存檔，崩潰重啟後自動消失）。
  *             MULTIPLY_TOTAL 與速度藥水、疾跑加成相乘 → 走路與疾跑都是原版的 speed_multiplier（預設 80%）；
- *             手上拿近戰武器時改用 melee_speed_multiplier（預設 100%）。
+ *             手上拿近戰武器、而且拔刀動畫播完後改用 melee_speed_multiplier（預設 100%；見 MeleeDrawSpeed）。
  *       跳躍：玩家移動由客戶端決定，所以在客戶端的跳躍事件修正起跳垂直速度，
  *             讓高度 = 原高度 × (jump_height ÷ 原版無藥水高度)，跳躍藥水依同比例縮小；
  *             並抵銷疾跑跳多出來的水平前衝。
@@ -63,7 +63,7 @@ public final class BRMovement {
 
     private static double targetMultiplier(ServerPlayer player) {
         PGConfig c = PGConfig.SERVER;
-        boolean melee = player.getMainHandItem().is(com.provinggrounds.compat.GunCompat.MELEE);
+        boolean melee = com.provinggrounds.events.MeleeDrawSpeed.drawn(player); // 拔刀動畫播完才算拿著近戰武器
         double base = c.brSpeedMultiplier.get();
         return com.provinggrounds.special.SpecialSpeed.multiplier(player, base, melee ? c.brMeleeSpeedMultiplier.get() : base);
     }

@@ -75,6 +75,14 @@ public final class Compass {
         g.pose().translate(width / 2.0, yOffset, 0); // 貼齊螢幕最上方
         g.pose().scale((float) scale, (float) scale, 1);
 
+        final double bear = bearing;
+        // 效能（spark 實測）：刻度與文字合成一次繪圖送給顯示卡（drawManaged），不要每條線送一次
+        g.drawManaged(() -> drawBar(g, font, bear));
+        g.pose().popPose();
+        HudLayout.pop(g);
+    }
+
+    private static void drawBar(GuiGraphics g, Font font, double bearing) {
         // 方位條（沒有底色；刻度與文字都有陰影，在亮的天空也看得清楚）
         int barY = 1;
         int first = (int) Math.ceil((bearing - 90) / 15.0) * 15;
@@ -98,7 +106,5 @@ public final class Compass {
         int shown = (int) Math.round(bearing) % 360;
         String num = NUMBERS[shown == 0 ? 360 : shown];
         g.drawString(font, num, -font.width(num) / 2 + 1, triY + 5, ACCENT, true);
-        g.pose().popPose();
-        HudLayout.pop(g);
     }
 }

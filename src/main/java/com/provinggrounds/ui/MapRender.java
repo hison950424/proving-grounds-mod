@@ -111,7 +111,15 @@ public final class MapRender {
 
     // ── 圈 ──────────────────────────────────────────────────────────────────
 
+    /**
+     * 效能（spark 實測）：GuiGraphics.fill() 平常每呼叫一次就送一次繪圖指令給顯示卡；圈是上千個小點，
+     * 所以用 drawManaged 把整個圈合成一次送出。標記、自己的箭頭也一樣。
+     */
     public static void drawCircle(GuiGraphics g, View v, double cx, double cz, double r, int color, int thickness, boolean dashed) {
+        g.drawManaged(() -> drawCircle0(g, v, cx, cz, r, color, thickness, dashed));
+    }
+
+    private static void drawCircle0(GuiGraphics g, View v, double cx, double cz, double r, int color, int thickness, boolean dashed) {
         if (r <= 0) return;
         double pr = r / v.blocksPerPixel();
         int n = (int) Math.max(48, Math.min(1440, pr * 2 * Math.PI / 1.5));
@@ -132,6 +140,10 @@ public final class MapRender {
     // ── 標記 ────────────────────────────────────────────────────────────────
 
     public static void drawMarkers(GuiGraphics g, Font font, View v, boolean names) {
+        g.drawManaged(() -> drawMarkers0(g, font, v, names)); // 合成一次繪圖（見 drawCircle）
+    }
+
+    private static void drawMarkers0(GuiGraphics g, Font font, View v, boolean names) {
         long now = System.currentTimeMillis();
         for (MapMarkersPacket.Marker m : ClientMapData.markers()) {
             int sx = (int) v.px(m.x()), sz = (int) v.pz(m.z());
@@ -174,6 +186,10 @@ public final class MapRender {
 
     /** 自己：綠色箭頭、四周加黑色邊框（計畫書 5 的 E1，比較好認）。 */
     public static void drawSelf(GuiGraphics g, Font font, View v, double x, double z, float yaw) {
+        g.drawManaged(() -> drawSelf0(g, font, v, x, z, yaw)); // 合成一次繪圖（見 drawCircle）
+    }
+
+    private static void drawSelf0(GuiGraphics g, Font font, View v, double x, double z, float yaw) {
         int sx = (int) v.px(x), sz = (int) v.pz(z);
         g.pose().pushPose();
         g.pose().translate(sx, sz, 0);

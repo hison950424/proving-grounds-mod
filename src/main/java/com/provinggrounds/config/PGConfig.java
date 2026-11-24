@@ -63,6 +63,8 @@ public class PGConfig {
 
     // ── BR：移動 ──────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.DoubleValue brSpeedMultiplier, brMeleeSpeedMultiplier;
+    public final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> meleeDrawTicks;
+    public final ForgeConfigSpec.IntValue meleeDrawTicksDefault;
     public final ForgeConfigSpec.DoubleValue brJumpHeight;
 
     // ── BR：戰利品 ────────────────────────────────────────────────────────────
@@ -287,6 +289,12 @@ public class PGConfig {
             .defineInRange("speed_multiplier", 0.8, 0.1, 2.0);
         brMeleeSpeedMultiplier = builder.comment("BR 內手上拿著近戰武器（lrtactical 近戰）時的移動速度倍率（1.0 = 原版速度）")
             .defineInRange("melee_speed_multiplier", 1.0, 0.1, 2.0);
+        meleeDrawTicks = builder.comment("拿出近戰武器後，拔刀動畫播完才有跑速加成（所有模式）：每把武器的拔刀動畫長度（tick，20 = 1 秒）。",
+                "格式：武器ID=tick（武器ID 是 NBT 的 MeleeWeaponId）；沒列到的用 melee_draw_ticks_default。預設值取自各武器拔刀動畫的長度")
+            .defineListAllowEmpty("melee_draw_ticks", java.util.List.of(
+                "lrtactical:dagger=11", "lrtactical:karambit=21", "lrtactical:baseball_bat=25", "cs2_wt:bayonet=23"), o -> o instanceof String);
+        meleeDrawTicksDefault = builder.comment("沒在 melee_draw_ticks 裡的近戰武器，拔刀後多久才有跑速加成（tick；CS2 刀具包的刀都是 20）")
+            .defineInRange("melee_draw_ticks_default", 20, 0, 200);
         brJumpHeight = builder.comment("BR 內無藥水時的跳躍高度（格）。原版約 1.25；跳躍藥水依同比例縮小")
             .defineInRange("jump_height", 1.10, 0.5, 3.0);
         builder.pop();

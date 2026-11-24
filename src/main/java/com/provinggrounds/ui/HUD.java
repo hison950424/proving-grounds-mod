@@ -40,6 +40,11 @@ public final class HUD {
 
         // 每個元件照原本的位置畫，HudLayout 負責玩家自訂的位置、大小、開關（主選單「HUD 介面設定」）
         renderMinimap(g, font, s, mc, w, h);
+        // 效能（spark 實測）：其他元件只有色塊與文字，合成一次繪圖送給顯示卡（drawManaged）
+        g.drawManaged(() -> renderPanels(g, font, s, mc, w, h));
+    }
+
+    private static void renderPanels(GuiGraphics g, Font font, BRStatePacket s, Minecraft mc, int w, int h) {
         if (HudLayout.push(g, HudLayout.El.ZONE, w, h)) { renderZone(g, font, s, 82); HudLayout.pop(g); }
         if (HudLayout.push(g, HudLayout.El.ALIVE, w, h)) { renderAlive(g, font, s, w); HudLayout.pop(g); }
         if (HudLayout.push(g, HudLayout.El.BR_FEED, w, h)) { renderKillFeed(g, font, w, 36); HudLayout.pop(g); }
