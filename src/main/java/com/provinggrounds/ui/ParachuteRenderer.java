@@ -22,7 +22,7 @@ import net.minecraftforge.fml.common.Mod;
 
 /**
  * 檔案: ParachuteRenderer.java
- * 目的: 畫出打開的降落傘（只在客戶端）。誰手上拿著打開的降落傘（ParachuteItem 的 Open），
+ * 目的: 畫出打開的降落傘（只在客戶端）。誰在伺服器送來的「開傘中」清單裡（ChuteSyncPacket；計畫書 6 D4 起不再用降落傘物品），
  *   就在他頭上畫傘衣模型（models/item/parachute_canopy.json，放大 3 倍，跟著身體方向轉、輕微擺動）。
  *   別人：在畫人物之後畫（RenderPlayerEvent）。
  *   自己第一人稱：原版不畫自己的身體，所以另外在世界裡畫，抬頭就看得到傘衣。
@@ -46,7 +46,7 @@ public final class ParachuteRenderer {
     @SubscribeEvent
     public static void onRenderPlayer(RenderPlayerEvent.Post event) {
         Player p = event.getEntity();
-        if (!ParachuteItem.isOpen(p.getMainHandItem()) || p.isInvisible()) return;
+        if (!com.provinggrounds.network.ChuteSyncPacket.isOpen(p.getId()) || p.isInvisible()) return;
         PoseStack ps = event.getPoseStack();
         ps.pushPose();
         float bodyYaw = Mth.rotLerp(event.getPartialTick(), p.yBodyRotO, p.yBodyRot);
@@ -60,7 +60,7 @@ public final class ParachuteRenderer {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
         Minecraft mc = Minecraft.getInstance();
         Player p = mc.player;
-        if (p == null || !mc.options.getCameraType().isFirstPerson() || !ParachuteItem.isOpen(p.getMainHandItem())) return;
+        if (p == null || !mc.options.getCameraType().isFirstPerson() || !com.provinggrounds.network.ChuteSyncPacket.isOpen(p.getId())) return;
         float pt = event.getPartialTick();
         Vec3 cam = event.getCamera().getPosition();
         double x = Mth.lerp(pt, p.xo, p.getX()), y = Mth.lerp(pt, p.yo, p.getY()), z = Mth.lerp(pt, p.zo, p.getZ());

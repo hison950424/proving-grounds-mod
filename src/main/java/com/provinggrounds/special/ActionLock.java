@@ -35,6 +35,7 @@ public final class ActionLock {
     /** 不能使用特殊物品（倒地可以用；斗篷、飛機上不行）。伺服器端呼叫。 */
     public static boolean blocksSpecial(Player p) {
         if (cloaked(p)) return true;
-        return !p.level().isClientSide && BattleRoyaleMode.get().isProtected(p.getUUID());
+        if (p.level().isClientSide) return false;
+        return BattleRoyaleMode.get().isProtected(p.getUUID()) || BattleRoyaleMode.get().isAirborne(p.getUUID()); // 跳傘中也不能用（計畫書 6 D4）
     }
 }

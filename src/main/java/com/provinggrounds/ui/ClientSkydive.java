@@ -29,10 +29,9 @@ public final class ClientSkydive {
     private ClientSkydive() {}
 
     /** 上飛機到落地：快捷欄鎖在第 9 格（降落傘）。 */
+    /** 計畫書 6 D4：跳傘不再鎖快捷欄（沒有降落傘物品了）。保留這個方法讓其他地方的呼叫照常運作。 */
     public static boolean hotbarLocked() {
-        byte self = ClientBRState.get().selfState();
-        return self == ClientBRState.SELF_PLANE || self == ClientBRState.SELF_GLIDE
-            || self == ClientBRState.SELF_FREEFALL || self == ClientBRState.SELF_CHUTE;
+        return false;
     }
 
     /** 鎖住時：數字鍵換格無效、選在第 9 格（伺服器也會再強制一次）。 */

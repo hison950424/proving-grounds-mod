@@ -25,7 +25,7 @@ public abstract class HumanoidArmsMixin {
     }, at = @At("TAIL"), remap = false)
     private void provinggrounds$parachuteArms(LivingEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks,
                                               float netHeadYaw, float headPitch, CallbackInfo ci) {
-        if (!(entity instanceof Player p) || !ParachuteItem.isOpen(p.getMainHandItem())) return;
+        if (!(entity instanceof Player p) || !com.provinggrounds.network.ChuteSyncPacket.isOpen(p.getId())) return; // 開傘中（計畫書 6 D4）
         HumanoidModel<?> m = (HumanoidModel<?>) (Object) this;
         float sway = (float) Math.sin(ageInTicks * 0.08f) * 0.05f; // 輕微晃動
         m.rightArm.xRot = (float) Math.PI + 0.15f + sway;

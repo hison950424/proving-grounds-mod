@@ -19,8 +19,13 @@ public final class BRDowned {
     public static boolean cannotAct(Entity e) {
         if (isDowned(e)) return true;
         if (!(e instanceof Player p)) return false;
-        if (p.level().isClientSide) return p.isLocalPlayer() && ClientBRState.get().selfState() == ClientBRState.SELF_PLANE;
-        return BattleRoyaleMode.get().isProtected(p.getUUID());
+        if (p.level().isClientSide) {
+            // 計畫書 6 D4：飛機上、鞘翅滑翔、自由落體、開傘中都不能使用任何物品，落地後才能用
+            byte s = ClientBRState.get().selfState();
+            return p.isLocalPlayer() && (s == ClientBRState.SELF_PLANE || s == ClientBRState.SELF_GLIDE
+                || s == ClientBRState.SELF_FREEFALL || s == ClientBRState.SELF_CHUTE);
+        }
+        return BattleRoyaleMode.get().isProtected(p.getUUID()) || BattleRoyaleMode.get().isAirborne(p.getUUID());
     }
 
     public static boolean isDowned(Entity e) {

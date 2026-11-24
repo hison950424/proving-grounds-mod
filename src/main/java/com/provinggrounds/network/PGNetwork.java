@@ -89,6 +89,8 @@ public final class PGNetwork {
         CHANNEL.registerMessage(id++, InteractKeyPacket.class, InteractKeyPacket::encode, InteractKeyPacket::decode,
 
             InteractKeyPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, ChuteSyncPacket.class, ChuteSyncPacket::encode, ChuteSyncPacket::decode,
+            ChuteSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)); // 開傘中的玩家（計畫書 6）
         CHANNEL.registerMessage(id++, BRBoardPacket.class, BRBoardPacket::encode, BRBoardPacket::decode,
             BRBoardPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)); // 大逃殺戰績面板（計畫書 6）
         CHANNEL.registerMessage(id++, MeleeGlassPacket.class, MeleeGlassPacket::encode, MeleeGlassPacket::decode,

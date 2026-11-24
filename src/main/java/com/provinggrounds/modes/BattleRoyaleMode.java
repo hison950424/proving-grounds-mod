@@ -459,7 +459,6 @@ public class BattleRoyaleMode {
             if (p == null || !part.alive) continue;
             level.getChunk((int) Math.floor(planeStart.x) >> 4, (int) Math.floor(planeStart.z) >> 4);
             com.provinggrounds.modes.br.HotbarRules.clearKeepMelee(p); // 登機時再清一次，只留近戰武器（第 3 格）
-            com.provinggrounds.item.ParachuteItem.enforce(p, false); // 第 9 格放降落傘，快捷欄鎖在第 9 格（到落地為止）
             p.teleportTo(level, planeStart.x, planeStart.y, planeStart.z, yaw, 0);
             Display.ItemDisplay carrier = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, level);
             carrier.moveTo(planeStart.x, planeStart.y, planeStart.z, yaw, 0);
@@ -497,7 +496,6 @@ public class BattleRoyaleMode {
             if (part.carrier != null && part.carrier.isAlive()) {
                 part.carrier.moveTo(pos.x, pos.y, pos.z, part.carrier.getYRot(), 0);
             }
-            com.provinggrounds.item.ParachuteItem.enforce(p, false);
             boolean stillRiding = part.carrier != null && p.getVehicle() == part.carrier;
             if (!stillRiding || end) {
                 jump(p, part);
@@ -637,15 +635,33 @@ public class BattleRoyaleMode {
         }
     }
 
+    /** 上一次送出的「開傘中」實體編號（有變化才送 ChuteSyncPacket；計畫書 6 D4）。 */
+    private final Set<Integer> chuteSent = new HashSet<>();
+
+    private void syncChutes() {
+        if (level == null) return;
+        Set<Integer> now = new HashSet<>();
+        for (Participant part : participants.values()) {
+            if (!part.alive || part.state != PlayerState.CHUTE) continue;
+            ServerPlayer p = player(part.id);
+            if (p != null) now.add(p.getId());
+        }
+        if (now.equals(chuteSent)) return;
+        chuteSent.clear();
+        chuteSent.addAll(now);
+        PGNetwork.sendToAll(new com.provinggrounds.network.ChuteSyncPacket(now.stream().mapToInt(Integer::intValue).toArray()));
+    }
+
     private void tickDropping() {
         tickJumpGrace();
+        syncChutes();
         for (Participant part : participants.values()) {
             if (!part.alive || !isDroppingState(part.state)) continue;
             ServerPlayer p = player(part.id);
             if (p == null) continue;
 
             p.fallDistance = 0;
-            com.provinggrounds.item.ParachuteItem.enforce(p, part.state == PlayerState.CHUTE); // 開傘中 = 傘衣打開
+            com.provinggrounds.item.ParachuteItem.removeAll(p); // 計畫書 6 D4：不再有降落傘物品（舊版留下的一律收掉）
             if (part.state == PlayerState.GLIDE && !landed(p)) {
                 // 鞘翅滑翔中：離地夠近就自動開傘；萬一滑翔被中斷（例如撞到東西）就重新開始滑翔
                 double auto = PGConfig.SERVER.skydiveAutoChuteHeight.get();
