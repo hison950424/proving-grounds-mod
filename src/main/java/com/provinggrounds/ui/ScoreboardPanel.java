@@ -62,6 +62,8 @@ public final class ScoreboardPanel {
         HudLayout.Box box = HudLayout.box(HudLayout.El.SCOREBOARD, w, h);
         scale *= HudLayout.scale(HudLayout.El.SCOREBOARD);
         float right = box.x() + box.w(), midY = box.y() + box.h() / 2f;
+        float alpha = HudLayout.alpha(HudLayout.El.SCOREBOARD);
+        if (alpha < 0.999f) com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha); // 透明度（HUD 介面設定）
         g.pose().pushPose();
         g.pose().translate(right - pw * scale, Math.max(4, Math.min(h - ph * scale - 4, midY - ph * scale / 2)), 0);
         g.pose().scale(scale, scale, 1);
@@ -87,5 +89,7 @@ public final class ScoreboardPanel {
             y += rowH;
         }
         g.pose().popPose();
+        g.flush();
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
     }
 }

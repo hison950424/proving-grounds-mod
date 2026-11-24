@@ -27,7 +27,28 @@ import java.util.function.Supplier;
  *   繪製時用 push() 把整個元件平移＋縮放；位置會自動夾在螢幕內，換解析度也不會跑出畫面。
  *   已經有舊設定開關的元件（指北針、擊殺圖示、擊殺紀錄、互動提示）沿用舊的設定值，兩邊同步。
  */
+@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = net.minecraftforge.api.distmarker.Dist.CLIENT)
 public final class HudLayout {
+
+    // ── 原版藥水效果圖示（計畫書 6 B4）：畫之前套用位置、大小、透明度，關掉就不畫 ──
+
+    private static boolean effectsPushed;
+
+    @net.minecraftforge.eventbus.api.SubscribeEvent
+    public static void onOverlayPre(net.minecraftforge.client.event.RenderGuiOverlayEvent.Pre event) {
+        if (event.getOverlay() != net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.POTION_ICONS.type()) return;
+        int w = event.getWindow().getGuiScaledWidth(), h = event.getWindow().getGuiScaledHeight();
+        if (!enabled(El.EFFECTS)) { event.setCanceled(true); return; }
+        apply(event.getGuiGraphics(), El.EFFECTS, w, h);
+        effectsPushed = true;
+    }
+
+    @net.minecraftforge.eventbus.api.SubscribeEvent
+    public static void onOverlayPost(net.minecraftforge.client.event.RenderGuiOverlayEvent.Post event) {
+        if (event.getOverlay() != net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.POTION_ICONS.type() || !effectsPushed) return;
+        effectsPushed = false;
+        pop(event.getGuiGraphics());
+    }
 
     /** 預設方框：x、y、寬、高（GUI 像素，縮放前）。 */
     public record Box(int x, int y, int w, int h) {}
@@ -58,7 +79,9 @@ public final class HudLayout {
         KILL_ICON("擊殺圖示", 2, Pivot.CENTER, (w, h) -> new Box(w / 2 - 36, h / 2 + 12, 72, 20)),
         INTERACT("互動提示", 2, Pivot.TOP_CENTER, (w, h) -> new Box(w / 2 - 40, h / 2 + 11, 80, 10)),
         TITLE("上方標題", 2, Pivot.TOP_CENTER, (w, h) -> new Box(w / 2 - 100, 58, 200, 22)),
-        SPECIAL("特殊物品格", 2, Pivot.BOTTOM_CENTER, (w, h) -> new Box(w / 2 + 99, h - 32, 22, 32));
+        SPECIAL("特殊物品格", 2, Pivot.BOTTOM_CENTER, (w, h) -> new Box(w / 2 + 99, h - 32, 22, 32)),
+        /** 原版藥水效果圖示（右上角；計畫書 6 B4）。 */
+        EFFECTS("藥水效果圖示", 2, Pivot.TOP_RIGHT, (w, h) -> new Box(w - 126, 0, 126, 52));
 
         public final String label;
         public final int group;
@@ -79,7 +102,20 @@ public final class HudLayout {
     private static final class Entry {
         boolean enabled = true;
         float scale = 1f;
+        float alpha = 1f; // 不透明度（計畫書 6 B3）
         int dx, dy;
+    }
+
+    public static final float MIN_ALPHA = 0.2f;
+
+    public static float alpha(El e) {
+        ensureLoaded();
+        return ENTRIES.get(e).alpha;
+    }
+
+    public static void setAlpha(El e, float a) {
+        ensureLoaded();
+        ENTRIES.get(e).alpha = Math.round(Math.max(MIN_ALPHA, Math.min(1f, a)) * 20) / 20f;
     }
 
     public static final float MIN_SCALE = 0.5f, MAX_SCALE = 2f;
@@ -155,9 +191,16 @@ public final class HudLayout {
         g.pose().pushPose();
         g.pose().translate(now.x() - def.x() * s, now.y() - def.y() * s, 0);
         g.pose().scale(s, s, 1);
+        float a = alpha(e);
+        if (a < 0.999f) {
+            g.flush(); // 之前畫的東西照原本的透明度送出
+            com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, a);
+        }
     }
 
     public static void pop(GuiGraphics g) {
+        g.flush(); // 這個元件畫的東西用它自己的透明度送出，再恢復
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         g.pose().popPose();
     }
 
@@ -204,6 +247,7 @@ public final class HudLayout {
         ensureLoaded();
         Entry en = ENTRIES.get(e);
         en.scale = 1f;
+        en.alpha = 1f;
         en.dx = 0;
         en.dy = 0;
         setEnabled(e, true);
@@ -211,7 +255,7 @@ public final class HudLayout {
 
     public static boolean isDefault(El e) {
         Entry en = ENTRIES.get(e);
-        return en.scale == 1f && en.dx == 0 && en.dy == 0;
+        return en.scale == 1f && en.alpha == 1f && en.dx == 0 && en.dy == 0;
     }
 
     public static void resetAll() {
@@ -237,6 +281,7 @@ public final class HudLayout {
                 Entry en = ENTRIES.get(e);
                 if (o.has("enabled")) en.enabled = o.get("enabled").getAsBoolean();
                 if (o.has("scale")) en.scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, o.get("scale").getAsFloat()));
+                if (o.has("alpha")) en.alpha = Math.max(MIN_ALPHA, Math.min(1f, o.get("alpha").getAsFloat()));
                 if (o.has("dx")) en.dx = o.get("dx").getAsInt();
                 if (o.has("dy")) en.dy = o.get("dy").getAsInt();
             }
@@ -253,6 +298,7 @@ public final class HudLayout {
             JsonObject o = new JsonObject();
             o.addProperty("enabled", en.enabled);
             o.addProperty("scale", en.scale);
+            o.addProperty("alpha", en.alpha);
             o.addProperty("dx", en.dx);
             o.addProperty("dy", en.dy);
             root.add(e.name(), o);

@@ -31,6 +31,13 @@ public class HudEditScreen extends Screen {
 
     // 記住上次的分頁、捲動、面板位置（同一次遊戲啟動期間）
     private static int tab;
+    /** 模式篩選（計畫書 6 B2）：0 = 全部、1 = 大逃殺、2 = 團隊模式。通用的元件一律顯示。 */
+    private static int modeFilter;
+    private static final String[] MODE_NAMES = { "全部", "大逃殺", "團隊模式" };
+
+    private static boolean shown(HudLayout.El e) {
+        return modeFilter == 0 || e.group == 2 || e.group == modeFilter - 1;
+    }
     private static int scroll;
     private static boolean panelRight;
 
@@ -54,15 +61,39 @@ public class HudEditScreen extends Screen {
         px = panelRight ? width - PW - 8 : 8;
         py = (height - ph) / 2;
         listTop = py + 42;
-        listBottom = py + ph - 30;
+        listBottom = py + ph - 48; // 下面留一列給選取元件的透明度
         labelHits.clear();
         texts.clear();
 
+        // 右上：模式篩選（只顯示該模式會出現的元件）
+        addRenderableWidget(new PGButton(px + PW - 90, py + 4, 80, BH, Component.literal("模式：" + MODE_NAMES[modeFilter]), modeFilter != 0, false, () -> {
+            modeFilter = (modeFilter + 1) % MODE_NAMES.length;
+            if (selected != null && !shown(selected)) selected = null;
+            scroll = 0;
+            rebuildWidgets();
+        }));
         int tw = (PW - 20 - 6) / 2;
         addRenderableWidget(new PGButton(px + 10, py + 20, tw, BH, Component.literal("版面"), tab == 0, false, () -> switchTab(0)));
         addRenderableWidget(new PGButton(px + 16 + tw, py + 20, tw, BH, Component.literal("其他"), tab == 1, false, () -> switchTab(1)));
 
         if (tab == 0) initLayout(); else initOther();
+
+        // 選取中的元件：透明度（計畫書 6 B3）
+        if (tab == 0 && selected != null) {
+            HudLayout.El e = selected;
+            int ay = py + ph - 44;
+            texts.add(new Object[] { px + 10, ay + 4, e.label + " 透明度", ACCENT });
+            int ax = px + PW - 10 - 76;
+            PGButton minus = btn(ax, ay, 14, "－", false, () -> { HudLayout.setAlpha(e, HudLayout.alpha(e) - 0.1f); rebuildWidgets(); });
+            minus.active = HudLayout.alpha(e) > HudLayout.MIN_ALPHA + 1e-3;
+            addRenderableWidget(minus);
+            texts.add(new Object[] { ax + 16, ay + 4, Math.round(HudLayout.alpha(e) * 100) + "%", TEXT, 44 });
+            PGButton plus = btn(ax + 62, ay, 14, "＋", false, () -> { HudLayout.setAlpha(e, HudLayout.alpha(e) + 0.1f); rebuildWidgets(); });
+            plus.active = HudLayout.alpha(e) < 0.999f;
+            addRenderableWidget(plus);
+        } else if (tab == 0) {
+            texts.add(new Object[] { px + 10, py + ph - 40, "點一下元件可以調透明度", DIM });
+        }
 
         int bw = (PW - 20 - 12) / 3, by = py + ph - 22;
         addRenderableWidget(new PGButton(px + 10, by, bw, BH, Component.literal("全部重設"), false, false, () -> {
@@ -92,12 +123,21 @@ public class HudEditScreen extends Screen {
 
     // ── 版面分頁 ────────────────────────────────────────────────────────────
 
-    private int layoutRowCount() { return HudLayout.El.values().length + GROUPS.length; }
+    private int layoutRowCount() {
+        int n = 0, group = -1;
+        for (HudLayout.El e : HudLayout.El.values()) {
+            if (!shown(e)) continue;
+            if (e.group != group) { group = e.group; n++; }
+            n++;
+        }
+        return n;
+    }
 
     private void initLayout() {
         scroll = Math.max(0, Math.min(scroll, layoutRowCount() - visibleRows()));
         int i = 0, group = -1;
         for (HudLayout.El e : HudLayout.El.values()) {
+            if (!shown(e)) continue;
             if (e.group != group) {
                 group = e.group;
                 int y = rowY(i++);
@@ -211,7 +251,7 @@ public class HudEditScreen extends Screen {
         // 選取中的元件優先（重疊時好抓）
         if (selected != null && hit(selected, mx, my)) return selected;
         HudLayout.El[] all = HudLayout.El.values();
-        for (int i = all.length - 1; i >= 0; i--) if (hit(all[i], mx, my)) return all[i];
+        for (int i = all.length - 1; i >= 0; i--) if (shown(all[i]) && hit(all[i], mx, my)) return all[i];
         return null;
     }
 
@@ -336,7 +376,7 @@ public class HudEditScreen extends Screen {
         // 畫面正中央的對齊線（拖曳時）
         if (dragging != null) g.fill(width / 2, 0, width / 2 + 1, height, 0x40E8D060);
         HudLayout.El hover = inPanel(mouseX, mouseY) ? null : elementAt(mouseX, mouseY);
-        for (HudLayout.El e : HudLayout.El.values()) drawElement(g, e, e == selected || e == dragging, e == hover);
+        for (HudLayout.El e : HudLayout.El.values()) if (shown(e)) drawElement(g, e, e == selected || e == dragging, e == hover);
 
         // 側邊面板
         g.fill(px - 1, py - 1, px + PW + 1, py + ph + 1, BORDER);
@@ -418,6 +458,7 @@ public class HudEditScreen extends Screen {
             case INTERACT -> new String[] { "F 開啟" };
             case TITLE -> new String[] { "上方標題（倒數、淘汰…）" };
             case SPECIAL -> new String[] { "[Q]", "▢" };
+            case EFFECTS -> new String[] { "▣ ▣ ▣", "藥水效果" };
         };
     }
 }
