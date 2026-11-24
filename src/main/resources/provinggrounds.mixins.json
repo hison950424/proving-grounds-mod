@@ -14,7 +14,8 @@
     "EntitySpecialMixin",
     "LivingSpecialMixin",
     "CreativeSlotMixin",
-    "LevelSetBlockMixin"
+    "LevelSetBlockMixin",
+    "ExplosionHitPlayersMixin"
   ],
   "injectors": {
     "defaultRequire": 0

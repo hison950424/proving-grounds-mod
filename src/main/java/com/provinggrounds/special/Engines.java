@@ -63,6 +63,7 @@ public final class Engines {
         double knock = SpecialConfig.get().shockKnockback.get();
         for (LivingEntity e : livingAround(level, c, radius)) {
             if (spareAllies && ally(by, e)) continue;
+            com.provinggrounds.events.BulletHitEvents.allow(e); // 衝擊波是特別允許的擊退（要在造成傷害之前）
             double dist = e.position().distanceTo(c);
             double k = Math.max(0, 1 - dist / radius);
             if (centerDamage > 0 && k > 0) e.hurt(source(level, by), (float) (centerDamage * k));

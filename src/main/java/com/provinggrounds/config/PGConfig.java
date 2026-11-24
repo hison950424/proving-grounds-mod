@@ -122,7 +122,7 @@ public class PGConfig {
     public final ForgeConfigSpec.ConfigValue<List<? extends String>> ammoLight, ammoMedium, ammoHeavy, ammoShotgun, ammoHeavyWeapon;
 
     // ── 中彈效果（所有模式通用） ─────────────────────────────────────────────────
-    public final ForgeConfigSpec.BooleanValue bulletKnockback;
+    public final ForgeConfigSpec.BooleanValue bulletKnockback, attackKnockback;
     public final ForgeConfigSpec.BooleanValue bulletHurtShake;
 
     // ── 趴下（所有模式通用） ─────────────────────────────────────────────────────
@@ -448,6 +448,8 @@ public class PGConfig {
         builder.comment("中彈效果：被 TACZ 子彈打中時的擊退與畫面抖動。").push("combat");
         bulletKnockback = builder.comment("被子彈打中會不會被擊退（false = 完全不擊退）")
             .define("bullet_knockback", false);
+        attackKnockback = builder.comment("被任何攻擊打中（子彈、近戰、爆炸、手榴彈…）會不會被擊退（false = 都不擊退；衝擊波、擊退盾、彈簧鞋照舊會推人）")
+            .define("attack_knockback", false);
         bulletHurtShake = builder.comment("被子彈打中畫面會不會晃動（false = 不晃；玩家端在登入後才會讀到這個設定）")
             .define("bullet_hurt_shake", false);
         builder.pop();

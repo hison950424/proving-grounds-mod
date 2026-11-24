@@ -95,6 +95,7 @@ public final class KnockbackShield {
         SpecialConfig s = SpecialConfig.get();
         double speed = 1.2;
         p.setDeltaMovement(c.dir.x * speed, Math.min(p.getDeltaMovement().y, 0.1), c.dir.z * speed);
+        com.provinggrounds.events.BulletHitEvents.allow(p); // 擊退盾衝撞：自己的移動
         p.hurtMarked = true;
         p.fallDistance = 0;
         // 撞到敵人？
@@ -113,6 +114,7 @@ public final class KnockbackShield {
     private static void finishCharge(ServerPlayer p, Vec3 at, SpecialConfig s) {
         CHARGING.remove(p.getUUID());
         p.setDeltaMovement(Vec3.ZERO);
+        com.provinggrounds.events.BulletHitEvents.allow(p); // 擊退盾衝撞：自己的移動
         p.hurtMarked = true;
         SpecialConfig sc = SpecialConfig.get(); // 擊退盾：自己與隊友不受影響
         Engines.shockwave(p.serverLevel(), at, s.shieldShockRadius.get(), sc.shockCenterDamage.get(), SpecialConfig.ticks(sc.shockConcussSeconds), p, true);

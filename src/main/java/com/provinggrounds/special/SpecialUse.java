@@ -122,6 +122,7 @@ public final class SpecialUse {
                 Vec3 look = p.getLookAngle();
                 double power = s.springPower.get();
                 p.setDeltaMovement(look.x * power, Math.max(0.3, look.y * power + 0.3), look.z * power);
+                com.provinggrounds.events.BulletHitEvents.allow(p); // 彈簧鞋：自己的移動
                 p.hurtMarked = true;
                 p.fallDistance = 0;
                 SpecialWorld.noFallFor(p, 100);
