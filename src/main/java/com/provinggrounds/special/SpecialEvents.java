@@ -70,9 +70,9 @@ public final class SpecialEvents {
             }
             // 失去方向感：客戶端在毒氣效果期間自己處理（每 3～5 秒換一個方向讓視角慢慢偏），不用伺服器通知
         }
-        // 一陣咳嗽：每 5 tick 咳一聲
+        // 一陣咳嗽：每 7 tick 咳一聲（每聲約 0.3～0.4 秒）
         Integer left = COUGH_FITS.get(p.getUUID());
-        if (left != null && p.tickCount % 5 == 0) {
+        if (left != null && p.tickCount % 7 == 0) {
             var r = p.getRandom();
             p.level().playSound(null, p.getX(), p.getEyeY(), p.getZ(), SpecialRegistry.GAS_COUGH.get(), SoundSource.PLAYERS, 1f, 0.9f + r.nextFloat() * 0.2f);
             if (left <= 1) COUGH_FITS.remove(p.getUUID());

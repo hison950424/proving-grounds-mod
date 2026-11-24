@@ -2,11 +2,9 @@
   "gas_cough": {
     "subtitle": "provinggrounds.subtitle.gas_cough",
     "sounds": [
-      { "name": "minecraft:mob/fox/spit1", "pitch": 0.55, "volume": 1.0 },
-      { "name": "minecraft:mob/fox/spit2", "pitch": 0.6, "volume": 1.0 },
-      { "name": "minecraft:mob/fox/spit3", "pitch": 0.5, "volume": 1.0 },
-      { "name": "minecraft:mob/llama/spit1", "pitch": 0.7, "volume": 0.8 },
-      { "name": "minecraft:mob/llama/spit2", "pitch": 0.65, "volume": 0.8 }
+      { "name": "provinggrounds:gas/cough1", "volume": 1.0 },
+      { "name": "provinggrounds:gas/cough2", "volume": 1.0 },
+      { "name": "provinggrounds:gas/cough3", "volume": 1.0 }
     ]
   }
 }
