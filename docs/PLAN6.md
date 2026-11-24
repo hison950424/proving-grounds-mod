@@ -69,3 +69,25 @@
 - [ ] E10 重新跳傘器：傳送自己到目前位置上方 300 格並重新跳傘
 - [ ] E11 多人重新跳傘器：自身半徑 3 格內所有玩家傳送到自己上方 300 格並重新跳傘
 - [ ] E12 多人重新跳傘指定器：準心看的地點水平半徑 3 格內所有玩家傳送到自己上方 300 格並重新跳傘
+
+---
+
+## 交接備註（2026-11-24，「ui-scale3-redesign」對話寫的，給下一個對話）
+
+**已完成**：A1～A21、B1～B4、B6～B8、C1～C4、D1～D4（每項的提交見 `git log --oneline`，訊息開頭都是「計畫書 6 …」）。
+都已編譯通過、開發伺服器能啟動；**全部都還沒在真正的客戶端實測**。網路版本已改成 22（PGNetwork.VERSION）。
+
+**還沒做**：
+- **B5 箱子畫面左右排**：原版 `Slot.x / Slot.y` 是 final（SRG `f_40220_`、`f_40221_`），可在 `ScreenEvent.Init.Post` 對 `ContainerScreen`（原版箱子、木桶、CrateBlock 的箱子畫面）用反射改格子位置：箱子格放左邊、玩家物品欄（27＋9）放右邊，`imageWidth` 加寬，背景自己畫（參考 `ui/TombstoneScreen` 的色塊畫法）。也要顧到 `BackpackOverlay`、`CompatHighlight` 用的是格子座標（跟著走就好）。
+- **E1～E12 特殊物品**：做法：
+  - 新物品只要在 `special/SpecialType` 加一行（物品會自動註冊）；貼圖跑 `tools/make_special_icons.py`（在檔案裡的對照表加形狀）；箱子權重加在 `resources/data/br/loot_tables/special.json`；效果寫在 `special/SpecialUse` 的 `switch (type)`；中文名在 lang（看現有 special 物品怎麼寫）。
+  - 投擲類（E2 定身球、E3 火焰鑽頭）用 `special/entity/SpecialProjectile`（看 WIND_BOMB、GAS_GRENADE 怎麼用）；E3 要不受重力、碰方塊後黏住 7 秒。
+  - E1 洗腦工具：新效果加進 `special/ActionLock`（伺服器擋開物品欄／F 互動／換格；客戶端在 `ClientSpecial` 輸入層擋），開物品欄可在客戶端 `ScreenEvent.Opening` 擋 `InventoryScreen`，換格擋數字鍵與滾輪（參考 `ui/ClientSkydive` 舊的鎖快捷欄寫法）。
+  - E2 定身：移動速度 -100% 屬性＋擋跳（客戶端 `MovementInputUpdateEvent` 清掉輸入，參考 `ui/UiWalk`），可轉視角。
+  - E4／E6 回溯點：每人記一個位置（＋血量），位置每秒冒粒子給本人看；60 秒過了自動消失（物品也消失）。第一次使用不消耗物品、第二次才消耗。
+  - E5／E7 賭徒釣竿：最大生命用屬性修改（比賽結束要移除，參考 `ArenaMode.applyHealth` 的 HEALTH_MOD 寫法）；震盪用 `SpecialRegistry.CONCUSSION`；隨機特殊物品用 special.json 的權重或 `SpecialType.values()` 隨機。
+  - E8／E9 雷神錘：`EntityType.LIGHTNING_BOLT`，準心地點用射線（參考 FAKE_GUNSHOT 怎麼找準星位置）；落雷不要點火（`setVisualOnly` 或之後滅火），傷害要算在使用者身上（`setCause`）。
+  - E10～E12 重新跳傘：`modes/BattleRoyaleMode` 祭壇復活那段（搜尋 `vp.state = PlayerState.GLIDE`）就是「從空中重新跳傘」的現成流程，抽成公開方法 `reSkydive(ServerPlayer)`：傳送到目前位置上方 300 格、狀態設 GLIDE、開始滑翔、發翼裝（SkydiveWings）。只在大逃殺進行中有效。
+- **A22 移除 variantbarrels**：先問使用者（地圖裡的它的木桶會變空氣）。同意才把伺服器與 Prism 客戶端 mods 裡的 `variantbarrels-3.1.jar` 移到 `mods-backup`。
+- **文件**：`docs/NEXT_RELEASE_NOTES.md` 現在還是 v0.27.0 的舊內容（已經發佈過），要整份改寫成計畫書 6 的內容；`docs/TESTING.md` 最上面加「計畫書 6」的測試項目（照本檔每一項寫「怎麼做／應該看到什麼」）。
+- **發佈**：全部做完再發佈一次（`-Level big`，會變 v0.28.0），先問使用者伺服器和客戶端關了沒。
