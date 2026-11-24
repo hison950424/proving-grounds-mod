@@ -18,6 +18,7 @@ public record LobbyStatePacket(
     boolean inLobby, int mapId, int presetOrdinal, int variantOrdinal,
     int teamModeOrdinal, int teamCount, int countdownSeconds,
     boolean special, // 特殊物品模式
+    boolean blockDamage, // 大逃殺：爆炸破壞方塊
     int weaponModeOrdinal, // 槍械模式（WeaponMode）
     int gameModeOrdinal, // 大廳選的模式（GameManager.GameMode）
     com.provinggrounds.modes.arena.ArenaManager.Settings arena, // 團隊死鬥／佔點／槍王之王設定
@@ -36,6 +37,7 @@ public record LobbyStatePacket(
         buf.writeVarInt(teamCount);
         buf.writeVarInt(countdownSeconds);
         buf.writeBoolean(special);
+        buf.writeBoolean(blockDamage);
         buf.writeVarInt(weaponModeOrdinal);
         buf.writeVarInt(gameModeOrdinal);
         buf.writeVarInt(arena.tdmKills());
@@ -57,6 +59,7 @@ public record LobbyStatePacket(
         int map = buf.readVarInt(), preset = buf.readVarInt(), variant = buf.readVarInt();
         int teamMode = buf.readVarInt(), teamCount = buf.readVarInt(), countdown = buf.readVarInt();
         boolean special = buf.readBoolean();
+        boolean blockDamage = buf.readBoolean();
         int weapon = buf.readVarInt();
         int gameMode = buf.readVarInt();
         var arena = new com.provinggrounds.modes.arena.ArenaManager.Settings(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
@@ -69,7 +72,7 @@ public record LobbyStatePacket(
             byte f = buf.readByte();
             players.add(new Entry(id, name, team, (f & 1) != 0, (f & 2) != 0, (f & 4) != 0, (f & 8) != 0));
         }
-        return new LobbyStatePacket(inLobby, map, preset, variant, teamMode, teamCount, countdown, special, weapon, gameMode, arena, players);
+        return new LobbyStatePacket(inLobby, map, preset, variant, teamMode, teamCount, countdown, special, blockDamage, weapon, gameMode, arena, players);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {

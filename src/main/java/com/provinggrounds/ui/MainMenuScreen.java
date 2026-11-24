@@ -200,6 +200,9 @@ public class MainMenuScreen extends Screen {
             () -> send(LobbyManager.Action.SET_WEAPON_MODE, (weapon.ordinal() + 1) % com.provinggrounds.core.WeaponMode.values().length));
         y = row(sx, y, sw, "特殊物品", special ? "開" : "關", canEdit,
             () -> send(LobbyManager.Action.SET_SPECIAL, special ? 0 : 1));
+        boolean blockDamage = lobby == null || lobby.blockDamage(); // 爆炸物會炸掉方塊（比賽結束自動還原）
+        y = row(sx, y, sw, "炸毀方塊", blockDamage ? "開" : "關", canEdit,
+            () -> send(LobbyManager.Action.SET_BLOCK_DAMAGE, blockDamage ? 0 : 1));
         }
         y += 6;
         section(sx, y, "隊伍");

@@ -58,6 +58,8 @@ public final class ShopScreen extends Screen {
             PGNetwork.sendToServer(new MenuRequestPacket());
             minecraft.setScreen(new MainMenuScreen());
         }));
+        addRenderableWidget(new PGButton(left + 80, by, 64, 16, Component.literal("HUD 設定"), false, false,
+            () -> minecraft.setScreen(new HudEditScreen(this)))); // 比賽中也能調 HUD 版面
         addRenderableWidget(new PGButton(left + panelW - 74, by, 64, 16, Component.literal("關閉"), false, false, this::onClose));
         if (!s.shop()) return;
 

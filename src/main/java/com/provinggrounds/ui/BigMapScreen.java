@@ -16,7 +16,7 @@ import net.minecraft.world.entity.Entity;
  * 目的: 大地圖（只在客戶端使用）。遊戲中按 M 打開，再按 M 或 Esc 關閉。
  *   顯示：地形俯視圖、安全區（白）、下一圈（淺藍虛線）、空投、隊友、隊友看到的敵人、自己。
  *   操作：滾輪縮放（以滑鼠位置為中心）、左鍵拖曳移動、右鍵回到全圖。
- *   左上「選單」按鈕：打開主選單（管理員結束遊戲、觀戰者加入遊戲都在那裡）。
+ *   左上「選單」按鈕：打開主選單（管理員結束遊戲、觀戰者加入遊戲都在那裡）；「HUD 設定」：比賽中調整 HUD 位置與大小。
  */
 public class BigMapScreen extends Screen {
 
@@ -46,6 +46,9 @@ public class BigMapScreen extends Screen {
             MainMenuScreen.openLobbyView();
             Minecraft.getInstance().setScreen(new MainMenuScreen());
         }));
+        // 比賽中也能調 HUD 版面（設定畫面關掉後回到大地圖）
+        addRenderableWidget(new PGButton(mapX + 66, 5, 64, 18, Component.literal("HUD 設定"), false, false,
+            () -> Minecraft.getInstance().setScreen(new HudEditScreen(this))));
         addRenderableWidget(new PGButton(mapX + mapSize - 60, 5, 60, 18, Tr.c("map.close"), false, false, this::onClose));
     }
 

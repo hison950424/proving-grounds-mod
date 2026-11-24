@@ -57,6 +57,7 @@ public final class LobbyManager {
         END_GAME,           // 管理員：強制結束進行中的遊戲、全員回大廳
         CLEAR_TEAMS,        // 管理員：所有人移出隊伍（變成未分隊）
         SET_SPECIAL,        // 管理員：特殊物品模式開（arg 1）／關（arg 0）
+        SET_BLOCK_DAMAGE,   // 管理員：大逃殺爆炸破壞方塊開（arg 1）／關（arg 0）
         SET_WEAPON_MODE,    // 管理員：槍械模式（arg = WeaponMode 的順序）
         GOTO_VENUE,         // 自己：傳送到場地（arg = 場地選單的順序）
         SET_GAME_MODE,      // 管理員：選模式（arg = GameManager.GameMode 的順序）
@@ -264,6 +265,10 @@ public final class LobbyManager {
                 variant = all[arg];
             }
             case SET_SPECIAL -> com.provinggrounds.special.SpecialConfig.setEnabled(arg != 0);
+            case SET_BLOCK_DAMAGE -> {
+                com.provinggrounds.config.PGConfig.SERVER.brExplosionBlockDamage.set(arg != 0);
+                com.provinggrounds.config.PGConfig.SERVER.brExplosionBlockDamage.save();
+            }
             case SET_WEAPON_MODE -> weaponMode = WeaponMode.byOrdinal(arg);
             case SET_GAME_MODE -> {
                 GameManager.GameMode[] modes = GameManager.GameMode.values();
@@ -468,7 +473,7 @@ public final class LobbyManager {
         }
         return new LobbyStatePacket(GameManager.get().isInLobby(), map, preset.ordinal(), variant.ordinal(),
             teamMode.ordinal(), teamCount, countdownTicks < 0 ? -1 : (countdownTicks + 19) / 20,
-            com.provinggrounds.special.SpecialConfig.enabledSafe(), weaponMode.ordinal(),
+            com.provinggrounds.special.SpecialConfig.enabledSafe(), com.provinggrounds.core.BlockProtection.explosionBlockDamageOn(), weaponMode.ordinal(),
             gameMode.ordinal(), arenaSettings(), players);
     }
 }

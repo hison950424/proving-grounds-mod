@@ -18,7 +18,8 @@
     "ExplosionHitPlayersMixin"
   ],
   "client": [
-    "HumanoidArmsMixin"
+    "HumanoidArmsMixin",
+    "DamageSoundMixin"
   ],
   "injectors": {
     "defaultRequire": 0

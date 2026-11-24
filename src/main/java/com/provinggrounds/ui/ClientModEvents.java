@@ -73,6 +73,12 @@ public final class ClientModEvents {
     }
 
 
+    /** 額外模型：第一人稱的降落傘傘衣（沒有傘繩，不擋視野）。 */
+    @SubscribeEvent
+    public static void onRegisterModels(net.minecraftforge.client.event.ModelEvent.RegisterAdditional event) {
+        event.register(ParachuteRenderer.FP_MODEL);
+    }
+
     @SubscribeEvent
     public static void onRegisterKeys(RegisterKeyMappingsEvent event) {
         event.register(OPEN_MENU);

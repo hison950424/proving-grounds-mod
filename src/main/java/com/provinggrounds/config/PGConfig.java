@@ -63,6 +63,7 @@ public class PGConfig {
 
     // ── BR：移動 ──────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.DoubleValue brSpeedMultiplier, brMeleeSpeedMultiplier;
+    public final ForgeConfigSpec.BooleanValue brExplosionBlockDamage;
     public final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> meleeDrawTicks;
     public final ForgeConfigSpec.IntValue meleeDrawTicksDefault;
     public final ForgeConfigSpec.DoubleValue brJumpHeight;
@@ -287,6 +288,9 @@ public class PGConfig {
         builder.push("movement");
         brSpeedMultiplier = builder.comment("BR 內移動速度倍率（走路與疾跑都套用；速度藥水照原版相乘）")
             .defineInRange("speed_multiplier", 0.8, 0.1, 2.0);
+        brExplosionBlockDamage = builder.comment("大逃殺：爆炸物（RPG、榴彈、手榴彈…）會破壞方塊（只在這場地圖範圍內；箱子、祭壇等有內容的方塊不會被炸掉；破掉的方塊不掉落；比賽結束自動還原）。",
+                "大廳選單可以切換")
+            .define("explosion_block_damage_v1", true);
         brMeleeSpeedMultiplier = builder.comment("BR 內手上拿著近戰武器（lrtactical 近戰）時的移動速度倍率（1.0 = 原版速度）")
             .defineInRange("melee_speed_multiplier", 1.0, 0.1, 2.0);
         meleeDrawTicks = builder.comment("拿出近戰武器後，拔刀動畫播完才有跑速加成（所有模式）：每把武器的拔刀動畫長度（tick，20 = 1 秒）。",
