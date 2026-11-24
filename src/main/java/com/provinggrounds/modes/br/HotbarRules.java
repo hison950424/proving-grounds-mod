@@ -83,6 +83,8 @@ public final class HotbarRules {
         if (g == GunClass.PISTOL) return Kind.PISTOL;
         if (s.is(GunCompat.MELEE)) return Kind.MELEE; // lrtactical 近戰武器：可放第 3 格（手槍格）
         if (s.is(HEALING)) return Kind.HEALING;
+        // 團隊模式職業的「大補」「速補」藥水（NBT 有 PgArenaKit）也算補品（計畫書 6 C2）
+        if (s.getItem() instanceof net.minecraft.world.item.PotionItem && s.hasTag() && s.getTag().getBoolean("PgArenaKit")) return Kind.HEALING;
         if (s.is(THROWABLE)) return Kind.THROWABLE;
         return Kind.OTHER;
     }
@@ -515,8 +517,10 @@ public final class HotbarRules {
             int slot = k == 0 ? HEAL : THROW;
             ItemStack now = inv.getItem(slot);
             ItemStack before = last[k];
-            if (now.isEmpty() && !before.isEmpty() && inv.selected == slot) {
+            if (now.isEmpty() && !before.isEmpty()) {
+                // 計畫書 6 C3：先補同樣的物品，沒有就補同類型（補品補補品、投擲物補投擲物）
                 int from = findSame(p, before, slot);
+                if (from < 0) from = findKind(p, k == 0 ? Kind.HEALING : Kind.THROWABLE, slot);
                 if (from >= 0) {
                     inv.setItem(slot, inv.getItem(from));
                     inv.setItem(from, ItemStack.EMPTY);
@@ -534,6 +538,17 @@ public final class HotbarRules {
             if (i == target || (i >= 9 && !backpackUsable(p, i))) continue;
             ItemStack s = inv.getItem(i);
             if (!s.isEmpty() && ItemStack.isSameItemSameTags(s, sample)) return i;
+        }
+        return -1;
+    }
+
+    /** 在第 6～9 格與可用的背包格找同類型的物品（補品／投擲物）；找不到回傳 -1。 */
+    private static int findKind(ServerPlayer p, Kind want, int target) {
+        Inventory inv = p.getInventory();
+        for (int i = 5; i <= 35; i++) {
+            if (i == target || (i >= 9 && !backpackUsable(p, i))) continue;
+            ItemStack s = inv.getItem(i);
+            if (!s.isEmpty() && kind(s) == want) return i;
         }
         return -1;
     }

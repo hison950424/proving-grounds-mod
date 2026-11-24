@@ -759,9 +759,11 @@ public abstract class ArenaMode {
         p.fallDistance = 0;
     }
 
+    /** 發物品：照快捷欄規則放進專用格（槍 1、2，近戰 3，補品 4，投擲物 5；計畫書 6 C2），放不下才丟在腳邊。 */
     protected static void give(ServerPlayer p, ItemStack stack) {
         if (stack.isEmpty()) return;
-        if (!p.getInventory().add(stack) && !stack.isEmpty()) p.drop(stack, false);
+        if (com.provinggrounds.modes.br.HotbarRules.active(p)) com.provinggrounds.modes.br.HotbarRules.insert(p, stack);
+        if (!stack.isEmpty() && !p.getInventory().add(stack) && !stack.isEmpty()) p.drop(stack, false);
     }
 
     /** 背包裡沒有就補 1 個（彈藥箱、醫療包）；多的收掉。 */
