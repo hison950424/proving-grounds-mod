@@ -64,6 +64,8 @@ public class PGConfig {
     // ── BR：移動 ──────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.DoubleValue brSpeedMultiplier, brMeleeSpeedMultiplier;
     public final ForgeConfigSpec.IntValue brExplosionBlockDamage;
+    public final ForgeConfigSpec.IntValue brCustomStages, brCustomInterval, brCustomFirstWait, brCustomFinal;
+    public final ForgeConfigSpec.DoubleValue brCustomSpeed;
     public final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> meleeDrawTicks;
     public final ForgeConfigSpec.IntValue meleeDrawTicksDefault;
     public final ForgeConfigSpec.DoubleValue brJumpHeight;
@@ -216,6 +218,12 @@ public class PGConfig {
             .defineInRange("slow_speed_factor_v3", 0.5, 0.1, 2.0);
         brSlowFirstWait = builder.comment("慢速方案：開場第一次縮圈前額外多等幾秒")
             .defineInRange("slow_first_wait_seconds_v3", 90, 0, 600);
+        // 自訂方案（計畫書 6 D2）：管理員在大廳選「自訂」後可以直接調整
+        brCustomStages = builder.comment("自訂方案：縮圈階段數").defineInRange("custom_stages_v1", 4, 2, 8);
+        brCustomInterval = builder.comment("自訂方案：每階段的等待時間與最短縮圈時間（秒）").defineInRange("custom_interval_seconds_v1", 90, 15, 600);
+        brCustomSpeed = builder.comment("自訂方案：圈移動速度上限 = BR 疾跑速度 × 此倍率").defineInRange("custom_speed_factor_v1", 0.6, 0.1, 2.0);
+        brCustomFirstWait = builder.comment("自訂方案：開場第一次縮圈前額外多等幾秒").defineInRange("custom_first_wait_seconds_v1", 60, 0, 600);
+        brCustomFinal = builder.comment("自訂方案：最後一圈的半徑 = 地圖半徑的幾 %（0 = 縮到一個點）").defineInRange("custom_final_percent_v1", 0, 0, 50);
         brDamageBase = builder.comment("圈外傷害基礎值（HP/秒）。BR 最大血量 100：預設第 1~4 階段每秒 1、2.5、4、5.5")
             .defineInRange("damage_base", 1.0, 0.0, 100.0);
         brDamagePerStage = builder.comment("圈外傷害每階段增加量（HP/秒）。傷害 = 基礎 + 每階段 × 階段索引(0 起算)")

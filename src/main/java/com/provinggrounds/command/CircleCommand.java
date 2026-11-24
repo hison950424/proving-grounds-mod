@@ -33,6 +33,7 @@ public final class CircleCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         LiteralArgumentBuilder<CommandSourceStack> set = Commands.literal("set");
         for (CirclePreset p : CirclePreset.values()) {
+            if (p == CirclePreset.CUSTOM) continue; // 自訂方案在大廳選單調整
             set.then(Commands.literal(p.key)
                 .then(Commands.literal("ratios").then(Commands.argument("values", StringArgumentType.greedyString())
                     .executes(ctx -> setRatios(ctx.getSource(), p, StringArgumentType.getString(ctx, "values")))))
@@ -45,6 +46,7 @@ public final class CircleCommand {
         }
         LiteralArgumentBuilder<CommandSourceStack> reset = Commands.literal("reset");
         for (CirclePreset p : CirclePreset.values()) {
+            if (p == CirclePreset.CUSTOM) continue;
             reset.then(Commands.literal(p.key).executes(ctx -> {
                 p.ratiosValue().set(p.ratiosValue().getDefault());
                 p.intervalValue().set(p.intervalValue().getDefault());

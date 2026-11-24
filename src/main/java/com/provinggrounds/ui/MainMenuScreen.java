@@ -194,6 +194,15 @@ public class MainMenuScreen extends Screen {
         });
         y = row(sx, y, sw, "縮圈", preset.displayName + "・約 " + Math.round(estimateMinutes(preset)) + " 分", canEdit,
             () -> send(LobbyManager.Action.SET_PRESET, (preset.ordinal() + 1) % CirclePreset.values().length));
+        if (preset == CirclePreset.CUSTOM && lobby != null && lobby.customCircle().length >= 5) {
+            // 自訂縮圈（計畫書 6 D2）：－／＋ 調整
+            int[] cc = lobby.customCircle();
+            y = stepper(sx, y, sw, "階段數", cc[0] + " 階", canEdit, 1, cc[0], LobbyManager.Action.SET_CIRCLE_STAGES);
+            y = stepper(sx, y, sw, "每階段", cc[1] + " 秒", canEdit, 15, cc[1], LobbyManager.Action.SET_CIRCLE_INTERVAL);
+            y = stepper(sx, y, sw, "圈速度", "×" + String.format("%.1f", cc[2] / 10.0), canEdit, 1, cc[2], LobbyManager.Action.SET_CIRCLE_SPEED);
+            y = stepper(sx, y, sw, "開場等", cc[3] + " 秒", canEdit, 15, cc[3], LobbyManager.Action.SET_CIRCLE_WAIT);
+            y = stepper(sx, y, sw, "最後圈", cc[4] + "%", canEdit, 5, cc[4], LobbyManager.Action.SET_CIRCLE_FINAL);
+        }
         y = row(sx, y, sw, "玩法", variant.displayName, canEdit,
             () -> send(LobbyManager.Action.SET_VARIANT, (variant.ordinal() + 1) % BattleRoyaleMode.Variant.values().length));
         y = row(sx, y, sw, "槍械", weapon.displayName, canEdit,

@@ -14,7 +14,9 @@ import java.util.List;
 public enum CirclePreset {
     FAST("快速", "fast"),
     STANDARD("標準", "standard"),
-    SLOW("慢速", "slow");
+    SLOW("慢速", "slow"),
+    /** 自訂（計畫書 6 D2）：階段數、間隔、速度、開場等待、最後一圈大小都在大廳調整。 */
+    CUSTOM("自訂", "custom");
 
     public final String displayName;
     /** 指令用名稱。 */
@@ -35,7 +37,7 @@ public enum CirclePreset {
         return switch (this) {
             case FAST -> c.brFastRatios;
             case STANDARD -> c.brStandardRatios;
-            case SLOW -> c.brSlowRatios;
+            case SLOW, CUSTOM -> c.brSlowRatios; // 自訂方案不用這個（ratios() 另外算）
         };
     }
 
@@ -45,6 +47,7 @@ public enum CirclePreset {
             case FAST -> c.brFastInterval;
             case STANDARD -> c.brStandardInterval;
             case SLOW -> c.brSlowInterval;
+            case CUSTOM -> c.brCustomInterval;
         };
     }
 
@@ -54,6 +57,7 @@ public enum CirclePreset {
             case FAST -> c.brFastSpeed;
             case STANDARD -> c.brStandardSpeed;
             case SLOW -> c.brSlowSpeed;
+            case CUSTOM -> c.brCustomSpeed;
         };
     }
 
@@ -63,11 +67,20 @@ public enum CirclePreset {
             case FAST -> c.brFastFirstWait;
             case STANDARD -> c.brStandardFirstWait;
             case SLOW -> c.brSlowFirstWait;
+            case CUSTOM -> c.brCustomFirstWait;
         };
     }
 
     /** 各階段半徑 ÷ 地圖半徑，保證遞減。 */
     public double[] ratios() {
+        if (this == CUSTOM) {
+            // 自訂：n 階段，從整張地圖平滑縮到「最後一圈 %」（前面縮得多、後面縮得少）
+            int n = PGConfig.SERVER.brCustomStages.get();
+            double fin = PGConfig.SERVER.brCustomFinal.get() / 100.0;
+            double[] out = new double[n];
+            for (int i = 1; i <= n; i++) out[i - 1] = fin + (1 - fin) * Math.pow(1 - i / (double) n, 1.5);
+            return out;
+        }
         return ratiosValue().get().stream().mapToDouble(Number::doubleValue).boxed()
             .sorted((a, b) -> Double.compare(b, a))
             .mapToDouble(Double::doubleValue).toArray();
