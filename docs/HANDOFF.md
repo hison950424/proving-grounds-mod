@@ -1,0 +1,48 @@
+# 交接文件（給接手的 Claude 對話）
+
+> 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
+> 最後更新：2026-11-24（從「電腦2.0」對話交接）。
+
+## 1. 使用者與溝通
+- 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
+- 使用者常用**手機遠端**看：結尾訊息要能獨立看懂，最後一句寫出問題與選項（例如「要現在發佈嗎？（現在發佈／先不要）」）。
+- 回報時要誠實：哪些實測過、哪些只編譯過、哪些沒做，都講清楚。
+- 對話記憶用到 **90%** 要在回覆開頭提醒（`get_usage` 的 `context.percentUsed`）。
+- 自動記憶資料夾（`C:\Users\assas\.claude\projects\...tacz-reborn\memory\`，索引 `MEMORY.md`）跟著工作資料夾自動載入，裡面有更多偏好。
+
+## 2. 規則
+- **發佈**：先問「伺服器和客戶端都關了嗎？」，得到回覆、確認沒有 java 程序，才跑
+  `powershell -ExecutionPolicy Bypass -File tools\release.ps1 -Level big|small -NotesFile <說明.md>`（在模組資料夾執行，不要加 `*>&1`）。
+  大型計畫書一路做完再發佈一次；小回饋做完就問。版本規則：`docs/VERSIONS.md`（新系統／操作改變／網路版本變 = big；修正與數值 = small）。發佈後傳 `docs/TESTING.md` 給使用者。
+- **發佈前先移除 Spark**（見第 5 點）。
+- **下載**：做模組需要的東西可以下載，但先問，說明用途、檔名、來源、大小；能核對雜湊就核對。素材要能散佈的授權（公眾領域／CC0，CC BY 要記在 `docs/CREDITS.md`）。不要用其他遊戲的素材。
+- 改伺服器設定預設值：用**改名的設定鍵**（例如 `xxx_v2`），不要動使用者的 toml。改伺服器 toml 前確認沒有 java 在跑。
+- `.mcfunction`／`.json` 用 UTF-8 無 BOM。提交訊息繁體中文，結尾 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`。
+- 不要分享使用者的 email 或個資；不要取出 git 憑證；release 腳本不 `--force`、不改寫歷史。
+
+## 3. 位置與工具
+| 東西 | 位置 |
+|---|---|
+| 模組原始碼 | `C:\mcdatapack\proving-grounds-mod`（分支 `feature/phase1-setup`，套件 `com.provinggrounds`） |
+| 模組伺服器 | `C:\mcdatapack\1.20.1 Proving Grounds_Server_Mod`（設定 `world/serverconfig/provinggrounds-server.toml`） |
+| Prism 客戶端 | `C:\Users\assas\AppData\Roaming\PrismLauncher\instances\1.20.1 Proving Grounds_Client_Mod\minecraft` |
+| 舊資料包（舊版規則參考） | `C:\mcdatapack\1.20.1 Proving Grounds_Server Side_V3.0.0\world\datapacks\tacz_reborn` |
+| ffmpeg | `C:\mcdatapack\tools\ffmpeg\bin\` |
+| Python | `C:\Users\assas\AppData\Local\Programs\Python\Python314\python.exe`（加 `-I`；印中文設 `PYTHONIOENCODING=utf-8`） |
+| javap（看 TACZ 類別） | `C:\Program Files\Java\jdk-17\bin\javap.exe` |
+| 槍包原始立體聲備份 | `C:\mcdatapack\backups\tacz_stereo_20261124` |
+
+- 開發伺服器：`./gradlew runServer`（用 `run_in_background`，等日誌出現 `Done (`），RCON 埠 25575，密碼在 `run/server.properties`。開發客戶端：`./gradlew runClient`（只能看日誌，電腦控制工具抓不到遊戲視窗）。
+- Mixin 沒有 refmap：`remap = false`，方法名同時寫開發名與 SRG 名。SRG 對照：`~/.gradle/caches/forge_gradle/mcp_repo/de/oceanlabs/mcp/mcp_config/1.20.1-20230612.114412/joined/downloadClientMappings/client_mappings.txt`（官方名→混淆名）＋同目錄 `rename/config/joined.tsrg`（混淆名→SRG）。客戶端專用 mixin 放 `provinggrounds.mixins.json` 的 `client`。
+- TACZ 只能在 `compat/` 用反射存取（建置的 `checkGunModIsolation` 會檢查）。TACZ 設定可用反射設值（例：`ClientGunAim.applyDotCrosshairOnce`、`hideTaczInteractText`）。
+- 小技巧：Bash heredoc 會吃反斜線，大段替換建議用 Write 寫一個替換清單檔再用 Python 套用；`./gradlew build -q` 會跑完整檢查。
+
+## 4. 已完成（重點）
+- v0.25.0 已發佈：計畫書 5（`docs/PLAN5_REPORT.md`）、互動鍵 F、點狀準心、邊緣標題、擊殺提示、團隊模式規則、防蹲點、佔點光柱、戰績面板、商店 122 把槍（`docs/SHOP_PRICES.md`）、跑庫塔、方塊還原（`data/BlockLedger` + `LevelSetBlockMixin`）、只有大逃殺會破壞方塊（`core/BlockProtection`）、匯入地圖（`/pg map import`，`docs/MAP_IMPORT.md`）、全員準備自動開始、單人可開任何模式、不擊退（`events/BulletHitEvents`、`ExplosionHitPlayersMixin`）、倒地速度 30%。
+- 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
+
+## 5. 進行中／待決定
+- **介面大小 3 重新排版＋大逃殺 HUD 自訂畫面**：新對話「ui-scale3-redesign」正在做。
+- **Spark**：`spark-1.10.53-forge.jar` 還在伺服器與客戶端 mods 資料夾。使用者會回家自己量 FPS（要用 `/sparkc profiler start --timeout 60`，`/spark` 量的是伺服器），網址傳來後用內建瀏覽器打開分析。量完或發佈前移除。
+- **三個第三方資料包**（armored elytra、custom villager shops、elevators，在伺服器 `world/datapacks/`）每 tick 搜尋實體，佔伺服器 22.9%，建議移除，**還沒問使用者**。
+- 未做：掉線分身（H1）、大逃殺掉線保留、團隊模式倒地開關、擊殺的穿牆樣式、大逃殺戰績面板。
