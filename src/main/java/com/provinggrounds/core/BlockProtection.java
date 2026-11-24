@@ -43,16 +43,33 @@ public final class BlockProtection {
 
     // ── 爆炸 ──
 
-    /** 大廳設定「爆炸破壞方塊」（伺服器設定 explosion_block_damage_v1）。 */
-    public static boolean explosionBlockDamageOn() {
+    public static final int BOOM_OFF = 0, BOOM_ALL = 1, BOOM_GUNS = 2, BOOM_THROWABLES = 3;
+
+    /** 大廳設定「炸毀方塊」（伺服器設定 explosion_block_damage_mode_v1）：0 關、1 全部、2 只有槍械、3 只有投擲物。 */
+    public static int explosionMode() {
         try { return com.provinggrounds.config.PGConfig.SERVER.brExplosionBlockDamage.get(); }
-        catch (IllegalStateException e) { return true; }
+        catch (IllegalStateException e) { return BOOM_ALL; }
     }
 
-    /** 爆炸可不可以炸掉這一格：大逃殺範圍內、大廳開關開著。其他維度照原版。 */
-    private static boolean allowsExplosion(Level level, BlockPos pos) {
+    /**
+     * 這次爆炸算哪一種（計畫書 6 D3）：TACZ 的子彈實體（爆炸彈、火箭、榴彈）= 槍械；lrtactical 的手榴彈爆炸 = 投擲物；
+     * 其他（TNT、苦力怕、特殊物品…）只有「全部」時才炸毀方塊。只看類別名稱，不 import 槍械模組（建置規則）。
+     */
+    private static boolean explosionAllowedByMode(net.minecraft.world.level.Explosion ex) {
+        int mode = explosionMode();
+        if (mode == BOOM_ALL) return true;
+        if (mode == BOOM_OFF) return false;
+        net.minecraft.world.entity.Entity src = ex.getDirectSourceEntity();
+        String srcName = src != null ? src.getClass().getName() : "";
+        boolean gun = srcName.startsWith("com.tacz.");
+        boolean throwable = ex.getClass().getName().startsWith("me.xjqsh.lrtactical.") || srcName.startsWith("me.xjqsh.lrtactical.");
+        return mode == BOOM_GUNS ? gun : throwable;
+    }
+
+    /** 爆炸可不可以炸掉這一格：大逃殺範圍內、大廳設定允許這種爆炸。其他維度照原版。 */
+    private static boolean allowsExplosion(Level level, BlockPos pos, net.minecraft.world.level.Explosion ex) {
         if (level.dimension() != Level.OVERWORLD) return true;
-        return explosionBlockDamageOn() && allowsDamage(level, pos);
+        return explosionAllowedByMode(ex) && allowsDamage(level, pos);
     }
 
     private static java.lang.reflect.Field interactionField;
@@ -70,7 +87,7 @@ public final class BlockProtection {
         Level level = event.getLevel();
         if (level.isClientSide || interactionFailed) return;
         net.minecraft.world.level.Explosion ex = event.getExplosion();
-        if (level.dimension() != Level.OVERWORLD || !allowsExplosion(level, BlockPos.containing(ex.getPosition()))) return;
+        if (level.dimension() != Level.OVERWORLD || !allowsExplosion(level, BlockPos.containing(ex.getPosition()), ex)) return;
         try {
             if (interactionField == null) {
                 interactionField = net.minecraftforge.fml.util.ObfuscationReflectionHelper.findField(net.minecraft.world.level.Explosion.class, "f_46010_");
@@ -99,7 +116,8 @@ public final class BlockProtection {
         int before = event.getAffectedBlocks().size();
         // 不能炸的：大逃殺範圍外、大廳關掉；箱子、祭壇、墓碑等有內容的方塊（方塊實體）也不炸，避免物資噴出來或祭壇消失
         // 物資箱可以被炸掉（裡面的東西照常噴出，比賽結束不修復物資箱，計畫書 6 A10）
-        event.getAffectedBlocks().removeIf(pos -> !allowsExplosion(level, pos)
+        net.minecraft.world.level.Explosion ex = event.getExplosion();
+        event.getAffectedBlocks().removeIf(pos -> !allowsExplosion(level, pos, ex)
             || (level.dimension() == Level.OVERWORLD && level.getBlockEntity(pos) != null && !isCrate(level, pos)));
         if (level.dimension() == Level.OVERWORLD) {
             for (BlockPos pos : event.getAffectedBlocks()) {
