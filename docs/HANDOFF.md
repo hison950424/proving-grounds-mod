@@ -11,6 +11,7 @@
 - 自動記憶資料夾（`C:\Users\assas\.claude\projects\...tacz-reborn\memory\`，索引 `MEMORY.md`）跟著工作資料夾自動載入，裡面有更多偏好。
 
 ## 2. 規則
+- **分工（使用者確認過）**：模組的所有實作（新要求、回饋、修錯）都由「目前接手的那個對話」負責，其他對話不寫程式。對話記憶用到 **90%**（`get_usage` 的 `context.percentUsed`）時：先在回覆開頭提醒使用者 → 更新本檔（最後更新日期、已完成、進行中／待決定）並提交 → 開新對話交接，並把這條「所有實作由新對話負責、90% 交接」的規則一起交代下去。
 - **發佈**：先問「伺服器和客戶端都關了嗎？」，得到回覆、確認沒有 java 程序，才跑
   `powershell -ExecutionPolicy Bypass -File tools\release.ps1 -Level big|small -NotesFile <說明.md>`（在模組資料夾執行，不要加 `*>&1`）。
   大型計畫書一路做完再發佈一次；小回饋做完就問。版本規則：`docs/VERSIONS.md`（新系統／操作改變／網路版本變 = big；修正與數值 = small）。發佈後傳 `docs/TESTING.md` 給使用者。
