@@ -43,7 +43,7 @@
 
 ## 5. 進行中／待決定
 - **介面大小 3 重新排版＋HUD 自訂畫面**：已完成並提交（0b85849，屬於未發佈的 v0.26.0），建置與開發伺服器啟動都通過，**還沒在真正客戶端看過**。內容：`ui/ClientGuiScale`（固定介面大小 3，設定 `[gui] force_gui_scale_v1`）、`ui/HudLayout`（15 個 HUD 元件的位置／大小／開關，存 `config/provinggrounds-hud.json`）、`ui/HudEditScreen`（主選單首頁「HUD 介面設定」）、主選單／大廳／商店／選地圖重新排版。測試項目 UI-1～5、HE-1～7 在 `docs/TESTING.md` 最上面。等使用者測完回饋。
-- **Spark**：`spark-1.10.53-forge.jar` 還在伺服器與客戶端 mods 資料夾，**發佈前移除**。客戶端 FPS 報告（https://spark.lucko.me/sThhJ2rvC5）已分析：20% 時間在等 FPS 上限（有餘裕）、地形繪製 33%、我們的 HUD 約 6.5%（每個 fill 單獨送顯示卡）→ 已改 drawManaged（5f2b25d），請使用者再量一次確認。其他模組：tacz 3.4%、simplebedrockmodel 2.8%、lrtactical 2.2%。
+- **Spark 已移除**（2026-11-24，移到伺服器與客戶端的 mods-backup）。改裝 5 個優化模組：客戶端 Embeddium 0.3.31、ImmediatelyFast 1.5.5、Entity Culling 1.11.3、FerriteCore 6.0.1、ModernFix 5.27.91；伺服器只裝 FerriteCore、ModernFix（正式伺服器已實際開關一次正常）。使用者若回報畫面異常，先懷疑 Embeddium。FPS 報告分析：20% 在等 FPS 上限、地形繪製 33%、我們 HUD 6.5% 已改 drawManaged。
 - 已完成（未發佈 v0.26.0）：電梯方塊（block/ElevatorEvents）、準星 65%＋黑框（TACZ 準星改 EMPTY）、拔刀動畫播完才加速（events/MeleeDrawSpeed）。
 - **三個第三方資料包**（armored elytra、custom villager shops、elevators，在伺服器 `world/datapacks/`）每 tick 搜尋實體，佔伺服器 22.9%，建議移除，**還沒問使用者**。
 - 未做：掉線分身（H1）、大逃殺掉線保留、團隊模式倒地開關、擊殺的穿牆樣式、大逃殺戰績面板。
