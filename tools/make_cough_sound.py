@@ -1,9 +1,12 @@
 # 檔案: make_cough_sound.py
 # 目的: 用程式合成原創的咳嗽聲（不取樣任何錄音），給毒氣彈用。
-#   模擬一聲咳嗽的三個階段：
-#     1. 爆發：聲門突然打開，約 40 毫秒的強烈寬頻氣流聲；
-#     2. 氣流：約 0.2 秒慢慢減弱的喉嚨氣音（白噪音經過人聲共鳴的濾波，大約是「ㄜ」的共鳴位置）；
-#     3. 聲帶振動：前段帶一點低沉的聲帶脈衝（基頻約 110～150 Hz，往下滑）。
+#   v2（使用者回饋「太像噴氣」）：以「聲帶發聲」為主、氣流聲為輔：
+#     1. 爆發：聲門突然打開，約 20 毫秒的短促爆破（低通過的噪音，不尖）；
+#     2. 喉音：聲帶振動（Rosenberg 聲門脈衝，基頻約 95～150 Hz 往下滑），
+#        加上每次振動的細微不規則（jitter／shimmer）與「氣泡音」的粗糙感（隔一次振動變弱），聽起來沙啞；
+#        經過「ㄏㄜ」母音的共振峰（約 650、1150、2450 Hz）；
+#     3. 氣流：少量白噪音經過同樣的共振峰，跟著喉音一起衰減；
+#     最後整體低通（約 3.5 kHz），去掉高頻嘶聲。
 #   產生 3 個版本（音高、長短、共鳴不同），存成 44.1 kHz 單聲道 WAV，再用 ffmpeg 轉成 Minecraft 要的 .ogg。
 # 用法: python tools/make_cough_sound.py <ffmpeg.exe 路徑>
 import math, os, random, struct, subprocess, sys, tempfile, wave
@@ -28,41 +31,66 @@ class Biquad:
         return y
 
 
-def cough(seed, length, f0_start, f0_end, formants, burst_ms, tau_ms, voiced_amount):
+class LowPass:
+    """一階低通。"""
+    def __init__(self, freq):
+        self.a = 1 - math.exp(-2 * math.pi * freq / SR)
+        self.y = 0.0
+
+    def __call__(self, x):
+        self.y += self.a * (x - self.y)
+        return self.y
+
+
+def glottal(phase, open_q=0.6):
+    """Rosenberg 聲門脈衝：張開段慢慢升起、關閉段快速落下、之後閉合（0）。回傳的是氣流的變化率（比較像真的聲音）。"""
+    tp = open_q * 0.66
+    tn = open_q * 0.34
+    if phase < tp:
+        return math.sin(math.pi * phase / tp) * 0.5 * math.pi / tp * 0.02
+    if phase < tp + tn:
+        return -math.sin(math.pi / 2 * (phase - tp) / tn) * math.pi / (2 * tn) * 0.02
+    return 0.0
+
+
+def cough(seed, length, f0_start, f0_end, formants, burst_ms, tau_ms, noise_amount):
     rnd = random.Random(seed)
     n = int(SR * length)
-    # 共鳴（人聲的共振峰）：氣音與聲帶聲都經過
-    noise_f = [(Biquad(f, q), g) for f, q, g in formants]
-    voice_f = [(Biquad(f, q * 1.5), g) for f, q, g in formants]
-    hiss = Biquad(3200, 1.2)  # 喉嚨的嘶聲
-    out = []
-    phase = 0.0
+    voice_f = [(Biquad(f, q), g) for f, q, g in formants]
+    noise_f = [(Biquad(f, q * 0.7), g) for f, q, g in formants]
+    burst_lp = LowPass(1800)
+    out_lp = LowPass(3500)
+    out_lp2 = LowPass(5000)
+    vs, bs, ns = [], [], []
+    phase, period_amp, period_idx = 0.0, 1.0, 0
+    f0_jit = 1.0
     for i in range(n):
         t = i / SR
         ms = t * 1000
-        # 振幅包絡：極快的起音，爆發段後快速衰減到氣流段，再慢慢收尾
-        attack = min(1.0, ms / 4.0)
-        if ms < burst_ms:
-            env = attack
-        else:
-            env = 0.55 * math.exp(-(ms - burst_ms) / tau_ms) + 0.45 * math.exp(-(ms - burst_ms) / (tau_ms * 0.35))
-        env *= attack
-        # 氣流：白噪音 → 共振峰 + 一點高頻嘶聲
-        w = rnd.uniform(-1, 1)
-        breath = sum(f(w) * g for f, g in noise_f) + hiss(w) * 0.35
-        # 聲帶：鋸齒狀脈衝，基頻往下滑，只在前段
-        f0 = f0_start + (f0_end - f0_start) * min(1.0, t / length)
+        attack = min(1.0, ms / 3.0)
+        # 喉音包絡：很快到最大，維持一小段，然後衰減
+        hold = 35
+        venv = attack if ms < hold else math.exp(-(ms - hold) / tau_ms)
+        # 聲帶振動：每個週期重新抽一次不規則量；氣泡音＝隔一次振動變弱
+        f0 = (f0_start + (f0_end - f0_start) * min(1.0, t / length)) * f0_jit
         phase += f0 / SR
         if phase >= 1:
             phase -= 1
-        pulse = (1 - 2 * phase) * (1 + 0.15 * rnd.uniform(-1, 1))
-        voice = sum(f(pulse) * g for f, g in voice_f)
-        voice_env = voiced_amount * math.exp(-ms / (tau_ms * 0.9))
-        # 爆發段額外的寬頻能量（「咳」的爆破感）
-        burst = (rnd.uniform(-1, 1) * 0.6) * max(0.0, 1 - ms / burst_ms) if ms < burst_ms else 0.0
-        out.append(env * (breath * 1.4 + burst) + voice * voice_env * attack)
-    # 結尾 15 毫秒淡出、正規化到 0.85
-    fade = int(SR * 0.015)
+            period_idx += 1
+            f0_jit = 1 + rnd.uniform(-0.05, 0.05)
+            period_amp = (1 + rnd.uniform(-0.2, 0.2)) * (0.6 if period_idx % 2 else 1.0)
+        src = glottal(phase) * period_amp
+        vs.append(sum(f(src) * g for f, g in voice_f) * venv)
+        w = rnd.uniform(-1, 1)
+        ns.append(sum(f(w) * g for f, g in noise_f) * venv)
+        bs.append(burst_lp(rnd.uniform(-1, 1)) * max(0.0, 1 - ms / burst_ms) if ms < burst_ms else 0.0)
+    # 三個成分各自正規化，再照比例混合：喉音為主（1.0）、爆發 0.45、氣流 noise_amount
+    def norm(a):
+        m = max(abs(x) for x in a) or 1
+        return [x / m for x in a]
+    vs, bs, ns = norm(vs), norm(bs), norm(ns)
+    out = [out_lp2(out_lp(v + 0.45 * b + noise_amount * x)) for v, b, x in zip(vs, bs, ns)]
+    fade = int(SR * 0.02)
     for k in range(fade):
         out[-1 - k] *= k / fade
     peak = max(abs(v) for v in out) or 1
@@ -78,10 +106,10 @@ def write_wav(path, samples):
 
 
 VARIANTS = [
-    # 種子, 長度(秒), 基頻起, 基頻終, 共振峰 [(頻率, Q, 增益)], 爆發毫秒, 衰減毫秒, 聲帶量
-    (11, 0.34, 150, 110, [(520, 2.2, 1.0), (1350, 3.0, 0.7), (2600, 4.0, 0.35)], 40, 85, 0.55),
-    (23, 0.28, 135, 105, [(600, 2.0, 1.0), (1500, 3.2, 0.6), (2800, 4.5, 0.3)], 32, 70, 0.45),
-    (37, 0.40, 125, 95, [(480, 2.4, 1.0), (1250, 2.8, 0.75), (2500, 4.0, 0.4)], 45, 100, 0.6),
+    # 種子, 長度(秒), 基頻起, 基頻終, 共振峰 [(頻率, Q, 增益)], 爆發毫秒, 衰減毫秒, 氣流量
+    (11, 0.30, 150, 115, [(650, 4.0, 1.0), (1150, 5.0, 0.6), (2450, 6.0, 0.25)], 20, 70, 0.25),
+    (23, 0.26, 135, 105, [(700, 4.0, 1.0), (1200, 5.0, 0.55), (2500, 6.0, 0.22)], 18, 60, 0.2),
+    (37, 0.36, 120, 95, [(620, 4.5, 1.0), (1100, 5.0, 0.65), (2400, 6.0, 0.28)], 22, 85, 0.3),
 ]
 
 if __name__ == '__main__':
