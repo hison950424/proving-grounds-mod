@@ -85,16 +85,66 @@ public class BlockLedger extends SavedData {
 
     // ── 記錄 ──
 
-    /** 比賽開始：開始記錄這個範圍內的所有方塊變化。 */
+    /** 這場比賽範圍的外框（方塊 X、Z），比賽結束時用來關木門。 */
+    private static int boxX0, boxZ0, boxX1, boxZ1;
+    private static boolean hasBox;
+
+    /** 比賽開始：開始記錄這個範圍內的所有方塊變化（沒有外框：比賽結束不關木門，例如測試指令）。 */
     public static void beginMatch(MinecraftServer server, Predicate<BlockPos> inScope) {
         get(server);
         scope = inScope;
+        hasBox = false;
     }
 
-    /** 比賽結束：停止記錄並立刻還原。回傳還原數量。 */
+    /** 比賽開始：開始記錄這個範圍內的所有方塊變化。x0～x1、z0～z1 = 範圍的外框（比賽結束關木門用）。 */
+    public static void beginMatch(MinecraftServer server, Predicate<BlockPos> inScope, int x0, int z0, int x1, int z1) {
+        get(server);
+        scope = inScope;
+        boxX0 = x0; boxZ0 = z0; boxX1 = x1; boxZ1 = z1;
+        hasBox = true;
+    }
+
+    /** 比賽結束：停止記錄並立刻還原，再把範圍內所有木門關上（計畫書 6 A9）。回傳還原數量。 */
     public static int endMatch(MinecraftServer server) {
+        Predicate<BlockPos> s = scope;
         scope = null;
-        return get(server).restoreAll(server.overworld());
+        int n = get(server).restoreAll(server.overworld());
+        if (hasBox && s != null) closeWoodenDoors(server.overworld(), s);
+        hasBox = false;
+        return n;
+    }
+
+    /**
+     * 把比賽範圍內所有打開的木門關上（只看已載入的區塊；鐵門等不能用手開的門不動）。
+     * 先用區段的調色盤（maybeHas）快速跳過沒有門的區段，只掃有門的。
+     */
+    private static void closeWoodenDoors(ServerLevel level, Predicate<BlockPos> inScope) {
+        long t0 = System.nanoTime();
+        int closed = 0;
+        java.util.function.Predicate<BlockState> door = st -> st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock d
+            && d.type().canOpenByHand() && st.getValue(net.minecraft.world.level.block.DoorBlock.OPEN);
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
+        for (int cx = boxX0 >> 4; cx <= boxX1 >> 4; cx++) {
+            for (int cz = boxZ0 >> 4; cz <= boxZ1 >> 4; cz++) {
+                net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkSource().getChunkNow(cx, cz);
+                if (chunk == null) continue;
+                net.minecraft.world.level.chunk.LevelChunkSection[] sections = chunk.getSections();
+                for (int si = 0; si < sections.length; si++) {
+                    net.minecraft.world.level.chunk.LevelChunkSection sec = sections[si];
+                    if (sec.hasOnlyAir() || !sec.maybeHas(door)) continue;
+                    int baseY = level.getSectionYFromSectionIndex(si) << 4;
+                    for (int y = 0; y < 16; y++) for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
+                        BlockState st = sec.getBlockState(x, y, z);
+                        if (!door.test(st)) continue;
+                        mp.set((cx << 4) + x, baseY + y, (cz << 4) + z);
+                        if (!inScope.test(mp)) continue;
+                        level.setBlock(mp, st.setValue(net.minecraft.world.level.block.DoorBlock.OPEN, false), 2);
+                        closed++;
+                    }
+                }
+            }
+        }
+        if (closed > 0) ProvingGroundsMod.LOGGER.info("Closed {} wooden door blocks in {} ms.", closed, (System.nanoTime() - t0) / 1_000_000);
     }
 
     public static boolean recording() { return scope != null; }

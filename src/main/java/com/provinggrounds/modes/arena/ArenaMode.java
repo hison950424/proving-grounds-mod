@@ -633,7 +633,8 @@ public abstract class ArenaMode {
         for (Vec3 v : pts) { minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x); minZ = Math.min(minZ, v.z); maxZ = Math.max(maxZ, v.z); }
         final double x0 = minX - 48, x1 = maxX + 48, z0 = minZ - 48, z1 = maxZ + 48;
         com.provinggrounds.data.BlockLedger.get(server).restoreAll(level); // 上一場沒還原到的先修回去
-        com.provinggrounds.data.BlockLedger.beginMatch(server, pos -> pos.getX() >= x0 && pos.getX() <= x1 && pos.getZ() >= z0 && pos.getZ() <= z1);
+        com.provinggrounds.data.BlockLedger.beginMatch(server, pos -> pos.getX() >= x0 && pos.getX() <= x1 && pos.getZ() >= z0 && pos.getZ() <= z1,
+            (int) Math.floor(x0), (int) Math.floor(z0), (int) Math.ceil(x1), (int) Math.ceil(z1));
     }
 
     public final void finish() {

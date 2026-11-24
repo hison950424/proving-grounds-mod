@@ -322,7 +322,7 @@ public class BattleRoyaleMode {
         com.provinggrounds.data.BlockLedger.beginMatch(server, pos -> {
             double dx = pos.getX() + 0.5 - mcx, dz = pos.getZ() + 0.5 - mcz;
             return dx * dx + dz * dz <= mr * mr;
-        });
+        }, (int) Math.floor(mcx - mr), (int) Math.floor(mcz - mr), (int) Math.ceil(mcx + mr), (int) Math.ceil(mcz + mr));
         airdrops = new AirdropManager(level);
         loot = new LootSpawner(level, m, LootSpawner.Mode.SPAWN);
         phase = Phase.PREPARING;

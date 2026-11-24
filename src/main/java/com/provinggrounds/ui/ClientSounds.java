@@ -21,6 +21,9 @@ import net.minecraftforge.fml.common.Mod;
 public final class ClientSounds {
 
     private static final ResourceLocation SMOKE_END = new ResourceLocation("lrtactical", "entity.grenade.smoke.end");
+    /** Suffuse 槍包的集束手榴彈把爆炸聲寫成不存在的 testpack:…（作者筆誤），改播 M67 的爆炸聲（計畫書 6 A7）。 */
+    private static final ResourceLocation BROKEN_CLUSTER = new ResourceLocation("testpack", "entity.grenade.m67.explode");
+    private static final ResourceLocation M67_EXPLODE = new ResourceLocation("lrtactical", "entity.grenade.m67.explode");
 
     /** 客戶端正在處理的受傷事件的傷害來源（DamageSoundMixin 設定，只在渲染執行緒用）。 */
     public static volatile net.minecraft.world.damagesource.DamageSource currentDamage;
@@ -32,6 +35,11 @@ public final class ClientSounds {
     public static void onPlaySound(PlaySoundEvent event) {
         SoundInstance s = event.getSound();
         if (s == null) return;
+        if (BROKEN_CLUSTER.equals(s.getLocation())) {
+            event.setSound(new SimpleSoundInstance(M67_EXPLODE, s.getSource(), 1f, 1f,
+                SoundInstance.createUnseededRandom(), false, 0, s.getAttenuation(), s.getX(), s.getY(), s.getZ(), s.isRelative()));
+            return;
+        }
         double mul;
         var dmg = currentDamage;
         if (dmg != null && dmg.is(net.minecraft.world.damagesource.DamageTypes.OUTSIDE_BORDER)) {

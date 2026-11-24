@@ -24,7 +24,7 @@ import javax.annotation.Nullable;
  *     3. 放火（燃燒彈、打火石）：不能放火方塊，所以不會燒掉木頭。燃燒瓶是範圍效果雲，不是火方塊，照常有效。
  *   管理員在創造模式手動蓋、拆方塊不受影響。
  *   大逃殺範圍內的爆炸：大廳「炸毀方塊」開著時會炸掉方塊（TACZ、lrtactical 自己的設定是不破壞，這裡逐次改成破壞），
- *   但有方塊實體的方塊（箱子、祭壇、墓碑…）不炸、被炸掉的方塊不掉落；比賽結束由 BlockLedger 還原。
+ *   但有方塊實體的方塊（祭壇、墓碑…）不炸（物資箱可以炸，裡面的東西照常掉出、比賽結束不修復）、被炸掉的方塊不掉落；比賽結束由 BlockLedger 還原。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID)
 public final class BlockProtection {
@@ -57,6 +57,7 @@ public final class BlockProtection {
 
     private static java.lang.reflect.Field interactionField;
     private static boolean interactionFailed;
+    private static java.lang.reflect.Field destroyMultiplierField;
     /** 這個 tick 被爆炸炸掉的方塊（炸掉時掉出來的物品要取消，避免滿地方塊；每 tick 結束清空）。 */
     private static final java.util.Set<BlockPos> EXPLODED = new java.util.HashSet<>();
 
@@ -77,6 +78,14 @@ public final class BlockProtection {
             if (interactionField.get(ex) == net.minecraft.world.level.Explosion.BlockInteraction.KEEP) {
                 interactionField.set(ex, net.minecraft.world.level.Explosion.BlockInteraction.DESTROY);
             }
+            // lrtactical 的手榴彈爆炸（CustomExplosion）有自己的「破壞方塊威力倍率」，M67 設成 0 → 就算允許也炸不壞方塊（計畫書 6 A8）
+            if (ex.getClass().getName().equals("me.xjqsh.lrtactical.util.CustomExplosion")) {
+                if (destroyMultiplierField == null) {
+                    destroyMultiplierField = ex.getClass().getDeclaredField("destroyMultiplier");
+                    destroyMultiplierField.setAccessible(true);
+                }
+                if (destroyMultiplierField.getFloat(ex) <= 0f) destroyMultiplierField.setFloat(ex, 1f);
+            }
         } catch (ReflectiveOperationException | RuntimeException e) {
             interactionFailed = true;
             ProvingGroundsMod.LOGGER.warn("Explosion block damage unavailable: {}", e.toString());
@@ -89,12 +98,19 @@ public final class BlockProtection {
         if (level.isClientSide) return;
         int before = event.getAffectedBlocks().size();
         // 不能炸的：大逃殺範圍外、大廳關掉；箱子、祭壇、墓碑等有內容的方塊（方塊實體）也不炸，避免物資噴出來或祭壇消失
+        // 物資箱可以被炸掉（裡面的東西照常噴出，比賽結束不修復物資箱，計畫書 6 A10）
         event.getAffectedBlocks().removeIf(pos -> !allowsExplosion(level, pos)
-            || (level.dimension() == Level.OVERWORLD && level.getBlockEntity(pos) != null));
+            || (level.dimension() == Level.OVERWORLD && level.getBlockEntity(pos) != null && !isCrate(level, pos)));
         if (level.dimension() == Level.OVERWORLD) {
-            for (BlockPos pos : event.getAffectedBlocks()) if (!level.getBlockState(pos).isAir()) EXPLODED.add(pos.immutable());
+            for (BlockPos pos : event.getAffectedBlocks()) {
+                if (!level.getBlockState(pos).isAir() && !isCrate(level, pos)) EXPLODED.add(pos.immutable());
+            }
         }
         if (before > 0 && event.getAffectedBlocks().isEmpty()) ProvingGroundsMod.LOGGER.debug("Explosion block damage blocked ({} blocks).", before);
+    }
+
+    private static boolean isCrate(Level level, BlockPos pos) {
+        return level.getBlockState(pos).getBlock() instanceof com.provinggrounds.block.CrateBlock;
     }
 
     /** 被炸掉的方塊不掉落（地圖比賽結束會由 BlockLedger 自動還原，掉一地方塊只會亂）。 */
