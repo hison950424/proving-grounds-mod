@@ -234,7 +234,9 @@ public final class NewSpecials {
             if (r.until() < now) {
                 it.remove();
                 SpecialType held = SpecialItem.typeOf(SpecialSlot.get(p));
-                if (held == SpecialType.RECALL || held == SpecialType.RECALL_PLUS) SpecialSlot.clear(p);
+                if (held == SpecialType.RECALL || held == SpecialType.RECALL_PLUS) {
+                    if (!DomGear.recallExpired(p, held)) SpecialSlot.clear(p); // 佔點：進冷卻，不刪掉
+                }
                 msg(p, "回溯點已消失", ChatFormatting.GRAY);
                 continue;
             }
@@ -265,7 +267,7 @@ public final class NewSpecials {
                 double hp = (roll == 0 ? 5 : 10) * k;
                 for (int i = 0; i < items; i++) {
                     ItemStack s = SpecialLoot.roll(level);
-                    if (!s.isEmpty()) HotbarRules.dropAtFeet(p, s);
+                    if (!s.isEmpty() && !DomGear.giveLoot(p, s)) HotbarRules.dropAtFeet(p, s); // 佔點：變成額外特殊物品
                 }
                 changeMaxHealth(p, hp);
                 p.heal((float) hp);

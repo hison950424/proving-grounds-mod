@@ -17,7 +17,7 @@ import java.util.Optional;
 public final class PGNetwork {
 
     /** 封包格式改變時要加 1，舊版客戶端連線時會直接顯示版本不符（7 = 跳傘改版）。 */
-    private static final String VERSION = "24"; // 24 = 標點、23 = 計畫書 7、22 = 計畫書 6、21 = 大廳「爆炸破壞方塊」開關、 15 = 特殊物品系統、16 = 大廳特殊物品開關、17 = 槍械模式、18 = 場地選擇、19 = 團隊死鬥／佔點／槍王之王、20 = 計畫書 5（互動鍵、擊殺提示、據點光柱…）
+    private static final String VERSION = "25"; // 25 = 佔點特殊物品裝備（計畫書 8）、24 = 標點、23 = 計畫書 7、22 = 計畫書 6、21 = 大廳「爆炸破壞方塊」開關、 15 = 特殊物品系統、16 = 大廳特殊物品開關、17 = 槍械模式、18 = 場地選擇、19 = 團隊死鬥／佔點／槍王之王、20 = 計畫書 5（互動鍵、擊殺提示、據點光柱…）
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ProvingGroundsMod.MOD_ID, "main"),
@@ -101,6 +101,10 @@ public final class PGNetwork {
             PingPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER)); // 標點
         CHANNEL.registerMessage(id++, PingSyncPacket.class, PingSyncPacket::encode, PingSyncPacket::decode,
             PingSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)); // 標點同步給隊友
+        CHANNEL.registerMessage(id++, DomGearPacket.class, DomGearPacket::encode, DomGearPacket::decode,
+            DomGearPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)); // 佔點特殊物品裝備（計畫書 8）
+        CHANNEL.registerMessage(id++, DomGearActionPacket.class, DomGearActionPacket::encode, DomGearActionPacket::decode,
+            DomGearActionPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
 
     }
 

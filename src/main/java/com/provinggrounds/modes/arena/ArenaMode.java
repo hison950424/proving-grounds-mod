@@ -127,6 +127,8 @@ public abstract class ArenaMode {
 
     public boolean usesShop() { return true; }
     public boolean usesClasses() { return true; }
+    /** 沒有職業、但要發固定的基本裝備（佔點；計畫書 8）：自由人的起始槍與消耗品、血量 100、沒有折扣。 */
+    protected boolean basicKit() { return false; }
     protected boolean keepInventory() { return true; }
     /** 能不能丟東西（佔點可以丟槍給隊友）。 */
     protected boolean allowToss(ItemStack stack) { return false; }
@@ -207,7 +209,7 @@ public abstract class ArenaMode {
         applyHealth(p, usesClasses() ? ap.cls.maxHealth : 100);
         p.addEffect(new MobEffectInstance(MobEffects.REGENERATION, MobEffectInstance.INFINITE_DURATION, 1, false, false, true));
         p.addEffect(new MobEffectInstance(MobEffects.SATURATION, MobEffectInstance.INFINITE_DURATION, 0, false, false, true));
-        if (usesClasses()) {
+        if (usesClasses() || basicKit()) {
             if (giveGun) {
                 ItemStack gun = GunCompat.createLoadedGun(new net.minecraft.resources.ResourceLocation(ap.cls.gun), ap.cls.fireMode);
                 give(p, gun);
@@ -395,7 +397,7 @@ public abstract class ArenaMode {
         com.provinggrounds.core.KillEvents.arenaKillOffline(this, server, counted ? killer : null, counted ? k : null, v, lostStreak);
         if (!counted) return;
         onKill(killer, k, null, v);
-        if (com.provinggrounds.special.SpecialConfig.enabledSafe()) {
+        if (com.provinggrounds.special.SpecialConfig.enabledSafe() && !basicKit()) {
             ItemStack sp = com.provinggrounds.special.SpecialLoot.roll(level);
             if (!sp.isEmpty()) level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level, s.pos.x, s.pos.y + 0.5, s.pos.z, sp));
         }
@@ -453,7 +455,7 @@ public abstract class ArenaMode {
         com.provinggrounds.core.KillEvents.arenaKill(this, counted ? killer : null, counted ? k : null, victim, v, lostStreak);
         if (!counted) return;
         onKill(killer, k, victim, v);
-        if (com.provinggrounds.special.SpecialConfig.enabledSafe()) { // 特殊物品模式（大廳開關）：擊殺掉落特殊物品
+        if (com.provinggrounds.special.SpecialConfig.enabledSafe() && !basicKit()) { // 特殊物品模式（大廳開關）：擊殺掉落特殊物品（佔點改用裝備，不掉）
             ItemStack sp = com.provinggrounds.special.SpecialLoot.roll(level);
             if (!sp.isEmpty()) victim.spawnAtLocation(sp);
         }
@@ -601,14 +603,14 @@ public abstract class ArenaMode {
         if (!canShop(p, ap)) { deny(p, "必須在自己的基地內才能購買！"); return; }
         ArenaData.ShopItem[] pieces = armorSet(set);
         int total = 0, n = 0;
-        for (ArenaData.ShopItem i : pieces) if (i != null) { total += i.priceFor(ap.cls); n++; }
+        for (ArenaData.ShopItem i : pieces) if (i != null) { total += i.priceFor(priceClass(ap)); n++; }
         if (n == 0) return;
         if (ap.money < total) { deny(p, "金錢不足！還差 $" + (total - ap.money)); return; }
         ap.money -= total;
         for (ArenaData.ShopItem item : pieces) {
             if (item == null) continue;
             ItemStack stack = RespawnKit.parse(item.item() + " " + item.count());
-            if (!(stack.getItem() instanceof ArmorItem a)) { ap.money += item.priceFor(ap.cls); continue; } // 伺服器缺少物品：退錢
+            if (!(stack.getItem() instanceof ArmorItem a)) { ap.money += item.priceFor(priceClass(ap)); continue; } // 伺服器缺少物品：退錢
             EquipmentSlot slot = a.getEquipmentSlot();
             ItemStack old = p.getItemBySlot(slot);
             p.setItemSlot(slot, stack);
@@ -625,7 +627,7 @@ public abstract class ArenaMode {
         if (ap == null || !usesShop() || index < 0 || index >= shop.size()) return;
         if (!canShop(p, ap)) { deny(p, "必須在自己的基地內才能購買！"); return; }
         ArenaData.ShopItem item = shop.get(index);
-        int price = item.priceFor(ap.cls);
+        int price = item.priceFor(priceClass(ap));
         if (ap.money < price) { deny(p, "金錢不足！還差 $" + (price - ap.money)); return; }
         ItemStack stack = RespawnKit.parse(item.item() + " " + item.count());
         if (stack.isEmpty()) { deny(p, "這個商品目前無法購買（伺服器缺少物品）"); return; }
@@ -644,6 +646,23 @@ public abstract class ArenaMode {
         p.sendSystemMessage(Component.literal("[商店] 成功購買 " + item.name() + "！（-$" + price + "）").withStyle(ChatFormatting.GREEN));
         p.playNotifySound(SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.MASTER, 1f, 1.2f);
         syncHud();
+    }
+
+    /** 算價格用的職業（沒有職業的模式 = null，不打折）。 */
+    @Nullable
+    private ArenaClass priceClass(ArenaPlayer ap) { return usesClasses() ? ap.cls : null; }
+
+    /** 花錢買不是商店清單裡的東西（佔點的特殊物品；計畫書 8）。檢查基地、金錢，成功就扣錢、提示、同步 HUD。 */
+    public boolean trySpend(ServerPlayer p, int price, String what) {
+        ArenaPlayer ap = players.get(p.getUUID());
+        if (ap == null || !usesShop()) return false;
+        if (!canShop(p, ap)) { deny(p, "必須在自己的基地內才能購買！"); return false; }
+        if (ap.money < price) { deny(p, "金錢不足！還差 $" + (price - ap.money)); return false; }
+        ap.money -= price;
+        p.sendSystemMessage(Component.literal("[商店] 成功購買 " + what + "！（-$" + price + "）").withStyle(ChatFormatting.GREEN));
+        p.playNotifySound(SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.MASTER, 1f, 1.2f);
+        syncHud();
+        return true;
     }
 
     public void transfer(ServerPlayer p, UUID targetId, int amount) {

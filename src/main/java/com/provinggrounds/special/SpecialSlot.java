@@ -101,5 +101,9 @@ public final class SpecialSlot {
 
         @Override
         public int getMaxStackSize() { return 1; }
+
+        /** 佔點的特殊物品裝備（計畫書 8）不能拿出來。 */
+        @Override
+        public boolean mayPickup(Player p) { return !DomGear.isGearStack(getItem()) && super.mayPickup(p); }
     }
 }

@@ -77,7 +77,8 @@ public final class SpecialUse {
     }
 
     public static void onKey(ServerPlayer p) {
-        if (!SpecialConfig.enabledSafe()) { msg(p, "特殊物品模式已關閉"); return; }
+        boolean dom = DomGear.active(p); // 佔點的特殊物品裝備（計畫書 8）：不受大廳開關影響、用完進冷卻
+        if (!SpecialConfig.enabledSafe() && !dom) { msg(p, "特殊物品模式已關閉"); return; }
         if (!canUseNow(p)) { msg(p, "觀戰中不能使用特殊物品"); return; }
         if (KnockbackShield.active(p)) {
             if (ActionLock.blocksSpecial(p)) { msg(p, "現在不能使用"); return; }
@@ -92,12 +93,19 @@ public final class SpecialUse {
         SpecialType type = SpecialItem.typeOf(stack);
         if (type == null) { msg(p, "特殊物品欄是空的"); return; }
         if (ActionLock.blocksSpecial(p)) { msg(p, ActionLock.cloaked(p) ? "隱形中不能使用任何物品" : "現在不能使用特殊物品"); return; }
+        String why = DomGear.blockReason(p, stack);
+        if (why != null) { msg(p, why); return; }
         long now = p.server.getTickCount();
         Long last = LAST_USE.get(p.getUUID());
         if (last != null && now - last < SpecialConfig.get().useCooldownTicks.get()) return;
         keepItem = false;
         if (!use(p, type)) return;
         LAST_USE.put(p.getUUID(), now);
+        if (DomGear.isGearStack(stack)) { // 佔點：裝備進冷卻、額外的扣次數（物品格的內容由 DomGear 換）
+            DomGear.afterUse(p, stack, keepItem);
+            p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.5f, 1.6f);
+            return;
+        }
         if (type.twoUses()) { // 計畫書 7 C11：可以用 2 次，次數存在物品 NBT
             int left = SpecialItem.usesLeft(stack) - 1;
             if (left > 0) {

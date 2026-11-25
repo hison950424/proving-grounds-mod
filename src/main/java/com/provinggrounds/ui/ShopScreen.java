@@ -26,12 +26,17 @@ import java.util.Map;
  *   底部「垃圾桶」：打開一個暫時的箱子，放進去的東西在關掉時刪除。
  *   自由人顯示八折價。只能在自己的基地買（伺服器檢查，介面上也會提示）。
  *   槍王之王沒有商店：只顯示戰況與「選單」按鈕。
+ *   佔點（計畫書 8）：沒有「職業」，改成「特殊物品」分頁：上面三列換裝備（準備階段、在基地裡），
+ *   下面是可以買的一次性特殊物品（價格依強度）。
  */
 public final class ShopScreen extends Screen {
 
     private static final int BG = 0xEB0F141E, BORDER = 0xFF2A3344, ACCENT = 0xFFE8D060, TEXT = 0xFFFFFFFF,
         DIM = 0xFFA0A8B8, GOOD = 0xFF4CC864, BAD = 0xFFE04848, HOVER = 0x30FFFFFF;
-    private static final String TAB_CLASS = "職業", TAB_TRANSFER = "轉帳";
+    private static final String TAB_CLASS = "職業", TAB_TRANSFER = "轉帳", TAB_SPECIAL = "特殊物品";
+    /** 特殊物品分頁：可以買的種類、格子從哪裡開始。 */
+    private final List<com.provinggrounds.special.SpecialType> specialList = new ArrayList<>();
+    private int specialY;
     /** 大分類（左欄）→ 小分類（格子上方一排）。計畫書 6 B7：先分大方向再細分，畫面不再一長串。 */
     private static final String MAIN_GUNS = "槍械", MAIN_ATTACH = "配件", MAIN_GEAR = "近戰／投擲", MAIN_ARMOR = "防具", MAIN_OTHER = "其他";
     private static final List<String> GUN_CATS = List.of("手槍", "衝鋒槍", "散彈槍", "步槍", "機槍", "狙擊槍", "重武器", "其他槍械");
@@ -47,7 +52,7 @@ public final class ShopScreen extends Screen {
     private static final Map<Integer, ItemStack> ICONS = new HashMap<>();
 
     private int panelW, panelH, left, top, gridX, gridY, gridW, gridH, scroll;
-    private int seen = -1;
+    private int seen = -1, seenGear = -1;
     /** 商品格（null = 空格：配件分組的標題列、防具沒有的部位）。 */
     private final List<ArenaData.ShopItem> visible = new ArrayList<>();
     /** 配件「全部」的分組標題：格子編號（一列的開頭）→ 組名（計畫書 7 A7）。 */
@@ -66,6 +71,7 @@ public final class ShopScreen extends Screen {
         left = (width - panelW) / 2;
         top = (height - panelH) / 2;
         seen = ClientArenaState.version();
+        seenGear = com.provinggrounds.client.ClientDomGear.version();
         ArenaStatePacket s = ClientArenaState.get();
         int by = top + panelH - 23; // 介面大小 3 為基準：底部按鈕高 16
         addRenderableWidget(new PGButton(left + 10, by, 64, 16, Component.literal("選單"), false, false, () -> {
@@ -84,6 +90,7 @@ public final class ShopScreen extends Screen {
         // 左欄：大分類
         List<String> tabs = new ArrayList<>();
         if (s.classes()) tabs.add(TAB_CLASS);
+        if (com.provinggrounds.client.ClientDomGear.inMatch()) tabs.add(TAB_SPECIAL);
         if (ArenaData.shop().stream().anyMatch(i -> GUN_CATS.contains(i.category()))) tabs.add(MAIN_GUNS);
         if (hasCat("配件")) tabs.add(MAIN_ATTACH);
         if (ArenaData.shop().stream().anyMatch(i -> GEAR_CATS.contains(i.category()))) tabs.add(MAIN_GEAR);
@@ -129,7 +136,9 @@ public final class ShopScreen extends Screen {
         visible.clear();
         headers.clear();
         armorCols.clear();
+        specialList.clear();
         if (tab.equals(TAB_CLASS)) initClasses(s);
+        else if (tab.equals(TAB_SPECIAL)) initSpecials(s);
         else if (tab.equals(TAB_TRANSFER)) initTransfer(s);
         else if (tab.equals(MAIN_ARMOR)) initArmor(s);
         else if (tab.equals(MAIN_ATTACH) && sub.equals("全部")) initAttachGroups();
@@ -164,7 +173,7 @@ public final class ShopScreen extends Screen {
         for (ArenaData.ShopItem i : ArenaData.shop()) {
             if (i.category().equals("防具") && !visible.subList(0, setCount).contains(i)) visible.add(i);
         }
-        boolean free = s.classOrdinal() == ArenaClass.FREELANCER.ordinal();
+        boolean free = s.classes() && s.classOrdinal() == ArenaClass.FREELANCER.ordinal();
         int cw = cellW();
         for (int c = 0; c < armorCols.size(); c++) {
             int set = armorCols.get(c), total = 0;
@@ -260,6 +269,31 @@ public final class ShopScreen extends Screen {
         }
     }
 
+    /** 特殊物品分頁（佔點）：三列裝備（點了展開下拉選單）＋一次性商品格。 */
+    private void initSpecials(ArenaStatePacket s) {
+        List<com.provinggrounds.special.SpecialType> all = com.provinggrounds.special.DomGear.allowed();
+        List<String> labels = all.stream().map(ShopScreen::gearLabel).toList();
+        int y = gridY + 12, bw = Math.min(220, gridW - 60);
+        for (int i = 0; i < com.provinggrounds.special.DomGear.SLOTS; i++) {
+            com.provinggrounds.special.SpecialType cur = com.provinggrounds.client.ClientDomGear.gear(i);
+            final int slot = i, bx = gridX + 56, by = y;
+            PGButton b = new PGButton(bx, by, bw, 14, Component.literal((cur == null ? "—" : gearLabel(cur)) + " ▾"), false, false,
+                () -> Dropdown.open(bx, by + 14, bw, labels, Math.max(0, all.indexOf(cur)), k -> PGNetwork.sendToServer(
+                    new com.provinggrounds.network.DomGearActionPacket(com.provinggrounds.network.DomGearActionPacket.Action.SET, slot, all.get(k).ordinal()))));
+            b.active = s.canShop();
+            addRenderableWidget(b);
+            y += 17;
+        }
+        specialY = y + 16;
+        specialList.addAll(all);
+    }
+
+    /** 「【弱】彈簧鞋　冷卻 30 秒」 */
+    private static String gearLabel(com.provinggrounds.special.SpecialType t) {
+        int tier = com.provinggrounds.special.DomGear.tier(t);
+        return "【" + com.provinggrounds.special.DomGear.tierName(tier) + "】" + t.zh + "　冷卻 " + com.provinggrounds.special.DomGear.cooldownSeconds(t) + " 秒";
+    }
+
     private void initTransfer(ArenaStatePacket s) {
         int x = gridX, y = gridY;
         int[] steps = { -500, -50, -5, 5, 50, 500 };
@@ -293,7 +327,7 @@ public final class ShopScreen extends Screen {
             if (tab.equals(MAIN_ATTACH) && sub.equals("可裝手上的槍")) { rebuildWidgets(); return; }
         }
         if (!ClientArenaState.active()) { onClose(); return; }
-        if (seen != ClientArenaState.version()) {
+        if (seen != ClientArenaState.version() || seenGear != com.provinggrounds.client.ClientDomGear.version()) {
             // 金錢、在不在基地、冷卻有變：重建按鈕（保留捲動位置）
             int keep = scroll;
             rebuildWidgets();
@@ -315,6 +349,7 @@ public final class ShopScreen extends Screen {
             g.drawString(font, where, left + panelW - 20 - font.width(money) - font.width(where), top + 9, s.canShop() ? DIM : BAD, false);
             if (tab.equals(TAB_CLASS)) renderClasses(g, s);
             else if (tab.equals(TAB_TRANSFER)) renderTransfer(g, s);
+            else if (tab.equals(TAB_SPECIAL)) renderSpecials(g, s, mouseX, mouseY);
             else renderGrid(g, s, mouseX, mouseY);
         } else {
             int y = top + 32;
@@ -327,6 +362,46 @@ public final class ShopScreen extends Screen {
             g.drawString(font, s.status(), left + 14, y + 6, DIM, false);
         }
         super.render(g, mouseX, mouseY, partialTick);
+        Dropdown.render(g, font, mouseX, mouseY, height); // 下拉選單畫在最上層
+    }
+
+    /** 特殊物品分頁的商品格（不捲動的區域：裝備三列；可以捲動：商品格）。 */
+    private void renderSpecials(GuiGraphics g, ArenaStatePacket s, int mouseX, int mouseY) {
+        g.drawString(font, "我的裝備（三選一用長按 5，按 Q 使用；用完進入冷卻。準備時間在基地可以換）", gridX, gridY, DIM, false);
+        for (int i = 0; i < com.provinggrounds.special.DomGear.SLOTS; i++) {
+            g.drawString(font, "裝備 " + (i + 1), gridX, gridY + 15 + i * 17, TEXT, false);
+        }
+        int extraMax;
+        try { extraMax = com.provinggrounds.config.PGConfig.SERVER.arena.domGearExtraMax.get(); } catch (IllegalStateException e) { extraMax = 3; }
+        g.drawString(font, "購買一次性特殊物品（用完就沒有，不進冷卻；身上 " + com.provinggrounds.client.ClientDomGear.extras().size() + "／" + extraMax + "）",
+            gridX, specialY - 11, DIM, false);
+        int top = specialY, bottom = gridY + gridH, cols = cols();
+        g.enableScissor(gridX, top, gridX + gridW, bottom);
+        com.provinggrounds.special.SpecialType hovered = null;
+        for (int i = 0; i < specialList.size(); i++) {
+            com.provinggrounds.special.SpecialType t = specialList.get(i);
+            int cx = gridX + (i % cols) * CELL_W, cy = top + (i / cols) * CELL_H - scroll;
+            if (cy + CELL_H < top || cy > bottom) continue;
+            boolean over = mouseX >= cx && mouseX < cx + CELL_W - 2 && mouseY >= cy && mouseY < cy + CELL_H - 2 && mouseY >= top && mouseY < bottom;
+            if (over) hovered = t;
+            g.fill(cx, cy, cx + CELL_W - 2, cy + CELL_H - 2, over ? HOVER : 0x18FFFFFF);
+            g.renderItem(new ItemStack(com.provinggrounds.special.SpecialRegistry.item(t)), cx + 3, cy + 3);
+            int tier = com.provinggrounds.special.DomGear.tier(t), price = com.provinggrounds.special.DomGear.price(t);
+            g.drawString(font, trim(t.zh, CELL_W - 26), cx + 22, cy + 3, TEXT, false);
+            g.drawString(font, "$" + price, cx + 22, cy + 13, s.money() >= price ? GOOD : BAD, false);
+            String tn = com.provinggrounds.special.DomGear.tierName(tier);
+            g.drawString(font, tn, cx + CELL_W - 6 - font.width(tn), cy + 13, 0xFF000000 | com.provinggrounds.special.DomGear.tierColor(tier), false);
+        }
+        g.disableScissor();
+        if (hovered != null && !Dropdown.isOpen()) {
+            List<Component> tip = new ArrayList<>();
+            tip.add(Component.literal(hovered.zh));
+            tip.add(Component.literal(hovered.desc));
+            tip.add(Component.literal("強度 " + com.provinggrounds.special.DomGear.tierName(com.provinggrounds.special.DomGear.tier(hovered))
+                + "・價格 $" + com.provinggrounds.special.DomGear.price(hovered) + "（一次性）・當裝備時冷卻 " + com.provinggrounds.special.DomGear.cooldownSeconds(hovered) + " 秒"));
+            tip.add(Component.literal(s.canShop() ? "點一下購買" : "回基地才能購買"));
+            g.renderTooltip(font, tip.stream().map(Component::getVisualOrderText).toList(), mouseX, mouseY);
+        }
     }
 
     private int cols() {
@@ -335,7 +410,7 @@ public final class ShopScreen extends Screen {
     }
 
     private void renderGrid(GuiGraphics g, ArenaStatePacket s, int mouseX, int mouseY) {
-        boolean free = s.classOrdinal() == ArenaClass.FREELANCER.ordinal();
+        boolean free = s.classes() && s.classOrdinal() == ArenaClass.FREELANCER.ordinal();
         g.enableScissor(gridX, gridY, gridX + gridW, gridY + gridH);
         int cols = cols();
         ArenaData.ShopItem hovered = null;
@@ -398,7 +473,17 @@ public final class ShopScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (Dropdown.mouseClicked(mx, my, height)) return true; // 下拉選單展開中：先處理它
         if (super.mouseClicked(mx, my, button)) return true;
+        if (tab.equals(TAB_SPECIAL)) { // 特殊物品分頁：點商品格 = 買一次性的
+            if (mx < gridX || mx >= gridX + gridW || my < specialY || my >= gridY + gridH) return false;
+            int col = (int) ((mx - gridX) / CELL_W), row = (int) ((my - specialY + scroll) / CELL_H);
+            int i = row * cols() + col;
+            if (col >= cols() || i < 0 || i >= specialList.size()) return false;
+            PGNetwork.sendToServer(new com.provinggrounds.network.DomGearActionPacket(
+                com.provinggrounds.network.DomGearActionPacket.Action.BUY, specialList.get(i).ordinal(), 0));
+            return true;
+        }
         if (!ClientArenaState.get().shop() || tab.equals(TAB_CLASS) || tab.equals(TAB_TRANSFER)) return false;
         if (mx < gridX || mx >= gridX + gridW || my < gridY || my >= gridY + gridH) return false;
         int col = (int) ((mx - gridX) / cellW()), row = (int) ((my - gridY + scroll) / CELL_H);
@@ -411,20 +496,29 @@ public final class ShopScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
-        int rows = (visible.size() + cols() - 1) / cols();
-        int max = Math.max(0, rows * CELL_H - gridH);
+        if (Dropdown.isOpen()) return Dropdown.mouseScrolled(delta);
+        boolean sp = tab.equals(TAB_SPECIAL);
+        int rows = ((sp ? specialList.size() : visible.size()) + cols() - 1) / cols();
+        int max = Math.max(0, rows * CELL_H - (sp ? gridY + gridH - specialY : gridH));
         scroll = Math.max(0, Math.min(max, scroll - (int) (delta * CELL_H)));
         return true;
     }
 
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
+        if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE && Dropdown.isOpen()) { Dropdown.close(); return true; }
         if (ClientModEvents.OPEN_MENU.matches(key, scan)) { onClose(); return true; }
         return super.keyPressed(key, scan, mods);
     }
 
     @Override
     public boolean isPauseScreen() { return false; }
+
+    @Override
+    public void removed() {
+        Dropdown.close();
+        super.removed();
+    }
 
     private static ItemStack icon(ArenaData.ShopItem item) {
         return ICONS.computeIfAbsent(item.index(), k -> RespawnKit.parse(item.item()));

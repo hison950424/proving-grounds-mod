@@ -31,8 +31,16 @@ public final class SpecialHotbar {
     static volatile boolean pearlFlying;
 
     public static boolean modeOn() {
+        if (com.provinggrounds.client.ClientDomGear.inMatch()) return true; // 佔點的特殊物品裝備（計畫書 8）不受大廳開關影響
         LobbyStatePacket lobby = ClientLobbyData.get();
         return lobby == null || lobby.special();
+    }
+
+    /** 特殊物品格裡是佔點裝備、而且在冷卻中：回傳剩餘 tick，否則 0。 */
+    private static int gearCooldown(ItemStack stack) {
+        if (!com.provinggrounds.client.ClientDomGear.inMatch() || !com.provinggrounds.special.DomGear.isGearStack(stack)) return 0;
+        int idx = stack.getTag().getInt(com.provinggrounds.special.DomGear.TAG);
+        return idx < com.provinggrounds.special.DomGear.SLOTS ? com.provinggrounds.client.ClientDomGear.cooldownLeft(idx) : 0;
     }
 
     private static void render(GuiGraphics g, int w, int h) {
@@ -51,14 +59,27 @@ public final class SpecialHotbar {
         RenderSystem.disableBlend();
         ItemStack stack = SpecialSlot.get(p);
         Font font = mc.font;
+        int cd = gearCooldown(stack);
         if (!stack.isEmpty()) {
             g.renderItem(stack, x + 3, y + 3);
             g.renderItemDecorations(font, stack, x + 3, y + 3);
+            if (cd > 0) { // 佔點裝備冷卻中：由下往上蓋暗色，中間寫剩幾秒
+                int idx = stack.getTag().getInt(com.provinggrounds.special.DomGear.TAG);
+                float f = Math.min(1f, cd / (float) com.provinggrounds.client.ClientDomGear.cooldownTotal(idx));
+                int ch = Math.max(1, Math.round(16 * f));
+                g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(), x + 3, y + 19 - ch, x + 19, y + 19, 0xA0000000);
+                String sec = String.valueOf((cd + 19) / 20);
+                g.pose().pushPose();
+                g.pose().translate(0, 0, 300);
+                g.drawString(font, sec, x + 11 - font.width(sec) / 2, y + 7, 0xFFFFFFFF, true);
+                g.pose().popPose();
+            }
         }
         String key = ClientSpecial.USE_KEY.getTranslatedKeyMessage().getString();
         String hint = null;
         if (holdingShield(p)) hint = "[" + key + "] 衝撞";
         else if (pearlFlying) hint = "[" + key + "] 傳送";
+        else if (cd > 0) hint = "冷卻中・長按 5 切換";
         else if (!stack.isEmpty()) hint = "[" + key + "] 使用";
         if (hint == null) return;
         g.pose().pushPose();

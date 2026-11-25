@@ -78,9 +78,17 @@ public final class DomMode extends ArenaMode {
 
     private int captureMax() { return cfg.domCaptureSeconds.get(); }
 
+    /** 計畫書 8：佔點沒有職業，改成自選三個特殊物品（special/DomGear）；開局發固定的基本裝備。 */
+    @Override public boolean usesClasses() { return false; }
+    @Override protected boolean basicKit() { return true; }
+
+    /** 正在戰鬥（不是準備、結算）。特殊物品裝備只有戰鬥中能用、準備時才能換。 */
+    public boolean fighting() { return phase == Phase.ROUND; }
+
     @Override
     protected void onStart() {
         for (Point pt : points) setFloor(pt, false);
+        com.provinggrounds.special.DomGear.startMatch(online());
         enterPrep();
     }
 
@@ -88,6 +96,7 @@ public final class DomMode extends ArenaMode {
     protected void onFinish() {
         fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.AIR.defaultBlockState(), true);
         for (Point pt : points) setFloor(pt, false);
+        com.provinggrounds.special.DomGear.endMatch(server);
     }
 
     private void setFloor(Point pt, boolean open) {
@@ -134,6 +143,7 @@ public final class DomMode extends ArenaMode {
             refillConsumables(p, ap, true);
         }
         fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.AIR.defaultBlockState(), true);
+        com.provinggrounds.special.DomGear.resetCooldowns(); // 每回合特殊物品冷卻歸零（計畫書 8）
         broadcastTitle(Component.literal("⚔ 戰鬥開始！").withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
             Component.literal("佔領將於 " + cfg.domFreezeSeconds.get() + " 秒後開放").withStyle(ChatFormatting.YELLOW), 40);
         playAll(SoundEvents.RAID_HORN.value(), 0.6f, 1.2f);

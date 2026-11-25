@@ -62,7 +62,7 @@ public class MainMenuScreen extends Screen {
     private static int leftScroll;
     private int leftW = 170, leftTop, leftBottom, leftContentH;
     private final List<Row> rows = new ArrayList<>();
-    private int seenMenu = -1, seenLobby = -1;
+    private int seenMenu = -1, seenLobby = -1, seenGear = -1;
 
     /** 名單的一列：隊伍標題（entry 為 null）或玩家。team：1.. 隊伍、0 孤狼、-1 未分隊、-2 觀戰。 */
     private record Row(int team, String label, int color, @Nullable LobbyStatePacket.Entry entry) {}
@@ -85,6 +85,7 @@ public class MainMenuScreen extends Screen {
         top = (height - panelH) / 2;
         seenMenu = ClientMenuData.version();
         seenLobby = ClientLobbyData.version();
+        seenGear = com.provinggrounds.client.ClientDomGear.version();
         switch (view) {
             case HOME -> initHome();
             case MODES -> initModes();
@@ -323,7 +324,22 @@ public class MainMenuScreen extends Screen {
         y = choice(sx, y, sw, "倒地", downedOn ? "開" : "關", OFF_ON, downedOn ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_ARENA_DOWNED, i));
         boolean special = lobby == null || lobby.special(); // 特殊物品模式：擊殺敵人掉落特殊物品（商店不賣）
         y = choice(sx, y, sw, "特殊物品", special ? "開" : "關", OFF_ON, special ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_SPECIAL, i));
-        if (gm != GameManager.GameMode.GK) {
+        if (gm == GameManager.GameMode.DOM) {
+            // 計畫書 8：佔點沒有職業，每個人自選三個特殊物品（用完進冷卻；強度越高冷卻越長）
+            LobbyStatePacket.Entry me = self(lobby);
+            boolean canPick = me != null && !me.spectator() && lobby != null && lobby.inLobby();
+            List<com.provinggrounds.special.SpecialType> all = com.provinggrounds.special.DomGear.allowed();
+            List<String> labels = all.stream().map(t -> "【" + com.provinggrounds.special.DomGear.tierName(com.provinggrounds.special.DomGear.tier(t)) + "】"
+                + t.zh + "　" + com.provinggrounds.special.DomGear.cooldownSeconds(t) + " 秒").toList();
+            for (int i = 0; i < com.provinggrounds.special.DomGear.SLOTS; i++) {
+                com.provinggrounds.special.SpecialType cur = com.provinggrounds.client.ClientDomGear.choice(i);
+                final int slot = i;
+                String value = cur == null ? "—" : "【" + com.provinggrounds.special.DomGear.tierName(com.provinggrounds.special.DomGear.tier(cur)) + "】" + cur.zh;
+                y = choice(sx, y, sw, "特殊物品 " + (i + 1), value, labels, Math.max(0, all.indexOf(cur)), canPick,
+                    k -> PGNetwork.sendToServer(new com.provinggrounds.network.DomGearActionPacket(
+                        com.provinggrounds.network.DomGearActionPacket.Action.SET, slot, all.get(k).ordinal())));
+            }
+        } else if (gm != GameManager.GameMode.GK) {
             // 每個人自己選職業（開始前；計畫書 6 C1），點一下換下一個
             LobbyStatePacket.Entry me = self(lobby);
             com.provinggrounds.modes.arena.ArenaClass[] all = com.provinggrounds.modes.arena.ArenaClass.values();
@@ -760,7 +776,8 @@ public class MainMenuScreen extends Screen {
     public void tick() {
         // 伺服器資料到了（或更新了）就重建按鈕，讓設定與按鈕狀態正確
         boolean confirming = System.currentTimeMillis() < endConfirmUntil;
-        if (ClientMenuData.version() != seenMenu || ClientLobbyData.version() != seenLobby || confirming != wasConfirming) {
+        if (ClientMenuData.version() != seenMenu || ClientLobbyData.version() != seenLobby || confirming != wasConfirming
+                || com.provinggrounds.client.ClientDomGear.version() != seenGear) {
             wasConfirming = confirming; // 確認時間過了，按鈕文字要變回「結束遊戲」
             rebuildWidgets();
         }

@@ -37,6 +37,10 @@ public final class ArenaConfig {
         domKillMoney, domFirstBloodMoney, domPointIncome, domTieMoney, domTieAlivePenalty, domTieDeadPay;
     public final ForgeConfigSpec.ConfigValue<List<? extends Integer>> domWinMoney, domLossMoney;
     public final ForgeConfigSpec.ConfigValue<List<? extends String>> domPoints;
+    // 佔點特殊物品裝備（計畫書 8）
+    public final ForgeConfigSpec.ConfigValue<List<? extends Integer>> domGearCooldown, domGearPrice;
+    public final ForgeConfigSpec.ConfigValue<List<? extends String>> domGearTiers;
+    public final ForgeConfigSpec.IntValue domGearExtraMax;
 
     // 槍王之王
     public final ForgeConfigSpec.IntValue gkMultiplier;
@@ -111,6 +115,13 @@ public final class ArenaConfig {
                 "A|192.5 24 -16.5|4|196 24 -13 188 24 -21",
                 "B|161.5 13 -47.5|5|166 13 -53 156 13 -43",
                 "C|122.5 13 -86.5|8|130 13 -79 115 13 -94"), ArenaConfig::isString);
+        b.comment("佔點特殊物品裝備（計畫書 8）：每人自選三個，用完進入冷卻；商店可以買一次性的額外特殊物品").push("gear");
+        domGearCooldown = b.comment("冷卻秒數：弱、中、強").defineList("cooldown_v1", List.of(30, 60, 120), ArenaConfig::isInt);
+        domGearPrice = b.comment("商店價格（一次性）：弱、中、強").defineList("price_v1", List.of(150, 300, 600), ArenaConfig::isInt);
+        domGearTiers = b.comment("強度覆寫：「物品ID=等級」（1 弱、2 中、3 強、0 佔點不能用）。沒寫的用模組內建的評估（見 docs/PLAN8_DOM_SPECIALS.md）")
+            .defineListAllowEmpty(List.of("tier_overrides_v1"), List::of, ArenaConfig::isString);
+        domGearExtraMax = b.comment("身上最多帶幾個一次性的額外特殊物品").defineInRange("extra_max_v1", 3, 0, 20);
+        b.pop();
         b.pop();
 
         b.comment("槍王之王（重生點與武器清單在模組內的 data/provinggrounds/arena/gk.json）").push("gk");
