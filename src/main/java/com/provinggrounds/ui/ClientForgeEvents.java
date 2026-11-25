@@ -57,6 +57,12 @@ public final class ClientForgeEvents {
             // 本地先擋一次冷卻（避免連按灌封包）；真正的判斷在伺服器
             long now = System.currentTimeMillis();
             if (now - lastProneRequest < 250) continue;
+            // 跳起來（腳離地）時不能趴下（使用者回饋：跳起來能趴、趴下卻不能跳，不一致）；本地當下判斷最準
+            if (!mc.player.onGround() && !com.provinggrounds.client.ClientProneData.isProne(mc.player.getUUID())) {
+                mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("要站在地上才能趴下")
+                    .withStyle(net.minecraft.ChatFormatting.GRAY), true);
+                continue;
+            }
             lastProneRequest = now;
             PGNetwork.sendToServer(new com.provinggrounds.network.ProneTogglePacket());
         }
