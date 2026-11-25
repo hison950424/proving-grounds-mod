@@ -173,8 +173,8 @@ public final class MapRender {
                     box(g, sx, sz, 2, c);
                     if (names) label(g, font, sx, sz, Tr.t("map.downed_name", m.name()), c);
                 }
-                default -> { // 隊友、觀戰時的所有玩家
-                    int c = 0xFF000000 | m.color();
+                default -> { // 隊友（一律藍色，使用者回饋）、觀戰時的所有玩家（照隊伍顏色）
+                    int c = 0xFF000000 | (m.kind() == MapMarkersPacket.TEAMMATE ? ClientTeamColors.MATE : m.color());
                     arrow(g, font, sx, sz, m.yaw(), c);
                     if (names) label(g, font, sx, sz, m.name(), c);
                 }

@@ -262,12 +262,12 @@ public final class HUD {
             g.fill(x, y, x + boxW, y + 14, withAlpha(BG, alpha * 0.92f));
             int tx = x + PAD;
             if (!d.killer().isEmpty()) {
-                g.drawString(font, d.killer(), tx, y + 3, withAlpha(0xFF000000 | d.killerColor(), alpha), false);
+                g.drawString(font, d.killer(), tx, y + 3, withAlpha(0xFF000000 | ClientTeamColors.colorFor(d.killer(), d.killerColor()), alpha), false);
                 tx += wKiller;
             }
             g.drawString(font, sep, tx, y + 3, withAlpha(TEXT_DIM, alpha), false);
             tx += wSep;
-            g.drawString(font, d.victim(), tx, y + 3, withAlpha(0xFF000000 | d.victimColor(), alpha), false);
+            g.drawString(font, d.victim(), tx, y + 3, withAlpha(0xFF000000 | ClientTeamColors.colorFor(d.victim(), d.victimColor()), alpha), false);
             if (!marks.isEmpty()) g.drawString(font, marks, tx + font.width(d.victim()), y + 3, withAlpha(0xFFFFD040, alpha), false);
             y += 16;
         }

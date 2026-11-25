@@ -42,7 +42,7 @@ public final class ClientPing {
         InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, "key.categories.provinggrounds");
 
     private static final long SOLID_MS = 2000, SHOW_MS = 5000;
-    private static final int SELF_COLOR = 0xFFE040, MATE_COLOR = 0x60D0FF;
+    private static final int SELF_COLOR = 0xFFE040, MATE_COLOR = ClientTeamColors.MATE; // 隊友一律藍色
 
     private record Ping(Vec3 pos, String name, boolean self, long start) {}
     private static final Map<UUID, Ping> PINGS = new HashMap<>();

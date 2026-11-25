@@ -119,12 +119,12 @@ public final class KillHud {
             int total = kw + iconW + vw + 8;
             int x = -total;
             g.fill(x - 3, ly - 2, 2, ly + 14, (int) (0x60 * alpha / 255f) << 24);
-            g.drawString(font, d.killer(), x, ly + 3, a | d.killerColor(), true);
+            g.drawString(font, d.killer(), x, ly + 3, a | ClientTeamColors.colorFor(d.killer(), d.killerColor()), true);
             x += kw + 4;
             if (!d.weapon().isEmpty()) g.renderItem(d.weapon(), x, ly - 1);
             else g.drawString(font, "›", x, ly + 3, a | 0xAAAAAA, true);
             x += iconW;
-            g.drawString(font, d.victim(), x, ly + 3, a | d.victimColor(), true);
+            g.drawString(font, d.victim(), x, ly + 3, a | ClientTeamColors.colorFor(d.victim(), d.victimColor()), true);
             if (!hs.isEmpty()) g.drawString(font, hs, x + font.width(d.victim()), ly + 3, a | (d.knock() ? 0xC0C0C0 : 0xFFD040), true);
             ly += 17;
         }

@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *       所以射速快的槍每發傷害低、射速慢的每發高，但同類型打死人的時間差不多；手感差異（射速、後座、彈匣）保留。
  *     栓動狙擊槍（射速 ≤ sniper_bolt_rpm）：打身體 sniper_body_shots 發（預設 2），爆頭倍率至少 sniper_head_multiplier（一發爆頭）。
  *     霰彈槍：每一發（所有彈丸加起來）shotgun_shot_damage，近距離 2 發。
- *   距離減傷改用我們自己的（取代槍械包各自的設定）：
+ *   距離減傷（使用者回饋：預設關閉 distance_falloff_v1，遠近傷害一樣；槍械包自己的減傷照樣先還原）。開著時改用我們自己的：
  *     步槍、機槍：rifle_falloff_start 格內全額，到 rifle_falloff_end 格降到 rifle_falloff_min，之後維持。
  *     衝鋒槍、手槍：smg_falloff_*；霰彈槍：shotgun_falloff_*；狙擊槍：不減傷。
  *   護甲：子彈不再吃原版護甲值（資料檔把子彈傷害加進 minecraft:bypasses_armor），只算 ArmorEvents 的防彈係數，
@@ -121,6 +121,7 @@ public final class GunBalance {
     /** 我們的距離減傷（1 = 全額）。 */
     private static double ourFalloff(String kind, double dist) {
         PGConfig c = PGConfig.SERVER;
+        if (!c.gunDistanceFalloff.get()) return 1.0; // 使用者回饋：預設不再有距離減傷
         double start, end, min;
         switch (kind) {
             case "sniper" -> { return 1.0; }

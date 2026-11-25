@@ -69,13 +69,23 @@ public final class FlashShieldTweaks {
             Object value = Class.forName("me.xjqsh.lrtactical.config.ServerConfig").getField("FLASH_SHIELD_MAX_DURABILITY").get(null);
             var cfg = (net.minecraftforge.common.ForgeConfigSpec.ConfigValue<Integer>) value;
             var done = SpecialConfig.get().flashShieldHalved;
-            if (done.get()) return;
-            int half = Math.max(1, cfg.get() / 2);
-            cfg.set(half);
-            cfg.save();
-            done.set(true);
-            done.save();
-            ProvingGroundsMod.LOGGER.info("Flash shield durability halved to {}.", half);
+            if (!done.get()) {
+                int half = Math.max(1, cfg.get() / 2);
+                cfg.set(half);
+                cfg.save();
+                done.set(true);
+                done.save();
+                ProvingGroundsMod.LOGGER.info("Flash shield durability halved to {}.", half);
+            }
+            var done045 = SpecialConfig.get().flashShield045; // 使用者回饋：再改成當時的 45%
+            if (!done045.get()) {
+                int v = Math.max(1, Math.round(cfg.get() * 0.45f));
+                cfg.set(v);
+                cfg.save();
+                done045.set(true);
+                done045.save();
+                ProvingGroundsMod.LOGGER.info("Flash shield durability set to 45%: {}.", v);
+            }
         } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
             // lrtactical 沒裝或改版：不處理
         }
