@@ -40,6 +40,7 @@ public final class ClientModEvents {
     @SubscribeEvent
     public static void onRegisterOverlays(RegisterGuiOverlaysEvent event) {
         event.registerAboveAll("br_hud", HUD.OVERLAY);
+        event.registerAboveAll("ping", ClientPing.OVERLAY); // 標點（不會被方塊擋住）
         event.registerAboveAll("arena_hud", ArenaHud.OVERLAY); // 團隊死鬥／佔點／槍王之王
         event.registerAboveAll("item_wheel", ClientWheel.OVERLAY);
         event.registerAboveAll("compass", Compass.OVERLAY);

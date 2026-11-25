@@ -180,6 +180,12 @@ public final class MapRender {
                 }
             }
         }
+        // 標點（自己黃色、隊友藍色；使用者回饋）
+        for (ClientPing.MapPing p : ClientPing.mapPings()) {
+            int sx = (int) v.px(p.x()), sz = (int) v.pz(p.z());
+            int c = (p.alpha() << 24) | (p.self() ? 0xFFE040 : ClientTeamColors.MATE);
+            g.drawString(font, "◆", sx - font.width("◆") / 2, sz - 4, c, true);
+        }
         // 強力發光的目標（特殊物品）：閃爍的紅點，外圈白框
         for (com.provinggrounds.network.GlowSyncPacket.Entry e : com.provinggrounds.special.client.ClientSpecial.mapTargets()) {
             int sx = (int) v.px(e.x()), sz = (int) v.pz(e.z());
