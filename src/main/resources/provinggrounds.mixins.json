@@ -16,7 +16,8 @@
     "CreativeSlotMixin",
     "LevelSetBlockMixin",
     "ExplosionHitPlayersMixin",
-    "FlashShieldMixin"
+    "FlashShieldMixin",
+    "ChestMenuMixin"
   ],
   "client": [
     "HumanoidArmsMixin",

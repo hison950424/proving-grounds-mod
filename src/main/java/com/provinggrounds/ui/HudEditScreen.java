@@ -27,7 +27,7 @@ public class HudEditScreen extends Screen {
     private static final int BG = 0xE00F141E, BORDER = 0xFF2A3344, ACCENT = 0xFFE8D060, TEXT = 0xFFFFFFFF,
         DIM = 0xFFA0A8B8, OFF = 0xFF6A7384;
     private static final int PW = 214, ROW = 18, BH = 14;
-    private static final String[] GROUPS = { "大逃殺", "團隊模式", "通用" };
+    private static final String[] GROUPS = { "大逃殺", "團隊模式", "通用", "箱子畫面（只能移動）" };
 
     // 記住上次的分頁、捲動、面板位置（同一次遊戲啟動期間）
     private static int tab;
@@ -36,7 +36,7 @@ public class HudEditScreen extends Screen {
     private static final String[] MODE_NAMES = { "全部", "大逃殺", "團隊模式" };
 
     private static boolean shown(HudLayout.El e) {
-        return modeFilter == 0 || e.group == 2 || e.group == modeFilter - 1;
+        return modeFilter == 0 || e.group >= 2 || e.group == modeFilter - 1;
     }
     private static int scroll;
     private static boolean panelRight;
@@ -470,6 +470,8 @@ public class HudEditScreen extends Screen {
             case TITLE -> new String[] { "上方標題（倒數、淘汰…）" };
             case SPECIAL -> new String[] { "[Q]", "▢" };
             case EFFECTS -> new String[] { "▣ ▣ ▣", "藥水效果" };
+            case CHEST_INV -> new String[] { "背包", "（防具、特殊格、快捷欄）", "打開箱子時的位置" };
+            case CHEST_BOX -> new String[] { "箱子", "打開箱子時的位置" };
         };
     }
 }

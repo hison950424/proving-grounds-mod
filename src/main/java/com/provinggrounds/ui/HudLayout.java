@@ -63,7 +63,7 @@ public final class HudLayout {
 
     private interface BoxFn { Box at(int sw, int sh); }
 
-    /** 可以自訂的 HUD 元件。group：0 = 大逃殺、1 = 團隊模式、2 = 通用。 */
+    /** 可以自訂的 HUD 元件。group：0 = 大逃殺、1 = 團隊模式、2 = 通用、3 = 箱子畫面（只能移動）。 */
     public enum El {
         MINIMAP("小地圖", 0, Pivot.TOP_LEFT, (w, h) -> new Box(0, 0, 76, 76)),
         ZONE("縮圈資訊", 0, Pivot.TOP_LEFT, (w, h) -> new Box(0, 82, 110, 34)),
@@ -81,7 +81,12 @@ public final class HudLayout {
         TITLE("上方標題", 2, Pivot.TOP_CENTER, (w, h) -> new Box(w / 2 - 100, 58, 200, 22)),
         SPECIAL("特殊物品格", 2, Pivot.BOTTOM_CENTER, (w, h) -> new Box(w / 2 + 99, h - 32, 22, 32)),
         /** 原版藥水效果圖示（右上角；計畫書 6 B4）。 */
-        EFFECTS("藥水效果圖示", 2, Pivot.TOP_RIGHT, (w, h) -> new Box(w - 126, 0, 126, 52));
+        EFFECTS("藥水效果圖示", 2, Pivot.TOP_RIGHT, (w, h) -> new Box(w - 126, 0, 126, 52)),
+        /** 打開箱子時的背包與箱子位置（計畫書 7 A4；不能縮放、不能隱藏）。預設：背包在左、箱子在右。 */
+        CHEST_INV("箱子畫面：背包", 3, Pivot.TOP_LEFT, (w, h) -> new Box(w / 2 - ChestSideLayout.INV_W - 2, h / 2 - ChestSideLayout.INV_H / 2,
+            ChestSideLayout.INV_W, ChestSideLayout.INV_H)),
+        CHEST_BOX("箱子畫面：箱子", 3, Pivot.TOP_LEFT, (w, h) -> new Box(w / 2 + 2, h / 2 - ChestSideLayout.INV_H / 2,
+            ChestSideLayout.BOX_W, ChestSideLayout.BOX_EDIT_H));
 
         public final String label;
         public final int group;
@@ -96,6 +101,9 @@ public final class HudLayout {
         }
 
         public Box defaultBox(int sw, int sh) { return box.at(sw, sh); }
+
+        /** 只能移動（不能縮放、隱藏、調透明度）：箱子畫面的兩塊。 */
+        public boolean moveOnly() { return group == 3; }
     }
 
     /** 每個元件的自訂值。 */
@@ -187,6 +195,7 @@ public final class HudLayout {
     }
 
     public static float scale(El e) {
+        if (e.moveOnly()) return 1f;
         ensureLoaded();
         return ENTRIES.get(e).scale;
     }
@@ -236,6 +245,7 @@ public final class HudLayout {
 
     public static void setEnabled(El e, boolean on) {
         ensureLoaded();
+        if (e.moveOnly()) return;
         ForgeConfigSpec.BooleanValue legacy = legacyToggle(e);
         if (legacy != null) {
             legacy.set(on);
@@ -247,6 +257,7 @@ public final class HudLayout {
 
     public static void setScale(El e, float s, int sw, int sh) {
         ensureLoaded();
+        if (e.moveOnly()) return;
         Entry en = ENTRIES.get(e);
         en.scale = Math.round(Math.max(MIN_SCALE, Math.min(MAX_SCALE, s)) * 20) / 20f; // 每格 5%
         clamp(e, sw, sh); // 放大後碰到螢幕邊被推回來時，把位置記成推回後的樣子
