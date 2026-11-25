@@ -68,6 +68,12 @@ public final class BRMovement {
         return com.provinggrounds.special.SpecialSpeed.multiplier(player, base, melee ? c.brMeleeSpeedMultiplier.get() : base);
     }
 
+    /** 目前有沒有套用 BR 速度（沒有 = 大逃殺以外，特殊物品加速由 SpecialSpeed 自己處理）。 */
+    public static boolean hasBrSpeed(ServerPlayer player) {
+        AttributeInstance attr = player.getAttribute(Attributes.MOVEMENT_SPEED);
+        return attr != null && attr.getModifier(SPEED_ID) != null;
+    }
+
     /** 移除所有 BR 速度修改（包含倒地緩速）。 */
     public static void remove(ServerPlayer player) {
         AttributeInstance attr = player.getAttribute(Attributes.MOVEMENT_SPEED);

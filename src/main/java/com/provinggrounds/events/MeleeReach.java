@@ -19,6 +19,7 @@ import net.minecraftforge.fml.common.Mod;
  *   melee_reach_v1（預設 1.75 格）就取消這次傷害。只會縮短，不會讓本來打不到的變打得到。
  *   傷害平衡（使用者回饋）：lrtactical 每把刀都是左鍵 40、右鍵 400（倍率 10），這裡改成固定的
  *   melee_light_damage_v1（預設 20）與 melee_heavy_damage_v1（預設 55）。原始傷害 ≥ 100 的算右鍵重擊。之後照原版護甲計算。
+ *   背刺（使用者回饋）：從背後打（對方面向的反方向左右 60 度內）傷害 × melee_backstab_multiplier_v1（預設 2）。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID)
 public final class MeleeReach {
@@ -41,10 +42,20 @@ public final class MeleeReach {
         if (!attacker.getMainHandItem().is(GunCompat.MELEE)) return;
         try {
             boolean heavy = event.getAmount() >= 100f; // 右鍵重擊是左鍵的 10 倍
-            event.setAmount((float) (heavy ? PGConfig.SERVER.meleeHeavyDamage.get() : PGConfig.SERVER.meleeLightDamage.get()).doubleValue());
+            double dmg = heavy ? PGConfig.SERVER.meleeHeavyDamage.get() : PGConfig.SERVER.meleeLightDamage.get();
+            if (behind(attacker, event.getEntity())) dmg *= PGConfig.SERVER.meleeBackstabMultiplier.get(); // 背刺（使用者回饋）
+            event.setAmount((float) dmg);
         } catch (IllegalStateException ignored) {
             // 設定還沒載入：照原本
         }
+    }
+
+    /** 攻擊者在對方背後：從對方指向攻擊者的水平方向，和對方面向的反方向相差 60 度以內。 */
+    private static boolean behind(ServerPlayer attacker, LivingEntity target) {
+        Vec3 face = Vec3.directionFromRotation(0, target.getYHeadRot());
+        Vec3 toAttacker = new Vec3(attacker.getX() - target.getX(), 0, attacker.getZ() - target.getZ());
+        if (toAttacker.lengthSqr() < 1e-6) return false;
+        return face.dot(toAttacker.normalize()) <= -0.5; // cos(120°)
     }
 
     /** 點到方框最近一點的距離（點在方框裡 = 0）。 */

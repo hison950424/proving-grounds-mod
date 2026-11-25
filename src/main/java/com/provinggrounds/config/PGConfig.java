@@ -160,7 +160,7 @@ public class PGConfig {
 
     // ── 槍械平衡（所有模式通用，GunBalance） ─────────────────────────────────
     public final ForgeConfigSpec.BooleanValue gunBalanceEnabled, gunDistanceFalloff;
-    public final ForgeConfigSpec.DoubleValue meleeReach, meleeLightDamage, meleeHeavyDamage;
+    public final ForgeConfigSpec.DoubleValue meleeReach, meleeLightDamage, meleeHeavyDamage, meleeBackstabMultiplier;
     public final ForgeConfigSpec.ConfigValue<List<? extends String>> venueList;
     public final ForgeConfigSpec.DoubleValue venueMaxHealth;
     public final ForgeConfigSpec.ConfigValue<String> venueAmmoBox;
@@ -437,6 +437,7 @@ public class PGConfig {
         gunDistanceFalloff = builder.comment("距離減傷（使用者回饋：改成兩段：門檻內全額、超過門檻固定一個比例；槍械包自己的距離減傷一律取消）").define("distance_falloff_v2", true);
         meleeLightDamage = builder.comment("刀子左鍵（輕擊）每刀傷害（使用者回饋平衡：原本 40 = 3 刀死；20 = 5 刀約 2.5 秒，跟槍差不多）").defineInRange("melee_light_damage_v1", 20.0, 0.0, 1000.0);
         meleeHeavyDamage = builder.comment("刀子右鍵（重擊）每刀傷害（原本 400 = 一刀死；55 = 兩刀死）").defineInRange("melee_heavy_damage_v1", 55.0, 0.0, 1000.0);
+        meleeBackstabMultiplier = builder.comment("刀子打背後的傷害倍率（使用者回饋：雙倍）。背後 = 對方面向的反方向左右各 60 度內").defineInRange("melee_backstab_multiplier_v1", 2.0, 1.0, 10.0);
         meleeReach = builder.comment("刀子（lrtactical 近戰）的最遠攻擊距離（格，從眼睛量到對方身體）。原本 2，使用者回饋減 0.25").defineInRange("melee_reach_v1", 1.75, 0.5, 6.0);
         weaponModeThrowables = builder.comment("槍械模式「投擲物」：槍換成這些投擲物（格式同 /give）")
             .defineListAllowEmpty(List.of("weapon_mode_throwables"), () -> List.of(

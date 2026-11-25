@@ -77,7 +77,7 @@ public final class SpecialUse {
     }
 
     public static void onKey(ServerPlayer p) {
-        boolean dom = DomGear.active(p); // 佔點的特殊物品裝備（計畫書 8）：不受大廳開關影響、用完進冷卻
+        boolean dom = DomGear.active(p); // 佔點的整場特殊物品（計畫書 8）
         if (!SpecialConfig.enabledSafe() && !dom) { msg(p, "特殊物品模式已關閉"); return; }
         if (!canUseNow(p)) { msg(p, "觀戰中不能使用特殊物品"); return; }
         if (KnockbackShield.active(p)) {
@@ -101,8 +101,8 @@ public final class SpecialUse {
         keepItem = false;
         if (!use(p, type)) return;
         LAST_USE.put(p.getUUID(), now);
-        if (DomGear.isGearStack(stack)) { // 佔點：裝備進冷卻、額外的扣次數（物品格的內容由 DomGear 換）
-            DomGear.afterUse(p, stack, keepItem);
+        if (DomGear.isGearStack(stack)) { // 佔點：整場的特殊物品用完不刪，這回合不能再用
+            DomGear.afterUse(p, keepItem);
             p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.5f, 1.6f);
             return;
         }

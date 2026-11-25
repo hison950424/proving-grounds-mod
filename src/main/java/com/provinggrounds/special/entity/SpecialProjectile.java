@@ -172,7 +172,7 @@ public class SpecialProjectile extends ThrowableItemProjectile {
         SpecialUse.forgetPearl(this);
         if (getOwner() instanceof ServerPlayer p) {
             ItemStack back = new ItemStack(SpecialRegistry.item(SpecialType.WARP_PEARL));
-            if (!com.provinggrounds.special.DomGear.refund(p, SpecialType.WARP_PEARL) && !SpecialSlot.tryInsert(p, back))
+            if (!com.provinggrounds.special.DomGear.refund(p) && !SpecialSlot.tryInsert(p, back))
                 com.provinggrounds.modes.br.HotbarRules.dropAtFeet(p, back);
             p.displayClientMessage(Component.literal(msg).withStyle(ChatFormatting.YELLOW), true);
         }

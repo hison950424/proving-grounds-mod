@@ -127,8 +127,6 @@ public abstract class ArenaMode {
 
     public boolean usesShop() { return true; }
     public boolean usesClasses() { return true; }
-    /** 沒有職業、但要發固定的基本裝備（佔點；計畫書 8）：自由人的起始槍與消耗品、血量 100、沒有折扣。 */
-    protected boolean basicKit() { return false; }
     protected boolean keepInventory() { return true; }
     /** 能不能丟東西（佔點可以丟槍給隊友）。 */
     protected boolean allowToss(ItemStack stack) { return false; }
@@ -160,6 +158,7 @@ public abstract class ArenaMode {
             ap.money = cfg.startMoney.get();
             if (p.isPassenger()) p.stopRiding();
             p.getInventory().clearContent();
+            com.provinggrounds.special.SpecialSlot.clear(p); // 大廳留下來的特殊物品不帶進比賽
             p.removeAllEffects();
             p.setGameMode(GameType.ADVENTURE);
             p.setCamera(p);
@@ -169,6 +168,7 @@ public abstract class ArenaMode {
             ArenaPlayer ap = players.get(p.getUUID());
             prepare(p, ap, true);
             teleport(p, spawnOf(ap));
+            giveSpawnSpecial(p);
         }
         broadcastTitle(Component.literal(title()).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD),
             Component.literal(usesShop() ? "在基地裡按 M 打開商店" : "擊殺敵人升級武器").withStyle(ChatFormatting.YELLOW), 60);
@@ -209,7 +209,7 @@ public abstract class ArenaMode {
         applyHealth(p, usesClasses() ? ap.cls.maxHealth : 100);
         p.addEffect(new MobEffectInstance(MobEffects.REGENERATION, MobEffectInstance.INFINITE_DURATION, 1, false, false, true));
         p.addEffect(new MobEffectInstance(MobEffects.SATURATION, MobEffectInstance.INFINITE_DURATION, 0, false, false, true));
-        if (usesClasses() || basicKit()) {
+        if (usesClasses()) {
             if (giveGun) {
                 ItemStack gun = GunCompat.createLoadedGun(new net.minecraft.resources.ResourceLocation(ap.cls.gun), ap.cls.fireMode);
                 give(p, gun);
@@ -397,9 +397,12 @@ public abstract class ArenaMode {
         com.provinggrounds.core.KillEvents.arenaKillOffline(this, server, counted ? killer : null, counted ? k : null, v, lostStreak);
         if (!counted) return;
         onKill(killer, k, null, v);
-        if (com.provinggrounds.special.SpecialConfig.enabledSafe() && !basicKit()) {
-            ItemStack sp = com.provinggrounds.special.SpecialLoot.roll(level);
-            if (!sp.isEmpty()) level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level, s.pos.x, s.pos.y + 0.5, s.pos.z, sp));
+        if (com.provinggrounds.special.SpecialConfig.enabledSafe()) {
+            if (kind() == GameManager.GameMode.TDM) com.provinggrounds.special.DomGear.giveRandom(killer, "擊殺 " + v.name); // 計畫書 8
+            else if (kind() == GameManager.GameMode.GK) {
+                ItemStack sp = com.provinggrounds.special.SpecialLoot.roll(level);
+                if (!sp.isEmpty()) level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level, s.pos.x, s.pos.y + 0.5, s.pos.z, sp));
+            }
         }
     }
 
@@ -455,9 +458,13 @@ public abstract class ArenaMode {
         com.provinggrounds.core.KillEvents.arenaKill(this, counted ? killer : null, counted ? k : null, victim, v, lostStreak);
         if (!counted) return;
         onKill(killer, k, victim, v);
-        if (com.provinggrounds.special.SpecialConfig.enabledSafe() && !basicKit()) { // 特殊物品模式（大廳開關）：擊殺掉落特殊物品（佔點改用裝備，不掉）
-            ItemStack sp = com.provinggrounds.special.SpecialLoot.roll(level);
-            if (!sp.isEmpty()) victim.spawnAtLocation(sp);
+        if (com.provinggrounds.special.SpecialConfig.enabledSafe()) { // 特殊物品模式（大廳開關）
+            // 計畫書 8：團隊死鬥擊殺直接拿一個隨機特殊物品；佔點是整場一種（不掉）；槍王之王照舊掉在地上
+            if (kind() == GameManager.GameMode.TDM) com.provinggrounds.special.DomGear.giveRandom(killer, "擊殺 " + v.name);
+            else if (kind() == GameManager.GameMode.GK) {
+                ItemStack sp = com.provinggrounds.special.SpecialLoot.roll(level);
+                if (!sp.isEmpty()) victim.spawnAtLocation(sp);
+            }
         }
     }
 
@@ -493,6 +500,7 @@ public abstract class ArenaMode {
         teleport(p, spawnOf(ap));
         prepare(p, ap, false);
         ap.respawnKitTicks = 10;
+        giveSpawnSpecial(p);
         int protect = cfg.spawnProtect.get();
         if (protect > 0) ap.protectUntil = ticks + protect * 20;
     }
@@ -603,14 +611,14 @@ public abstract class ArenaMode {
         if (!canShop(p, ap)) { deny(p, "必須在自己的基地內才能購買！"); return; }
         ArenaData.ShopItem[] pieces = armorSet(set);
         int total = 0, n = 0;
-        for (ArenaData.ShopItem i : pieces) if (i != null) { total += i.priceFor(priceClass(ap)); n++; }
+        for (ArenaData.ShopItem i : pieces) if (i != null) { total += shopPrice(p, ap, i); n++; }
         if (n == 0) return;
         if (ap.money < total) { deny(p, "金錢不足！還差 $" + (total - ap.money)); return; }
         ap.money -= total;
         for (ArenaData.ShopItem item : pieces) {
             if (item == null) continue;
             ItemStack stack = RespawnKit.parse(item.item() + " " + item.count());
-            if (!(stack.getItem() instanceof ArmorItem a)) { ap.money += item.priceFor(priceClass(ap)); continue; } // 伺服器缺少物品：退錢
+            if (!(stack.getItem() instanceof ArmorItem a)) { ap.money += shopPrice(p, ap, item); continue; } // 伺服器缺少物品：退錢
             EquipmentSlot slot = a.getEquipmentSlot();
             ItemStack old = p.getItemBySlot(slot);
             p.setItemSlot(slot, stack);
@@ -627,7 +635,7 @@ public abstract class ArenaMode {
         if (ap == null || !usesShop() || index < 0 || index >= shop.size()) return;
         if (!canShop(p, ap)) { deny(p, "必須在自己的基地內才能購買！"); return; }
         ArenaData.ShopItem item = shop.get(index);
-        int price = item.priceFor(priceClass(ap));
+        int price = shopPrice(p, ap, item);
         if (ap.money < price) { deny(p, "金錢不足！還差 $" + (price - ap.money)); return; }
         ItemStack stack = RespawnKit.parse(item.item() + " " + item.count());
         if (stack.isEmpty()) { deny(p, "這個商品目前無法購買（伺服器缺少物品）"); return; }
@@ -646,6 +654,18 @@ public abstract class ArenaMode {
         p.sendSystemMessage(Component.literal("[商店] 成功購買 " + item.name() + "！（-$" + price + "）").withStyle(ChatFormatting.GREEN));
         p.playNotifySound(SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.MASTER, 1f, 1.2f);
         syncHud();
+    }
+
+    /** 團隊死鬥＋特殊物品模式：每次出生（含開局）隨機拿一個特殊物品（計畫書 8）。 */
+    private void giveSpawnSpecial(ServerPlayer p) {
+        if (kind() == GameManager.GameMode.TDM && com.provinggrounds.special.SpecialConfig.enabledSafe()) {
+            com.provinggrounds.special.DomGear.giveRandom(p, "出生");
+        }
+    }
+
+    /** 商店價格：職業折扣，再加上佔點特殊物品的加價（選越強越貴；計畫書 8）。 */
+    protected int shopPrice(ServerPlayer p, ArenaPlayer ap, ArenaData.ShopItem item) {
+        return com.provinggrounds.special.DomGear.applyMarkup(item.priceFor(priceClass(ap)), com.provinggrounds.special.DomGear.activeTier(p));
     }
 
     /** 算價格用的職業（沒有職業的模式 = null，不打折）。 */
