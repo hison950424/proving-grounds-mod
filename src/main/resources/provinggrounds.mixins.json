@@ -17,7 +17,8 @@
     "LevelSetBlockMixin",
     "ExplosionHitPlayersMixin",
     "FlashShieldMixin",
-    "ChestMenuMixin"
+    "ChestMenuMixin",
+    "ArmorAbsorbMixin"
   ],
   "client": [
     "HumanoidArmsMixin",

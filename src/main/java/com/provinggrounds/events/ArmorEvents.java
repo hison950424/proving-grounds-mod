@@ -29,52 +29,77 @@ import java.util.Map;
  *        一般部分 = 傷害 × (1 − 穿甲率)，傷害類型 tacz:bullet / tacz:bullet_void
  *        穿甲部分 = 傷害 × 穿甲率，      傷害類型 tacz:bullet_ignore_armor / tacz:bullet_void_ignore_armor
  *
- * 我們的做法：
- *   - 只減「一般部分」，穿甲部分照樣全額打進去 → 穿甲率越高的槍，防彈越沒用。
- *   - 爆頭（head_body_split 開啟時）：只看頭盔，頭盔材質的全套數值整個套用。
- *     身體中彈：看胸甲、護腿、靴子三件，每件占 1/3。
- *   - 拿不到爆頭資訊時（例如 /damage 指令、TACZ 版本不同）：四件各占 1/4。
+ * 我們的做法（使用者回饋：只算被打中部位的那一件，不把全身相加）：
+ *   - 只處理「一般部分」，穿甲部分照樣全額打進去 → 穿甲率越高的槍，防彈越沒用。
+ *   - 被打中的部位（Hitbox.armorSlotHit）：頭 → 頭盔、身體與手 → 胸甲、腳上半 → 護腿、腳下 1/3 → 靴子。
+ *     判斷不出來時：爆頭 → 頭盔，其他 → 胸甲。
+ *   - 減傷只看那一件：先減該材質的防彈比例（bulletproof_*），再用那一件自己的護甲值與韌性算原版護甲減傷。
+ *     原版「全身護甲加總」的減傷與四件一起扣耐久，對子彈不再套用（mixin/ArmorAbsorbMixin）。
+ *   - 耐久只扣那一件（跟原版一樣：每 4 點傷害扣 1，至少 1）。
  *   - 爆頭倍率已經包含在傷害裡，防彈是在爆頭倍率之後才減。
- * LivingHurtEvent 在原版護甲計算之前觸發；原版護甲之後仍會再擋一般部分（TACZ 原本的行為）。
  */
 public class ArmorEvents {
 
     private static final TagKey<DamageType> BULLETS =
         com.provinggrounds.compat.GunCompat.BULLET_DAMAGE;
 
-    private static final EquipmentSlot[] BODY_SLOTS = { EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET };
-    private static final EquipmentSlot[] ALL_SLOTS  = { EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET };
-
     /** 最近一次命中（同一 tick、同一顆子彈才算數）。key = 被打實體的 id。 */
-    private record Hit(int bulletId, boolean headshot, long gameTime) {}
+    private record Hit(int bulletId, boolean headshot, long gameTime, @javax.annotation.Nullable EquipmentSlot slot) {}
     private static final Map<Integer, Hit> HITS = new HashMap<>();
 
     /** TACZ 命中事件（扣血之前）呼叫，記下是否爆頭。 */
     public static void recordHit(Entity target, Entity bullet, boolean headshot) {
         long now = target.level().getGameTime();
         if (HITS.size() > 512) HITS.values().removeIf(h -> h.gameTime() != now); // 清掉舊紀錄
-        HITS.put(target.getId(), new Hit(bullet.getId(), headshot, now));
+        net.minecraft.world.phys.Vec3 v = bullet.getDeltaMovement();
+        EquipmentSlot slot = com.provinggrounds.core.Hitbox.armorSlotHit(target, bullet.position().subtract(v), bullet.position().add(v));
+        HITS.put(target.getId(), new Hit(bullet.getId(), headshot, now, slot));
+    }
+
+    /** 子彈的一般部分：原版的全身護甲減傷不套用，改由這裡只算被打中的那一件（ArmorAbsorbMixin 呼叫）。 */
+    public static boolean handlesArmor(DamageSource source) {
+        try {
+            return PGConfig.SERVER.bulletproofEnabled.get() && source.is(BULLETS) && !source.is(DamageTypeTags.BYPASSES_ARMOR);
+        } catch (IllegalStateException e) {
+            return false;
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onHurt(LivingHurtEvent event) {
         PGConfig cfg = PGConfig.SERVER;
         DamageSource source = event.getSource();
-        if (!cfg.bulletproofEnabled.get() || !source.is(BULLETS)) return;
-        if (source.is(DamageTypeTags.BYPASSES_ARMOR)) return; // 穿甲部分：防彈擋不住
+        if (!handlesArmor(source)) return; // 穿甲部分、非子彈：照原版
         LivingEntity target = event.getEntity();
         if (target.level().isClientSide) return;
 
-        double reduction;
-        Boolean headshot = cfg.bulletproofHeadBodySplit.get() ? lookupHeadshot(target, source) : null;
-        if (headshot == null) {
-            reduction = average(target, ALL_SLOTS, cfg);
-        } else if (headshot) {
-            reduction = slotReduction(target, EquipmentSlot.HEAD, cfg);
-        } else {
-            reduction = average(target, BODY_SLOTS, cfg);
+        EquipmentSlot slot = lookupSlot(target, source);
+        if (slot == null) {
+            Boolean headshot = lookupHeadshot(target, source);
+            slot = Boolean.TRUE.equals(headshot) ? EquipmentSlot.HEAD : EquipmentSlot.CHEST;
         }
-        if (reduction > 0) event.setAmount((float) (event.getAmount() * (1.0 - reduction)));
+        ItemStack piece = target.getItemBySlot(slot);
+        if (!(piece.getItem() instanceof ArmorItem armor)) return; // 那個部位沒穿：不減傷
+        float amount = event.getAmount();
+        float reduced = (float) (amount * (1.0 - fullSetReduction(armor.getMaterial(), cfg)));
+        reduced = net.minecraft.world.damagesource.CombatRules.getDamageAfterAbsorb(reduced, armor.getDefense(), armor.getToughness());
+        event.setAmount(Math.max(0, reduced));
+        // 耐久只扣被打中的那一件
+        if (!piece.isEmpty() && amount > 0) {
+            int dmg = Math.max(1, (int) (amount / 4.0f));
+            final EquipmentSlot s = slot;
+            piece.hurtAndBreak(dmg, target, e -> e.broadcastBreakEvent(s));
+        }
+    }
+
+    /** 這次傷害打中的部位；沒有紀錄或判斷不出來回傳 null。 */
+    @javax.annotation.Nullable
+    private static EquipmentSlot lookupSlot(LivingEntity target, DamageSource source) {
+        Hit hit = HITS.get(target.getId());
+        if (hit == null || hit.gameTime() != target.level().getGameTime()) return null;
+        Entity direct = source.getDirectEntity();
+        if (direct != null && direct.getId() != hit.bulletId()) return null;
+        return hit.slot();
     }
 
     /** 給擊殺提示用：這次傷害是不是爆頭（沒有紀錄回傳 null）。 */
@@ -87,17 +112,6 @@ public class ArmorEvents {
         Entity direct = source.getDirectEntity();
         if (direct != null && direct.getId() != hit.bulletId()) return null;
         return hit.headshot();
-    }
-
-    private static double average(LivingEntity target, EquipmentSlot[] slots, PGConfig cfg) {
-        double sum = 0;
-        for (EquipmentSlot slot : slots) sum += slotReduction(target, slot, cfg);
-        return sum / slots.length;
-    }
-
-    private static double slotReduction(LivingEntity target, EquipmentSlot slot, PGConfig cfg) {
-        ItemStack stack = target.getItemBySlot(slot);
-        return stack.getItem() instanceof ArmorItem armor ? fullSetReduction(armor.getMaterial(), cfg) : 0;
     }
 
     /** 該材質「穿全套」的減傷比例；其他模組的防具不在表上就是 0。 */

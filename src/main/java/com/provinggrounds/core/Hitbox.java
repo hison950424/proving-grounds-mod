@@ -99,6 +99,63 @@ public final class Hitbox {
     public static double heightScale(float bbHeight) { return bbHeight / (32 * PX); }
 
 
+    /**
+     * 子彈打到哪個部位（防彈用，使用者回饋：只算被打中部位的那一件防具）。回傳防具欄位：
+     * 頭 → 頭盔；身體、兩手 → 胸甲；腳的上半 → 護腿、下 1/3 → 靴子。不是玩家、不是站立／蹲下、或判斷不出來回傳 null。
+     */
+    @javax.annotation.Nullable
+    public static net.minecraft.world.entity.EquipmentSlot armorSlotHit(Entity target, Vec3 a, Vec3 b) {
+        if (!(target instanceof Player p) || p.isPassenger() || p.isFallFlying() || p.isSleeping()) return null;
+        double tol;
+        try { tol = PGConfig.SERVER.hitboxTolerance.get(); } catch (IllegalStateException e) { tol = 0.06; }
+        java.util.List<Snap> snaps = new java.util.ArrayList<>();
+        snaps.add(new Snap(p));
+        java.util.Deque<Snap> hist = HISTORY.get(p.getUUID());
+        if (hist != null) snaps.addAll(hist);
+        for (Snap s : snaps) {
+            Pose pose = s.pose();
+            if (pose != Pose.STANDING && pose != Pose.CROUCHING) return null;
+            double hScale = s.height() / (32 * PX);
+            double body = Math.toRadians(s.bodyYaw()), head = Math.toRadians(s.headYaw());
+            double[][] parts = parts(pose == Pose.CROUCHING);
+            int best = -1;
+            double bestT = 2, bestY = 0;
+            for (int i = 0; i < parts.length; i++) {
+                double[] hit = segmentEntry(a, b, s.x(), s.y(), s.z(), i == parts.length - 1 ? head : body, parts[i], hScale, tol);
+                if (hit != null && hit[0] < bestT) { bestT = hit[0]; bestY = hit[1]; best = i; }
+            }
+            if (best < 0) continue;
+            if (best == 5) return net.minecraft.world.entity.EquipmentSlot.HEAD;
+            if (best >= 2) return net.minecraft.world.entity.EquipmentSlot.CHEST;
+            return bestY < 4 * PX * hScale ? net.minecraft.world.entity.EquipmentSlot.FEET : net.minecraft.world.entity.EquipmentSlot.LEGS;
+        }
+        return null;
+    }
+
+    /** 跟 segmentHitsBox 一樣，但回傳 {進入點的 t（0～1）, 進入點離腳底的高度}；沒打到回傳 null。 */
+    @javax.annotation.Nullable
+    private static double[] segmentEntry(Vec3 a, Vec3 b, double ox, double oy, double oz, double yaw,
+                                         double[] part, double hScale, double tol) {
+        double cos = Math.cos(yaw), sin = Math.sin(yaw);
+        double[] la = toLocal(a, ox, oy, oz, cos, sin), lb = toLocal(b, ox, oy, oz, cos, sin);
+        double[] lo = { (part[0] - part[3]) * PX - tol, part[1] * PX * hScale - tol, (part[2] - part[5]) * PX - tol };
+        double[] hi = { (part[0] + part[3]) * PX + tol, (part[1] + part[4]) * PX * hScale + tol, (part[2] + part[5]) * PX + tol };
+        double t0 = 0, t1 = 1;
+        for (int i = 0; i < 3; i++) {
+            double d = lb[i] - la[i];
+            if (Math.abs(d) < 1e-9) {
+                if (la[i] < lo[i] || la[i] > hi[i]) return null;
+                continue;
+            }
+            double u = (lo[i] - la[i]) / d, v = (hi[i] - la[i]) / d;
+            if (u > v) { double t = u; u = v; v = t; }
+            t0 = Math.max(t0, u);
+            t1 = Math.min(t1, v);
+            if (t0 > t1) return null;
+        }
+        return new double[] { t0, la[1] + (lb[1] - la[1]) * t0 };
+    }
+
     /** 把線段轉到部位自己的座標（繞垂直軸旋轉），再做 AABB 與線段的相交測試。 */
     private static boolean segmentHitsBox(Vec3 a, Vec3 b, double ox, double oy, double oz, double yaw,
                                           double[] part, double hScale, double tol) {
