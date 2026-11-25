@@ -95,8 +95,7 @@ public final class HUD {
         HudLayout.Box box = HudLayout.box(HudLayout.El.MINIMAP, sw, sh);
         int x = box.x() + 2, y = box.y() + 2; // 外框 2 像素：預設整塊貼齊螢幕左上角
         int size = Math.max(16, box.w() - 4);
-        float alpha = HudLayout.alpha(HudLayout.El.MINIMAP);
-        if (alpha < 0.999f) com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha); // 透明度（HUD 介面設定）
+        HudLayout.beginAlpha(g, HudLayout.El.MINIMAP); // 文字／背景透明度（HUD 介面設定）
         g.fill(x - 2, y - 2, x + size + 2, y + size + 2, BG);
         MapRender.View v = new MapRender.View(x, y, size, size,
             cam.getX() - MINIMAP_SPAN / 2, cam.getZ() - MINIMAP_SPAN / 2, MINIMAP_SPAN);
@@ -112,7 +111,7 @@ public final class HUD {
         String north = Tr.t("hud.north");
         g.drawString(font, north, x + (size - font.width(north)) / 2, y + 2, ACCENT, true);
         g.flush();
-        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        HudLayout.endAlpha(g);
     }
 
     /** 左上、小地圖下方：縮圈時間（準備階段顯示登機倒數）。 */

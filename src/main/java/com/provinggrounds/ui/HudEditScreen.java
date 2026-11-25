@@ -61,7 +61,7 @@ public class HudEditScreen extends Screen {
         px = panelRight ? width - PW - 8 : 8;
         py = (height - ph) / 2;
         listTop = py + 42;
-        listBottom = py + ph - 48; // 下面留一列給選取元件的透明度
+        listBottom = py + ph - 76; // 下面留空間給選取元件的文字／背景透明度（計畫書 7 A1）
         labelHits.clear();
         texts.clear();
 
@@ -80,10 +80,12 @@ public class HudEditScreen extends Screen {
 
         // 選取中的元件：透明度（計畫書 6 B3）
         if (tab == 0 && selected != null) {
+            // 計畫書 7 A1：文字、背景透明度分開調
             HudLayout.El e = selected;
-            int ay = py + ph - 44;
-            texts.add(new Object[] { px + 10, ay + 4, e.label + " 透明度", ACCENT });
+            int ay = py + ph - 62;
+            texts.add(new Object[] { px + 10, ay - 8, e.label, ACCENT });
             int ax = px + PW - 10 - 76;
+            texts.add(new Object[] { px + 10, ay + 4, "文字透明度", TEXT });
             PGButton minus = btn(ax, ay, 14, "－", false, () -> { HudLayout.setAlpha(e, HudLayout.alpha(e) - 0.1f); rebuildWidgets(); });
             minus.active = HudLayout.alpha(e) > HudLayout.MIN_ALPHA + 1e-3;
             addRenderableWidget(minus);
@@ -91,8 +93,17 @@ public class HudEditScreen extends Screen {
             PGButton plus = btn(ax + 62, ay, 14, "＋", false, () -> { HudLayout.setAlpha(e, HudLayout.alpha(e) + 0.1f); rebuildWidgets(); });
             plus.active = HudLayout.alpha(e) < 0.999f;
             addRenderableWidget(plus);
+            int by2 = ay + 18;
+            texts.add(new Object[] { px + 10, by2 + 4, "背景透明度", TEXT });
+            PGButton bMinus = btn(ax, by2, 14, "－", false, () -> { HudLayout.setBgAlpha(e, HudLayout.bgAlpha(e) - 0.1f); rebuildWidgets(); });
+            bMinus.active = HudLayout.bgAlpha(e) > 1e-3;
+            addRenderableWidget(bMinus);
+            texts.add(new Object[] { ax + 16, by2 + 4, Math.round(HudLayout.bgAlpha(e) * 100) + "%", TEXT, 44 });
+            PGButton bPlus = btn(ax + 62, by2, 14, "＋", false, () -> { HudLayout.setBgAlpha(e, HudLayout.bgAlpha(e) + 0.1f); rebuildWidgets(); });
+            bPlus.active = HudLayout.bgAlpha(e) < 0.999f;
+            addRenderableWidget(bPlus);
         } else if (tab == 0) {
-            texts.add(new Object[] { px + 10, py + ph - 40, "點一下元件可以調透明度", DIM });
+            texts.add(new Object[] { px + 10, py + ph - 40, "點一下元件可以調文字、背景透明度", DIM });
         }
 
         int bw = (PW - 20 - 12) / 3, by = py + ph - 22;

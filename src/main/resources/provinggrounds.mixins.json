@@ -21,7 +21,8 @@
   "client": [
     "HumanoidArmsMixin",
     "DamageSoundMixin",
-    "ContainerScreenBgMixin"
+    "ContainerScreenBgMixin",
+    "GuiGraphicsFillMixin"
   ],
   "injectors": {
     "defaultRequire": 0

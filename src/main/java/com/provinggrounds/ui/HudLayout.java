@@ -102,7 +102,8 @@ public final class HudLayout {
     private static final class Entry {
         boolean enabled = true;
         float scale = 1f;
-        float alpha = 1f; // 不透明度（計畫書 6 B3）
+        float alpha = 1f;   // 文字（含圖示）不透明度（計畫書 6 B3；設定檔欄位 alpha）
+        float bgAlpha = 1f; // 背景色塊不透明度（計畫書 7 A1；設定檔欄位 bg_alpha，舊檔沒有時 = alpha）
         int dx, dy;
     }
 
@@ -116,6 +117,38 @@ public final class HudLayout {
     public static void setAlpha(El e, float a) {
         ensureLoaded();
         ENTRIES.get(e).alpha = Math.round(Math.max(MIN_ALPHA, Math.min(1f, a)) * 20) / 20f;
+    }
+
+    /** 背景色塊的不透明度（0 = 完全透明；計畫書 7 A1）。 */
+    public static float bgAlpha(El e) {
+        ensureLoaded();
+        return ENTRIES.get(e).bgAlpha;
+    }
+
+    public static void setBgAlpha(El e, float a) {
+        ensureLoaded();
+        ENTRIES.get(e).bgAlpha = Math.round(Math.max(0f, Math.min(1f, a)) * 20) / 20f;
+    }
+
+    /**
+     * 畫色塊時要乘上的透明度倍率（GuiGraphicsFillMixin 讀）。文字與圖示用 setShaderColor 的透明度，
+     * 色塊也會被它乘到，所以色塊另外乘上「背景 ÷ 文字」，最後色塊 = 背景透明度。1 = 不調整。
+     */
+    public static float fillAlphaMul = 1f;
+
+    /** 開始畫一個元件：套用文字／背景透明度（畫完呼叫 endAlpha）。 */
+    public static void beginAlpha(GuiGraphics g, El e) {
+        float a = alpha(e), b = bgAlpha(e);
+        if (a >= 0.999f && b >= 0.999f) return;
+        g.flush(); // 之前畫的東西照原本的透明度送出
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, a);
+        fillAlphaMul = b / Math.max(0.01f, a);
+    }
+
+    public static void endAlpha(GuiGraphics g) {
+        g.flush(); // 這個元件畫的東西用它自己的透明度送出，再恢復
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        fillAlphaMul = 1f;
     }
 
     public static final float MIN_SCALE = 0.5f, MAX_SCALE = 2f;
@@ -191,16 +224,11 @@ public final class HudLayout {
         g.pose().pushPose();
         g.pose().translate(now.x() - def.x() * s, now.y() - def.y() * s, 0);
         g.pose().scale(s, s, 1);
-        float a = alpha(e);
-        if (a < 0.999f) {
-            g.flush(); // 之前畫的東西照原本的透明度送出
-            com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, a);
-        }
+        beginAlpha(g, e);
     }
 
     public static void pop(GuiGraphics g) {
-        g.flush(); // 這個元件畫的東西用它自己的透明度送出，再恢復
-        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        endAlpha(g);
         g.pose().popPose();
     }
 
@@ -248,6 +276,7 @@ public final class HudLayout {
         Entry en = ENTRIES.get(e);
         en.scale = 1f;
         en.alpha = 1f;
+        en.bgAlpha = 1f;
         en.dx = 0;
         en.dy = 0;
         setEnabled(e, true);
@@ -255,7 +284,7 @@ public final class HudLayout {
 
     public static boolean isDefault(El e) {
         Entry en = ENTRIES.get(e);
-        return en.scale == 1f && en.alpha == 1f && en.dx == 0 && en.dy == 0;
+        return en.scale == 1f && en.alpha == 1f && en.bgAlpha == 1f && en.dx == 0 && en.dy == 0;
     }
 
     public static void resetAll() {
@@ -282,6 +311,8 @@ public final class HudLayout {
                 if (o.has("enabled")) en.enabled = o.get("enabled").getAsBoolean();
                 if (o.has("scale")) en.scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, o.get("scale").getAsFloat()));
                 if (o.has("alpha")) en.alpha = Math.max(MIN_ALPHA, Math.min(1f, o.get("alpha").getAsFloat()));
+                // 計畫書 7 A1：舊檔只有一個透明度 → 背景也用同一個值
+                en.bgAlpha = o.has("bg_alpha") ? Math.max(0f, Math.min(1f, o.get("bg_alpha").getAsFloat())) : en.alpha;
                 if (o.has("dx")) en.dx = o.get("dx").getAsInt();
                 if (o.has("dy")) en.dy = o.get("dy").getAsInt();
             }
@@ -299,6 +330,7 @@ public final class HudLayout {
             o.addProperty("enabled", en.enabled);
             o.addProperty("scale", en.scale);
             o.addProperty("alpha", en.alpha);
+            o.addProperty("bg_alpha", en.bgAlpha);
             o.addProperty("dx", en.dx);
             o.addProperty("dy", en.dy);
             root.add(e.name(), o);

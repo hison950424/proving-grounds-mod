@@ -66,8 +66,7 @@ public final class ScoreboardPanel {
         HudLayout.Box box = HudLayout.box(HudLayout.El.SCOREBOARD, w, h);
         scale *= HudLayout.scale(HudLayout.El.SCOREBOARD);
         float right = box.x() + box.w(), midY = box.y() + box.h() / 2f;
-        float alpha = HudLayout.alpha(HudLayout.El.SCOREBOARD);
-        if (alpha < 0.999f) com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha); // 透明度（HUD 介面設定）
+        HudLayout.beginAlpha(g, HudLayout.El.SCOREBOARD); // 文字／背景透明度（HUD 介面設定）
         g.pose().pushPose();
         g.pose().translate(right - pw * scale, Math.max(4, Math.min(h - ph * scale - 4, midY - ph * scale / 2)), 0);
         g.pose().scale(scale, scale, 1);
@@ -94,7 +93,7 @@ public final class ScoreboardPanel {
         }
         g.pose().popPose();
         g.flush();
-        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        HudLayout.endAlpha(g);
     }
 
     /** 大逃殺戰績：名字（隊伍顏色）、擊殺、狀態（存活／倒地／陣亡）、被祭壇救回的次數。 */
@@ -107,8 +106,7 @@ public final class ScoreboardPanel {
         float scale = PGClientConfig.CLIENT.hudScale.get().floatValue() * HudLayout.scale(HudLayout.El.SCOREBOARD);
         HudLayout.Box box = HudLayout.box(HudLayout.El.SCOREBOARD, w, h);
         float right = box.x() + box.w(), midY = box.y() + box.h() / 2f;
-        float alpha = HudLayout.alpha(HudLayout.El.SCOREBOARD);
-        if (alpha < 0.999f) com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
+        HudLayout.beginAlpha(g, HudLayout.El.SCOREBOARD);
         g.pose().pushPose();
         g.pose().translate(right - pw * scale, Math.max(4, Math.min(h - ph * scale - 4, midY - ph * scale / 2)), 0);
         g.pose().scale(scale, scale, 1);
@@ -135,6 +133,6 @@ public final class ScoreboardPanel {
         }
         g.pose().popPose();
         g.flush();
-        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        HudLayout.endAlpha(g);
     }
 }
