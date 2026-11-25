@@ -14,9 +14,8 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * 檔案: TombstoneScreen.java
- * 目的: 墓碑畫面（只在客戶端）：跟物品欄一樣的分區。
- *   上半：死者的防具（頭、胸、腿、腳）、副手、背包、特殊物品，下面是死者的背包 27 格與快捷欄 9 格；
- *   下半：自己的物品欄與快捷欄。空著的格子顯示淡淡的提示圖示（防具、背包、特殊物品）。
+ * 目的: 墓碑畫面（只在客戶端）：左邊是自己的背包畫面（玩家模型、防具、副手、背包欄、特殊物品欄、背包、快捷欄，跟按 E 一樣），
+ *   右邊是墓碑主人的背包畫面（同樣的排法；玩家模型的位置顯示墓碑主人名字）。空著的格子顯示淡淡的提示圖示。
  *   沒有用材質圖，背景與格子框直接用色塊畫（原版物品欄的配色）。
  */
 public class TombstoneScreen extends AbstractContainerScreen<TombstoneMenu> {
@@ -32,9 +31,8 @@ public class TombstoneScreen extends AbstractContainerScreen<TombstoneMenu> {
 
     public TombstoneScreen(TombstoneMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
-        imageWidth = 176;
-        imageHeight = 208;
-        inventoryLabelY = TombstoneMenu.INV_Y - 11;
+        imageWidth = TombstoneMenu.W;
+        imageHeight = TombstoneMenu.H;
     }
 
     @Override
@@ -47,16 +45,21 @@ public class TombstoneScreen extends AbstractContainerScreen<TombstoneMenu> {
     @Override
     protected void renderBg(GuiGraphics g, float partial, int mouseX, int mouseY) {
         int x = leftPos, y = topPos;
-        // 外框：跟原版物品欄一樣的立體灰框
-        g.fill(x, y, x + imageWidth, y + imageHeight, EDGE);
-        g.fill(x + 1, y + 1, x + imageWidth - 1, y + imageHeight - 1, LIGHT);
-        g.fill(x + 3, y + 3, x + imageWidth - 1, y + imageHeight - 1, DARK);
-        g.fill(x + 3, y + 3, x + imageWidth - 3, y + imageHeight - 3, BG);
-        // 墓碑與自己物品欄之間的分隔線
-        int sep = y + TombstoneMenu.HOTBAR_Y + 20;
-        g.fill(x + 6, sep, x + imageWidth - 6, sep + 1, DARK);
-        // 墓碑背包與快捷欄之間空一點（跟原版一樣）
+        // 兩塊原版樣式的面板：左邊自己、右邊墓碑
+        ChestSideLayout.panel(g, x, y, 176, TombstoneMenu.H);
+        ChestSideLayout.panel(g, x + TombstoneMenu.TX, y, 176, TombstoneMenu.H);
         for (Slot s : menu.slots) slotFrame(g, x + s.x - 1, y + s.y - 1);
+        // 自己的玩家模型（跟物品欄畫面一樣，會跟著滑鼠轉頭）；墓碑那邊同一個位置顯示主人名字
+        g.fill(x + 25, y + 7, x + 76, y + 79, EDGE);
+        if (minecraft != null && minecraft.player != null) {
+            net.minecraft.client.gui.screens.inventory.InventoryScreen.renderEntityInInventoryFollowsMouse(g, x + 51, y + 75, 30,
+                (float) (x + 51 - mouseX), (float) (y + 75 - 50 - mouseY), minecraft.player);
+        }
+        int tx = x + TombstoneMenu.TX;
+        g.fill(tx + 25, y + 7, tx + 76, y + 79, 0xFF202020);
+        g.drawCenteredString(font, "☠", tx + 50, y + 30, 0xFFA0A0A0);
+        String owner = font.plainSubstrByWidth(title.getString(), 48);
+        g.drawCenteredString(font, owner, tx + 50, y + 46, 0xFFFFFFFF);
         // 空格提示圖示
         RenderSystem.enableBlend();
         for (int i = 0; i < 4; i++) emptyIcon(g, TombstoneMenu.ARMOR + i, ARMOR_ICONS[i], x, y);
@@ -87,8 +90,6 @@ public class TombstoneScreen extends AbstractContainerScreen<TombstoneMenu> {
 
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        g.drawString(font, title, titleLabelX, titleLabelY, 0x404040, false);
-        g.drawString(font, Component.literal("背包"), TombstoneMenu.BACKPACK_X - 26, TombstoneMenu.ROW_Y + 5, 0x606060, false);
-        g.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0x404040, false);
+        // 標題（墓碑主人）畫在右邊模型框裡，原版物品欄沒有「物品欄」字樣
     }
 }
