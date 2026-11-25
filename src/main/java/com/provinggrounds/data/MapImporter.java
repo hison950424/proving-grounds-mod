@@ -73,6 +73,8 @@ public final class MapImporter {
         Block.BLOCK_STATE_REGISTRY, BlockState.CODEC, PalettedContainer.Strategy.SECTION_STATES, Blocks.AIR.defaultBlockState());
 
     private static final class Job {
+        /** 一行匯入（/pg map import auto）：匯入完自動產生俯視圖。 */
+        boolean autoRender;
         final Path world;
         final String name;
         final int mapId, dxChunks, dzChunks;
@@ -159,6 +161,17 @@ public final class MapImporter {
             j.name, j.total, j.missing, j.errors, j.entities, (System.currentTimeMillis() - j.startMs) / 1000.0, j.mapId, cx, cz, j.radius);
         ProvingGroundsMod.LOGGER.info(msg);
         j.src.sendSystemMessage(Component.literal(msg).withStyle(ChatFormatting.GREEN));
+        if (j.autoRender) { // 一行匯入：接著自動畫俯視圖
+            MapRegistry.BRMap m = MapRegistry.get(server).getMap(j.mapId);
+            String error = m == null ? "找不到剛登記的地圖" : MapRenderJob.start(server, m, j.src);
+            if (error == null) {
+                j.src.sendSystemMessage(Component.literal("[匯入地圖] 開始自動產生地圖 #" + j.mapId + " 的俯視圖（小地圖、大地圖）…").withStyle(ChatFormatting.AQUA));
+            } else {
+                j.src.sendSystemMessage(Component.literal("[匯入地圖] 自動產生俯視圖失敗：" + error + "，請之後手動 /pg map render " + j.mapId).withStyle(ChatFormatting.RED));
+            }
+            j.src.sendSystemMessage(Component.literal("接下來：到地圖裡用 /pg loot add " + j.mapId + " 設定箱子點位；用 /pg map list 確認。").withStyle(ChatFormatting.AQUA));
+            return;
+        }
         j.src.sendSystemMessage(Component.literal("接下來：/pg map render " + j.mapId + "（產生小地圖與大地圖的俯視圖）；到地圖裡用 /pg loot add "
             + j.mapId + " 設定箱子點位；用 /pg map list 確認。").withStyle(ChatFormatting.AQUA));
     }
@@ -287,6 +300,10 @@ public final class MapImporter {
                                 .executes(c -> start(c.getSource(), StringArgumentType.getString(c, "folder"),
                                     DoubleArgumentType.getDouble(c, "x"), DoubleArgumentType.getDouble(c, "z"),
                                     IntegerArgumentType.getInteger(c, "radius"), StringArgumentType.getString(c, "name")))))))))
+            // 一行匯入（使用者回饋）：自動偵測範圍 → 匯入 → 自動產生俯視圖
+            .then(Commands.literal("auto").then(Commands.argument("folder", StringArgumentType.string())
+                .then(Commands.argument("name", StringArgumentType.greedyString())
+                    .executes(c -> auto(c.getSource(), StringArgumentType.getString(c, "folder"), StringArgumentType.getString(c, "name"))))))
             .then(Commands.literal("cancel").executes(c -> {
                 Job j = job;
                 if (j == null) { c.getSource().sendFailure(Component.literal("目前沒有在匯入地圖。")); return 0; }
@@ -310,9 +327,33 @@ public final class MapImporter {
         return p;
     }
 
+    /** 一行匯入：用存檔裡有方塊的範圍當中心與半徑，匯入完自動畫俯視圖。 */
+    private static int auto(CommandSourceStack src, String name, String mapName) {
+        int[] b = bounds(src, name);
+        if (b == null) return 0;
+        int r = Math.max(32, Math.min(b[2], 4000));
+        src.sendSuccess(() -> Component.literal(String.format("[匯入地圖] 自動偵測：中心 (%d, %d)、半徑 %d（%d 個區塊），開始匯入…", b[0], b[1], r, b[3]))
+            .withStyle(ChatFormatting.AQUA), false);
+        int ok = start(src, name, b[0], b[1], r, mapName);
+        if (ok > 0 && job != null) job.autoRender = true;
+        return ok;
+    }
+
     private static int info(CommandSourceStack src, String name) {
+        int[] b = bounds(src, name);
+        if (b == null) return 0;
+        String msg = String.format("[匯入地圖] %s：%d 個 region 檔、%d 個區塊，範圍 X %d～%d、Z %d～%d。\n建議：/pg map import start \"%s\" %d %d %d <地圖名稱>"
+            + "\n（存檔周圍如果有很多自然地形，請自己縮小半徑、改成地圖真正的中心）\n或一行完成：/pg map import auto \"%s\" <地圖名稱>（自動用這個範圍匯入並畫好俯視圖）",
+            name, b[4], b[3], b[5], b[6], b[7], b[8], name, b[0], b[1], Math.min(b[2], 4000), name);
+        src.sendSuccess(() -> Component.literal(msg).withStyle(ChatFormatting.AQUA), false);
+        return b[3];
+    }
+
+    /** 存檔裡有方塊的範圍：{中心X, 中心Z, 半徑, 區塊數, region 檔數, X 最小, X 最大, Z 最小, Z 最大}；失敗回傳 null（已提示原因）。 */
+    @Nullable
+    private static int[] bounds(CommandSourceStack src, String name) {
         Path world = folder(src, name);
-        if (world == null) return 0;
+        if (world == null) return null;
         int minX = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE, count = 0, files = 0;
         try (var stream = Files.list(world.resolve("region"))) {
             for (Path p : stream.toList()) {
@@ -331,15 +372,12 @@ public final class MapImporter {
             }
         } catch (IOException e) {
             src.sendFailure(Component.literal("讀取失敗：" + e.getMessage()));
-            return 0;
+            return null;
         }
-        if (count == 0) { src.sendFailure(Component.literal("region 資料夾裡沒有區塊。")); return 0; }
+        if (count == 0) { src.sendFailure(Component.literal("region 資料夾裡沒有區塊。")); return null; }
         int bx0 = minX * 16, bx1 = maxX * 16 + 15, bz0 = minZ * 16, bz1 = maxZ * 16 + 15;
         int cx = (bx0 + bx1) / 2, cz = (bz0 + bz1) / 2, r = Math.max(bx1 - bx0, bz1 - bz0) / 2 + 1;
-        String msg = String.format("[匯入地圖] %s：%d 個 region 檔、%d 個區塊，範圍 X %d～%d、Z %d～%d。\n建議：/pg map import start \"%s\" %d %d %d <地圖名稱>"
-            + "\n（存檔周圍如果有很多自然地形，請自己縮小半徑、改成地圖真正的中心）", name, files, count, bx0, bx1, bz0, bz1, name, cx, cz, Math.min(r, 4000));
-        src.sendSuccess(() -> Component.literal(msg).withStyle(ChatFormatting.AQUA), false);
-        return count;
+        return new int[] { cx, cz, r, count, files, bx0, bx1, bz0, bz1 };
     }
 
     private static int start(CommandSourceStack src, String name, double x, double z, int radius, String mapName) {
