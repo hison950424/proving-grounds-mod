@@ -31,6 +31,9 @@ import java.util.UUID;
  *   - 朝使用者當時面向的方向奔跑（疾跑速度）decoy_seconds 秒後消失；前方有 1 格高的方塊會自動跳起。
  *   - 只有 1 點血：被打中就冒煙消失，不算擊殺、不掉東西。打掉它的人會發光 3 秒，所有人都看得到。
  *   - 隊友看到帶淡色輪廓（EntitySpecialMixin 對同隊的人畫發光外框），避免誤傷；不出現在地圖上。
+ *   計畫書 7 D「掉線分身」模式（body = true，core/DisconnectBodies 建立）：外觀一樣，但不動、不會自己消失、
+ *   血量與掉線瞬間相同（含額外生命值）、受傷與死亡都是真的（死亡交給 DisconnectBodies 照各模式規則處理）；
+ *   掉線時正在倒地 → 趴著，流血照常（每秒扣血，扣完就死）；這一版隊友不能扶起分身。
  */
 public class DecoyEntity extends PathfinderMob {
 
@@ -41,6 +44,11 @@ public class DecoyEntity extends PathfinderMob {
     private double speed = 0.224;
     private int life = 200;
     private float runYaw;
+    /** 掉線分身模式（計畫書 7 D）。 */
+    private boolean body;
+    /** 掉線分身：倒地中（趴著、流血）。 */
+    private boolean bodyDowned;
+    private int bleedTicks = 20;
 
     public DecoyEntity(EntityType<? extends DecoyEntity> type, Level level) {
         super(type, level);
@@ -69,6 +77,33 @@ public class DecoyEntity extends PathfinderMob {
         d.setSprinting(true);
         return d;
     }
+
+    /** 掉線分身（計畫書 7 D）：在玩家的位置建立，外觀、裝備、血量、額外生命值都跟玩家一樣。 */
+    public static DecoyEntity createBody(ServerLevel level, ServerPlayer owner, boolean downed) {
+        DecoyEntity d = new DecoyEntity(SpecialRegistry.DECOY.get(), level);
+        d.moveTo(owner.getX(), owner.getY(), owner.getZ(), owner.getYRot(), owner.getXRot());
+        d.setYHeadRot(owner.getYHeadRot());
+        d.setYBodyRot(owner.getYRot());
+        d.entityData.set(OWNER, owner.getStringUUID());
+        d.entityData.set(TEAM, owner.getTeam() != null ? owner.getTeam().getName() : "");
+        d.setCustomName(owner.getName());
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            d.setItemSlot(slot, owner.getItemBySlot(slot).copy());
+            d.setDropChance(slot, 0);
+        }
+        d.body = true;
+        d.bodyDowned = downed;
+        var attr = d.getAttribute(Attributes.MAX_HEALTH);
+        if (attr != null) attr.setBaseValue(Math.max(1, owner.getMaxHealth()));
+        d.setHealth(Math.max(1, owner.getHealth()));
+        d.setAbsorptionAmount(owner.getAbsorptionAmount());
+        if (downed) d.setPose(net.minecraft.world.entity.Pose.SWIMMING);
+        return d;
+    }
+
+    public boolean isBody() { return body; }
+
+    public boolean isBodyDowned() { return bodyDowned; }
 
     @Override
     protected void defineSynchedData() {
@@ -99,6 +134,7 @@ public class DecoyEntity extends PathfinderMob {
     public void tick() {
         super.tick();
         if (level().isClientSide) return;
+        if (body) { tickBody(); return; }
         if (--life <= 0) { poof(); return; }
         setYRot(runYaw);
         setYHeadRot(runYaw);
@@ -110,9 +146,27 @@ public class DecoyEntity extends PathfinderMob {
         if (horizontalCollision && onGround()) jumpFromGround(); // 前方 1 格高的方塊自動跳起
     }
 
+    /** 掉線分身：不動；倒地就趴著流血；已經不是掉線狀態（比賽結束、玩家回來）就消失。 */
+    private void tickBody() {
+        UUID o = owner();
+        if (o == null || !com.provinggrounds.core.DisconnectBodies.isActiveBody(o, getUUID())) { discard(); return; }
+        Vec3 v = getDeltaMovement();
+        setDeltaMovement(0, v.y, 0);
+        if (bodyDowned) {
+            if (getPose() != net.minecraft.world.entity.Pose.SWIMMING) setPose(net.minecraft.world.entity.Pose.SWIMMING);
+            if (--bleedTicks <= 0) {
+                bleedTicks = 20;
+                float hp = getHealth() - com.provinggrounds.config.PGConfig.SERVER.brBleedPerSecond.get().floatValue();
+                if (hp <= 0) com.provinggrounds.core.DisconnectBodies.bleedOut(this);
+                else setHealth(hp);
+            }
+        }
+    }
+
     @Override
     public boolean hurt(DamageSource source, float amount) {
         if (level().isClientSide || isRemoved()) return false;
+        if (body) return super.hurt(source, amount); // 掉線分身：真的受傷
         if (source.is(net.minecraft.tags.DamageTypeTags.IS_FALL)) return false;
         // 打掉分身的人會發光 decoy_reveal_seconds 秒（所有人都看得到，不上地圖）
         if (source.getEntity() instanceof ServerPlayer attacker) {
@@ -133,6 +187,14 @@ public class DecoyEntity extends PathfinderMob {
     }
 
     @Override
+    public void die(DamageSource source) {
+        if (body && !level().isClientSide && !isRemoved()) {
+            com.provinggrounds.core.DisconnectBodies.onKilled(this, source); // 照各模式的死亡規則處理
+        }
+        super.die(source);
+    }
+
+    @Override
     public boolean removeWhenFarAway(double dist) { return false; }
 
     @Override
@@ -148,6 +210,8 @@ public class DecoyEntity extends PathfinderMob {
         tag.putString("Team", entityData.get(TEAM));
         tag.putInt("Life", life);
         tag.putFloat("RunYaw", runYaw);
+        tag.putBoolean("Body", body);
+        tag.putBoolean("BodyDowned", bodyDowned);
     }
 
     @Override
@@ -157,5 +221,7 @@ public class DecoyEntity extends PathfinderMob {
         entityData.set(TEAM, tag.getString("Team"));
         life = tag.getInt("Life");
         runYaw = tag.getFloat("RunYaw");
+        body = tag.getBoolean("Body");
+        bodyDowned = tag.getBoolean("BodyDowned");
     }
 }

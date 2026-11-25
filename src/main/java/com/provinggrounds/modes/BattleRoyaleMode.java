@@ -128,6 +128,7 @@ public class BattleRoyaleMode {
         boolean finalDead = false;   // 確定死亡（不能再被復活）
         boolean usedAltar = false;   // 競技模式：已用掉祭壇復活機會
         int altarRevived;            // 被復活祭壇救回來幾次（戰績面板顯示，計畫書 6 B1）
+        boolean offline;             // 掉線中，原地留著掉線分身（計畫書 7 D）
         final List<UUID> heldCards = new ArrayList<>(); // 身上持有的隊友復活牌（死者 UUID）
 
         // 祭壇
@@ -375,7 +376,7 @@ public class BattleRoyaleMode {
         switch (phase) {
             case PREPARING -> tickPreparing();
             case PLANE -> { tickPlane(); tickDropping(); tickRevival(); tickFood(); checkWin(); }
-            case ACTIVE -> { tickFood(); tickDropping(); tickCircle(); tickRevival(); tickSpectators(); tickMeleeSpeed(); tickDeadHealth(); checkWin(); }
+            case ACTIVE -> { tickFood(); tickDropping(); tickCircle(); tickRevival(); tickSpectators(); tickMeleeSpeed(); tickDeadHealth(); tickOffline(); checkWin(); }
             case ENDING -> tickEnding();
             default -> {}
         }
@@ -743,6 +744,12 @@ public class BattleRoyaleMode {
             p.hurt(p.damageSources().outOfBorder(), damage);
             // 原版受傷後會把伺服器的移動速度強制送回客戶端（hurtMarked），每秒扣血一次就像被推一下：圈外傷害不送
             p.hurtMarked = false;
+        }
+        // 掉線分身照一般規則受圈外傷害（計畫書 7 D）
+        for (Participant part : new ArrayList<>(participants.values())) {
+            if (!part.alive || !part.offline || level == null) continue;
+            var body = com.provinggrounds.core.DisconnectBodies.bodyOf(level.getServer(), part.id);
+            if (body != null && circle.isOutside(body.getX(), body.getZ())) body.hurt(body.damageSources().outOfBorder(), damage);
         }
     }
 
@@ -1249,6 +1256,10 @@ public class BattleRoyaleMode {
                             if (!p.alive || !p.downed) continue;
                             ServerPlayer sp = player(p.id);
                             if (sp != null) { eliminate(sp, p, null, Cause.TEAM_WIPE); changed = true; }
+                            else if (p.offline && level != null) { // 掉線倒地（計畫書 7 D）：分身也跟著死
+                                var s = com.provinggrounds.core.DisconnectBodies.get(level.getServer(), p.id);
+                                if (s != null) { offlineEliminate(p, s, null, "隊伍全倒"); changed = true; }
+                            }
                         }
                     }
                     if (members.stream().noneMatch(p -> p.alive)) {
@@ -1296,14 +1307,141 @@ public class BattleRoyaleMode {
             return;
         }
         if (inPlay()) {
-            if (part.alive) eliminate(p, part, null, Cause.LOGOUT);
+            if (part.alive && part.state != PlayerState.PLANE) {
+                // 計畫書 7 D：掉線分身。在超時（disconnect_timeout）前都算隊伍人數，分身被殺才淘汰
+                goOffline(p, part);
+            } else if (part.alive) eliminate(p, part, null, Cause.LOGOUT);
             else if (!part.finalDead) finalizeDeath(part, "已離線");
         }
         discardCarrier(part);
     }
 
+    /** 掉線（或測試指令的模擬掉線）：原地留分身、保留參賽資格（計畫書 7 D）。 */
+    private void goOffline(ServerPlayer p, Participant part) {
+        part.offline = true;
+        part.reviveIntent = null;
+        part.altarIntent = null;
+        if (part.seat != null) { if (p.getVehicle() == part.seat) p.stopRiding(); part.seat.discard(); part.seat = null; }
+        com.provinggrounds.core.DisconnectBodies.spawn(p, "br", part.downed);
+        com.provinggrounds.core.DisconnectBodies.notifyTeam(p.server, p.getUUID(), part.name + " 掉線了（原地留下分身）");
+    }
+
+    /** 玩家回來（或測試指令的模擬回歸）：分身還活著就回到分身的位置與血量繼續。回傳 true = 已處理。 */
+    public boolean returnFromOffline(ServerPlayer p) {
+        Participant part = participants.get(p.getUUID());
+        MinecraftServer server = p.server;
+        var s = com.provinggrounds.core.DisconnectBodies.get(server, p.getUUID());
+        if (s == null || !"br".equals(s.mode)) return false;
+        com.provinggrounds.core.DisconnectBodies.setSimulated(p.getUUID(), false);
+        if (part == null || !inPlay()) { com.provinggrounds.core.DisconnectBodies.remove(server, p.getUUID()); return false; }
+        part.offline = false;
+        if (s.dead || !part.alive) {
+            // 分身已被殺：物品已經進了墓碑，背包清空、變旁觀
+            com.provinggrounds.core.DisconnectBodies.remove(server, p.getUUID());
+            p.getInventory().clearContent();
+            com.provinggrounds.modes.br.Backpack.clear(p);
+            com.provinggrounds.special.SpecialSlot.clear(p);
+            p.setGameMode(GameType.SPECTATOR);
+            p.sendSystemMessage(Component.literal("你掉線時分身被擊殺了，目前是觀察者。").withStyle(ChatFormatting.GRAY));
+            sendMapImage(p);
+            return true;
+        }
+        com.provinggrounds.core.DisconnectBodies.restore(p);
+        p.setGameMode(GameType.ADVENTURE);
+        BRMovement.apply(p);
+        if (part.downed) {
+            com.provinggrounds.core.DownedCore.applyDowned(p, p.getHealth());
+            if (PGConfig.SERVER.brDownedStyle.get() == PGConfig.DownedStyle.SIT) sitDown(p, part);
+        }
+        sendMapImage(p);
+        com.provinggrounds.core.DisconnectBodies.notifyTeam(server, p.getUUID(), part.name + " 回來了");
+        p.displayClientMessage(Component.literal("歡迎回來，比賽繼續").withStyle(ChatFormatting.GREEN), true);
+        return true;
+    }
+
+    /** 測試指令：模擬掉線（計畫書 7 G）。 */
+    public boolean debugGoOffline(ServerPlayer p) {
+        Participant part = participants.get(p.getUUID());
+        if (part == null || !part.alive || !inPlay() || part.offline) return false;
+        goOffline(p, part);
+        com.provinggrounds.core.DisconnectBodies.setSimulated(p.getUUID(), true);
+        p.setGameMode(GameType.SPECTATOR);
+        return true;
+    }
+
+    /** 掉線分身被殺（DisconnectBodies 呼叫）：照一般淘汰處理，物品用存下來的狀態放進墓碑。 */
+    public void onBodyKilled(com.provinggrounds.core.DisconnectBodies.OfflineState s, @Nullable ServerPlayer killer, @Nullable DamageSource source) {
+        Participant part = participants.get(s.owner);
+        if (part == null || !part.alive) return;
+        if (killer == null && part.downedBy != null) {
+            ServerPlayer downer = player(part.downedBy);
+            if (downer != null && !TeamManager.get().isSameTeam(downer.getUUID(), part.id)) killer = downer;
+        }
+        offlineEliminate(part, s, killer, "分身被擊殺");
+    }
+
+    /**
+     * 不需要玩家物件的淘汰（計畫書 7 D：掉線分身被殺、掉線超時）。統計、擊殺、擊殺紀錄、墓碑、復活牌、整隊檢查都跟一般淘汰一樣，
+     * 但不會有復活牌（跟以前掉線一樣）。玩家之後回來只能旁觀（回來時背包會被清空）。
+     */
+    private void offlineEliminate(Participant part, com.provinggrounds.core.DisconnectBodies.OfflineState s, @Nullable ServerPlayer killer, String why) {
+        if (level == null || !part.alive) return;
+        PGConfig c = PGConfig.SERVER;
+        PlayerDataManager data = PlayerDataManager.get();
+        boolean competitive = variant == Variant.COMPETITIVE;
+        part.stats.deaths++;
+        part.stats.stopAlive(tickCount);
+        part.stats.lastDeathTick = tickCount;
+        if (killer != null && !TeamManager.get().isSameTeam(killer.getUUID(), part.id)) {
+            data.addKill(killer);
+            int xp = data.addXp(killer, c.xpKill.get(), competitive);
+            Participant kp = participants.get(killer.getUUID());
+            if (kp != null) { kp.stats.kills++; kp.stats.xp += xp; }
+            killer.displayClientMessage(Component.literal("擊殺 " + part.name + "  +" + xp + " 經驗").withStyle(ChatFormatting.GOLD), true);
+            PGNetwork.sendTo(killer, new com.provinggrounds.network.KillNoticePacket(false, true, killer.getGameProfile().getName(), 0xFFFFFF,
+                part.name, 0xFFFFFF, killer.getMainHandItem().copyWithCount(1), 0, kp != null ? kp.stats.kills : 1));
+        } else {
+            killer = null;
+        }
+        damagers.remove(part.id);
+        ProvingGroundsMod.LOGGER.info("BR eliminated (offline): {} by {} ({})", part.name, killer != null ? killer.getGameProfile().getName() : "-", why);
+        PGNetwork.sendToAll(new KillFeedPacket(killer != null ? killer.getGameProfile().getName() : "", killer != null ? colorOf(killer.getUUID()) : 0xFFFFFF,
+            part.name, colorOf(part.id), false));
+        clearDowned(null, part);
+        dropHeldCards(null, part, s.pos);
+        com.provinggrounds.modes.br.Tombstones.placeOffline(level, s.pos, s.name, s.items(),
+            ItemStack.of(s.backpack), ItemStack.of(s.special));
+        s.dead = true;
+        part.alive = false;
+        part.state = PlayerState.DEAD;
+        part.downedBy = null;
+        part.altarTicks = 0;
+        part.altarTarget = null;
+        finalizeDeath(part, why);
+        resolveTeams();
+    }
+
+    /** 掉線超時（disconnect_timeout，跟團隊模式同一個設定）：視為淘汰，分身消失、物品放進墓碑。 */
+    private void tickOffline() {
+        if (level == null || tickCount % 20 != 0) return;
+        MinecraftServer server = level.getServer();
+        long limit = PGConfig.SERVER.arena.disconnectTimeout.get() * 20L;
+        for (Participant part : new ArrayList<>(participants.values())) {
+            if (!part.offline || !part.alive) continue;
+            var s = com.provinggrounds.core.DisconnectBodies.get(server, part.id);
+            if (s == null) { part.offline = false; continue; }
+            if (level.getGameTime() - s.since < limit) continue;
+            var body = com.provinggrounds.core.DisconnectBodies.bodyOf(server, part.id);
+            if (body != null) s.pos = body.position();
+            offlineEliminate(part, s, null, "掉線過久");
+            com.provinggrounds.core.DisconnectBodies.remove(server, part.id);
+            com.provinggrounds.core.DisconnectBodies.notifyTeam(server, part.id, part.name + " 因掉線過久被移出");
+        }
+    }
+
     /** 玩家登入：倒數期間加入參賽；遊戲中變觀察者；沒有遊戲但有還原標記就還原。 */
     public void onLogin(ServerPlayer p) {
+        if (returnFromOffline(p)) return;
         if (!isAirborne(p.getUUID())) { SkydiveWings.removeAll(p); com.provinggrounds.item.ParachuteItem.removeAll(p); } // 不在跳傘中卻有翼裝、降落傘（例如跳傘時斷線）就清掉
 
         CompoundTag tag = p.getPersistentData().getCompound(RESTORE_TAG);
@@ -2254,6 +2392,7 @@ public class BattleRoyaleMode {
 
     @Nullable
     private ServerPlayer player(UUID id) {
+        if (com.provinggrounds.core.DisconnectBodies.isSimulated(id)) return null; // 測試指令的「模擬掉線」（計畫書 7 G）
         MinecraftServer server = level != null ? level.getServer() : GameManager.get().getServer();
         return server == null ? null : server.getPlayerList().getPlayer(id);
     }

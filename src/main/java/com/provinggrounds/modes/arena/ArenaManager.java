@@ -42,6 +42,22 @@ public final class ArenaManager {
         return m != null && m.downedEnabled ? m.downed.ids() : java.util.Set.of();
     }
 
+    /** 掉線分身被殺（計畫書 7 D）。 */
+    public static void onBodyKilled(com.provinggrounds.core.DisconnectBodies.OfflineState s, @javax.annotation.Nullable ServerPlayer killer) {
+        if (current != null) current.handleBodyDeath(s, killer);
+    }
+
+    public static boolean debugGoOffline(ServerPlayer p) {
+        return current != null && !current.isEnding() && current.debugGoOffline(p);
+    }
+
+    /** 測試指令的模擬回歸。 */
+    public static boolean debugReturn(ServerPlayer p) {
+        if (current == null) return false;
+        current.handleLogin(p);
+        return true;
+    }
+
     /** F 鍵：扶團隊模式倒地的隊友。 */
     public static boolean startReviveByKey(ServerPlayer helper, @javax.annotation.Nullable net.minecraft.world.entity.Entity looked) {
         ArenaMode m = current;
@@ -110,7 +126,7 @@ public final class ArenaManager {
 
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
-        if (current != null && event.getEntity() instanceof ServerPlayer p) { current.downed.onLogout(p); current.handleLogout(p); }
+        if (current != null && event.getEntity() instanceof ServerPlayer p) { current.handleLogout(p); current.downed.onLogout(p); }
     }
 
     /** 重生保護：被保護的人不會受傷，也不能攻擊別人（計畫書 5 的 H2）。 */

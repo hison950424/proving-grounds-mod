@@ -71,8 +71,21 @@ public final class KillEvents {
             if (!m.isParticipant(p.getUUID())) continue;
             PGNetwork.sendTo(p, new KillNoticePacket(true, p == killer, kName, kColor, v.name, m.colorOf(v), weapon, flags, k != null ? k.streak : 0));
         }
-        if (lostStreak >= STREAK_ANNOUNCE) announceEnded(victim, v.name, lostStreak, kName);
+        if (lostStreak >= STREAK_ANNOUNCE) announceEnded(victim.server, v.name, lostStreak, kName);
         lastSource = null;
+    }
+
+    /** 掉線分身被殺（計畫書 7 D）：沒有被擊殺者的玩家物件，用名字與隊伍顏色。 */
+    public static void arenaKillOffline(ArenaMode m, net.minecraft.server.MinecraftServer server, @Nullable ServerPlayer killer,
+                                        @Nullable ArenaMode.ArenaPlayer k, ArenaMode.ArenaPlayer v, int lostStreak) {
+        ItemStack weapon = killer != null ? killer.getMainHandItem().copyWithCount(1) : ItemStack.EMPTY;
+        String kName = killer != null ? killer.getGameProfile().getName() : "";
+        int kColor = k != null ? m.colorOf(k) : 0xFFFFFF;
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (!m.isParticipant(p.getUUID())) continue;
+            PGNetwork.sendTo(p, new KillNoticePacket(true, p == killer, kName, kColor, v.name, m.colorOf(v), weapon, 0, k != null ? k.streak : 0));
+        }
+        if (lostStreak >= STREAK_ANNOUNCE) announceEnded(server, v.name, lostStreak, kName);
     }
 
     /** 大逃殺淘汰：只給擊殺者圖示與音效。 */
@@ -82,11 +95,11 @@ public final class KillEvents {
             victim.getGameProfile().getName(), 0xFFFFFF, killer.getMainHandItem().copyWithCount(1), KillNoticePacket.flags(headshot(victim, source), wallbang(killer, victim)), streak));
     }
 
-    private static void announceEnded(ServerPlayer victim, String name, int streak, String by) {
+    private static void announceEnded(net.minecraft.server.MinecraftServer server, String name, int streak, String by) {
         Component msg = Component.literal(name + " 的 " + streak + " 連殺被" + (by.isEmpty() ? "" : " " + by + " ") + "終結了！")
             .withStyle(ChatFormatting.GOLD);
-        victim.server.getPlayerList().broadcastSystemMessage(msg, false);
-        for (ServerPlayer p : victim.server.getPlayerList().getPlayers()) {
+        server.getPlayerList().broadcastSystemMessage(msg, false);
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             p.playNotifySound(SoundEvents.RAID_HORN.value(), SoundSource.MASTER, 0.4f, 1.4f);
         }
     }
@@ -116,7 +129,7 @@ public final class KillEvents {
                     victim.getGameProfile().getName(), 0xFFFFFF, weapon, flags, streak));
             }
         }
-        if (lost >= STREAK_ANNOUNCE) announceEnded(victim, victim.getGameProfile().getName(), lost, killer != null ? killer.getGameProfile().getName() : "");
+        if (lost >= STREAK_ANNOUNCE) announceEnded(victim.server, victim.getGameProfile().getName(), lost, killer != null ? killer.getGameProfile().getName() : "");
     }
 
     /**
@@ -128,6 +141,7 @@ public final class KillEvents {
         if (event.isCanceled() || event.getEntity().level().isClientSide) return;
         if (!(event.getSource().getEntity() instanceof ServerPlayer killer) || killer == event.getEntity()) return;
         net.minecraft.world.entity.LivingEntity victim = event.getEntity();
+        if (victim instanceof com.provinggrounds.special.entity.DecoyEntity d && d.isBody()) return; // 掉線分身：各模式自己發擊殺提示（計畫書 7 D）
         if (victim instanceof ServerPlayer vp) {
             if (inMiniDm(vp) || com.provinggrounds.modes.BattleRoyaleMode.get().isParticipant(vp.getUUID())
                 || com.provinggrounds.modes.arena.ArenaManager.isParticipant(vp.getUUID())) return;

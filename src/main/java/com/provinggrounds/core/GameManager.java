@@ -78,6 +78,7 @@ public class GameManager {
         mode  = GameMode.NONE;
         activePlayers.clear();
         TeamManager.get().reset();
+        DisconnectBodies.clearAll(server); // 掉線分身與離線狀態（計畫書 7 D）
         LobbyManager.get().onReturnToLobby(server); // 觀戰者「本局結束後加入」、清掉準備狀態
         ProvingGroundsMod.LOGGER.info("Game reset to LOBBY.");
     }

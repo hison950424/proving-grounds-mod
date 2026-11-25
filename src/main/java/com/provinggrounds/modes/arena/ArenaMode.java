@@ -356,7 +356,49 @@ public abstract class ArenaMode {
 
     public void handleLogout(ServerPlayer p) {
         ArenaPlayer ap = players.get(p.getUUID());
-        if (ap != null) ap.offlineSince = ticks;
+        if (ap == null) return;
+        ap.offlineSince = ticks;
+        // 計畫書 7 D：比賽中活著的人掉線 → 原地留分身（重生倒數中、旁觀中不留）
+        if (endTicks < 0 && !p.isSpectator() && p.isAlive() && ap.respawnAt < 0 && (kind() != GameManager.GameMode.DOM || ap.alive)) {
+            com.provinggrounds.core.DisconnectBodies.spawn(p, "arena", downedEnabled && downed.isDowned(p.getUUID()));
+            com.provinggrounds.core.DisconnectBodies.notifyTeam(server, p.getUUID(), ap.name + " 掉線了（原地留下分身）");
+        }
+    }
+
+    /** 測試指令：模擬掉線（計畫書 7 G）。 */
+    public boolean debugGoOffline(ServerPlayer p) {
+        ArenaPlayer ap = players.get(p.getUUID());
+        if (ap == null || ap.offlineSince >= 0) return false;
+        handleLogout(p);
+        downed.onLogout(p);
+        com.provinggrounds.core.DisconnectBodies.setSimulated(p.getUUID(), true);
+        p.setGameMode(GameType.SPECTATOR);
+        return true;
+    }
+
+    /** 掉線分身被殺（計畫書 7 D）：等於這位玩家死亡一次（擊殺、金錢、分數照常）；回來之前不重生，回來後走重生倒數。 */
+    public void handleBodyDeath(com.provinggrounds.core.DisconnectBodies.OfflineState s, @Nullable ServerPlayer killer) {
+        ArenaPlayer v = players.get(s.owner);
+        if (v == null || endTicks >= 0) return;
+        v.deaths++;
+        v.deathPos = s.pos;
+        v.campTicks = 0;
+        int lostStreak = v.streak;
+        v.streak = 0;
+        onDeath(null, v);
+        ArenaPlayer k = killer == null ? null : players.get(killer.getUUID());
+        boolean counted = k != null && !sameSide(k, v);
+        if (counted) {
+            k.kills++;
+            k.streak++;
+        }
+        com.provinggrounds.core.KillEvents.arenaKillOffline(this, server, counted ? killer : null, counted ? k : null, v, lostStreak);
+        if (!counted) return;
+        onKill(killer, k, null, v);
+        if (com.provinggrounds.special.SpecialConfig.enabledSafe()) {
+            ItemStack sp = com.provinggrounds.special.SpecialLoot.roll(level);
+            if (!sp.isEmpty()) level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level, s.pos.x, s.pos.y + 0.5, s.pos.z, sp));
+        }
     }
 
     private void removeTimedOut() {
@@ -365,6 +407,7 @@ public abstract class ArenaMode {
             if (ap.offlineSince < 0 || ticks - ap.offlineSince < limit) continue;
             players.remove(ap.id);
             removed.add(ap.id);
+            com.provinggrounds.core.DisconnectBodies.remove(server, ap.id); // 掉線分身也消失（計畫書 7 D）
             for (ServerPlayer mate : online()) {
                 ArenaPlayer m = players.get(mate.getUUID());
                 if (m != null && sameSide(m, ap)) mate.sendSystemMessage(Component.literal(ap.name + " 因掉線過久被移出").withStyle(ChatFormatting.GRAY));
@@ -456,12 +499,28 @@ public abstract class ArenaMode {
 
     public void handleLogin(ServerPlayer p) {
         ArenaPlayer ap = players.get(p.getUUID());
-        if (ap == null) return;
+        com.provinggrounds.core.DisconnectBodies.setSimulated(p.getUUID(), false);
+        var body = com.provinggrounds.core.DisconnectBodies.get(server, p.getUUID());
+        if (ap == null) { if (body != null) com.provinggrounds.core.DisconnectBodies.remove(server, p.getUUID()); return; }
         ap.offlineSince = -1;
         ap.respawnAt = -1;
-        ap.deathPos = null;
         GameManager.get().addPlayer(p);
         TeamManager.get().syncVanillaTeams(server, online());
+        if (body != null && "arena".equals(body.mode) && !body.dead) {
+            // 計畫書 7 D：分身還活著 → 回到分身的位置與血量繼續（倒地狀態不保留，回來是站著的）
+            com.provinggrounds.core.DisconnectBodies.restore(p);
+            ap.deathPos = null;
+            p.setGameMode(GameType.ADVENTURE);
+            com.provinggrounds.core.DisconnectBodies.notifyTeam(server, p.getUUID(), ap.name + " 回來了");
+            return;
+        }
+        if (body != null) {
+            // 分身已被殺：照死亡後的規則（死亡位置旁觀 → 重生倒數）
+            com.provinggrounds.core.DisconnectBodies.remove(server, p.getUUID());
+            com.provinggrounds.core.DisconnectBodies.notifyTeam(server, p.getUUID(), ap.name + " 回來了");
+        } else {
+            ap.deathPos = null;
+        }
         respawn(p, ap);
     }
 
@@ -763,6 +822,7 @@ public abstract class ArenaMode {
     protected List<ServerPlayer> online() {
         List<ServerPlayer> out = new ArrayList<>();
         for (UUID id : players.keySet()) {
+            if (com.provinggrounds.core.DisconnectBodies.isSimulated(id)) continue; // 測試指令的「模擬掉線」
             ServerPlayer p = server.getPlayerList().getPlayer(id);
             if (p != null) out.add(p);
         }

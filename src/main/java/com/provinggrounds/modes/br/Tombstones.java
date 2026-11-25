@@ -71,6 +71,43 @@ public final class Tombstones {
         return true;
     }
 
+    /**
+     * 掉線分身被殺（計畫書 7 D）：用掉線時存下來的物品建立墓碑（不需要玩家物件）。
+     * items：Inventory 的格子編號 → 物品（0～8 快捷欄、9～35 背包、36～39 防具、40 副手）。放不下的掉在地上。
+     */
+    public static void placeOffline(ServerLevel level, Vec3 corpse, String owner, java.util.Map<Integer, ItemStack> items,
+                                    ItemStack pack, ItemStack special) {
+        BlockPos pos = findSpot(level, BlockPos.containing(corpse));
+        if (pos != null) level.setBlockAndUpdate(pos, PGBlocks.TOMBSTONE.get().defaultBlockState());
+        List<ItemStack> spill = new ArrayList<>();
+        if (pos == null || !(level.getBlockEntity(pos) instanceof TombstoneBlockEntity t)) {
+            spill.addAll(items.values());
+            if (!pack.isEmpty()) spill.add(pack);
+            if (!special.isEmpty()) spill.add(special);
+        } else {
+            t.setOwner(owner);
+            List<ItemStack> later = new ArrayList<>();
+            for (var e : items.entrySet()) {
+                int i = e.getKey();
+                ItemStack s = e.getValue();
+                int at;
+                if (i <= 8) at = com.provinggrounds.block.TombstoneMenu.HOTBAR + i;
+                else if (i <= 35) at = com.provinggrounds.block.TombstoneMenu.MAIN + (i - 9);
+                else if (i <= 39) at = com.provinggrounds.block.TombstoneMenu.ARMOR + (39 - i);
+                else at = com.provinggrounds.block.TombstoneMenu.OFFHAND;
+                if (!t.put(at, s)) later.add(s);
+            }
+            if (!pack.isEmpty() && !t.put(com.provinggrounds.block.TombstoneMenu.BACKPACK, pack)) later.add(pack);
+            for (ItemStack s : later) if (!t.add(s)) spill.add(s);
+            if (!special.isEmpty() && !t.put(com.provinggrounds.block.TombstoneMenu.SPECIAL, special) && !t.add(special)) spill.add(special);
+            Ledger.get(level).add(pos);
+        }
+        for (ItemStack s : spill) {
+            net.minecraft.world.entity.item.ItemEntity ie = new net.minecraft.world.entity.item.ItemEntity(level, corpse.x, corpse.y + 0.5, corpse.z, s);
+            level.addFreshEntity(ie);
+        }
+    }
+
     /** 往上找第一格可以放墓碑的位置（空氣或可取代的方塊，例如草、雪）。 */
     @Nullable
     private static BlockPos findSpot(ServerLevel level, BlockPos start) {

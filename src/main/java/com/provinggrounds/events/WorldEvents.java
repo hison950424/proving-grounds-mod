@@ -43,6 +43,7 @@ public class WorldEvents {
     @SubscribeEvent
     public void onServerStopped(ServerStoppedEvent event) {
         PlayerDataManager.get().detach();
+        com.provinggrounds.core.DisconnectBodies.onServerStopped();
         AltarBlockEntity.LOADED.clear(); // 單人模式換世界時不留舊座標
         com.provinggrounds.modes.br.StatsBoard.clear();
         com.provinggrounds.admin.SpawnPointView.clear();
