@@ -84,8 +84,9 @@ public final class KillHud {
         float t = (now - iconTime) / (float) ICON_MS;
         int alpha = (int) (255 * (t < 0.7f ? 1f : (1f - t) / 0.3f));
         if (alpha < 8) return;
-        int color = icon.headshot() ? 0xFFD040 : icon.streak() >= 3 ? 0xFF5050 : 0xFFFFFF;
-        String text = (icon.headshot() ? "爆頭" : "擊殺") + (icon.streak() >= 2 ? "  " + icon.streak() + " 連殺" : "");
+        boolean wall = icon.wallbang() && PGClientConfig.CLIENT.killIconWallbang.get();
+        int color = icon.headshot() ? 0xFFD040 : wall ? 0x60D0FF : icon.streak() >= 3 ? 0xFF5050 : 0xFFFFFF;
+        String text = (wall ? "穿牆" : "") + (icon.headshot() ? "爆頭" : wall ? "" : "擊殺") + (icon.streak() >= 2 ? "  " + icon.streak() + " 連殺" : "");
         g.pose().pushPose();
         g.pose().translate(w / 2f, h / 2f + 24, 0);
         float pop = t < 0.1f ? 1.3f - 3f * t : 1f; // 彈出一下
@@ -96,7 +97,20 @@ public final class KillHud {
             g.fill(i - 1, -i - 1 - 10, i + 1, -i + 1 - 10, c);
         }
         g.drawString(font, text, -font.width(text) / 2, 0, c, true);
+        if (wall) brick(g, -font.width(text) / 2 - 11, 0, (alpha << 24) | 0x60D0FF); // 牆的小符號
         g.pose().popPose();
+    }
+
+    /** 小小的磚牆符號（9×9，穿牆擊殺用）。 */
+    private static void brick(GuiGraphics g, int x, int y, int color) {
+        g.fill(x, y, x + 9, y + 1, color);
+        g.fill(x, y + 4, x + 9, y + 5, color);
+        g.fill(x, y + 8, x + 9, y + 9, color);
+        g.fill(x, y, x + 1, y + 9, color);
+        g.fill(x + 8, y, x + 9, y + 9, color);
+        g.fill(x + 4, y + 1, x + 5, y + 4, color);
+        g.fill(x + 2, y + 5, x + 3, y + 8, color);
+        g.fill(x + 6, y + 5, x + 7, y + 8, color);
     }
 
     private static void renderFeed(GuiGraphics g, Font font, int w, long now, float scale) {
@@ -114,8 +128,9 @@ public final class KillHud {
             if (alpha < 8) continue;
             int a = alpha << 24;
             String hs = d.headshot() ? " ◎" : "";
+            boolean wall = d.wallbang() && PGClientConfig.CLIENT.killIconWallbang.get();
             int kw = font.width(d.killer()), vw = font.width(d.victim() + hs);
-            int iconW = d.weapon().isEmpty() ? 6 : 20;
+            int iconW = (d.weapon().isEmpty() ? 6 : 20) + (wall ? 11 : 0);
             int total = kw + iconW + vw + 8;
             int x = -total;
             g.fill(x - 3, ly - 2, 2, ly + 14, (int) (0x60 * alpha / 255f) << 24);
@@ -123,6 +138,7 @@ public final class KillHud {
             x += kw + 4;
             if (!d.weapon().isEmpty()) g.renderItem(d.weapon(), x, ly - 1);
             else g.drawString(font, "›", x, ly + 3, a | 0xAAAAAA, true);
+            if (wall) brick(g, x + (d.weapon().isEmpty() ? 6 : 18), ly + 2, a | 0x60D0FF); // 武器圖示旁的小牆
             x += iconW;
             g.drawString(font, d.victim(), x, ly + 3, a | d.victimColor(), true);
             if (!hs.isEmpty()) g.drawString(font, hs, x + font.width(d.victim()), ly + 3, a | 0xFFD040, true);

@@ -846,7 +846,7 @@ public class BattleRoyaleMode {
         // 擊倒訊息只顯示在右上角擊殺資訊，不發到聊天室
         PGNetwork.sendToAll(new KillFeedPacket(
             attacker != null ? attacker.getGameProfile().getName() : "", attacker != null ? colorOf(attacker.getUUID()) : 0xFFFFFF,
-            part.name, colorOf(victim.getUUID()), true));
+            part.name, colorOf(victim.getUUID()), true, com.provinggrounds.core.KillEvents.flagsFor(attacker, victim, source)));
         title(victim, Component.literal("你倒地了").withStyle(ChatFormatting.RED),
             Component.literal("等待隊友扶起（" + bleedSecondsLeft(victim) + " 秒）").withStyle(ChatFormatting.GRAY));
         level.playSound(null, victim.blockPosition(), SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1f, 0.6f);
@@ -1173,7 +1173,7 @@ public class BattleRoyaleMode {
             killer != null ? killer.getGameProfile().getName() : "-", cause);
         PGNetwork.sendToAll(new KillFeedPacket(
             killer != null ? killer.getGameProfile().getName() : "", killer != null ? colorOf(killer.getUUID()) : 0xFFFFFF,
-            part.name, colorOf(victim.getUUID()), false));
+            part.name, colorOf(victim.getUUID()), false, com.provinggrounds.core.KillEvents.flagsFor(killer, victim, source)));
         if (killer != null && !TeamManager.get().isSameTeam(killer, victim)) { // 擊殺圖示與音效（計畫書 5 的 E3）
             Participant kpart = participants.get(killer.getUUID());
             com.provinggrounds.core.KillEvents.brKill(killer, victim, source, kpart != null ? kpart.stats.kills : 1);

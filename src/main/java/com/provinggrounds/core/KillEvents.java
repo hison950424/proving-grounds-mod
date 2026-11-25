@@ -45,6 +45,17 @@ public final class KillEvents {
     /** ArenaManager 在轉交死亡事件前記下傷害來源（判斷爆頭）。 */
     public static void setSource(@Nullable DamageSource source) { lastSource = source; }
 
+    /** 擊殺紀錄的旗標（爆頭、穿牆；大逃殺的擊殺資訊用）。 */
+    public static int flagsFor(@Nullable ServerPlayer killer, ServerPlayer victim, @Nullable DamageSource source) {
+        if (killer == null) return 0;
+        return KillNoticePacket.flags(headshot(victim, source), wallbang(killer, victim));
+    }
+
+    /** 穿牆（計畫書 7 F）：擊殺者到被擊殺者之間有不可穿透的方塊。 */
+    private static boolean wallbang(@Nullable ServerPlayer killer, net.minecraft.world.entity.LivingEntity victim) {
+        return killer != null && Wallbang.through(killer, victim);
+    }
+
     private static boolean headshot(ServerPlayer victim, @Nullable DamageSource source) {
         return source != null && Boolean.TRUE.equals(ArmorEvents.wasHeadshot(victim, source));
     }
@@ -54,10 +65,11 @@ public final class KillEvents {
         boolean hs = killer != null && headshot(victim, lastSource);
         ItemStack weapon = killer != null ? killer.getMainHandItem().copyWithCount(1) : ItemStack.EMPTY;
         String kName = killer != null ? killer.getGameProfile().getName() : "";
+        int flags = KillNoticePacket.flags(hs, wallbang(killer, victim));
         int kColor = k != null ? m.colorOf(k) : 0xFFFFFF;
         for (ServerPlayer p : victim.server.getPlayerList().getPlayers()) {
             if (!m.isParticipant(p.getUUID())) continue;
-            PGNetwork.sendTo(p, new KillNoticePacket(true, p == killer, kName, kColor, v.name, m.colorOf(v), weapon, hs, k != null ? k.streak : 0));
+            PGNetwork.sendTo(p, new KillNoticePacket(true, p == killer, kName, kColor, v.name, m.colorOf(v), weapon, flags, k != null ? k.streak : 0));
         }
         if (lostStreak >= STREAK_ANNOUNCE) announceEnded(victim, v.name, lostStreak, kName);
         lastSource = null;
@@ -67,7 +79,7 @@ public final class KillEvents {
     public static void brKill(@Nullable ServerPlayer killer, ServerPlayer victim, @Nullable DamageSource source, int streak) {
         if (killer == null) return;
         PGNetwork.sendTo(killer, new KillNoticePacket(false, true, killer.getGameProfile().getName(), 0xFFFFFF,
-            victim.getGameProfile().getName(), 0xFFFFFF, killer.getMainHandItem().copyWithCount(1), headshot(victim, source), streak));
+            victim.getGameProfile().getName(), 0xFFFFFF, killer.getMainHandItem().copyWithCount(1), KillNoticePacket.flags(headshot(victim, source), wallbang(killer, victim)), streak));
     }
 
     private static void announceEnded(ServerPlayer victim, String name, int streak, String by) {
@@ -97,10 +109,11 @@ public final class KillEvents {
             streak = MINIDM_STREAK.merge(killer.getUUID(), 1, Integer::sum);
             boolean hs = headshot(victim, event.getSource());
             ItemStack weapon = killer.getMainHandItem().copyWithCount(1);
+            int flags = KillNoticePacket.flags(hs, wallbang(killer, victim));
             for (ServerPlayer p : victim.server.getPlayerList().getPlayers()) {
                 if (!inMiniDm(p)) continue;
                 PGNetwork.sendTo(p, new KillNoticePacket(true, p == killer, killer.getGameProfile().getName(), 0xFFFFFF,
-                    victim.getGameProfile().getName(), 0xFFFFFF, weapon, hs, streak));
+                    victim.getGameProfile().getName(), 0xFFFFFF, weapon, flags, streak));
             }
         }
         if (lost >= STREAK_ANNOUNCE) announceEnded(victim, victim.getGameProfile().getName(), lost, killer != null ? killer.getGameProfile().getName() : "");
@@ -120,7 +133,7 @@ public final class KillEvents {
                 || com.provinggrounds.modes.arena.ArenaManager.isParticipant(vp.getUUID())) return;
         }
         PGNetwork.sendTo(killer, new KillNoticePacket(false, true, killer.getGameProfile().getName(), 0xFFFFFF,
-            victim.getName().getString(), 0xFFFFFF, killer.getMainHandItem().copyWithCount(1), false, 0));
+            victim.getName().getString(), 0xFFFFFF, killer.getMainHandItem().copyWithCount(1), KillNoticePacket.flags(false, wallbang(killer, victim)), 0));
     }
 
     /** 離開迷你死鬥（換場地、離線）就歸零。 */

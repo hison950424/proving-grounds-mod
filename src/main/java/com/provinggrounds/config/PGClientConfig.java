@@ -40,7 +40,7 @@ public final class PGClientConfig {
     public final ForgeConfigSpec.DoubleValue damageIndicatorSeconds;
     // 計畫書 5：準星、互動提示、戰鬥提示
     public final ForgeConfigSpec.BooleanValue crosshairDot, crosshairDotTaczApplied, crosshairDotTaczV2Applied, defaultKeysV2Applied;
-    public final ForgeConfigSpec.BooleanValue interactHint, killIconEnabled, killFeedEnabled, killSoundEnabled, domBeacon, antiCampWall;
+    public final ForgeConfigSpec.BooleanValue interactHint, killIconEnabled, killIconWallbang, killFeedEnabled, killSoundEnabled, domBeacon, antiCampWall;
     public final ForgeConfigSpec.DoubleValue hudScale, killSoundVolume;
     public final ForgeConfigSpec.BooleanValue scoreboardToggle;
     public final ForgeConfigSpec.BooleanValue forceGuiScale;
@@ -108,6 +108,7 @@ public final class PGClientConfig {
             .define("crosshair_dot_tacz_applied_v2", false);
         interactHint = builder.comment("準星下方顯示「F 開啟」「F 扶起」等互動提示（拿槍時一定顯示；這裡關掉只影響空手）").define("interact_hint", true);
         killIconEnabled = builder.comment("擊殺時準星附近的小圖示").define("kill_icon", true);
+        killIconWallbang = builder.comment("穿牆擊殺時，擊殺圖示與擊殺紀錄加上牆的小符號（計畫書 7 F）").define("kill_icon_wallbang", true);
         killFeedEnabled = builder.comment("右上角擊殺紀錄（團隊死鬥／佔點／槍王之王）").define("kill_feed", true);
         killSoundEnabled = builder.comment("擊殺音效").define("kill_sound", true);
         killSoundVolume = builder.comment("擊殺音效音量").defineInRange("kill_sound_volume", 0.8, 0.0, 1.0);
