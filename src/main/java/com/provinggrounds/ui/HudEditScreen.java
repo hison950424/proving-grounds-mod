@@ -66,12 +66,14 @@ public class HudEditScreen extends Screen {
         texts.clear();
 
         // 右上：模式篩選（只顯示該模式會出現的元件）
-        addRenderableWidget(new PGButton(px + PW - 90, py + 4, 80, BH, Component.literal("模式：" + MODE_NAMES[modeFilter]), modeFilter != 0, false, () -> {
-            modeFilter = (modeFilter + 1) % MODE_NAMES.length;
-            if (selected != null && !shown(selected)) selected = null;
-            scroll = 0;
-            rebuildWidgets();
-        }));
+        // 使用者回饋：改成下拉選單
+        addRenderableWidget(new PGButton(px + PW - 90, py + 4, 80, BH, Component.literal("模式：" + MODE_NAMES[modeFilter] + " ▾"), modeFilter != 0, false,
+            () -> Dropdown.open(px + PW - 90, py + 4 + BH, 80, java.util.List.of(MODE_NAMES), modeFilter, i -> {
+                modeFilter = i;
+                if (selected != null && !shown(selected)) selected = null;
+                scroll = 0;
+                rebuildWidgets();
+            })));
         int tw = (PW - 20 - 6) / 2;
         addRenderableWidget(new PGButton(px + 10, py + 20, tw, BH, Component.literal("版面"), tab == 0, false, () -> switchTab(0)));
         addRenderableWidget(new PGButton(px + 16 + tw, py + 20, tw, BH, Component.literal("其他"), tab == 1, false, () -> switchTab(1)));
@@ -201,11 +203,13 @@ public class HudEditScreen extends Screen {
         if (y >= 0) {
             boolean t = c.scoreboardToggle.get();
             texts.add(new Object[] { px + 10, y + 4, "戰績面板", TEXT });
-            addRenderableWidget(btn(px + PW - 10 - 80, y, 80, t ? "按一下開關" : "按住顯示", false, () -> {
-                c.scoreboardToggle.set(!c.scoreboardToggle.get());
-                c.scoreboardToggle.save();
-                rebuildWidgets();
-            }));
+            int by = y;
+            addRenderableWidget(btn(px + PW - 10 - 80, y, 80, (t ? "按一下開關" : "按住顯示") + " ▾", false,
+                () -> Dropdown.open(px + PW - 10 - 80, by + BH, 80, java.util.List.of("按住顯示", "按一下開關"), t ? 1 : 0, pick -> {
+                    c.scoreboardToggle.set(pick == 1);
+                    c.scoreboardToggle.save();
+                    rebuildWidgets();
+                })));
         }
         stepper(i, "提示文字大小", c.hudScale, 0.1, 0.5, 2.0, true);
         otherRows = i[0];
@@ -273,6 +277,7 @@ public class HudEditScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (Dropdown.mouseClicked(mx, my, height)) return true; // 下拉選單展開中
         if (super.mouseClicked(mx, my, button)) return true;
         if (inPanel(mx, my)) {
             if (button == 0 && tab == 0) {
@@ -334,6 +339,7 @@ public class HudEditScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
+        if (Dropdown.isOpen()) return Dropdown.mouseScrolled(delta);
         if (inPanel(mx, my)) {
             int max = Math.max(0, (tab == 0 ? layoutRowCount() : otherRows + 1) - visibleRows());
             scroll = Math.max(0, Math.min(max, scroll - (int) Math.signum(delta)));
@@ -350,6 +356,7 @@ public class HudEditScreen extends Screen {
 
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
+        if (key == GLFW.GLFW_KEY_ESCAPE && Dropdown.isOpen()) { Dropdown.close(); return true; }
         if (selected != null) {
             int d = (mods & GLFW.GLFW_MOD_SHIFT) != 0 ? 5 : 1;
             int dx = key == GLFW.GLFW_KEY_LEFT ? -d : key == GLFW.GLFW_KEY_RIGHT ? d : 0;
@@ -372,6 +379,7 @@ public class HudEditScreen extends Screen {
 
     @Override
     public void removed() {
+        Dropdown.close();
         HudLayout.save(); // 直接被別的畫面取代時也要存
     }
 
@@ -410,6 +418,7 @@ public class HudEditScreen extends Screen {
             g.fill(px + PW - 4, barY, px + PW - 2, barY + barH, ACCENT);
         }
         super.render(g, mouseX, mouseY, partial);
+        Dropdown.render(g, font, mouseX, mouseY, height); // 下拉選單畫在最上層
 
         // 下方操作說明（面板另一側的畫面底部）
         String help = "拖曳移動｜滾輪縮放｜右鍵顯示／隱藏｜方向鍵微調";

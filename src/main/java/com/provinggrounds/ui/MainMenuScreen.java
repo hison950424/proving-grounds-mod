@@ -188,12 +188,11 @@ public class MainMenuScreen extends Screen {
         if (gm != GameManager.GameMode.BATTLE_ROYALE) {
             y = arenaRows(sx, y, sw, gm, lobby, canEdit, teamMode);
         } else {
-        y = row(sx, y, sw, "地圖", map == null ? "（無）" : map.name(), canEdit && maps.size() > 1, () -> {
-            int i = maps.indexOf(map);
-            send(LobbyManager.Action.SET_MAP, maps.get((i + 1) % maps.size()).id());
-        });
-        y = row(sx, y, sw, "縮圈", preset.displayName + "・約 " + estimateText(preset, lobby), canEdit,
-            () -> send(LobbyManager.Action.SET_PRESET, (preset.ordinal() + 1) % CirclePreset.values().length));
+        y = choice(sx, y, sw, "地圖", map == null ? "（無）" : map.name(), maps.stream().map(MenuDataPacket.MapEntry::name).toList(),
+            maps.indexOf(map), canEdit && maps.size() > 1, i -> send(LobbyManager.Action.SET_MAP, maps.get(i).id()));
+        y = choice(sx, y, sw, "縮圈", preset.displayName + "・約 " + estimateText(preset, lobby),
+            java.util.Arrays.stream(CirclePreset.values()).map(p -> p.displayName).toList(), preset.ordinal(), canEdit,
+            i -> send(LobbyManager.Action.SET_PRESET, i));
         if (preset == CirclePreset.CUSTOM && lobby != null && lobby.customCircle().length >= 5) {
             // 自訂縮圈（計畫書 6 D2）：－／＋ 調整
             int[] cc = lobby.customCircle();
@@ -204,32 +203,31 @@ public class MainMenuScreen extends Screen {
             y = stepper(sx, y, sw, "最後圈", cc[4] + "%", canEdit, 5, cc[4], LobbyManager.Action.SET_CIRCLE_FINAL);
             if (cc.length >= 6) y = stepper(sx, y, sw, "決賽圈", cc[5] + " 秒", canEdit, 15, cc[5], LobbyManager.Action.SET_CIRCLE_HOLD);
         }
-        y = row(sx, y, sw, "玩法", variant.displayName, canEdit,
-            () -> send(LobbyManager.Action.SET_VARIANT, (variant.ordinal() + 1) % BattleRoyaleMode.Variant.values().length));
-        y = row(sx, y, sw, "槍械", weapon.displayName, canEdit,
-            () -> send(LobbyManager.Action.SET_WEAPON_MODE, (weapon.ordinal() + 1) % com.provinggrounds.core.WeaponMode.values().length));
-        y = row(sx, y, sw, "特殊物品", special ? "開" : "關", canEdit,
-            () -> send(LobbyManager.Action.SET_SPECIAL, special ? 0 : 1));
+        y = choice(sx, y, sw, "玩法", variant.displayName, java.util.Arrays.stream(BattleRoyaleMode.Variant.values()).map(v -> v.displayName).toList(),
+            variant.ordinal(), canEdit, i -> send(LobbyManager.Action.SET_VARIANT, i));
+        y = choice(sx, y, sw, "槍械", weapon.displayName, java.util.Arrays.stream(com.provinggrounds.core.WeaponMode.values()).map(m -> m.displayName).toList(),
+            weapon.ordinal(), canEdit, i -> send(LobbyManager.Action.SET_WEAPON_MODE, i));
+        y = choice(sx, y, sw, "特殊物品", special ? "開" : "關", OFF_ON, special ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_SPECIAL, i));
         int blockDamage = lobby == null ? 1 : lobby.blockDamage(); // 爆炸炸毀方塊（比賽結束自動還原；計畫書 6 D3）
         String[] bdNames = { "關", "全部", "只有槍械", "只有投擲物" };
-        y = row(sx, y, sw, "炸毀方塊", bdNames[Math.max(0, Math.min(3, blockDamage))], canEdit,
-            () -> send(LobbyManager.Action.SET_BLOCK_DAMAGE, (blockDamage + 1) % 4));
+        int bd = Math.max(0, Math.min(3, blockDamage));
+        y = choice(sx, y, sw, "炸毀方塊", bdNames[bd], List.of(bdNames), bd, canEdit, i -> send(LobbyManager.Action.SET_BLOCK_DAMAGE, i));
         }
         y += 6;
         section(sx, y, "隊伍");
         y += 12;
         boolean twoTeams = gm == GameManager.GameMode.TDM || gm == GameManager.GameMode.DOM;
         if (twoTeams) {
-            y = row(sx, y, sw, "分隊", teamMode.displayName, canEdit,
-                () -> send(LobbyManager.Action.SET_TEAM_MODE, (teamMode.ordinal() + 1) % LobbyManager.TeamMode.values().length));
+            y = choice(sx, y, sw, "分隊", teamMode.displayName, TEAM_MODES, teamMode.ordinal(), canEdit,
+                i -> send(LobbyManager.Action.SET_TEAM_MODE, i));
             y = row(sx, y, sw, "隊伍", "紅藍兩隊", false, () -> {});
             if (canEdit) {
                 setting(sx, y, sw, Tr.t("lobby.auto_balance"), true, () -> send(LobbyManager.Action.AUTO_BALANCE, 0));
                 y += PITCH + 2;
             }
         } else {
-        y = row(sx, y, sw, "分隊", teamMode.displayName, canEdit,
-            () -> send(LobbyManager.Action.SET_TEAM_MODE, (teamMode.ordinal() + 1) % LobbyManager.TeamMode.values().length));
+        y = choice(sx, y, sw, "分隊", teamMode.displayName, TEAM_MODES, teamMode.ordinal(), canEdit,
+            i -> send(LobbyManager.Action.SET_TEAM_MODE, i));
         if (canEdit) {
             // 隊數：－ 值 ＋（值置中在兩個按鈕之間，「全體孤狼」也放得下）
             settingRows.add(new SettingRow(sx, y, "隊數", null));
@@ -322,16 +320,17 @@ public class MainMenuScreen extends Screen {
             default -> {}
         }
         boolean downedOn = a.downed(); // 計畫書 7 E：團隊模式倒地（只有管理員能改，預設關）
-        y = row(sx, y, sw, "倒地", downedOn ? "開" : "關", canEdit, () -> send(LobbyManager.Action.SET_ARENA_DOWNED, downedOn ? 0 : 1));
+        y = choice(sx, y, sw, "倒地", downedOn ? "開" : "關", OFF_ON, downedOn ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_ARENA_DOWNED, i));
         boolean special = lobby == null || lobby.special(); // 特殊物品模式：擊殺敵人掉落特殊物品（商店不賣）
-        y = row(sx, y, sw, "特殊物品", special ? "開" : "關", canEdit, () -> send(LobbyManager.Action.SET_SPECIAL, special ? 0 : 1));
+        y = choice(sx, y, sw, "特殊物品", special ? "開" : "關", OFF_ON, special ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_SPECIAL, i));
         if (gm != GameManager.GameMode.GK) {
             // 每個人自己選職業（開始前；計畫書 6 C1），點一下換下一個
             LobbyStatePacket.Entry me = self(lobby);
             com.provinggrounds.modes.arena.ArenaClass[] all = com.provinggrounds.modes.arena.ArenaClass.values();
             com.provinggrounds.modes.arena.ArenaClass mine = all[Math.max(0, Math.min(all.length - 1, me != null ? me.cls() : 0))];
             boolean canPick = me != null && !me.spectator() && lobby != null && lobby.inLobby();
-            y = row(sx, y, sw, "我的職業", mine.displayName, canPick, () -> send(LobbyManager.Action.SET_MY_CLASS, (mine.ordinal() + 1) % all.length));
+            y = choice(sx, y, sw, "我的職業", mine.displayName, java.util.Arrays.stream(all).map(c -> c.displayName).toList(), mine.ordinal(), canPick,
+                i -> send(LobbyManager.Action.SET_MY_CLASS, i));
         }
         return y;
 
@@ -362,6 +361,17 @@ public class MainMenuScreen extends Screen {
         }
         sections.add(new int[] { x, y });
         sectionNames.add(name);
+    }
+
+    private static final List<String> OFF_ON = List.of("關", "開");
+    private static final List<String> TEAM_MODES = java.util.Arrays.stream(LobbyManager.TeamMode.values()).map(m -> m.displayName).toList();
+
+    /** 一列下拉選單（使用者回饋：取代「點一下換下一個」）。value = 按鈕上顯示的字；點按鈕展開 options，選一個呼叫 pick。 */
+    private int choice(int x, int y, int w, String label, String value, List<String> options, int current, boolean editable,
+                       java.util.function.IntConsumer pick) {
+        if (!editable || options.isEmpty()) return row(x, y, w, label, value, false, () -> {});
+        int bx = x + LABEL_W, bw = w - LABEL_W;
+        return row(x, y, w, label, value + " ▾", true, () -> Dropdown.open(bx, y + BTN_H, bw, options, current, pick));
     }
 
     /** 一列設定：左邊標籤，右邊是值（可以改時是按鈕，不能改時是文字）。回傳下一列的 y。 */
@@ -449,6 +459,7 @@ public class MainMenuScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (Dropdown.mouseClicked(mx, my, height)) return true; // 下拉選單展開中：先處理它
         if (view == View.LOBBY && button == 0) {
             Row row = rowAt(mx, my);
             if (row != null) {
@@ -546,6 +557,7 @@ public class MainMenuScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
+        if (Dropdown.isOpen()) return Dropdown.mouseScrolled(delta);
         if (view == View.LOBBY && mx >= left && mx < listX - 4 && my >= leftTop && my < leftBottom && maxLeftScroll() > 0) {
             // 左欄（設定）捲動：每格 20（一列）
             int next = Math.max(0, Math.min(maxLeftScroll(), leftScroll - (int) Math.signum(delta) * PITCH));
@@ -589,7 +601,14 @@ public class MainMenuScreen extends Screen {
         return mc.player == null ? null : find(lobby, mc.player.getUUID());
     }
 
+    @Override
+    public void removed() {
+        Dropdown.close();
+        super.removed();
+    }
+
     private void switchTo(View v) {
+        Dropdown.close();
         view = v;
         rebuildWidgets();
     }
@@ -619,6 +638,7 @@ public class MainMenuScreen extends Screen {
             default -> renderLobby(g, mouseX, mouseY);
         }
         super.render(g, mouseX, mouseY, partialTick);
+        Dropdown.render(g, font, mouseX, mouseY, height); // 下拉選單畫在最上層
     }
 
     private void renderHomeFooter(GuiGraphics g, @Nullable MenuDataPacket data) {
@@ -748,6 +768,7 @@ public class MainMenuScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE && Dropdown.isOpen()) { Dropdown.close(); return true; }
         if (ClientModEvents.OPEN_MENU.matches(keyCode, scanCode)) {
             onClose();
             return true;
