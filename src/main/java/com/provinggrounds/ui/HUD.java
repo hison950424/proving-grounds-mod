@@ -129,7 +129,7 @@ public final class HUD {
                 line = Tr.t("hud.remaining", s.seconds());
             }
             case ClientBRState.PHASE_ACTIVE -> {
-                title = Tr.t("hud.stage", s.stage(), s.totalStages());
+                title = s.stage() > s.totalStages() ? Tr.t("hud.final_circle") : Tr.t("hud.stage", s.stage(), s.totalStages());
                 if (s.nextRadius() < 0) {
                     line = Tr.t("hud.final_zone");
                     lineColor = DANGER;

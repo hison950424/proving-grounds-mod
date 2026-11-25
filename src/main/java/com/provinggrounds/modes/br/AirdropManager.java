@@ -140,6 +140,7 @@ public class AirdropManager {
         if (!windowOpened) return;
         windowTicks++;
         // 時間到、且目前沒有空投在掉 → 投下（確保一次只掉一個）
+        if (circle.inFinal() || circle.finished()) { schedule.clear(); return; } // 決賽圈不再掉空投（計畫書 7 B）
         if (falling == null && !schedule.isEmpty() && windowTicks >= schedule.peek()) {
             schedule.poll();
             spawn(circle.centerX(), circle.centerZ(), circle.radius());

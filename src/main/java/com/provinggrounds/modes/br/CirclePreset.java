@@ -71,6 +71,27 @@ public enum CirclePreset {
         };
     }
 
+    public ForgeConfigSpec.IntValue finalHoldValue() {
+        PGConfig c = PGConfig.SERVER;
+        return switch (this) {
+            case FAST -> c.brFastFinalHold;
+            case STANDARD -> c.brStandardFinalHold;
+            case SLOW -> c.brSlowFinalHold;
+            case CUSTOM -> c.brCustomFinalHold;
+        };
+    }
+
+    /** 決賽圈（半徑 2.5 格）停留幾秒後再縮到 0（計畫書 7 B）。 */
+    public int finalHoldSeconds() {
+        PGConfig c = PGConfig.SERVER;
+        return switch (this) {
+            case FAST -> c.brFastFinalHold.get();
+            case STANDARD -> c.brStandardFinalHold.get();
+            case SLOW -> c.brSlowFinalHold.get();
+            case CUSTOM -> c.brCustomFinalHold.get();
+        };
+    }
+
     /** 各階段半徑 ÷ 地圖半徑，保證遞減。 */
     public double[] ratios() {
         if (this == CUSTOM) {
@@ -96,16 +117,17 @@ public enum CirclePreset {
 
     /**
      * 估計一場的總時間（秒）：每階段 = 等待 + 縮圈（至少一個間隔；距離太遠時依速度上限拉長），
-     * 中心平均偏移取最大可偏移距離的 2/3。
+     * 中心平均偏移取最大可偏移距離的 2/3。包含決賽圈（停留 finalHoldSeconds 再縮到 0；計畫書 7 B）。
      */
     public double estimateSeconds(double mapRadius) {
         double speed = PGConfig.SERVER.brSprintSpeed() * speedFactor();
         double r = mapRadius, t = 0;
-        double[] rs = ratios();
+        double[] rs = Circle.stageRadii(mapRadius, ratios());
         for (int i = 0; i < rs.length; i++) {
-            double to = mapRadius * rs[i];
+            double to = rs[i];
             double travel = (r - to) * 5.0 / 3.0;
-            t += intervalSeconds() + (i == 0 ? firstWaitSeconds() : 0) + Math.max(intervalSeconds(), travel / Math.max(0.01, speed));
+            double wait = i == rs.length - 1 ? finalHoldSeconds() : intervalSeconds();
+            t += wait + (i == 0 ? firstWaitSeconds() : 0) + Math.max(intervalSeconds(), travel / Math.max(0.01, speed));
             r = to;
         }
         return t;

@@ -35,6 +35,7 @@ public class PGConfig {
     public final ForgeConfigSpec.IntValue brCircleWarnSeconds;
     public final ForgeConfigSpec.DoubleValue brFastSpeed, brStandardSpeed, brSlowSpeed;
     public final ForgeConfigSpec.IntValue brFastFirstWait, brStandardFirstWait, brSlowFirstWait;
+    public final ForgeConfigSpec.IntValue brFastFinalHold, brStandardFinalHold, brSlowFinalHold, brCustomFinalHold;
     public final ForgeConfigSpec.ConfigValue<List<? extends Double>> brFastRatios;
     public final ForgeConfigSpec.ConfigValue<List<? extends Double>> brStandardRatios;
     public final ForgeConfigSpec.ConfigValue<List<? extends Double>> brSlowRatios;
@@ -140,6 +141,7 @@ public class PGConfig {
     public final ForgeConfigSpec.IntValue spotDelayTicks;
     public final ForgeConfigSpec.BooleanValue preciseHitbox;
     public final ForgeConfigSpec.DoubleValue hitboxTolerance;
+    public final ForgeConfigSpec.DoubleValue elevatorCooldownSeconds;
     public final ForgeConfigSpec.DoubleValue quietWalkSpeed, stepVolumeSprint, stepVolumeWalk, stepVolumeQuiet, stepMaterialContrast;
 
     // ── 防彈（所有模式通用） ───────────────────────────────────────────────────
@@ -224,6 +226,11 @@ public class PGConfig {
         brCustomSpeed = builder.comment("自訂方案：圈移動速度上限 = BR 疾跑速度 × 此倍率").defineInRange("custom_speed_factor_v1", 0.6, 0.1, 2.0);
         brCustomFirstWait = builder.comment("自訂方案：開場第一次縮圈前額外多等幾秒").defineInRange("custom_first_wait_seconds_v1", 60, 0, 600);
         brCustomFinal = builder.comment("自訂方案：最後一圈的半徑 = 地圖半徑的幾 %（0 = 縮到一個點）").defineInRange("custom_final_percent_v1", 0, 0, 50);
+        // 決賽圈（計畫書 7 B）：最後一階段縮到半徑 2.5 格後，停留這麼多秒，再縮到 0
+        brFastFinalHold = builder.comment("快速方案：決賽圈（半徑 2.5 格）停留幾秒後再縮到 0").defineInRange("fast_final_hold_seconds_v1", 30, 0, 600);
+        brStandardFinalHold = builder.comment("標準方案：決賽圈停留秒數").defineInRange("standard_final_hold_seconds_v1", 45, 0, 600);
+        brSlowFinalHold = builder.comment("慢速方案：決賽圈停留秒數").defineInRange("slow_final_hold_seconds_v1", 60, 0, 600);
+        brCustomFinalHold = builder.comment("自訂方案：決賽圈停留秒數（大廳可調）").defineInRange("custom_final_hold_seconds_v1", 45, 0, 600);
         brDamageBase = builder.comment("圈外傷害基礎值（HP/秒）。BR 最大血量 100：預設第 1~4 階段每秒 1、2.5、4、5.5")
             .defineInRange("damage_base", 1.0, 0.0, 100.0);
         brDamagePerStage = builder.comment("圈外傷害每階段增加量（HP/秒）。傷害 = 基礎 + 每階段 × 階段索引(0 起算)")
@@ -488,6 +495,7 @@ public class PGConfig {
         autoSprint = builder.comment("按方向鍵（往前）時自動奔跑").define("auto_sprint", true);
         preciseHitbox = builder.comment("精準命中：子彈要打到人物模型（頭、身體、手、腳）才算數，不再是比模型大的方柱").define("precise_hitbox", true);
         hitboxTolerance = builder.comment("精準命中：每個部位往外放寬幾格（護甲厚度、網路延遲；0.06 約 1 像素）").defineInRange("hitbox_tolerance", 0.06, 0.0, 0.5);
+        elevatorCooldownSeconds = builder.comment("電梯方塊：傳送後幾秒內不會再被傳送（計畫書 7 A5）").defineInRange("elevator_cooldown_seconds", 1.0, 0.0, 10.0);
         quietWalkSpeed = builder.comment("靜走速度：一般走路速度的幾倍").defineInRange("quiet_walk_speed", 0.6, 0.1, 1.0);
         stepVolumeSprint = builder.comment("奔跑腳步聲音量倍率（大於 1 也會傳得比較遠；原版 = 1）").defineInRange("step_volume_sprint", 2.0, 0.0, 8.0);
         stepVolumeWalk = builder.comment("一般走路腳步聲音量倍率").defineInRange("step_volume_walk", 1.0, 0.0, 8.0);

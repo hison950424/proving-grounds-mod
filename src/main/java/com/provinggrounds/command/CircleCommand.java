@@ -24,6 +24,7 @@ import java.util.List;
  *   /pg circle set <方案> interval <秒>              每階段的等待時間與最短縮圈時間
  *   /pg circle set <方案> speed <倍率>               圈移動速度上限 = BR 疾跑速度 × 倍率
  *   /pg circle set <方案> first_wait <秒>            開場第一次縮圈前額外多等幾秒
+ *   /pg circle set <方案> final_hold <秒>            決賽圈（半徑 2.5 格）停留幾秒後再縮到 0（計畫書 7 B）
  *   /pg circle reset <方案>                          改回預設值
  */
 public final class CircleCommand {
@@ -42,7 +43,9 @@ public final class CircleCommand {
                 .then(Commands.literal("speed").then(Commands.argument("factor", DoubleArgumentType.doubleArg(0.1, 2.0))
                     .executes(ctx -> { p.speedValue().set(DoubleArgumentType.getDouble(ctx, "factor")); return saved(ctx.getSource(), p, p.speedValue()); })))
                 .then(Commands.literal("first_wait").then(Commands.argument("seconds", IntegerArgumentType.integer(0, 600))
-                    .executes(ctx -> { p.firstWaitValue().set(IntegerArgumentType.getInteger(ctx, "seconds")); return saved(ctx.getSource(), p, p.firstWaitValue()); }))));
+                    .executes(ctx -> { p.firstWaitValue().set(IntegerArgumentType.getInteger(ctx, "seconds")); return saved(ctx.getSource(), p, p.firstWaitValue()); })))
+                .then(Commands.literal("final_hold").then(Commands.argument("seconds", IntegerArgumentType.integer(0, 600))
+                    .executes(ctx -> { p.finalHoldValue().set(IntegerArgumentType.getInteger(ctx, "seconds")); return saved(ctx.getSource(), p, p.finalHoldValue()); }))));
         }
         LiteralArgumentBuilder<CommandSourceStack> reset = Commands.literal("reset");
         for (CirclePreset p : CirclePreset.values()) {
@@ -52,7 +55,8 @@ public final class CircleCommand {
                 p.intervalValue().set(p.intervalValue().getDefault());
                 p.speedValue().set(p.speedValue().getDefault());
                 p.firstWaitValue().set(p.firstWaitValue().getDefault());
-                return saved(ctx.getSource(), p, p.ratiosValue(), p.intervalValue(), p.speedValue(), p.firstWaitValue());
+                p.finalHoldValue().set(p.finalHoldValue().getDefault());
+                return saved(ctx.getSource(), p, p.ratiosValue(), p.intervalValue(), p.speedValue(), p.firstWaitValue(), p.finalHoldValue());
             }));
         }
         dispatcher.register(Commands.literal("pg").then(Commands.literal("circle").requires(s -> s.hasPermission(2))
@@ -95,7 +99,8 @@ public final class CircleCommand {
                 .append(p.ratios().length).append(" 階段 ").append(Arrays.toString(p.ratios()))
                 .append("｜間隔 ").append(p.intervalSeconds()).append(" 秒")
                 .append("｜速度 疾跑×").append(p.speedFactor())
-                .append("｜開場多等 ").append(p.firstWaitSeconds()).append(" 秒");
+                .append("｜開場多等 ").append(p.firstWaitSeconds()).append(" 秒")
+                .append("｜決賽圈（2.5 格）停留 ").append(p.finalHoldSeconds()).append(" 秒");
             if (!radii.isEmpty()) {
                 double min = Double.MAX_VALUE, max = 0;
                 for (double r : radii) { double t = p.estimateSeconds(r); min = Math.min(min, t); max = Math.max(max, t); }
@@ -104,7 +109,7 @@ public final class CircleCommand {
             String line = sb.toString();
             src.sendSuccess(() -> Component.literal(line).withStyle(ChatFormatting.AQUA), false);
         }
-        src.sendSuccess(() -> Component.literal("[PG] 修改：/pg circle set <fast|standard|slow> <ratios|interval|speed|first_wait> <值>；還原：/pg circle reset <方案>")
+        src.sendSuccess(() -> Component.literal("[PG] 修改：/pg circle set <fast|standard|slow> <ratios|interval|speed|first_wait|final_hold> <值>；還原：/pg circle reset <方案>")
             .withStyle(ChatFormatting.GRAY), false);
         return 1;
     }

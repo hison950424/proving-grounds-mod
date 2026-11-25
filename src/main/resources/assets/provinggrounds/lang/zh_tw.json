@@ -84,6 +84,7 @@
   "provinggrounds.hud.flying": "飛行中",
   "provinggrounds.hud.remaining": "剩 %s 秒",
   "provinggrounds.hud.stage": "第 %s / %s 階段",
+  "provinggrounds.hud.final_circle": "決賽圈",
   "provinggrounds.hud.final_zone": "最終圈",
   "provinggrounds.hud.shrinking": "縮圈中 %s",
   "provinggrounds.hud.shrink_in": "%s 後縮圈",

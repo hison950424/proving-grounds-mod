@@ -63,7 +63,8 @@ public final class LobbyManager {
         SET_WEAPON_MODE,    // 管理員：槍械模式（arg = WeaponMode 的順序）
         GOTO_VENUE,         // 自己：傳送到場地（arg = 場地選單的順序）
         SET_GAME_MODE,      // 管理員：選模式（arg = GameManager.GameMode 的順序）
-        SET_TDM_KILLS, SET_TDM_MINUTES, SET_DOM_SCORE, SET_GK_MULTIPLIER // 管理員：對戰設定（arg = 新的值）
+        SET_TDM_KILLS, SET_TDM_MINUTES, SET_DOM_SCORE, SET_GK_MULTIPLIER, // 管理員：對戰設定（arg = 新的值）
+        SET_CIRCLE_HOLD     // 管理員：自訂縮圈的決賽圈停留秒數（計畫書 7 B）
     }
 
     public static final String SPECTATOR_TAG = "pg_spectator";
@@ -102,15 +103,25 @@ public final class LobbyManager {
         v.save();
     }
 
-    /** 自訂縮圈目前的值：階段數、間隔、速度 × 10、開場等待、最後一圈 %。 */
-    private static int[] customCircle() {
+    /**
+     * 自訂縮圈目前的值：階段數、間隔、速度 × 10、開場等待、最後一圈 %、決賽圈停留秒數（計畫書 7 B）、
+     * 以及「目前選的方案」在目前地圖上的預估總秒數（計畫書 7 A6：由伺服器用最新設定算，客戶端的設定副本只在登入時同步，會過期）。
+     */
+    private static int[] customCircle(CirclePreset preset, double mapRadius) {
         try {
             PGConfig c = PGConfig.SERVER;
             return new int[] { c.brCustomStages.get(), c.brCustomInterval.get(), (int) Math.round(c.brCustomSpeed.get() * 10),
-                c.brCustomFirstWait.get(), c.brCustomFinal.get() };
+                c.brCustomFirstWait.get(), c.brCustomFinal.get(), CirclePreset.CUSTOM.finalHoldSeconds(),
+                (int) Math.round(preset.estimateSeconds(mapRadius)) };
         } catch (IllegalStateException e) {
-            return new int[] { 4, 90, 6, 60, 0 };
+            return new int[] { 4, 90, 6, 60, 0, 45, 0 };
         }
+    }
+
+    /** 地圖半徑（預估縮圈時間用；沒有地圖時 400）。 */
+    private static double mapRadius(net.minecraft.server.MinecraftServer server, int map) {
+        MapRegistry.BRMap m = MapRegistry.get(server).getMap(map);
+        return m == null ? 400 : m.radius;
     }
 
     /** 玩家在大廳預選的職業（沒選過 = 自由人）。 */
@@ -321,6 +332,7 @@ public final class LobbyManager {
             case SET_CIRCLE_INTERVAL -> setCustom(PGConfig.SERVER.brCustomInterval, arg, 15, 600);
             case SET_CIRCLE_WAIT -> setCustom(PGConfig.SERVER.brCustomFirstWait, arg, 0, 600);
             case SET_CIRCLE_FINAL -> setCustom(PGConfig.SERVER.brCustomFinal, arg, 0, 50);
+            case SET_CIRCLE_HOLD -> setCustom(PGConfig.SERVER.brCustomFinalHold, arg, 0, 600);
             case SET_CIRCLE_SPEED -> {
                 double v = Math.max(0.1, Math.min(2.0, arg / 10.0));
                 PGConfig.SERVER.brCustomSpeed.set(v);
@@ -540,6 +552,6 @@ public final class LobbyManager {
         return new LobbyStatePacket(GameManager.get().isInLobby(), map, preset.ordinal(), variant.ordinal(),
             teamMode.ordinal(), teamCount, countdownTicks < 0 ? -1 : (countdownTicks + 19) / 20,
             com.provinggrounds.special.SpecialConfig.enabledSafe(), com.provinggrounds.core.BlockProtection.explosionMode(), weaponMode.ordinal(),
-            gameMode.ordinal(), arenaSettings(), customCircle(), players);
+            gameMode.ordinal(), arenaSettings(), customCircle(preset, mapRadius(server, map)), players);
     }
 }

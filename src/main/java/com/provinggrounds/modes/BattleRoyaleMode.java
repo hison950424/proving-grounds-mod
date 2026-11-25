@@ -691,7 +691,7 @@ public class BattleRoyaleMode {
         assert map != null && level != null;
         for (Participant part : participants.values()) discardCarrier(part);
         double maxSpeed = PGConfig.SERVER.brSprintSpeed() * preset.speedFactor(); // 每種模式各自的圈速度上限
-        circle = new Circle(map.centerX, map.centerZ, map.radius, preset.ratios(), preset.intervalSeconds(),
+        circle = new Circle(map.centerX, map.centerZ, map.radius, preset.ratios(), preset.intervalSeconds(), preset.finalHoldSeconds(),
             maxSpeed, level.getRandom());
         circle.addInitialWait(preset.firstWaitSeconds() * 20); // 開場第一次縮圈多等（每種模式各自設定）
         phase = Phase.ACTIVE;
@@ -718,7 +718,9 @@ public class BattleRoyaleMode {
                     airdrops.openWindow(circle.totalStages() - 2, preset.intervalSeconds());
                 }
                 if (circle.finished()) {
-                    broadcast(Component.literal("最終圈已成形。").withStyle(ChatFormatting.RED));
+                    broadcast(Component.literal("圈已縮到 0。").withStyle(ChatFormatting.RED));
+                } else if (circle.inFinal()) {
+                    broadcast(Component.literal(String.format("決賽圈：%d 秒後縮到 0！", circle.secondsLeft())).withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
                 } else {
                     broadcast(Component.literal(String.format("第 %d 階段：%d 秒後開始縮圈。",
                         circle.displayStage(), circle.secondsLeft())).withStyle(ChatFormatting.AQUA));

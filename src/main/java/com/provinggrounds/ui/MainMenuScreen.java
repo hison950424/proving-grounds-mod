@@ -192,7 +192,7 @@ public class MainMenuScreen extends Screen {
             int i = maps.indexOf(map);
             send(LobbyManager.Action.SET_MAP, maps.get((i + 1) % maps.size()).id());
         });
-        y = row(sx, y, sw, "縮圈", preset.displayName + "・約 " + Math.round(estimateMinutes(preset)) + " 分", canEdit,
+        y = row(sx, y, sw, "縮圈", preset.displayName + "・約 " + estimateText(preset, lobby), canEdit,
             () -> send(LobbyManager.Action.SET_PRESET, (preset.ordinal() + 1) % CirclePreset.values().length));
         if (preset == CirclePreset.CUSTOM && lobby != null && lobby.customCircle().length >= 5) {
             // 自訂縮圈（計畫書 6 D2）：－／＋ 調整
@@ -202,6 +202,7 @@ public class MainMenuScreen extends Screen {
             y = stepper(sx, y, sw, "圈速度", "×" + String.format("%.1f", cc[2] / 10.0), canEdit, 1, cc[2], LobbyManager.Action.SET_CIRCLE_SPEED);
             y = stepper(sx, y, sw, "開場等", cc[3] + " 秒", canEdit, 15, cc[3], LobbyManager.Action.SET_CIRCLE_WAIT);
             y = stepper(sx, y, sw, "最後圈", cc[4] + "%", canEdit, 5, cc[4], LobbyManager.Action.SET_CIRCLE_FINAL);
+            if (cc.length >= 6) y = stepper(sx, y, sw, "決賽圈", cc[5] + " 秒", canEdit, 15, cc[5], LobbyManager.Action.SET_CIRCLE_HOLD);
         }
         y = row(sx, y, sw, "玩法", variant.displayName, canEdit,
             () -> send(LobbyManager.Action.SET_VARIANT, (variant.ordinal() + 1) % BattleRoyaleMode.Variant.values().length));
@@ -377,6 +378,13 @@ public class MainMenuScreen extends Screen {
     }
 
     /** 縮圈方案的估計時間（分鐘，以半徑 400 的地圖估算；數值由伺服器設定同步）。 */
+    /** 預估時間：伺服器算好放在 customCircle[6]（計畫書 7 A6，含決賽圈）；舊伺服器沒有時才在客戶端估。 */
+    private static String estimateText(CirclePreset p, @javax.annotation.Nullable com.provinggrounds.network.LobbyStatePacket lobby) {
+        double sec = lobby != null && lobby.customCircle().length >= 7 && lobby.customCircle()[6] > 0
+            ? lobby.customCircle()[6] : estimateMinutes(p) * 60;
+        return sec < 600 ? String.format("%.1f 分", sec / 60.0) : Math.round(sec / 60.0) + " 分";
+    }
+
     private static double estimateMinutes(CirclePreset p) {
         try { return p.estimateSeconds(400) / 60.0; } catch (IllegalStateException e) { return 0; }
     }
