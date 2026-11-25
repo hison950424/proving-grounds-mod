@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-25（v0.30.1 已發佈：隊友藍色、防彈減半、閃光盾 45%、刀子 1.75 格、取消距離減傷；等實測回饋）。
+> 最後更新：2026-11-26（v0.30.1 已發佈；v0.30.2 的修改已提交未發佈；佔點特殊物品裝備交給下一個對話）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -43,6 +43,9 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
+- **未發佈（下一版 v0.30.2）**：標點不被方塊擋住＋顯示在地圖、致盲珠速度 ×2、閃光盾耐久 50、強心劑自傷不擊退、距離減傷兩段、刀打玻璃要冷卻、墓碑重力、近戰傷害平衡（左鍵 20／右鍵 55）。說明在 `docs/NEXT_RELEASE_NOTES.md`，測試在 `docs/TESTING.md` 最上面 L1～L8。都已提交、建置與開發伺服器通過，還沒實測、還沒發佈（發佈前照規則問伺服器與客戶端關了沒）。
+- **下一個要做的**：`docs/PLAN8_DOM_SPECIALS.md`（佔點移除職業、自選三個特殊物品、依強度冷卻與價格、長按 5 輪盤）。裡面列了要先問使用者的問題。
+- 這個對話（「電腦4.0」）做過的重點：計畫書 7 全部（v0.29.0）、標點（X，近戰改 Y）、防彈只算被打中部位（`mixin/ArmorAbsorbMixin`＋`events/ArmorEvents`，防彈率已減半）、一行匯入地圖（`/pg map import auto`）、移除跑酷方塊（`events/LegacyCleanup` 清排行榜）、子彈穿透方塊（改伺服器與客戶端 `tacz/immersive_ballistic/data/tacz/tags/blocks/bullet_ignore.json`，原檔備份 `C:\mcdatapackackupsullet_ignore_20261125`）、隊友一律藍色（`ui/ClientTeamColors`）、刀子距離 1.75（`events/MeleeReach`）、下拉選單（`ui/Dropdown`）。
 - **計畫書 7（`docs/PLAN7.md`，使用者手機端寫的第七份）**：A1～A8、B、C1～C11、D、E、F、G 全部完成並提交，建置與開發伺服器啟動通過（**都還沒在真正客戶端、多人實測**）。每項的做法、與計畫書不同的地方都寫在 PLAN7.md 最後的「電腦端進度紀錄」。發佈說明 `docs/NEXT_RELEASE_NOTES.md`、測試步驟 `docs/TESTING.md` 最上面已寫好。網路版本 23。墓碑畫面沒有套用 A4 的位置設定（回報裡說明）。
 - **計畫書 6（`docs/PLAN6.md`）**：A1～A21、B、C、D、E 全部完成並提交，建置與開發伺服器啟動通過（**都還沒在真正客戶端實測**）。發佈說明 `docs/NEXT_RELEASE_NOTES.md`、測試步驟 `docs/TESTING.md` 最上面已寫好。A22 已移除 variantbarrels（jar 在伺服器與客戶端的 mods-backup），v0.28.0 已發佈，等使用者實測回饋。
 - v0.27.0 已發佈（比賽中調 HUD、子彈彈道、降落傘繩、圈外受傷聲、炸毀方塊開關、補品互換——互換已在計畫書 6 A2 拿掉）。
