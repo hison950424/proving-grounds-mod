@@ -822,18 +822,13 @@ public class BattleRoyaleMode {
         part.altarTicks = 0;
         part.altarTarget = null;
 
-        victim.stopUsingItem();
-        victim.closeContainer();
-        victim.setSprinting(false);
-        victim.clearFire();
         // 強心劑效果中倒地（計畫書 7 C10）：倒地後前 5 秒（不超過強心劑剩下的時間）可以使用任何物品
         var stim = victim.getEffect(com.provinggrounds.special.SpecialRegistry.ADRENALINE.get());
         if (stim != null) {
             int free = Math.min(stim.getDuration(), com.provinggrounds.special.SpecialConfig.ticks(com.provinggrounds.special.SpecialConfig.get().stimDownedFreeSeconds));
             if (free > 0) com.provinggrounds.special.Engines.effect(victim, com.provinggrounds.special.SpecialRegistry.STIM_FREE.get(), free, 0);
         }
-        victim.setHealth((float) Math.min(c.brDownedHealth.get(), victim.getMaxHealth()));
-        BRMovement.applyDowned(victim);
+        com.provinggrounds.core.DownedCore.applyDowned(victim, c.brDownedHealth.get().floatValue()); // 共用的倒地效果（計畫書 7 E）
         if (c.brDownedStyle.get() == PGConfig.DownedStyle.SIT) {
             sitDown(victim, part);
         } else {
@@ -880,8 +875,7 @@ public class BattleRoyaleMode {
         Entity seat = part.seat;
         part.seat = null;
         if (p != null) {
-            p.setForcedPose(null);
-            BRMovement.removeDowned(p);
+            com.provinggrounds.core.DownedCore.clearDowned(p);
             if (seat != null && p.getVehicle() == seat) p.stopRiding();
         }
         if (seat != null) seat.discard();
@@ -1040,12 +1034,7 @@ public class BattleRoyaleMode {
 
     /** 準心是否對著這個實體：視線射線碰到它的碰撞箱（稍微放大，倒地的人比較好瞄），中間沒有方塊擋住。 */
     private boolean aimsAtEntity(ServerPlayer p, Entity target, double range) {
-        Vec3 eye = p.getEyePosition(), end = eye.add(p.getLookAngle().scale(range + 1.5));
-        java.util.Optional<Vec3> hit = target.getBoundingBox().inflate(0.35).clip(eye, end);
-        if (hit.isEmpty()) return false;
-        net.minecraft.world.phys.BlockHitResult bh = p.level().clip(new net.minecraft.world.level.ClipContext(eye, hit.get(),
-            net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, p));
-        return bh.getType() == net.minecraft.world.phys.HitResult.Type.MISS;
+        return com.provinggrounds.core.DownedCore.aimsAtEntity(p, target, range); // 共用（計畫書 7 E）
     }
 
     /** 準心指著的祭壇（下半部位置）；沒有指著祭壇回傳 null。 */

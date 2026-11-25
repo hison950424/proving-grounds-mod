@@ -46,6 +46,7 @@ public record LobbyStatePacket(
         buf.writeVarInt(arena.tdmMinutes());
         buf.writeVarInt(arena.domScore());
         buf.writeVarInt(arena.gkMultiplier());
+        buf.writeBoolean(arena.downed());
         buf.writeVarIntArray(customCircle);
         buf.writeVarInt(players.size());
         for (Entry e : players) {
@@ -66,7 +67,7 @@ public record LobbyStatePacket(
         int blockDamage = buf.readVarInt();
         int weapon = buf.readVarInt();
         int gameMode = buf.readVarInt();
-        var arena = new com.provinggrounds.modes.arena.ArenaManager.Settings(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
+        var arena = new com.provinggrounds.modes.arena.ArenaManager.Settings(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean());
         int[] customCircle = buf.readVarIntArray(8);
         int n = Math.min(buf.readVarInt(), 1000);
         List<Entry> players = new ArrayList<>(n);

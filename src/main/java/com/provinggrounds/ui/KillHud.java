@@ -127,7 +127,7 @@ public final class KillHud {
             int alpha = (int) (255 * (age < FEED_MS - 800 ? 1f : (FEED_MS - age) / 800f));
             if (alpha < 8) continue;
             int a = alpha << 24;
-            String hs = d.headshot() ? " ◎" : "";
+            String hs = (d.headshot() ? " ◎" : "") + (d.knock() ? " 擊倒" : "");
             boolean wall = d.wallbang() && PGClientConfig.CLIENT.killIconWallbang.get();
             int kw = font.width(d.killer()), vw = font.width(d.victim() + hs);
             int iconW = (d.weapon().isEmpty() ? 6 : 20) + (wall ? 11 : 0);
@@ -141,7 +141,7 @@ public final class KillHud {
             if (wall) brick(g, x + (d.weapon().isEmpty() ? 6 : 18), ly + 2, a | 0x60D0FF); // 武器圖示旁的小牆
             x += iconW;
             g.drawString(font, d.victim(), x, ly + 3, a | d.victimColor(), true);
-            if (!hs.isEmpty()) g.drawString(font, hs, x + font.width(d.victim()), ly + 3, a | 0xFFD040, true);
+            if (!hs.isEmpty()) g.drawString(font, hs, x + font.width(d.victim()), ly + 3, a | (d.knock() ? 0xC0C0C0 : 0xFFD040), true);
             ly += 17;
         }
         g.pose().popPose();

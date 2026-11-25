@@ -425,7 +425,7 @@ def main():
     effects = {"concussion": ("star", (190, 190, 190)), "cloak": ("cloak", (128, 128, 192)), "adrenaline": ("syringe", (224, 64, 64)),
                "silent": ("boots", (64, 64, 96)), "shield_bubble": ("ring", (96, 192, 255)), "bubble_speed": ("ring", (96, 192, 255)),
                "zone_shelter": ("ring", (192, 240, 192)), "gassed": ("orb", (96, 192, 32)), "totem_held": ("totem", (240, 208, 64)),
-               "brainwash": ("brain", (192, 64, 192)), "stim_free": ("syringe", (224, 64, 64)), "rooted": ("orb", (80, 224, 176))}
+               "brainwash": ("brain", (192, 64, 192)), "downed": ("person", (160, 40, 40)), "stim_free": ("syringe", (224, 64, 64)), "rooted": ("orb", (80, 224, 176))}
     for name, (shape, rgb) in effects.items():
         rows = [[(0, 0, 0, 0)] * 18] + [[(0, 0, 0, 0)] + r + [(0, 0, 0, 0)] for r in render(shape, rgb)] + [[(0, 0, 0, 0)] * 18]
         png(os.path.join(ROOT, "resources", "assets", "provinggrounds", "textures", "mob_effect", name + ".png"), rows, 18)

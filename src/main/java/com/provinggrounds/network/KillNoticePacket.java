@@ -16,13 +16,15 @@ import java.util.function.Supplier;
 public record KillNoticePacket(boolean feed, boolean mine, String killer, int killerColor, String victim, int victimColor,
                                ItemStack weapon, int flags, int streak) {
 
-    public static final int HEADSHOT = 1, WALLBANG = 2;
+    public static final int HEADSHOT = 1, WALLBANG = 2, KNOCK = 4; // KNOCK：團隊模式倒地的「擊倒」（計畫書 7 E）
 
     public static int flags(boolean headshot, boolean wallbang) { return (headshot ? HEADSHOT : 0) | (wallbang ? WALLBANG : 0); }
 
     public boolean headshot() { return (flags & HEADSHOT) != 0; }
 
     public boolean wallbang() { return (flags & WALLBANG) != 0; }
+
+    public boolean knock() { return (flags & KNOCK) != 0; }
 
     public void encode(FriendlyByteBuf buf) {
         buf.writeBoolean(feed);

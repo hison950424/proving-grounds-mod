@@ -84,7 +84,17 @@ public final class ProneManager {
 
     /** 新登入的玩家要知道誰正在趴著。 */
     public static void onLogin(ServerPlayer p) {
-        PGNetwork.sendTo(p, new ProneSyncPacket(new ArrayList<>(PRONE)));
+        PGNetwork.sendTo(p, new ProneSyncPacket(syncList()));
+    }
+
+    /** 團隊模式倒地有變（計畫書 7 E）：下一 tick 重新同步趴下名單。 */
+    public static void markDirty() { dirty = true; }
+
+    /** 同步給客戶端的趴下名單：自己趴下的人＋團隊模式倒地的人。 */
+    private static List<UUID> syncList() {
+        List<UUID> out = new ArrayList<>(PRONE);
+        for (UUID id : com.provinggrounds.modes.arena.ArenaManager.downedIds()) if (!out.contains(id)) out.add(id);
+        return out;
     }
 
     public static void tick(MinecraftServer server) {
@@ -102,7 +112,7 @@ public final class ProneManager {
         }
         if (dirty) {
             dirty = false;
-            PGNetwork.sendToAll(new ProneSyncPacket(new ArrayList<>(PRONE)));
+            PGNetwork.sendToAll(new ProneSyncPacket(syncList()));
         }
     }
 

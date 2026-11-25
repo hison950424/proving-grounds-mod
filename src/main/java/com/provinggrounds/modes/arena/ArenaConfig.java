@@ -18,6 +18,7 @@ public final class ArenaConfig {
     // 共用
     public final ForgeConfigSpec.ConfigValue<String> redSpawn, blueSpawn;
     public final ForgeConfigSpec.ConfigValue<List<? extends String>> barriers, supplyChests;
+    public final ForgeConfigSpec.BooleanValue downedDefault;
     public final ForgeConfigSpec.IntValue baseRadius, startMoney, transferCooldown, endSeconds;
     public final ForgeConfigSpec.ConfigValue<String> ammoBox;
     public final ForgeConfigSpec.BooleanValue antiCamp, antiCampNoFire;
@@ -43,6 +44,7 @@ public final class ArenaConfig {
 
     public ArenaConfig(ForgeConfigSpec.Builder b) {
         b.comment("團隊死鬥、佔點、槍王之王（預設值照舊版資料包）").push("arena");
+        downedDefault = b.comment("團隊模式（團隊死鬥、佔點、槍王之王）的倒地預設值（大廳可以切換；計畫書 7 E）").define("downed_enabled_v1", false);
         redSpawn = b.comment("紅隊重生點（x y z）").define("red_spawn", "201.18 14 -87.2");
         blueSpawn = b.comment("藍隊重生點（x y z）").define("blue_spawn", "121.57 14 -7.56");
         barriers = b.comment("基地出口的屏障（x1 y1 z1 x2 y2 z2）。佔點準備階段封住，戰鬥開始拆掉；團隊死鬥開局拆掉")

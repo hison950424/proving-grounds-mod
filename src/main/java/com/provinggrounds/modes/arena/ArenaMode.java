@@ -91,6 +91,9 @@ public abstract class ArenaMode {
     protected final Map<UUID, ArenaPlayer> players = new LinkedHashMap<>();
     protected int ticks;
     private int endTicks = -1;
+    /** 團隊模式倒地（計畫書 7 E）：開關在大廳設定，開局時設好。 */
+    public boolean downedEnabled;
+    public final ArenaDowned downed = new ArenaDowned(this);
     private boolean savedKeepInventory, savedImmediateRespawn;
 
     protected ArenaMode(MinecraftServer server) {
@@ -249,6 +252,7 @@ public abstract class ArenaMode {
             return;
         }
         if (ticks % 20 == 0) removeTimedOut();
+        if (downedEnabled) downed.tick();
         for (ServerPlayer p : online()) {
             ArenaPlayer ap = players.get(p.getUUID());
             if (ap.respawnAt > 0) {
@@ -683,6 +687,7 @@ public abstract class ArenaMode {
         GameRules rules = server.getGameRules();
         rules.getRule(GameRules.RULE_KEEPINVENTORY).set(savedKeepInventory, server);
         rules.getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(savedImmediateRespawn, server);
+        downed.clearAll();
         onFinish();
         com.provinggrounds.data.BlockLedger.endMatch(server); // 場地方塊還原
 

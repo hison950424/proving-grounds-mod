@@ -32,8 +32,10 @@ public final class BRDowned {
         if (!(e instanceof Player p)) return false;
         if (p.level().isClientSide) {
             // 客戶端只知道「自己」的狀態，其他玩家一律交給伺服器判斷
-            return p.isLocalPlayer() && ClientBRState.get().selfState() == ClientBRState.SELF_DOWNED;
+            // 團隊模式倒地（計畫書 7 E）：自己身上有「倒地」效果
+            return p.isLocalPlayer() && (ClientBRState.get().selfState() == ClientBRState.SELF_DOWNED
+                || p.hasEffect(com.provinggrounds.special.SpecialRegistry.DOWNED_MARK.get()));
         }
-        return BattleRoyaleMode.get().isDowned(p.getUUID());
+        return BattleRoyaleMode.get().isDowned(p.getUUID()) || com.provinggrounds.modes.arena.ArenaManager.isDowned(p.getUUID());
     }
 }

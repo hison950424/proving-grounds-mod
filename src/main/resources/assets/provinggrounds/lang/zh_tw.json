@@ -221,6 +221,7 @@
   "effect.provinggrounds.totem_held": "不死圖騰",
   "effect.provinggrounds.brainwash": "洗腦",
   "effect.provinggrounds.stim_free": "強心劑：倒地可行動",
+  "effect.provinggrounds.downed": "倒地",
   "effect.provinggrounds.rooted": "定身",
   "entity.provinggrounds.mine": "地雷",
   "entity.provinggrounds.decoy": "殘影分身",

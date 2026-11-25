@@ -310,7 +310,7 @@ public class MainMenuScreen extends Screen {
 
     /** 團隊死鬥／佔點／槍王之王的設定列（值左右各一個 －／＋）。 */
     private int arenaRows(int sx, int y, int sw, GameManager.GameMode gm, @Nullable LobbyStatePacket lobby, boolean canEdit, LobbyManager.TeamMode teamMode) {
-        var a = lobby != null ? lobby.arena() : new com.provinggrounds.modes.arena.ArenaManager.Settings(100, 10, 1000, 1);
+        var a = lobby != null ? lobby.arena() : new com.provinggrounds.modes.arena.ArenaManager.Settings(100, 10, 1000, 1, false);
         y = row(sx, y, sw, "模式", Tr.t(gm == GameManager.GameMode.TDM ? "mode.tdm" : gm == GameManager.GameMode.DOM ? "mode.dom" : "mode.gk"), false, () -> {});
         switch (gm) {
             case TDM -> {
@@ -321,6 +321,8 @@ public class MainMenuScreen extends Screen {
             case GK -> y = stepper(sx, y, sw, "擊殺倍率", "×" + a.gkMultiplier(), canEdit, 1, a.gkMultiplier(), LobbyManager.Action.SET_GK_MULTIPLIER);
             default -> {}
         }
+        boolean downedOn = a.downed(); // 計畫書 7 E：團隊模式倒地（只有管理員能改，預設關）
+        y = row(sx, y, sw, "倒地", downedOn ? "開" : "關", canEdit, () -> send(LobbyManager.Action.SET_ARENA_DOWNED, downedOn ? 0 : 1));
         boolean special = lobby == null || lobby.special(); // 特殊物品模式：擊殺敵人掉落特殊物品（商店不賣）
         y = row(sx, y, sw, "特殊物品", special ? "開" : "關", canEdit, () -> send(LobbyManager.Action.SET_SPECIAL, special ? 0 : 1));
         if (gm != GameManager.GameMode.GK) {

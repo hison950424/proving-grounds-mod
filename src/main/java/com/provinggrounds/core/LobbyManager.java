@@ -64,7 +64,8 @@ public final class LobbyManager {
         GOTO_VENUE,         // 自己：傳送到場地（arg = 場地選單的順序）
         SET_GAME_MODE,      // 管理員：選模式（arg = GameManager.GameMode 的順序）
         SET_TDM_KILLS, SET_TDM_MINUTES, SET_DOM_SCORE, SET_GK_MULTIPLIER, // 管理員：對戰設定（arg = 新的值）
-        SET_CIRCLE_HOLD     // 管理員：自訂縮圈的決賽圈停留秒數（計畫書 7 B）
+        SET_CIRCLE_HOLD,    // 管理員：自訂縮圈的決賽圈停留秒數（計畫書 7 B）
+        SET_ARENA_DOWNED    // 管理員：團隊模式倒地開（arg 1）／關（arg 0）（計畫書 7 E）
     }
 
     public static final String SPECTATOR_TAG = "pg_spectator";
@@ -87,11 +88,15 @@ public final class LobbyManager {
     public GameManager.GameMode gameMode() { return gameMode; }
 
     /** 團隊死鬥／佔點／槍王之王的設定（沒調過就用伺服器設定的預設值）。 */
+    /** 團隊模式倒地開關（計畫書 7 E；null = 用設定檔的預設值）。 */
+    @Nullable private Boolean arenaDowned;
+
     public com.provinggrounds.modes.arena.ArenaManager.Settings arenaSettings() {
         var c = PGConfig.SERVER.arena;
         return new com.provinggrounds.modes.arena.ArenaManager.Settings(
             tdmKills > 0 ? tdmKills : c.tdmKills.get(), tdmMinutes > 0 ? tdmMinutes : c.tdmMinutes.get(),
-            domScore > 0 ? domScore : c.domScore.get(), gkMultiplier > 0 ? gkMultiplier : c.gkMultiplier.get());
+            domScore > 0 ? domScore : c.domScore.get(), gkMultiplier > 0 ? gkMultiplier : c.gkMultiplier.get(),
+            arenaDowned != null ? arenaDowned : c.downedDefault.get());
     }
 
     /** 槍械模式（這一場只出某一類的槍）。 */
@@ -365,6 +370,7 @@ public final class LobbyManager {
             case SET_TDM_MINUTES -> tdmMinutes = Math.max(1, Math.min(120, arg));
             case SET_DOM_SCORE -> domScore = Math.max(100, Math.min(100_000, arg));
             case SET_GK_MULTIPLIER -> gkMultiplier = Math.max(1, Math.min(20, arg));
+            case SET_ARENA_DOWNED -> arenaDowned = arg != 0;
             case SET_TEAM_MODE -> {
                 TeamMode[] all = TeamMode.values();
                 if (arg < 0 || arg >= all.length) return false;

@@ -28,7 +28,33 @@ import java.util.UUID;
 public final class ArenaManager {
 
     /** 大廳選的對戰設定。 */
-    public record Settings(int tdmKills, int tdmMinutes, int domScore, int gkMultiplier) {}
+    /** downed：團隊模式倒地開關（計畫書 7 E，大廳設定，預設關）。 */
+    public record Settings(int tdmKills, int tdmMinutes, int domScore, int gkMultiplier, boolean downed) {}
+
+    /** 團隊模式倒地中（倒地開關開著時）。 */
+    public static boolean isDowned(java.util.UUID id) {
+        ArenaMode m = current;
+        return m != null && m.downedEnabled && m.downed.isDowned(id);
+    }
+
+    public static java.util.Set<java.util.UUID> downedIds() {
+        ArenaMode m = current;
+        return m != null && m.downedEnabled ? m.downed.ids() : java.util.Set.of();
+    }
+
+    /** F 鍵：扶團隊模式倒地的隊友。 */
+    public static boolean startReviveByKey(ServerPlayer helper, @javax.annotation.Nullable net.minecraft.world.entity.Entity looked) {
+        ArenaMode m = current;
+        return m != null && m.downedEnabled && !m.isEnding() && m.downed.startReviveByKey(helper, looked);
+    }
+
+    /** 致命傷：倒地開關開著、有站著的隊友 → 改成倒地（取消這次死亡）。比一般死亡處理先跑。 */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void onLethal(LivingDeathEvent event) {
+        ArenaMode m = current;
+        if (m == null || !m.downedEnabled || m.isEnding() || event.isCanceled() || !(event.getEntity() instanceof ServerPlayer victim)) return;
+        if (m.downed.onLethal(victim, event.getSource())) event.setCanceled(true);
+    }
 
     @Nullable private static ArenaMode current;
 
@@ -53,6 +79,7 @@ public final class ArenaManager {
             case GK -> new GkMode(server, s.gkMultiplier());
             default -> null;
         };
+        if (m != null) m.downedEnabled = s.downed(); // 計畫書 7 E：團隊模式倒地開關
         if (m == null) return "不支援的模式：" + mode;
         // 任何模式 1 個人就能開始（方便測試）
         current = m;
@@ -83,7 +110,7 @@ public final class ArenaManager {
 
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
-        if (current != null && event.getEntity() instanceof ServerPlayer p) current.handleLogout(p);
+        if (current != null && event.getEntity() instanceof ServerPlayer p) { current.downed.onLogout(p); current.handleLogout(p); }
     }
 
     /** 重生保護：被保護的人不會受傷，也不能攻擊別人（計畫書 5 的 H2）。 */

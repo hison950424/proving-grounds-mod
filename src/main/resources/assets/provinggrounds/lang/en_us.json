@@ -221,6 +221,7 @@
   "effect.provinggrounds.totem_held": "Totem",
   "effect.provinggrounds.brainwash": "Brainwashed",
   "effect.provinggrounds.stim_free": "Stimulant: Act While Downed",
+  "effect.provinggrounds.downed": "Downed",
   "effect.provinggrounds.rooted": "Rooted",
   "entity.provinggrounds.mine": "Mine",
   "entity.provinggrounds.decoy": "Decoy",

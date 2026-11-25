@@ -56,6 +56,7 @@ public final class InteractEvents {
         Entity looked = entityId >= 0 ? p.level().getEntity(entityId) : null;
         BattleRoyaleMode br = BattleRoyaleMode.get();
         if (br.startReviveByKey(p, looked, !interacted)) return;
+        if (com.provinggrounds.modes.arena.ArenaManager.startReviveByKey(p, looked)) return; // 團隊模式倒地（計畫書 7 E）
         if (!interacted) br.startAltarByKey(p);
     }
 
