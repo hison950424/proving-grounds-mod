@@ -215,3 +215,4 @@
 - G 測試指令：`/pg debug body spawn <玩家>`（模擬掉線：留分身、玩家變旁觀，模式把他當成離線）、`/pg debug body return <玩家>`（模擬回歸）、`/pg debug body kill <玩家>`（擊殺分身；下指令的人當擊殺者）。
 - 使用者回饋（2026-11-25）：墓碑畫面改成左自己、右墓碑（TombstoneMenu／TombstoneScreen 重新排版，自己那側加 ChestExtraSlots）。
 - 使用者回饋（2026-11-25）：穿牆擊殺標記整個拿掉（F 章的程式、設定、顯示都刪了）。子彈穿透：伺服器沒裝 TACZ Tweaks，immersive_ballistic 的 bullet_interactions 沒作用；真正原因是它把 `tacz:bullet_ignore` 標籤用 replace:true 清空（TACZ 預設有鐵柵欄、柵欄、柵欄門、樹葉）→ 改成鐵柵欄、#minecraft:leaves、#minecraft:wooden_doors（伺服器與 Prism 客戶端的 tacz/immersive_ballistic 都改，原檔備份在 C:\mcdatapackackupsullet_ignore_20261125）。柵欄、柵欄門沒有加回去（使用者沒要求）。大廳與 HUD 介面設定的循環按鈕改成下拉選單（`ui/Dropdown`）。
+- 使用者回饋（2026-11-25）：子彈穿透清單再加 #minecraft:wooden_trapdoors、梯子、鐵鍊（柵欄、柵欄門、鐵門不加）。
