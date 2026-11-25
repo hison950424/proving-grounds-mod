@@ -33,7 +33,7 @@ import java.util.Map;
  *   - 只處理「一般部分」，穿甲部分照樣全額打進去 → 穿甲率越高的槍，防彈越沒用。
  *   - 被打中的部位（Hitbox.armorSlotHit）：頭 → 頭盔、身體與手 → 胸甲、腳上半 → 護腿、腳下 1/3 → 靴子。
  *     判斷不出來時：爆頭 → 頭盔，其他 → 胸甲。
- *   - 減傷只看那一件：先減該材質的防彈比例（bulletproof_*），再用那一件自己的護甲值與韌性算原版護甲減傷。
+ *   - 減傷只看那一件：減該材質的防彈比例（bulletproof_*）。bullet_ignores_vanilla_armor 關掉時，才再用那一件自己的護甲值算原版減傷。
  *     原版「全身護甲加總」的減傷與四件一起扣耐久，對子彈不再套用（mixin/ArmorAbsorbMixin）。
  *   - 耐久只扣那一件（跟原版一樣：每 4 點傷害扣 1，至少 1）。
  *   - 爆頭倍率已經包含在傷害裡，防彈是在爆頭倍率之後才減。
@@ -82,7 +82,9 @@ public class ArmorEvents {
         if (!(piece.getItem() instanceof ArmorItem armor)) return; // 那個部位沒穿：不減傷
         float amount = event.getAmount();
         float reduced = (float) (amount * (1.0 - fullSetReduction(armor.getMaterial(), cfg)));
-        reduced = net.minecraft.world.damagesource.CombatRules.getDamageAfterAbsorb(reduced, armor.getDefense(), armor.getToughness());
+        if (!cfg.bulletIgnoresVanillaArmor.get()) { // 預設 true：子彈只算防彈率，不吃原版護甲值
+            reduced = net.minecraft.world.damagesource.CombatRules.getDamageAfterAbsorb(reduced, armor.getDefense(), armor.getToughness());
+        }
         event.setAmount(Math.max(0, reduced));
         // 耐久只扣被打中的那一件
         if (!piece.isEmpty() && amount > 0) {
