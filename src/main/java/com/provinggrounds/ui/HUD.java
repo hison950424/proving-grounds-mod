@@ -253,8 +253,7 @@ public final class HUD {
             String sep = d.knock()
                 ? (d.killer().isEmpty() ? Tr.t("hud.feed.downed") + " " : " " + Tr.t("hud.feed.knock") + " ")
                 : (d.killer().isEmpty() ? "☠ " : "  ▸  ");
-            // 計畫書 7 F：爆頭 ◎、穿牆 ▦（客戶端設定 kill_icon_wallbang 可以關）
-            String marks = (d.headshot() ? " ◎" : "") + (d.wallbang() && com.provinggrounds.config.PGClientConfig.CLIENT.killIconWallbang.get() ? " ▦" : "");
+            String marks = d.headshot() ? " ◎" : ""; // 爆頭
             int wKiller = font.width(d.killer());
             int wSep = font.width(sep);
             int wVictim = font.width(d.victim() + marks);
@@ -269,7 +268,7 @@ public final class HUD {
             g.drawString(font, sep, tx, y + 3, withAlpha(TEXT_DIM, alpha), false);
             tx += wSep;
             g.drawString(font, d.victim(), tx, y + 3, withAlpha(0xFF000000 | d.victimColor(), alpha), false);
-            if (!marks.isEmpty()) g.drawString(font, marks, tx + font.width(d.victim()), y + 3, withAlpha(d.wallbang() ? 0xFF60D0FF : 0xFFFFD040, alpha), false);
+            if (!marks.isEmpty()) g.drawString(font, marks, tx + font.width(d.victim()), y + 3, withAlpha(0xFFFFD040, alpha), false);
             y += 16;
         }
     }

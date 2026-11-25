@@ -11,18 +11,16 @@ import java.util.function.Supplier;
  * 目的: 伺服器 → 客戶端。擊殺提示（計畫書 5 的 E3）。
  *   feed = true：加進右上角擊殺紀錄（團隊死鬥／佔點／槍王之王、迷你死鬥；大逃殺有自己的擊殺資訊）。
  *   mine = true：收到的人就是擊殺者 → 準星下方彈出小圖示＋擊殺音效（連殺數越高音越高，爆頭另一組音）。
- *   flags（計畫書 7 F，1 byte 位元旗標，好擴充）：HEADSHOT = 爆頭、WALLBANG = 穿牆。
+ *   flags（1 byte 位元旗標，好擴充）：HEADSHOT = 爆頭、KNOCK = 擊倒（團隊模式倒地）。穿牆標記已依使用者要求拿掉（位元 2 保留不用）。
  */
 public record KillNoticePacket(boolean feed, boolean mine, String killer, int killerColor, String victim, int victimColor,
                                ItemStack weapon, int flags, int streak) {
 
-    public static final int HEADSHOT = 1, WALLBANG = 2, KNOCK = 4; // KNOCK：團隊模式倒地的「擊倒」（計畫書 7 E）
+    public static final int HEADSHOT = 1, KNOCK = 4; // KNOCK：團隊模式倒地的「擊倒」（計畫書 7 E）
 
-    public static int flags(boolean headshot, boolean wallbang) { return (headshot ? HEADSHOT : 0) | (wallbang ? WALLBANG : 0); }
+    public static int flags(boolean headshot) { return headshot ? HEADSHOT : 0; }
 
     public boolean headshot() { return (flags & HEADSHOT) != 0; }
-
-    public boolean wallbang() { return (flags & WALLBANG) != 0; }
 
     public boolean knock() { return (flags & KNOCK) != 0; }
 

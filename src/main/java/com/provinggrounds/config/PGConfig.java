@@ -142,7 +142,6 @@ public class PGConfig {
     public final ForgeConfigSpec.BooleanValue preciseHitbox;
     public final ForgeConfigSpec.DoubleValue hitboxTolerance;
     public final ForgeConfigSpec.DoubleValue elevatorCooldownSeconds;
-    public final ForgeConfigSpec.ConfigValue<List<? extends String>> wallbangPassable;
     public final ForgeConfigSpec.DoubleValue quietWalkSpeed, stepVolumeSprint, stepVolumeWalk, stepVolumeQuiet, stepMaterialContrast;
 
     // ── 防彈（所有模式通用） ───────────────────────────────────────────────────
@@ -496,11 +495,6 @@ public class PGConfig {
         autoSprint = builder.comment("按方向鍵（往前）時自動奔跑").define("auto_sprint", true);
         preciseHitbox = builder.comment("精準命中：子彈要打到人物模型（頭、身體、手、腳）才算數，不再是比模型大的方柱").define("precise_hitbox", true);
         hitboxTolerance = builder.comment("精準命中：每個部位往外放寬幾格（護甲厚度、網路延遲；0.06 約 1 像素）").defineInRange("hitbox_tolerance", 0.06, 0.0, 0.5);
-        wallbangPassable = builder.comment("穿牆擊殺判定（計畫書 7 F）：這些方塊不算「牆」（子彈本來就穿得過）。可以寫方塊 ID 或 #方塊標籤；",
-                "另外一定包含 TACZ 的子彈忽略清單（#tacz:bullet_ignore）。")
-            .defineListAllowEmpty(List.of("wallbang_passable_blocks"), () -> List.of("#forge:glass", "#forge:glass_panes", "minecraft:glass", "minecraft:glass_pane",
-                "#minecraft:leaves", "minecraft:iron_bars", "#minecraft:fences", "#minecraft:fence_gates", "#minecraft:all_signs",
-                "#minecraft:wool_carpets", "minecraft:moss_carpet", "minecraft:snow", "minecraft:cobweb"), o -> o instanceof String);
         elevatorCooldownSeconds = builder.comment("電梯方塊：傳送後幾秒內不會再被傳送（計畫書 7 A5）").defineInRange("elevator_cooldown_seconds", 1.0, 0.0, 10.0);
         quietWalkSpeed = builder.comment("靜走速度：一般走路速度的幾倍").defineInRange("quiet_walk_speed", 0.6, 0.1, 1.0);
         stepVolumeSprint = builder.comment("奔跑腳步聲音量倍率（大於 1 也會傳得比較遠；原版 = 1）").defineInRange("step_volume_sprint", 2.0, 0.0, 8.0);
