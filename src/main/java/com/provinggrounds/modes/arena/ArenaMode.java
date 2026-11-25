@@ -516,6 +516,46 @@ public abstract class ArenaMode {
         return usesShop() && shopOpen() && p.isAlive() && !p.isSpectator() && inBase(p, ap);
     }
 
+    /** 防具套裝（計畫書 7 A8）：材質的商品 ID 前綴與顯示名稱；部位依序是 帽、胸甲、褲、靴。 */
+    public static final String[][] ARMOR_SETS = { { "leather", "皮革" }, { "chainmail", "鎖鏈" }, { "golden", "金" },
+        { "iron", "鐵" }, { "diamond", "鑽石" }, { "netherite", "獄髓" } };
+    public static final String[] ARMOR_PIECES = { "helmet", "chestplate", "leggings", "boots" };
+
+    /** 某個材質在商店裡的四件（沒有的部位是 null）。 */
+    public static ArenaData.ShopItem[] armorSet(int set) {
+        ArenaData.ShopItem[] out = new ArenaData.ShopItem[4];
+        if (set < 0 || set >= ARMOR_SETS.length) return out;
+        for (ArenaData.ShopItem i : ArenaData.shop()) {
+            for (int k = 0; k < 4; k++) if (i.id().equals(ARMOR_SETS[set][0] + "_" + ARMOR_PIECES[k])) out[k] = i;
+        }
+        return out;
+    }
+
+    /** 購買整套：價格 = 四件總和（不打折；自由人八折照舊），每一件照單件購買的規則穿上（舊的放回背包）。 */
+    public void buySet(ServerPlayer p, int set) {
+        ArenaPlayer ap = players.get(p.getUUID());
+        if (ap == null || !usesShop()) return;
+        if (!canShop(p, ap)) { deny(p, "必須在自己的基地內才能購買！"); return; }
+        ArenaData.ShopItem[] pieces = armorSet(set);
+        int total = 0, n = 0;
+        for (ArenaData.ShopItem i : pieces) if (i != null) { total += i.priceFor(ap.cls); n++; }
+        if (n == 0) return;
+        if (ap.money < total) { deny(p, "金錢不足！還差 $" + (total - ap.money)); return; }
+        ap.money -= total;
+        for (ArenaData.ShopItem item : pieces) {
+            if (item == null) continue;
+            ItemStack stack = RespawnKit.parse(item.item() + " " + item.count());
+            if (!(stack.getItem() instanceof ArmorItem a)) { ap.money += item.priceFor(ap.cls); continue; } // 伺服器缺少物品：退錢
+            EquipmentSlot slot = a.getEquipmentSlot();
+            ItemStack old = p.getItemBySlot(slot);
+            p.setItemSlot(slot, stack);
+            if (!old.isEmpty()) give(p, old);
+        }
+        p.sendSystemMessage(Component.literal("[商店] 已購買整套" + ARMOR_SETS[set][1] + "防具（-$" + total + "）").withStyle(ChatFormatting.GREEN));
+        p.playNotifySound(SoundEvents.ARMOR_EQUIP_DIAMOND, SoundSource.MASTER, 1f, 1f);
+        syncHud();
+    }
+
     public void buy(ServerPlayer p, int index) {
         ArenaPlayer ap = players.get(p.getUUID());
         List<ArenaData.ShopItem> shop = ArenaData.shop();

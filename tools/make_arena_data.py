@@ -1,5 +1,6 @@
 """從舊版資料包產生團隊死鬥／佔點／槍王之王用的資料（商店、槍王武器與配件、重生點）。
 用法：python make_arena_data.py <舊版 functions 資料夾> <markers.json> <輸出資料夾>"""
+# 注意（計畫書 7 A7）：重新產生 shop.json 之後要再跑 tools/sort_shop_attachments.py <伺服器 tacz 資料夾>，配件才會分組、依倍率排序。
 import os, re, json, sys
 F, MK, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
 GIVE = re.compile(r'give @s (\S+?)(\{.*\})? (\d+)\s*$')

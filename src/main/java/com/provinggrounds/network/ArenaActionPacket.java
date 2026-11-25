@@ -16,7 +16,7 @@ import java.util.function.Supplier;
  */
 public record ArenaActionPacket(Action action, int arg, UUID target) {
 
-    public enum Action { BUY, SET_CLASS, TRANSFER, OPEN_TRASH }
+    public enum Action { BUY, SET_CLASS, TRANSFER, OPEN_TRASH, BUY_SET } // BUY_SET：arg = 防具材質（ArenaMode.ARMOR_SETS 的順序；計畫書 7 A8）
 
     private static final UUID NONE = new UUID(0, 0);
 
@@ -42,6 +42,7 @@ public record ArenaActionPacket(Action action, int arg, UUID target) {
                 case SET_CLASS -> m.setClass(p, arg);
                 case TRANSFER -> m.transfer(p, target, arg);
                 case OPEN_TRASH -> openTrash(p);
+                case BUY_SET -> m.buySet(p, arg);
             }
         });
         ctx.get().setPacketHandled(true);

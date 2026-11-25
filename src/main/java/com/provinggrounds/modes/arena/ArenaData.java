@@ -24,7 +24,8 @@ import java.util.Map;
 public final class ArenaData {
 
     /** 商店商品。price = 一般價格、free = 自由人價格；item 格式同 /give。 */
-    public record ShopItem(int index, String id, String name, int price, int free, String item, int count, String category) {
+    /** atype：配件的類型（瞄具、槍口…；tools/sort_shop_attachments.py 從槍械包讀出來，計畫書 7 A7）；不是配件時是空字串。 */
+    public record ShopItem(int index, String id, String name, int price, int free, String item, int count, String category, String atype) {
         public int priceFor(ArenaClass c) { return c == ArenaClass.FREELANCER ? free : price; }
     }
 
@@ -90,7 +91,7 @@ public final class ArenaData {
                 JsonObject o = e.getAsJsonObject();
                 items.add(new ShopItem(items.size(), o.get("id").getAsString(), o.get("name").getAsString(),
                     o.get("price").getAsInt(), o.get("free").getAsInt(), o.get("item").getAsString(),
-                    o.get("count").getAsInt(), o.get("cat").getAsString()));
+                    o.get("count").getAsInt(), o.get("cat").getAsString(), o.has("atype") ? o.get("atype").getAsString() : ""));
             }
         }
         // 只留下真的有商品的分類
