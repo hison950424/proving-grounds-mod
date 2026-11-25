@@ -327,7 +327,7 @@ public class BattleRoyaleMode {
         airdrops = new AirdropManager(level);
         loot = new LootSpawner(level, m, LootSpawner.Mode.SPAWN);
         phase = Phase.PREPARING;
-        phaseTicks = PGConfig.SERVER.lobbyCountdownSeconds.get() * 20;
+        phaseTicks = com.provinggrounds.core.LobbyManager.ALL_READY_SECONDS * 20; // 計畫書 7 A3：開局後 10 秒倒數就登機（沒有前置準備階段）
 
         broadcast(Component.literal("▸ 大逃殺").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
             .append(Component.literal(String.format("  地圖 #%d %s｜%s｜%s模式｜%d 人 / %d 隊",

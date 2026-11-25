@@ -182,7 +182,13 @@ public final class LobbyManager {
         // 大廳裡所有參賽者都準備好 → 倒數 10 秒開始；倒數中有人取消準備就停止倒數
         if (GameManager.get().isInLobby()) {
             boolean all = allReady(server);
-            if (all && !wasAllReady && countdownTicks < 0) {
+            if (all && !wasAllReady && countdownTicks < 0 && gameMode == GameManager.GameMode.BATTLE_ROYALE) {
+                // 計畫書 7 A3：大逃殺沒有前置準備階段，全員準備就直接開局，開局後 10 秒倒數登機（倒數中不受傷）
+                broadcastChat(server, Component.literal("[PG] 全員已準備，" + ALL_READY_SECONDS + " 秒後登機！").withStyle(ChatFormatting.GREEN));
+                String error = doStart(server);
+                if (error != null) broadcastChat(server, Component.literal("[PG] 無法開始：" + error).withStyle(ChatFormatting.RED));
+                dirty = true;
+            } else if (all && !wasAllReady && countdownTicks < 0) {
                 countdownTicks = ALL_READY_SECONDS * 20;
                 broadcastChat(server, Component.literal("[PG] 全員已準備，" + ALL_READY_SECONDS + " 秒後開始遊戲！").withStyle(ChatFormatting.GREEN));
                 dirty = true;
@@ -402,13 +408,9 @@ public final class LobbyManager {
                 }
             }
             case START -> {
-                List<String> notReady = notReady(server, sender);
-                if (!notReady.isEmpty()) {
-                    deny(sender, "還有人沒準備：" + String.join("、", notReady) + "。要直接開始請按「強制全員準備」。");
-                    return false;
-                }
-                String error = doStart(server);
-                if (error != null) { deny(sender, error); return false; }
+                // 計畫書 7 A2：移除「開始」按鈕。開始只有兩種方式：全員準備自動開始、管理員「強制所有人準備」
+                deny(sender, "請讓所有人按「準備」，或按「強制所有人準備」。");
+                return false;
             }
             case FORCE_START -> {
                 // 計畫書 6 A20：強制開始改成「強制所有人準備」，接著跟一般全員準備一樣倒數 10 秒

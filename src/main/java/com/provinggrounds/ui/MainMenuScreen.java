@@ -296,12 +296,8 @@ public class MainMenuScreen extends Screen {
                 rebuildWidgets();
             });
             addRenderableWidget(end);
-        } else if (op) {
-            PGButton start = new PGButton(bx + (bw + 8), by, bw, BTN_H, Tr.c("lobby.start"), true, false,
-                () -> send(LobbyManager.Action.START, 0));
-            start.active = canEdit && !counting;
-            addRenderableWidget(start);
         }
+        // 計畫書 7 A2：大廳不再有「開始」按鈕（全員準備自動開始，或管理員按「強制所有人準備」）
         if (op) {
             PGButton force = new PGButton(bx + 2 * (bw + 8), by, bw, BTN_H, Tr.c(counting ? "lobby.cancel_countdown" : "lobby.force_start"), false, false,
                 () -> send(counting ? LobbyManager.Action.CANCEL_COUNTDOWN : LobbyManager.Action.FORCE_START, 0));
