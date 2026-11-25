@@ -50,7 +50,8 @@ import java.util.Set;
  *           殘影分身對使用者與隊友帶淡色輪廓。
  *   - 震盪：視角不受控制地上下左右晃動，快結束時線性減弱。
  *   - 毒氣：視野變模糊（濃霧拉到身邊＋淡綠色薄霧，約 1.5 秒逐漸加深、效果結束後約 2 秒逐漸恢復；不用後處理著色器，避免和優化模組一起時畫面變黑）、
- *           咳嗽（視角先上揚再往下）、失去方向感（每 3～5 秒換一個隨機方向與速度，視角持續慢慢往那邊偏，玩家可以用滑鼠拉回來）。
+ *           咳嗽（視角先上揚再往下）。
+ *   - 洗腦（計畫書 7 C6，原本毒氣彈的失去方向感）：每 3～5 秒換一個隨機方向與速度，視角持續慢慢往那邊偏，玩家可以用滑鼠拉回來。
  *   - 雷達脈衝：一圈往外擴散的環。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
@@ -211,7 +212,7 @@ public final class ClientSpecial {
     }
 
     /**
-     * 失去方向感（毒氣效果期間）：每段 3～5 秒，隨機一個方向（上下左右任意角度）與速度（每秒 10～28 度），
+     * 失去方向感（洗腦效果期間；計畫書 7 C6 從毒氣彈移過來）：每段 3～5 秒，隨機一個方向（上下左右任意角度）與速度（每秒 10～28 度），
      * 視角持續慢慢往那邊偏；一段結束還在毒氣效果中就換新的方向與速度。每一幀依經過時間平滑套用，
      * 只加上偏移量，玩家自己的滑鼠操作照樣有效，可以拉回來。上下的偏移只有左右的一半，避免一直看天或看地。
      */
@@ -223,7 +224,8 @@ public final class ClientSpecial {
         long now = System.nanoTime();
         double dt = lastFrameNanos == 0 ? 0 : Math.min(0.1, (now - lastFrameNanos) / 1e9);
         lastFrameNanos = now;
-        if (p == null || mc.isPaused() || !p.hasEffect(SpecialRegistry.GASSED.get())) { driftLeft = 0; return; }
+        // 計畫書 7 C5／C6：失去方向感從毒氣彈移到洗腦工具（同一套程式）
+        if (p == null || mc.isPaused() || !p.hasEffect(SpecialRegistry.BRAINWASH.get())) { driftLeft = 0; return; }
         if (driftLeft <= 0) {
             var r = p.getRandom();
             driftAngle = r.nextDouble() * Math.PI * 2;
@@ -231,7 +233,8 @@ public final class ClientSpecial {
             driftLeft = 3 + r.nextDouble() * 2;
         }
         driftLeft -= dt;
-        double ramp = Math.min(1, gasLevel * 1.5); // 剛進毒氣時慢慢加強
+        MobEffectInstance bw = p.getEffect(SpecialRegistry.BRAINWASH.get());
+        double ramp = bw == null ? 0 : Math.min(1, (com.provinggrounds.special.NewSpecials.BRAINWASH_TICKS - bw.getDuration()) / 30.0); // 剛被洗腦時約 1.5 秒慢慢加強
         double yaw = Math.cos(driftAngle) * driftSpeed * dt * ramp;
         double pitch = Math.sin(driftAngle) * driftSpeed * 0.5 * dt * ramp;
         float newPitch = (float) (p.getXRot() + pitch);

@@ -22,7 +22,6 @@ public final class SpecialConfig {
     public final ForgeConfigSpec.DoubleValue shockRadius, shockCenterDamage, shockConcussSeconds, shockKnockback;
     public final ForgeConfigSpec.DoubleValue concussStrength;
     public final ForgeConfigSpec.DoubleValue mineTriggerRadius, mineDelaySeconds, mineEffectRadius;
-    public final ForgeConfigSpec.IntValue mineMaxPerPlayer;
     public final ForgeConfigSpec.DoubleValue fakeCrateDamage, fakeCrateGlowSeconds, fakeCrateConcussSeconds;
     public final ForgeConfigSpec.BooleanValue friendlyFire;
 
@@ -41,7 +40,7 @@ public final class SpecialConfig {
     public final ForgeConfigSpec.DoubleValue totemSeconds, totemHeal, totemAbsorption, totemRegenSeconds, totemSoundVolume;
     public final ForgeConfigSpec.DoubleValue bubbleSeconds, bubbleAbsorption, bubbleSpeedBonus, bubbleSpeedSeconds;
     public final ForgeConfigSpec.DoubleValue pearlRange, pearlSeconds, pearlSpeed;
-    public final ForgeConfigSpec.DoubleValue silentSeconds;
+    public final ForgeConfigSpec.DoubleValue silentSeconds, silentBonus, stimSelfDamage, stimDownedFreeSeconds;
     public final ForgeConfigSpec.DoubleValue gasSeconds, gasLingerSeconds, gasPoisonSeconds;
     public final ForgeConfigSpec.DoubleValue selfReviveSeconds;
     public final ForgeConfigSpec.BooleanValue flashShieldHalved;
@@ -49,8 +48,6 @@ public final class SpecialConfig {
     public final ForgeConfigSpec.IntValue armorPlusMaxStacks;
     public final ForgeConfigSpec.DoubleValue shelterSeconds, shelterBonus;
     public final ForgeConfigSpec.DoubleValue radarRange, radarSeconds;
-    public final ForgeConfigSpec.DoubleValue gunshotRange, gunshotSeconds;
-    public final ForgeConfigSpec.ConfigValue<List<? extends String>> gunshotFallbackGuns;
     public final ForgeConfigSpec.DoubleValue decoySeconds, decoyRevealSeconds;
 
     public SpecialConfig(ForgeConfigSpec.Builder b) {
@@ -71,7 +68,6 @@ public final class SpecialConfig {
         mineTriggerRadius = b.comment("地雷：敵人進入幾格內觸發").defineInRange("mine_trigger_radius", 2.0, 0.5, 10.0);
         mineDelaySeconds = b.comment("地雷：觸發後幾秒產生效果").defineInRange("mine_delay_seconds", 0.5, 0.0, 10.0);
         mineEffectRadius = b.comment("地雷：效果半徑（格）").defineInRange("mine_effect_radius", 3.5, 0.5, 20.0);
-        mineMaxPerPlayer = b.comment("每人同時最多幾顆地雷，超過時最舊的消失（占位）").defineInRange("mine_max_per_player", 3, 1, 50);
         fakeCrateDamage = b.comment("假箱：打開的人受到的傷害").defineInRange("fake_crate_damage", 10.0, 0.0, 1000.0);
         fakeCrateGlowSeconds = b.comment("假箱：打開的人發光秒數（全體看得到、不上地圖）").defineInRange("fake_crate_glow_seconds", 5.0, 0.0, 120.0);
         fakeCrateConcussSeconds = b.comment("假箱：打開的人震盪秒數").defineInRange("fake_crate_concuss_seconds", 5.0, 0.0, 120.0);
@@ -82,11 +78,13 @@ public final class SpecialConfig {
         blindRange = b.comment("致盲珠：推進距離（格）").defineInRange("blind_range", 15.0, 1.0, 100.0);
         blindSpeed = b.comment("致盲珠：推進速度（格/秒，占位）").defineInRange("blind_speed", 5.0, 0.5, 50.0);
         blindSeconds = b.comment("致盲珠：致盲秒數").defineInRange("blind_seconds", 5.0, 0.5, 60.0);
-        adrenalineSeconds = b.comment("腎上腺素：持續秒數").defineInRange("adrenaline_seconds", 15.0, 1.0, 120.0);
-        adrenalineBonus = b.comment("腎上腺素：移動速度加成（0.75 = +75%，以 BR 基本速度為基準；不和拿刀疊加）").defineInRange("adrenaline_bonus", 0.75, 0.0, 5.0);
+        adrenalineSeconds = b.comment("強心劑（原腎上腺素）：持續秒數").defineInRange("adrenaline_seconds", 15.0, 1.0, 120.0);
+        adrenalineBonus = b.comment("強心劑：移動速度加成（0.5 = +50%，以 BR 基本速度為基準；不和拿刀疊加；計畫書 7 C10）").defineInRange("adrenaline_bonus_v2", 0.5, 0.0, 5.0);
+        stimSelfDamage = b.comment("強心劑：使用時自己受到的傷害（不會致死，至少留 1 血）").defineInRange("stim_self_damage_v1", 10.0, 0.0, 100.0);
+        stimDownedFreeSeconds = b.comment("強心劑：效果期間倒地時，倒地後前幾秒可以使用任何物品（不超過強心劑剩下的時間）").defineInRange("stim_downed_free_seconds_v1", 5.0, 0.0, 60.0);
         cloakSeconds = b.comment("隱形斗篷：持續秒數").defineInRange("cloak_seconds", 5.0, 1.0, 120.0);
         cloakBonus = b.comment("隱形斗篷：移動速度加成（0.25 = +25%，以 BR 基本速度為基準；可和拿刀疊加）").defineInRange("cloak_bonus", 0.25, 0.0, 5.0);
-        springPower = b.comment("彈簧鞋：衝刺力道（占位，約 8 格）").defineInRange("spring_power", 1.3, 0.1, 10.0);
+        springPower = b.comment("彈簧鞋：衝刺力道（計畫書 7 C4：原本 1.3 約 8 格，×3 約 24 格）").defineInRange("spring_power_v2", 3.9, 0.1, 10.0);
         snowRange = b.comment("臨時雪牆：雪球最遠水平飛行距離（格）").defineInRange("snow_range", 15.0, 1.0, 100.0);
         snowHeight = b.comment("臨時雪牆：雪牆最高幾格").defineInRange("snow_height", 4, 1, 16);
         snowSeconds = b.comment("臨時雪牆：雪塊幾秒後消失").defineInRange("snow_seconds", 15.0, 1.0, 600.0);
@@ -114,6 +112,7 @@ public final class SpecialConfig {
         pearlSeconds = b.comment("傳送珠：最長飛行秒數").defineInRange("pearl_seconds", 15.0, 1.0, 120.0);
         pearlSpeed = b.comment("傳送珠：飛行速度（格/tick，占位）").defineInRange("pearl_speed", 1.2, 0.1, 5.0);
         silentSeconds = b.comment("靜音靴：持續秒數").defineInRange("silent_seconds", 15.0, 1.0, 600.0);
+        silentBonus = b.comment("靜音靴：移動速度加成（1.0 = +100%，以 BR 基本速度為基準；不和拿刀、強心劑疊加，取較大者；計畫書 7 C9）").defineInRange("silent_bonus_v1", 1.0, 0.0, 5.0);
         gasSeconds = b.comment("毒氣彈：毒氣本身持續秒數（占位）").defineInRange("gas_seconds", 10.0, 1.0, 120.0);
         gasLingerSeconds = b.comment("毒氣彈：離開毒氣後效果殘留秒數").defineInRange("gas_linger_seconds", 5.0, 0.0, 120.0);
         gasPoisonSeconds = b.comment("毒氣彈：中毒秒數").defineInRange("gas_poison_seconds", 5.0, 0.0, 120.0);
@@ -126,11 +125,6 @@ public final class SpecialConfig {
         shelterBonus = b.comment("圈外庇護：在圈外時的移動速度加成（0.25 = +25%）").defineInRange("shelter_bonus", 0.25, 0.0, 5.0);
         radarRange = b.comment("雷達脈衝：掃描半徑（格，含高低差）").defineInRange("radar_range", 40.0, 1.0, 500.0);
         radarSeconds = b.comment("雷達脈衝：發光與地圖標點秒數").defineInRange("radar_seconds", 3.0, 0.5, 60.0);
-        gunshotRange = b.comment("假槍聲：最遠距離（格）").defineInRange("gunshot_range", 40.0, 1.0, 200.0);
-        gunshotSeconds = b.comment("假槍聲：持續秒數").defineInRange("gunshot_seconds", 6.0, 0.5, 60.0);
-        gunshotFallbackGuns = b.comment("（已不使用：假槍聲改成一定要拿著槍，用手上那把槍的聲音）")
-            .defineListAllowEmpty(List.of("gunshot_fallback_guns"), () -> List.of("tacz:ak47", "tacz:m4a1", "tacz:hk_mp5a5", "tacz:glock_17"),
-                o -> o instanceof String s && s.contains(":"));
         decoySeconds = b.comment("殘影分身：存在秒數").defineInRange("decoy_seconds", 10.0, 1.0, 120.0);
         decoyRevealSeconds = b.comment("殘影分身：打掉分身的人發光幾秒（所有人都看得到，不上地圖；0 = 不發光）").defineInRange("decoy_reveal_seconds", 3.0, 0.0, 60.0);
         b.pop();

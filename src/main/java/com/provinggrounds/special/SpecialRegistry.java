@@ -57,6 +57,7 @@ public final class SpecialRegistry {
     public static final RegistryObject<MobEffect> GASSED       = effect("gassed", MobEffectCategory.HARMFUL, 0x60C020);
     public static final RegistryObject<MobEffect> TOTEM_HELD   = effect("totem_held", MobEffectCategory.BENEFICIAL, 0xF0D040);
     public static final RegistryObject<MobEffect> BRAINWASH    = effect("brainwash", MobEffectCategory.HARMFUL, 0xC040C0); // 計畫書 6 E1
+    public static final RegistryObject<MobEffect> STIM_FREE    = effect("stim_free", MobEffectCategory.BENEFICIAL, 0xE04040); // 計畫書 7 C10：強心劑倒地後可行動
     public static final RegistryObject<MobEffect> ROOTED       = effect("rooted", MobEffectCategory.HARMFUL, 0x50E0B0);    // 計畫書 6 E2
 
     // ── 實體 ─────────────────────────────────────────────────────────────────

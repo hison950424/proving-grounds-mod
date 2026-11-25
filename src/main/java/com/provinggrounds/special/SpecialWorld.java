@@ -54,7 +54,6 @@ public final class SpecialWorld {
     private record Area(ServerLevel level, Vec3 center, long end, @Nullable UUID owner) {}
     private static final class SnowTrail { Snowball ball; Vec3 start; long lastCol = Long.MIN_VALUE; }
     private record SnowColumn(ServerLevel level, int x, int z, double ballY, long at) {}
-    private static final class Gunfire { ServerLevel level; Vec3 pos; long end; long next; int burst; net.minecraft.world.item.ItemStack gun; Entity anchor; }
 
     private static final Map<UUID, Burn> BURNS = new HashMap<>();
     private static final List<Cloud> BLIND = new ArrayList<>();
@@ -64,7 +63,6 @@ public final class SpecialWorld {
     private static final List<Area> GASES = new ArrayList<>();
     private static final List<SnowTrail> SNOW = new ArrayList<>();
     private static final List<SnowColumn> COLUMNS = new ArrayList<>();
-    private static final List<Gunfire> GUNFIRE = new ArrayList<>();
     private static final Map<UUID, Long> NO_FALL = new HashMap<>();
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -109,32 +107,6 @@ public final class SpecialWorld {
         p.serverLevel().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.SNOWBALL_THROW, SoundSource.PLAYERS, 1f, 0.8f);
     }
 
-    public static void addGunfire(ServerPlayer p, Vec3 at, net.minecraft.world.item.ItemStack gun) {
-        Gunfire g = new Gunfire();
-        g.level = p.serverLevel();
-        g.pos = at;
-        g.end = p.server.getTickCount() + SpecialConfig.ticks(SpecialConfig.get().gunshotSeconds);
-        g.next = p.server.getTickCount() + 3; // 等音源實體送到客戶端再開始播
-        g.gun = gun.copy();
-        // TACZ 的槍聲要綁在一個「活的實體」上播（不是活的實體 TACZ 會直接略過）：
-        // 放一個看不見、沒有碰撞箱的盔甲座（marker）當音源
-        net.minecraft.world.entity.decoration.ArmorStand anchor = new net.minecraft.world.entity.decoration.ArmorStand(
-            net.minecraft.world.entity.EntityType.ARMOR_STAND, g.level);
-        anchor.moveTo(at.x, at.y, at.z);
-        net.minecraft.nbt.CompoundTag marker = new net.minecraft.nbt.CompoundTag();
-        marker.putBoolean("Marker", true);
-        marker.putBoolean("Invisible", true);
-        marker.putBoolean("NoGravity", true);
-        marker.putBoolean("Silent", true);
-        marker.putBoolean("Invulnerable", true);
-        anchor.load(anchor.saveWithoutId(new net.minecraft.nbt.CompoundTag()).merge(marker));
-        anchor.moveTo(at.x, at.y, at.z);
-        anchor.addTag(ANCHOR_TAG);
-        g.level.addFreshEntity(anchor);
-        g.anchor = anchor;
-        GUNFIRE.add(g);
-    }
-
     private static final String ANCHOR_TAG = "pg_special_anchor";
 
     public static void noFallFor(ServerPlayer p, int ticks) {
@@ -157,7 +129,6 @@ public final class SpecialWorld {
         tickSmoke(now);
         tickGas(server, now);
         tickSnow(server, now);
-        tickGunfire(now);
         NewSpecials.tick(server);
         if (now % 20 == 0) {
             NO_FALL.values().removeIf(t -> t < now);
@@ -308,28 +279,6 @@ public final class SpecialWorld {
         if (changed) ledger.setDirty();
     }
 
-    private static void tickGunfire(long now) {
-        for (Iterator<Gunfire> it = GUNFIRE.iterator(); it.hasNext(); ) {
-            Gunfire g = it.next();
-            if (now >= g.end) {
-                if (g.anchor != null) g.anchor.discard();
-                it.remove();
-                continue;
-            }
-            if (now < g.next) continue;
-            RandomSource r = g.level.getRandom();
-            if (!GunCompat.playGunSound(g.anchor, g.gun)) {
-                g.level.playSound(null, g.pos.x, g.pos.y, g.pos.z, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 3f, 0.6f + r.nextFloat() * 0.2f);
-            }
-            g.level.sendParticles(ParticleTypes.SMALL_FLAME, g.pos.x, g.pos.y, g.pos.z, 3, 0.1, 0.1, 0.1, 0.02);
-            g.level.sendParticles(ParticleTypes.SMOKE, g.pos.x, g.pos.y, g.pos.z, 2, 0.1, 0.1, 0.1, 0.01);
-            // 隨機連發節奏：連發 2～6 發（每 2～3 tick 一發），之後停 0.3～1 秒
-            if (g.burst <= 0) g.burst = 2 + r.nextInt(5);
-            g.burst--;
-            g.next = now + (g.burst > 0 ? 2 + r.nextInt(2) : 6 + r.nextInt(15));
-        }
-    }
-
     // ═════════════════════════════════════════════════════════════════════════
     // 假箱
     // ═════════════════════════════════════════════════════════════════════════
@@ -357,8 +306,6 @@ public final class SpecialWorld {
         for (SnowTrail t : SNOW) t.ball.discard();
         SNOW.clear();
         COLUMNS.clear();
-        for (Gunfire g : GUNFIRE) if (g.anchor != null) g.anchor.discard();
-        GUNFIRE.clear();
         NO_FALL.clear();
         GlowManager.clearAll(server);
         KnockbackShield.restoreAll(server);
@@ -398,12 +345,6 @@ public final class SpecialWorld {
     }
 
     /** 每位玩家身上的地雷數（超過上限時移除最舊的）。 */
-    public static void limitMines(ServerLevel level, UUID owner, int max) {
-        List<MineEntity> mine = new ArrayList<>();
-        for (Entity e : level.getAllEntities()) if (e instanceof MineEntity m && owner.equals(m.owner())) mine.add(m);
-        mine.sort(Comparator.comparingInt(m -> -m.tickCount)); // 最舊的（tickCount 最大）排前面
-        while (mine.size() >= max) mine.remove(0).discard();
-    }
 
     // ═════════════════════════════════════════════════════════════════════════
     // 存檔：放到世界裡的雪塊、假箱

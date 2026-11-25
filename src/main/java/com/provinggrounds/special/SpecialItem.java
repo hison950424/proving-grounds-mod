@@ -32,6 +32,31 @@ public class SpecialItem extends Item {
         tooltip.add(Component.translatable("tooltip.provinggrounds.special_use").withStyle(ChatFormatting.DARK_AQUA));
     }
 
+    /** 剩餘使用次數的 NBT（計畫書 7 C11：臨時雪牆、地雷可以用 2 次）。 */
+    public static final String USES_TAG = "pg_uses";
+
+    public static int usesLeft(ItemStack stack) {
+        SpecialType t = typeOf(stack);
+        if (t == null || !t.twoUses()) return 1;
+        return stack.getTag() != null && stack.getTag().contains(USES_TAG) ? Math.max(1, stack.getTag().getInt(USES_TAG)) : 2;
+    }
+
+    @Override
+    public Component getName(ItemStack stack) {
+        Component base = super.getName(stack);
+        if (!type.twoUses()) return base;
+        return base.copy().append(Component.literal(" " + usesLeft(stack) + "／2").withStyle(ChatFormatting.GRAY));
+    }
+
+    @Override
+    public boolean isBarVisible(ItemStack stack) { return type.twoUses() && usesLeft(stack) < 2; }
+
+    @Override
+    public int getBarWidth(ItemStack stack) { return Math.round(13f * usesLeft(stack) / 2f); }
+
+    @Override
+    public int getBarColor(ItemStack stack) { return 0x55FF55; }
+
     @Nullable
     public static SpecialType typeOf(ItemStack stack) {
         return stack.getItem() instanceof SpecialItem s ? s.type : null;

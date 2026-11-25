@@ -826,6 +826,12 @@ public class BattleRoyaleMode {
         victim.closeContainer();
         victim.setSprinting(false);
         victim.clearFire();
+        // 強心劑效果中倒地（計畫書 7 C10）：倒地後前 5 秒（不超過強心劑剩下的時間）可以使用任何物品
+        var stim = victim.getEffect(com.provinggrounds.special.SpecialRegistry.ADRENALINE.get());
+        if (stim != null) {
+            int free = Math.min(stim.getDuration(), com.provinggrounds.special.SpecialConfig.ticks(com.provinggrounds.special.SpecialConfig.get().stimDownedFreeSeconds));
+            if (free > 0) com.provinggrounds.special.Engines.effect(victim, com.provinggrounds.special.SpecialRegistry.STIM_FREE.get(), free, 0);
+        }
         victim.setHealth((float) Math.min(c.brDownedHealth.get(), victim.getMaxHealth()));
         BRMovement.applyDowned(victim);
         if (c.brDownedStyle.get() == PGConfig.DownedStyle.SIT) {

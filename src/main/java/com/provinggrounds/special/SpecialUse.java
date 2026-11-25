@@ -98,6 +98,15 @@ public final class SpecialUse {
         keepItem = false;
         if (!use(p, type)) return;
         LAST_USE.put(p.getUUID(), now);
+        if (type.twoUses()) { // 計畫書 7 C11：可以用 2 次，次數存在物品 NBT
+            int left = SpecialItem.usesLeft(stack) - 1;
+            if (left > 0) {
+                ItemStack rest = stack.copy();
+                rest.getOrCreateTag().putInt(SpecialItem.USES_TAG, left);
+                SpecialSlot.container(p).setItem(0, rest);
+                keepItem = true;
+            }
+        }
         if (!keepItem && (type != SpecialType.FIRST_AID_SHOT || !BattleRoyaleMode.get().isSelfReviving(p.getUUID()))) {
             SpecialSlot.clear(p); // 使用後銷毀（急救針自救要讀條完成才消耗）
         }
@@ -114,7 +123,11 @@ public final class SpecialUse {
         double glow = s.glowSeconds.get();
         switch (type) {
             case BLIND_ORB -> SpecialWorld.addBlindCloud(p);
-            case ADRENALINE -> Engines.effect(p, SpecialRegistry.ADRENALINE.get(), SpecialConfig.ticks(s.adrenalineSeconds), 0);
+            case ADRENALINE -> { // 強心劑（計畫書 7 C10）：自己受 10 傷害（至少留 1 血）、加速
+                float dmg = (float) Math.min(s.stimSelfDamage.get(), p.getHealth() + p.getAbsorptionAmount() - 1);
+                if (dmg > 0) p.hurt(level.damageSources().magic(), dmg);
+                Engines.effect(p, SpecialRegistry.ADRENALINE.get(), SpecialConfig.ticks(s.adrenalineSeconds), 0);
+            }
             case INVIS_CLOAK -> {
                 int t = SpecialConfig.ticks(s.cloakSeconds);
                 p.stopUsingItem();
@@ -181,7 +194,6 @@ public final class SpecialUse {
             }
             case RECON_MINE, LAND_MINE, FIRE_MINE, SHOCK_MINE -> {
                 if (!p.onGround()) { msg(p, "要站在地上才能放地雷"); return false; }
-                SpecialWorld.limitMines(level, p.getUUID(), s.mineMaxPerPlayer.get());
                 level.addFreshEntity(MineEntity.create(level, type, p, p.position()));
                 level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.PLAYERS, 0.6f, 0.8f);
             }
@@ -200,21 +212,14 @@ public final class SpecialUse {
                 if (br.isDowned(p.getUUID())) {
                     if (!br.startSelfRevive(p)) { msg(p, "已經在自救了"); return false; }
                 } else if (!br.instantRevive(p)) {
-                    msg(p, "要在蹲下扶隊友、或自己倒地時才能使用");
-                    return false;
+                    // 計畫書 7 C7：沒倒地、也沒在扶隊友 → 立刻回復 25 血
+                    if (p.getHealth() >= p.getMaxHealth()) { msg(p, "血量已經是滿的"); return false; }
+                    p.heal(25f);
+                    level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.4f, 1.8f);
                 }
             }
             case ARMOR_REPAIR, ARMOR_REPAIR_PLUS -> repairArmor(p, type == SpecialType.ARMOR_REPAIR_PLUS);
             case ZONE_SHELTER -> Engines.effect(p, SpecialRegistry.ZONE_SHELTER.get(), SpecialConfig.ticks(s.shelterSeconds), 0);
-            case FAKE_GUNSHOT -> {
-                ItemStack gun = p.getMainHandItem(); // 用手上那把槍的槍聲
-                if (GunCompat.gunId(gun) == null) { msg(p, "手上要拿著槍才能使用假槍聲"); return false; }
-                Vec3 eye = p.getEyePosition();
-                Vec3 end = eye.add(p.getLookAngle().scale(s.gunshotRange.get()));
-                BlockHitResult hit = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
-                Vec3 at = hit.getType() == HitResult.Type.BLOCK ? hit.getLocation() : end;
-                SpecialWorld.addGunfire(p, at, gun);
-            }
             case DECOY -> level.addFreshEntity(DecoyEntity.create(level, p));
             // ── 計畫書 6 E 章（邏輯在 NewSpecials） ──
             case BRAINWASH -> NewSpecials.brainwash(p);

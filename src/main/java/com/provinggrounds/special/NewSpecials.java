@@ -55,7 +55,7 @@ public final class NewSpecials {
 
     // ── 數值 ─────────────────────────────────────────────────────────────────
     static final double BRAINWASH_RADIUS = 25;
-    static final int BRAINWASH_TICKS = 15 * 20;
+    public static final int BRAINWASH_TICKS = 15 * 20;
     public static final double ROOT_RADIUS = 2.5;
     public static final int ROOT_TICKS = 3 * 20;
     public static final int DRILL_FLY_TICKS = 10 * 20;
@@ -66,12 +66,12 @@ public final class NewSpecials {
     public static final int DRILL_BURN_TICKS = 3 * 20;
     static final int RECALL_TICKS = 60 * 20;
     static final double AIM_RANGE = 100;                // 占位：雷神錘、跳傘指定器的準心最遠距離
-    static final double THOR_RADIUS = 5;
+    static final double THOR_RADIUS = 20;              // 計畫書 7 C2：5 → 20
     static final float THOR_DAMAGE = 8f;                // 占位：雷神錘每道雷的傷害
     static final double THOR_HIT_RADIUS = 2;            // 占位：雷神錘每道雷的命中半徑
     static final float THOR_PLUS_DAMAGE = 6f;           // 占位：雷神錘加強版每道雷的傷害
     static final int THOR_TICKS = 5 * 20;
-    static final double SKYDIVE_RADIUS = 3;
+    static final double SKYDIVE_RADIUS = 5;            // 計畫書 7 C8：3 → 5
     private static final UUID GAMBLE_MOD = UUID.fromString("b3e7c2a1-4f6d-4e88-9a1b-6c0d2e5f7a93");
 
     // ── 狀態 ─────────────────────────────────────────────────────────────────
@@ -238,11 +238,11 @@ public final class NewSpecials {
                 msg(p, "回溯點已消失", ChatFormatting.GRAY);
                 continue;
             }
-            if (now % 5 == 0 && p.level().dimension() == r.dim()) { // 位置的特效（只有自己看得到）
+            if (now % 5 == 0 && p.level().dimension() == r.dim()) { // 位置的特效（所有人都看得到，計畫書 7 C3）
                 ServerLevel l = p.serverLevel();
                 Vec3 c = r.pos();
-                l.sendParticles(p, RECALL_DUST, true, c.x, c.y + 0.1, c.z, 6, 0.3, 0.02, 0.3, 0);
-                l.sendParticles(p, ParticleTypes.END_ROD, true, c.x, c.y + 0.2 + (now % 40) / 20.0, c.z, 1, 0.05, 0.05, 0.05, 0);
+                l.sendParticles(RECALL_DUST, c.x, c.y + 0.1, c.z, 6, 0.3, 0.02, 0.3, 0);
+                l.sendParticles(ParticleTypes.END_ROD, c.x, c.y + 0.2 + (now % 40) / 20.0, c.z, 1, 0.05, 0.05, 0.05, 0);
             }
             if (now % 20 == 0) {
                 long left = (r.until() - now) / 20;
@@ -340,8 +340,8 @@ public final class NewSpecials {
                 }
             }
             if (s.age % 10 == 0) { // 範圍邊框
-                for (int i = 0; i < 40; i++) {
-                    double a = i * Math.PI * 2 / 40;
+                for (int i = 0; i < 120; i++) {
+                    double a = i * Math.PI * 2 / 120;
                     double x = s.center.x + Math.cos(a) * THOR_RADIUS, z = s.center.z + Math.sin(a) * THOR_RADIUS;
                     s.level.sendParticles(ParticleTypes.ELECTRIC_SPARK, x, s.center.y + 0.2, z, 1, 0, 0.1, 0, 0);
                 }

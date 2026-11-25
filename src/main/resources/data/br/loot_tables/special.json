@@ -166,11 +166,6 @@
         },
         {
           "type": "minecraft:item",
-          "name": "provinggrounds:fake_gunshot",
-          "weight": 8
-        },
-        {
-          "type": "minecraft:item",
           "name": "provinggrounds:decoy",
           "weight": 6
         },

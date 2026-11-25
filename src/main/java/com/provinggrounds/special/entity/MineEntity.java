@@ -94,6 +94,7 @@ public class MineEntity extends Entity {
         ServerPlayer owner = ownerPlayer();
         if (fuse < 0) {
             if (tickCount < 20) return; // 放下後 1 秒才開始偵測
+            if ((tickCount + getId()) % 5 != 0) return; // 每 5 tick 偵測一次（地雷沒有上限，計畫書 7 C11；錯開每顆的時間）
             double r = s.mineTriggerRadius.get();
             for (LivingEntity e : Engines.livingAround(level, position(), r)) {
                 if (!(e instanceof ServerPlayer p) || !BattleRoyaleMode.get().isAliveParticipant(p.getUUID())) continue;
