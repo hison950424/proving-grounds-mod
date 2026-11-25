@@ -125,7 +125,7 @@ public final class SpecialUse {
             case BLIND_ORB -> SpecialWorld.addBlindCloud(p);
             case ADRENALINE -> { // 強心劑（計畫書 7 C10）：自己受 10 傷害（至少留 1 血）、加速
                 float dmg = (float) Math.min(s.stimSelfDamage.get(), p.getHealth() + p.getAbsorptionAmount() - 1);
-                if (dmg > 0) p.hurt(level.damageSources().magic(), dmg);
+                if (dmg > 0) { p.hurt(level.damageSources().magic(), dmg); p.hurtMarked = false; } // 不會被這次傷害擊退（使用者回饋）
                 Engines.effect(p, SpecialRegistry.ADRENALINE.get(), SpecialConfig.ticks(s.adrenalineSeconds), 0);
             }
             case INVIS_CLOAK -> {

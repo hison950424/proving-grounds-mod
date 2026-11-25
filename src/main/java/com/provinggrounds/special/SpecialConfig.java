@@ -43,7 +43,7 @@ public final class SpecialConfig {
     public final ForgeConfigSpec.DoubleValue silentSeconds, silentBonus, stimSelfDamage, stimDownedFreeSeconds;
     public final ForgeConfigSpec.DoubleValue gasSeconds, gasLingerSeconds, gasPoisonSeconds;
     public final ForgeConfigSpec.DoubleValue selfReviveSeconds;
-    public final ForgeConfigSpec.BooleanValue flashShieldHalved, flashShield045;
+    public final ForgeConfigSpec.BooleanValue flashShieldHalved, flashShield045, flashShield50;
     public final ForgeConfigSpec.DoubleValue armorPlusBonus;
     public final ForgeConfigSpec.IntValue armorPlusMaxStacks;
     public final ForgeConfigSpec.DoubleValue shelterSeconds, shelterBonus;
@@ -76,7 +76,7 @@ public final class SpecialConfig {
 
         b.comment("各物品").push("items");
         blindRange = b.comment("致盲珠：推進距離（格）").defineInRange("blind_range", 15.0, 1.0, 100.0);
-        blindSpeed = b.comment("致盲珠：推進速度（格/秒，占位）").defineInRange("blind_speed", 5.0, 0.5, 50.0);
+        blindSpeed = b.comment("致盲珠：推進速度（格/秒；使用者回饋：原本 5 的兩倍）").defineInRange("blind_speed_v2", 10.0, 0.5, 50.0);
         blindSeconds = b.comment("致盲珠：致盲秒數").defineInRange("blind_seconds", 5.0, 0.5, 60.0);
         adrenalineSeconds = b.comment("強心劑（原腎上腺素）：持續秒數").defineInRange("adrenaline_seconds", 15.0, 1.0, 120.0);
         adrenalineBonus = b.comment("強心劑：移動速度加成（0.5 = +50%，以 BR 基本速度為基準；不和拿刀疊加；計畫書 7 C10）").defineInRange("adrenaline_bonus_v2", 0.5, 0.0, 5.0);
@@ -119,6 +119,7 @@ public final class SpecialConfig {
         selfReviveSeconds = b.comment("急救針：自救讀條秒數").defineInRange("self_revive_seconds", 10.0, 1.0, 120.0);
         flashShieldHalved = b.comment("內部用：是否已把 lrtactical 閃光盾的耐久（flash_shield_max_durability）減半過（計畫書 6 A21，只做一次）。改成 false 會在下次開服再減半一次")
             .define("flash_shield_durability_halved_v1", false);
+        flashShield50 = b.comment("內部用：是否已把閃光盾耐久設成 50（使用者回饋，只做一次）").define("flash_shield_durability_50_v1", false);
         flashShield045 = b.comment("內部用：是否已把閃光盾耐久再改成當時的 45%（使用者回饋，只做一次）").define("flash_shield_durability_045_v1", false);
         armorPlusBonus = b.comment("強化護甲修復包：每次增加的耐久上限（0.5 = +50% 原始值，可疊加）").defineInRange("armor_plus_bonus", 0.5, 0.0, 10.0);
         armorPlusMaxStacks = b.comment("強化護甲修復包：最多疊加幾次（0 = 不設上限）").defineInRange("armor_plus_max_stacks", 0, 0, 1000);

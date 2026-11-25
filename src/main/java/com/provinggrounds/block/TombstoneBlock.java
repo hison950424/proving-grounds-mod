@@ -23,7 +23,8 @@ import javax.annotation.Nullable;
  * 目的: 墓碑。玩家在 BR 被淘汰時不噴裝，身上所有物品（含背包欄）收進死亡位置的墓碑。
  *   任何人右鍵都能打開查看並拿取（像箱子一樣，拿東西時一樣套用快捷欄規則）；拿空後墓碑自動消失。
  *   一局結束時（含強制停止、當機後的下一局）全部清除，見 modes/br/Tombstones。
- *   不會掉落物品，也不能被一般玩家破壞（BR 中是冒險模式）。
+ *   不會掉落物品，也不能被破壞（硬度 -1、爆炸抗性很高、BlockProtection 的爆炸也排除方塊實體）。
+ *   受重力（使用者回饋）：下面沒有方塊時往下掉，掉到第一個能站的方塊上，裡面的物品跟著搬過去。
  */
 public class TombstoneBlock extends BaseEntityBlock {
 
@@ -33,6 +34,39 @@ public class TombstoneBlock extends BaseEntityBlock {
 
     public TombstoneBlock(Properties props) {
         super(props);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
+        level.scheduleTick(pos, this, 2);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos from, boolean moving) {
+        if (from.equals(pos.below())) level.scheduleTick(pos, this, 2);
+    }
+
+    private static boolean canFallInto(Level level, BlockPos p) {
+        BlockState s = level.getBlockState(p);
+        return s.isAir() || s.canBeReplaced() || !s.getFluidState().isEmpty() && s.getCollisionShape(level, p).isEmpty();
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public void tick(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos, net.minecraft.util.RandomSource random) {
+        BlockPos to = pos;
+        while (to.getY() > level.getMinBuildHeight() && canFallInto(level, to.below())) to = to.below();
+        if (to.equals(pos)) return;
+        BlockEntity be = level.getBlockEntity(pos);
+        net.minecraft.nbt.CompoundTag data = be != null ? be.saveWithoutMetadata() : null;
+        level.removeBlockEntity(pos);
+        level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(to, state, Block.UPDATE_ALL);
+        BlockEntity nbe = level.getBlockEntity(to);
+        if (nbe != null && data != null) { nbe.load(data); nbe.setChanged(); }
+        com.provinggrounds.modes.br.Tombstones.moved(level, pos, to);
     }
 
     @Override

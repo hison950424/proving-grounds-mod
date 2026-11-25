@@ -120,6 +120,13 @@ public final class Tombstones {
         return null;
     }
 
+    /** 墓碑往下掉（TombstoneBlock 的重力）：更新記錄的位置。 */
+    public static void moved(ServerLevel level, BlockPos from, BlockPos to) {
+        Ledger l = Ledger.get(level);
+        l.remove(from);
+        l.add(to);
+    }
+
     /** 墓碑被拿空自動消失時：從記錄移除。 */
     public static void forget(Level level, BlockPos pos) {
         if (level instanceof ServerLevel sl) Ledger.get(sl).remove(pos);

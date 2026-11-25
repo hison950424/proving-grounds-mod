@@ -21,6 +21,10 @@ import java.util.function.Supplier;
  */
 public record MeleeGlassPacket(BlockPos pos) {
 
+    /** 每個人上次用刀打破方塊的 tick（使用者回饋：要等武器冷卻，跟 lrtactical 左鍵冷卻一樣 10 tick）。 */
+    private static final java.util.Map<java.util.UUID, Long> LAST = new java.util.HashMap<>();
+    private static final int COOLDOWN_TICKS = 10;
+
     public void encode(FriendlyByteBuf buf) { buf.writeBlockPos(pos); }
 
     public static MeleeGlassPacket decode(FriendlyByteBuf buf) { return new MeleeGlassPacket(buf.readBlockPos()); }
@@ -34,6 +38,11 @@ public record MeleeGlassPacket(BlockPos pos) {
             BlockState state = level.getBlockState(pos);
             if (!BlockLedger.isGlass(state) || state.getDestroySpeed(level, pos) < 0) return;
             if (!BlockProtection.allowsDamage(level, pos)) return;
+            long now = level.getGameTime();
+            Long last = LAST.get(p.getUUID());
+            if (last != null && now - last < COOLDOWN_TICKS) return; // 冷卻中
+            if (p.getAttackStrengthScale(0.5f) < 0.9f) return; // 原版攻擊冷卻也還沒好
+            LAST.put(p.getUUID(), now);
             BlockLedger.get(level.getServer()).recordGlass(level, pos, state);
             level.destroyBlock(pos, false, p); // 有破碎音效與粒子，不掉落
         });

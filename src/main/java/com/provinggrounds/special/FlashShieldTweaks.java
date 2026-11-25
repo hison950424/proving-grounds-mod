@@ -77,6 +77,17 @@ public final class FlashShieldTweaks {
                 done.save();
                 ProvingGroundsMod.LOGGER.info("Flash shield durability halved to {}.", half);
             }
+            var done50 = SpecialConfig.get().flashShield50; // 使用者回饋：耐久固定改成 50（取代前面的 45%）
+            if (!done50.get()) {
+                cfg.set(50);
+                cfg.save();
+                done50.set(true);
+                done50.save();
+                SpecialConfig.get().flashShield045.set(true);
+                SpecialConfig.get().flashShield045.save();
+                ProvingGroundsMod.LOGGER.info("Flash shield durability set to 50.");
+                return;
+            }
             var done045 = SpecialConfig.get().flashShield045; // 使用者回饋：再改成當時的 45%
             if (!done045.get()) {
                 int v = Math.max(1, Math.round(cfg.get() * 0.45f));

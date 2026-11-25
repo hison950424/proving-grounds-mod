@@ -434,7 +434,7 @@ public class PGConfig {
         builder.comment("槍械平衡：不改槍械包，依每把槍的射速重新決定每發傷害，讓同類型的槍打死人的時間差不多。",
                 "目標 TTK（秒）= 沒穿甲、近距離、全部打身體；穿全套鐵甲約再慢 25%（例：2.0 → 2.5 秒）。").push("gun_balance");
         gunBalanceEnabled = builder.comment("是否啟用槍械平衡（false = 照槍械包原本的數值）").define("enabled", true);
-        gunDistanceFalloff = builder.comment("距離減傷（使用者回饋：預設關，遠近傷害一樣；槍械包自己的距離減傷也一併取消）").define("distance_falloff_v1", false);
+        gunDistanceFalloff = builder.comment("距離減傷（使用者回饋：改成兩段：門檻內全額、超過門檻固定一個比例；槍械包自己的距離減傷一律取消）").define("distance_falloff_v2", true);
         meleeReach = builder.comment("刀子（lrtactical 近戰）的最遠攻擊距離（格，從眼睛量到對方身體）。原本 2，使用者回饋減 0.25").defineInRange("melee_reach_v1", 1.75, 0.5, 6.0);
         weaponModeThrowables = builder.comment("槍械模式「投擲物」：槍換成這些投擲物（格式同 /give）")
             .defineListAllowEmpty(List.of("weapon_mode_throwables"), () -> List.of(
@@ -448,15 +448,15 @@ public class PGConfig {
         sniperBoltRpm = builder.comment("射速不超過這個值的狙擊槍算栓動狙擊（其餘照步槍算）").defineInRange("sniper_bolt_rpm", 200, 1, 2000);
         sniperBodyShots = builder.comment("栓動狙擊打身體幾發死（沒穿甲）").defineInRange("sniper_body_shots", 2, 1, 20);
         sniperHeadMultiplier = builder.comment("栓動狙擊的爆頭倍率至少多少（2.0 = 沒穿甲一發爆頭）").defineInRange("sniper_head_multiplier", 2.0, 1.0, 10.0);
-        rifleFalloffStart = builder.comment("步槍、機槍：幾格內全額傷害").defineInRange("rifle_falloff_start", 30.0, 0.0, 500.0);
+        rifleFalloffStart = builder.comment("步槍、機槍：幾格內全額傷害").defineInRange("rifle_falloff_start_v2", 40.0, 0.0, 500.0); // 兩段：40 格內全額
         rifleFalloffEnd = builder.comment("步槍、機槍：到幾格時降到最低").defineInRange("rifle_falloff_end", 60.0, 0.0, 500.0);
-        rifleFalloffMin = builder.comment("步槍、機槍：最遠的傷害比例").defineInRange("rifle_falloff_min", 0.7, 0.0, 1.0);
-        smgFalloffStart = builder.comment("衝鋒槍、手槍：幾格內全額傷害").defineInRange("smg_falloff_start", 20.0, 0.0, 500.0);
+        rifleFalloffMin = builder.comment("步槍、機槍：最遠的傷害比例").defineInRange("rifle_falloff_min_v2", 0.8, 0.0, 1.0); // 超過 40 格 80%
+        smgFalloffStart = builder.comment("衝鋒槍、手槍：幾格內全額傷害").defineInRange("smg_falloff_start_v2", 25.0, 0.0, 500.0); // 兩段：25 格內全額
         smgFalloffEnd = builder.comment("衝鋒槍、手槍：到幾格時降到最低").defineInRange("smg_falloff_end", 40.0, 0.0, 500.0);
-        smgFalloffMin = builder.comment("衝鋒槍、手槍：最遠的傷害比例").defineInRange("smg_falloff_min", 0.6, 0.0, 1.0);
-        shotgunFalloffStart = builder.comment("霰彈槍：幾格內全額傷害").defineInRange("shotgun_falloff_start", 5.0, 0.0, 500.0);
+        smgFalloffMin = builder.comment("衝鋒槍、手槍：最遠的傷害比例").defineInRange("smg_falloff_min_v2", 0.7, 0.0, 1.0); // 超過 25 格 70%
+        shotgunFalloffStart = builder.comment("霰彈槍：幾格內全額傷害").defineInRange("shotgun_falloff_start_v2", 10.0, 0.0, 500.0); // 兩段：10 格內全額
         shotgunFalloffEnd = builder.comment("霰彈槍：到幾格時降到最低").defineInRange("shotgun_falloff_end", 15.0, 0.0, 500.0);
-        shotgunFalloffMin = builder.comment("霰彈槍：最遠的傷害比例").defineInRange("shotgun_falloff_min", 0.3, 0.0, 1.0);
+        shotgunFalloffMin = builder.comment("霰彈槍：最遠的傷害比例").defineInRange("shotgun_falloff_min_v2", 0.5, 0.0, 1.0); // 超過 10 格 50%
         builder.pop();
 
         builder.comment("場地選擇（M 選單 →「場地選擇」）。一行一個場地：ID|名稱|旗標|x y z; x y z; …（多個座標隨機選一個）",
