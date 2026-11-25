@@ -419,7 +419,7 @@ public class PGConfig {
         bulletproofEnabled = builder.comment("是否啟用防彈").define("enabled", true);
         armorDurabilityMultiplier = builder.comment("所有防具的最大耐久度倍率（2.0 = 原版兩倍，例如鐵頭盔 165 → 330）。登入時同步到客戶端")
             .defineInRange("armor_durability_multiplier", 2.0, 0.1, 10.0);
-        bulletproofHeadBodySplit = builder.comment("爆頭只看頭盔、身體只看其他三件；false = 不分部位，四件各占 1/4")
+        bulletproofHeadBodySplit = builder.comment("（已不使用：現在一律只算被打中部位的那一件防具）")
             .define("head_body_split", true);
         bulletproofLeather = builder.comment("皮革全套減傷").defineInRange("leather_v3", 0.12, 0.0, 0.95);
         bulletproofChainmail = builder.comment("鎖鏈全套減傷（占位）").defineInRange("chainmail_v3", 0.18, 0.0, 0.95);

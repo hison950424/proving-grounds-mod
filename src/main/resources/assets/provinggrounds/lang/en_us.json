@@ -25,6 +25,7 @@
   "item.provinggrounds.parachute": "降落傘",
   "provinggrounds.subtitle.gas_cough": "咳嗽",
   "item.provinggrounds.parachute_canopy": "傘衣（模型）",
+  "key.provinggrounds.ping": "Ping (crosshair location, teammates can see)",
   "key.provinggrounds.interact": "互動（開門、開箱、扶起隊友、祭壇）",
   "key.provinggrounds.scoreboard": "戰績面板（按住顯示）",
   "key.provinggrounds.prone":

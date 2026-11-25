@@ -72,6 +72,21 @@ public final class ClientKeyDefaults {
         ProvingGroundsMod.LOGGER.info("Applied Proving Grounds default key bindings v2 (interact = F).");
     }
 
+    /** 第三批預設按鍵（使用者回饋）：標點 X；原本綁在 X 的 TACZ 槍托近戰改到 Y。只做一次。 */
+    private static void applyKeysV3(Minecraft mc) {
+        if (PGClientConfig.CLIENT.defaultKeysV3Applied.get()) return;
+        InputConstants.Key x = InputConstants.getKey("key.keyboard.x");
+        for (KeyMapping km : mc.options.keyMappings) {
+            if (km.getName().equals("key.tacz.melee.desc") && km.getKey().equals(x)) km.setKeyModifierAndCode(KeyModifier.NONE, InputConstants.getKey("key.keyboard.y"));
+            if (km.getName().equals("key.provinggrounds.ping")) km.setKeyModifierAndCode(KeyModifier.NONE, x);
+        }
+        KeyMapping.resetMapping();
+        mc.options.save();
+        PGClientConfig.CLIENT.defaultKeysV3Applied.set(true);
+        PGClientConfig.CLIENT.defaultKeysV3Applied.save();
+        ProvingGroundsMod.LOGGER.info("Applied Proving Grounds default key bindings v3 (ping = X, melee = Y).");
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (checked || event.phase != TickEvent.Phase.END) return;
@@ -81,6 +96,7 @@ public final class ClientKeyDefaults {
         try {
             applyDirectionalAudio(mc);
             applyKeysV2(mc);
+            applyKeysV3(mc);
             com.provinggrounds.compat.ClientGunAim.applyDotCrosshairOnce();
             com.provinggrounds.compat.ClientGunAim.hideTaczInteractText(); // 不顯示 TACZ 的「按 [鍵] 互動」
             if (PGClientConfig.CLIENT.defaultKeysApplied.get()) return;
@@ -100,7 +116,8 @@ public final class ClientKeyDefaults {
         want.put("key.sprint", "key.keyboard.unknown");               // 自動奔跑，不需要疾跑鍵
         // 避免撞鍵
         want.put("key.tacz.crawl.desc", "key.keyboard.unknown");
-        want.put("key.tacz.melee.desc", "key.keyboard.x");
+        want.put("key.tacz.melee.desc", "key.keyboard.y");
+        want.put("key.provinggrounds.ping", "key.keyboard.x");
 
         want.put("key.swapOffhand", "key.keyboard.unknown");
         want.put("key.playerlist", "key.keyboard.grave.accent");

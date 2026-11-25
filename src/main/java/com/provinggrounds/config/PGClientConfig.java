@@ -39,7 +39,7 @@ public final class PGClientConfig {
     public final ForgeConfigSpec.BooleanValue damageIndicatorEnabled;
     public final ForgeConfigSpec.DoubleValue damageIndicatorSeconds;
     // 計畫書 5：準星、互動提示、戰鬥提示
-    public final ForgeConfigSpec.BooleanValue crosshairDot, crosshairDotTaczApplied, crosshairDotTaczV2Applied, defaultKeysV2Applied;
+    public final ForgeConfigSpec.BooleanValue crosshairDot, crosshairDotTaczApplied, crosshairDotTaczV2Applied, defaultKeysV2Applied, defaultKeysV3Applied;
     public final ForgeConfigSpec.BooleanValue interactHint, killIconEnabled, killFeedEnabled, killSoundEnabled, domBeacon, antiCampWall;
     public final ForgeConfigSpec.DoubleValue hudScale, killSoundVolume;
     public final ForgeConfigSpec.BooleanValue scoreboardToggle;
@@ -73,6 +73,7 @@ public final class PGClientConfig {
             .define("default_keys_applied_v1", false);
         directionalAudioApplied = builder.comment("是否已經幫你打開過原版的「方向性音訊」（HRTF，戴耳機時聲音方向更準）。改成 false 會在下次開遊戲時再打開一次")
             .define("directional_audio_applied_v1", false);
+        defaultKeysV3Applied = builder.comment("內部用：是否已套用第三批預設按鍵（標點 X、槍托近戰改 Y）").define("default_keys_applied_v3", false);
         defaultKeysV2Applied = builder.comment("內部用：是否已套用第二批預設按鍵（互動 F、槍托近戰改 X）").define("default_keys_applied_v2", false);
 
         builder.pop();

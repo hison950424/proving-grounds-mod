@@ -88,5 +88,6 @@ public final class ClientModEvents {
         event.register(ClientMovement.QUIET_WALK); // 靜走（預設 Shift）
         event.register(ClientInteract.INTERACT); // 互動（預設 F；計畫書 5）
         event.register(ScoreboardPanel.KEY); // 戰績面板（預設 Caps Lock）
+        event.register(ClientPing.KEY); // 標點（預設 X）
     }
 }
