@@ -1,8 +1,11 @@
 package com.provinggrounds.block;
 
 import com.provinggrounds.ProvingGroundsMod;
+import com.provinggrounds.modes.BattleRoyaleMode;
 import com.provinggrounds.registry.PGBlocks;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerLevel;
@@ -11,6 +14,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -21,24 +25,26 @@ import java.util.UUID;
 
 /**
  * 檔案: ElevatorEvents.java
- * 目的: 電梯方塊的上下傳送（伺服器端判斷，客戶端 ClientElevator 只負責偵測按鍵）。
- *   站在電梯方塊上「剛按下跳躍鍵」：往正上方找最近的電梯方塊（最多 MAX_RANGE 格），傳送到它上面。
- *   站在電梯方塊上「剛按下蹲下鍵」：往正下方找最近的電梯方塊，傳送到它上面。
- *   計畫書 7 A5 修正：以前伺服器用「離地往上移動」猜跳躍、每 tick 比對蹲下狀態，傳送後客戶端回報的位置、
- *   自動跳躍、走上台階都可能被當成跳躍，冷卻又只有 0.3 秒 → 傳下去又被傳回來、走上去就被傳走。
- *   現在只有客戶端送來的 ElevatorPacket（按鍵按下的那一下）會觸發；傳送後冷卻 elevator_cooldown_seconds（預設 1 秒）；
- *   蹲下要先放開再按（客戶端偵測按下瞬間，伺服器另外要求傳送後看過一次「沒蹲下」）。
- *   - 目標電梯上方要有 2 格能站人的空間，否則提示「被擋住」；中間隔著其他方塊沒關係。
- *   - 傳送後保留玩家在方塊上的水平位置與視角，清掉速度（不會飛起來或摔傷）。
- *   執行者：觸發的玩家（ServerPlayer）。
+ * 目的: 電梯方塊的上下傳送（伺服器端判斷，客戶端 ClientElevator 只負責偵測按鍵）：
+ *   - 非大逃殺／創造模式：立即傳送，冷卻 elevator_cooldown_seconds（預設 1 秒）。
+ *   - 大逃殺進行中（生存／冒險模式）：需於電梯方塊上讀條啟動 1.8 秒（36 tick），
+ *     期間出發與目標樓層都會發出機械提示音與雲霧粒子讓敵人察覺；
+ *     離開方塊或受到傷害立即中斷搭乘，成功到達後大逃殺冷卻 6 秒（120 tick）。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID)
 public final class ElevatorEvents {
 
     /** 往上／往下最多找幾格。 */
     public static final int MAX_RANGE = 64;
+    /** 大逃殺啟動讀條（1.8 秒 = 36 tick）。 */
+    public static final int BR_DELAY_TICKS = 36;
+    /** 大逃殺搭完後的冷卻時間（6 秒 = 120 tick）。 */
+    public static final int BR_COOLDOWN_TICKS = 120;
+
+    private record PendingRide(ServerLevel level, BlockPos from, BlockPos target, boolean up, long triggerTick) {}
 
     private static final Map<UUID, Long> COOLDOWN_UNTIL = new HashMap<>();
+    private static final Map<UUID, PendingRide> PENDING = new HashMap<>();
     /** 傳送後還沒放開蹲下的人（放開前不能再往下）。 */
     private static final java.util.Set<UUID> NEED_RELEASE = new java.util.HashSet<>();
 
@@ -54,12 +60,53 @@ public final class ElevatorEvents {
     public static void onTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer p)) return;
         if (!p.isShiftKeyDown()) NEED_RELEASE.remove(p.getUUID());
+
+        PendingRide ride = PENDING.get(p.getUUID());
+        if (ride == null) return;
+
+        ServerLevel level = p.serverLevel();
+        if (p.isDeadOrDying() || !BattleRoyaleMode.get().isRunning()
+            || level != ride.level() || !ride.from().equals(standingOn(p))) {
+            PENDING.remove(p.getUUID());
+            p.displayClientMessage(Component.literal("已離開電梯，取消搭乘").withStyle(ChatFormatting.GRAY), true);
+            return;
+        }
+
+        long now = level.getGameTime();
+        long left = ride.triggerTick() - now;
+        if (left <= 0) {
+            PENDING.remove(p.getUUID());
+            if (!hasRoom(level, ride.target())) {
+                p.displayClientMessage(Component.literal(ride.up() ? "上方的電梯被擋住了" : "下方的電梯被擋住了")
+                    .withStyle(ChatFormatting.RED), true);
+                return;
+            }
+            completeTeleport(p, level, ride.from(), ride.target(), BR_COOLDOWN_TICKS, true);
+            return;
+        }
+
+        if (left % 8 == 0) {
+            p.displayClientMessage(Component.literal(String.format("電梯啟動中（%.1f 秒，請勿離開方塊）", left / 20.0))
+                .withStyle(ChatFormatting.AQUA), true);
+            spawnWarningParticles(level, ride.from(), 3);
+            spawnWarningParticles(level, ride.target(), 4);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onHurt(LivingHurtEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer sp) || event.getAmount() <= 0) return;
+        if (PENDING.remove(sp.getUUID()) != null) {
+            sp.displayClientMessage(Component.literal("受到攻擊，電梯搭乘已中斷！").withStyle(ChatFormatting.RED), true);
+        }
     }
 
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
-        NEED_RELEASE.remove(event.getEntity().getUUID());
-        COOLDOWN_UNTIL.remove(event.getEntity().getUUID());
+        UUID id = event.getEntity().getUUID();
+        NEED_RELEASE.remove(id);
+        COOLDOWN_UNTIL.remove(id);
+        PENDING.remove(id);
     }
 
     /** 冷卻 tick 數（設定還沒載入時用 1 秒）。 */
@@ -68,11 +115,16 @@ public final class ElevatorEvents {
         catch (IllegalStateException e) { return 20; }
     }
 
+    private static boolean useBattleRoyaleRule(ServerPlayer p) {
+        return BattleRoyaleMode.get().isRunning() && !p.isCreative() && !p.isSpectator();
+    }
+
     /** 站在電梯方塊上時，往上（up = true）或往下找下一個電梯方塊並傳送。 */
     private static void use(ServerPlayer p, boolean up) {
         if (p.isSpectator() || p.isPassenger() || p.isSleeping()) return;
         BlockPos from = standingOn(p);
         if (from == null) return;
+        if (PENDING.containsKey(p.getUUID())) return;
 
         ServerLevel level = p.serverLevel();
         long now = level.getGameTime();
@@ -80,7 +132,7 @@ public final class ElevatorEvents {
         if (until != null && now < until) {
             double left = (until - now) / 20.0;
             p.displayClientMessage(Component.literal(String.format("電梯冷卻中（剩 %.1f 秒）", left))
-                .withStyle(net.minecraft.ChatFormatting.YELLOW), true);
+                .withStyle(ChatFormatting.YELLOW), true);
             return;
         }
 
@@ -99,15 +151,52 @@ public final class ElevatorEvents {
             return;
         }
 
-        COOLDOWN_UNTIL.put(p.getUUID(), now + cooldownTicks());
+        if (useBattleRoyaleRule(p)) {
+            NEED_RELEASE.add(p.getUUID());
+            PENDING.put(p.getUUID(), new PendingRide(level, from, target, up, now + BR_DELAY_TICKS));
+            level.playSound(null, from.getX() + 0.5, from.getY() + 0.5, from.getZ() + 0.5,
+                SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 1.1f, 0.9f);
+            level.playSound(null, target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5,
+                SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 1.1f, 1.1f);
+            spawnWarningParticles(level, from, 6);
+            spawnWarningParticles(level, target, 8);
+            p.displayClientMessage(Component.literal("電梯啟動中（1.8 秒，請勿離開方塊）...").withStyle(ChatFormatting.AQUA), true);
+            return;
+        }
+
+        completeTeleport(p, level, from, target, cooldownTicks(), false);
+    }
+
+    private static void completeTeleport(ServerPlayer p, ServerLevel level, BlockPos from, BlockPos target,
+                                         int cdTicks, boolean loudWarning) {
+        long now = level.getGameTime();
+        COOLDOWN_UNTIL.put(p.getUUID(), now + cdTicks);
         NEED_RELEASE.add(p.getUUID());
         double ox = p.getX() - from.getX(), oz = p.getZ() - from.getZ(); // 保留在方塊上的水平位置
-        level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.BLOCKS, 0.4f, 1.5f);
+        if (loudWarning) {
+            level.playSound(null, from.getX() + 0.5, from.getY() + 0.5, from.getZ() + 0.5,
+                SoundEvents.PISTON_CONTRACT, SoundSource.BLOCKS, 1.2f, 0.9f);
+        } else {
+            level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.BLOCKS, 0.4f, 1.5f);
+        }
         p.teleportTo(target.getX() + ox, target.getY() + 1.0, target.getZ() + oz);
         p.setDeltaMovement(Vec3.ZERO);
         p.fallDistance = 0;
         p.connection.send(new ClientboundSetEntityMotionPacket(p));
-        level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.BLOCKS, 0.4f, 1.5f);
+        if (loudWarning) {
+            level.playSound(null, target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5,
+                SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.BLOCKS, 1.2f, 1.2f);
+            level.playSound(null, target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5,
+                SoundEvents.PISTON_CONTRACT, SoundSource.BLOCKS, 1.1f, 1.0f);
+            spawnWarningParticles(level, target, 10);
+        } else {
+            level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.BLOCKS, 0.4f, 1.5f);
+        }
+    }
+
+    private static void spawnWarningParticles(ServerLevel level, BlockPos pos, int count) {
+        level.sendParticles(ParticleTypes.CLOUD, pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5,
+            count, 0.25, 0.2, 0.25, 0.02);
     }
 
     /** 玩家腳下（含剛起跳的那一刻）是電梯方塊就回傳它的位置。 */

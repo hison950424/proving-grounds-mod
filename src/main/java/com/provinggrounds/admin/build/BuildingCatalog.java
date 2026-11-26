@@ -19,8 +19,8 @@ import java.util.*;
 
 /**
  * 檔案: BuildingCatalog.java
- * 目的: 匯整 4 種風格 × 3 棟大型／超大型建築（共 12 棟），並管理放置、自動登記大逃殺物資箱點位、
- *       以及最多 10 筆一鍵復原紀錄（復原方塊＋移除剛剛新增的物資箱點位）。
+ * 目的: 匯整 8 種風格共 28 棟大型／超大型建築藍圖，並管理放置、自動登記大逃殺物資箱點位、
+ *       以及最多 8 筆一鍵復原紀錄（復原方塊＋移除剛剛新增的物資箱點位）。
  */
 public final class BuildingCatalog {
 
@@ -43,7 +43,7 @@ public final class BuildingCatalog {
     ) {}
 
     private static final Deque<UndoRecord> UNDO_STACK = new ArrayDeque<>();
-    private static final int MAX_UNDO = 10;
+    private static final int MAX_UNDO = 8;
 
     static {
         for (BuildingStyle s : BuildingStyle.values()) BY_STYLE.put(s, new ArrayList<>());
@@ -51,6 +51,10 @@ public final class BuildingCatalog {
         IndustrialBuildings.register(BuildingCatalog::add);
         JapaneseBuildings.register(BuildingCatalog::add);
         ScifiBuildings.register(BuildingCatalog::add);
+        CivicBuildings.register(BuildingCatalog::add);
+        MedievalBuildings.register(BuildingCatalog::add);
+        DesertBuildings.register(BuildingCatalog::add);
+        MaritimeBuildings.register(BuildingCatalog::add);
     }
 
     private BuildingCatalog() {}

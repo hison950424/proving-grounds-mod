@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * 檔案: BuildingPickerScreen.java
  * 目的: 「建築生成工具」的建築風格與款式選擇介面（只在客戶端）：
- *   - 上方 4 個風格分頁（現代軍事／工業倉庫／和風木造／廢土科幻，每頁 3 棟大型／超大型建築，共 12 棟）。
+ *   - 上方 2 列 × 4 欄共 8 個風格分頁（現代軍事／工業倉庫／和風木造／廢土科幻／都市地標／歐式古城／沙漠戰區／海港極地）。
  *   - 左側建築清單（名稱、佔地尺寸、物資點數），點擊可即時切換右側預覽說明。
  *   - 底部「選取此建築」會寫入工具 NBT 並關閉選單；也提供「復原上一棟」按鈕一鍵還原。
  */
@@ -49,22 +49,26 @@ public final class BuildingPickerScreen extends Screen {
 
     @Override
     protected void init() {
-        panelW = Math.min(520, width - 16);
-        panelH = Math.min(300, height - 16);
+        panelW = Math.min(540, width - 16);
+        panelH = Math.min(324, height - 16);
         left = (width - panelW) / 2;
         top = (height - panelH) / 2;
 
-        // 上方 4 個風格分頁按鈕
+        // 上方 2 列 × 4 欄共 8 個風格分頁按鈕
         BuildingStyle[] styles = BuildingStyle.values();
+        int cols = 4;
         int tabGap = 4;
-        int tabW = (panelW - 20 - tabGap * (styles.length - 1)) / styles.length;
-        int tabY = top + 24;
+        int tabW = (panelW - 20 - tabGap * (cols - 1)) / cols;
         for (int i = 0; i < styles.length; i++) {
             BuildingStyle st = styles[i];
             int count = BuildingCatalog.byStyle(st).size();
             boolean active = st == currentStyle;
+            int col = i % cols;
+            int row = i / cols;
+            int tabX = left + 10 + col * (tabW + tabGap);
+            int tabY = top + 23 + row * 18;
             addRenderableWidget(new PGButton(
-                left + 10 + i * (tabW + tabGap), tabY, tabW, 16,
+                tabX, tabY, tabW, 16,
                 Component.literal(st.displayName + " (" + count + ")"),
                 active, false,
                 () -> switchStyle(st)
@@ -73,9 +77,9 @@ public final class BuildingPickerScreen extends Screen {
 
         items = BuildingCatalog.byStyle(currentStyle);
         listX = left + 10;
-        listY = top + 54;
+        listY = top + 72;
         listW = (int) (panelW * 0.48) - 12;
-        listH = panelH - 84;
+        listH = panelH - 102;
 
         infoX = listX + listW + 10;
         infoY = listY;
@@ -121,8 +125,8 @@ public final class BuildingPickerScreen extends Screen {
         g.drawString(font, "建築生成工具 — 選擇風格與款式（共 " + BuildingCatalog.all().size() + " 棟）", left + 10, top + 8, ACCENT, false);
         g.fill(left + 10, top + 19, left + panelW - 10, top + 20, BORDER);
 
-        g.drawString(font, currentStyle.displayName + "（" + currentStyle.mapHint + "）", listX, top + 43, currentStyle.color, false);
-        g.drawString(font, "建築介紹", infoX, top + 43, DIM, false);
+        g.drawString(font, currentStyle.displayName + "（" + currentStyle.mapHint + "）", listX, top + 61, currentStyle.color, false);
+        g.drawString(font, "建築介紹", infoX, top + 61, DIM, false);
 
         renderList(g, mouseX, mouseY);
         renderDetail(g);

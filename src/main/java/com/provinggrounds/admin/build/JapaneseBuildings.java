@@ -10,7 +10,7 @@ import static com.provinggrounds.admin.build.BuildingStyle.JAPANESE;
 
 /**
  * 檔案: JapaneseBuildings.java
- * 目的: 和風城郭與庭園風格 3 棟大型／超大型建築（全數無木箱、樓梯最後一階完整齊平、柵欄／石牆／白玻璃格柵自動連接）。
+ * 目的: 和風城郭與庭園風格 4 棟大型／超大型建築（全數無木箱、樓梯最後一階完整齊平、柵欄／石牆／白玻璃格柵自動連接）。
  */
 final class JapaneseBuildings {
 
@@ -18,16 +18,20 @@ final class JapaneseBuildings {
 
     static void register(Consumer<BuildingBlueprint> out) {
         out.accept(new BuildingBlueprint("jp_tenshukaku", JAPANESE, "五重威嚴天守閣",
-            "4 層層疊飛簷城郭：石垣基座與四方城門、武士兵器陳列室、2 樓緣側木欄迴廊與議事大廳、3 樓藏書紙門迷宮、4 樓 360° 展望樓＋電梯井（32 個物資點）",
-            31, 31, 27, 32, JapaneseBuildings::tenshukaku));
+            "4 層層疊飛簷城郭：石垣基座與四方城門、武士兵器陳列室、2 樓緣側木欄迴廊與議事大廳、3 樓藏書紙門迷宮、4 樓 360° 展望樓＋單座電梯（38 個物資點）",
+            31, 31, 27, 38, JapaneseBuildings::tenshukaku));
 
         out.accept(new BuildingBlueprint("jp_onsen_ryokan", JAPANESE, "大型和風溫泉旅館",
-            "2 層回字形中庭大旅館：正中央露天溫泉池與櫻花石庭、西翼榻榻米宴會廳、東翼湯屋隔間、2 樓環中庭木欄廊道與 6 間獨立和室（32 個物資點）",
-            35, 29, 17, 32, JapaneseBuildings::onsenRyokan));
+            "2 層回字形中庭大旅館：正中央露天溫泉池與櫻花石庭、西翼榻榻米宴會廳、東翼湯屋隔間、2 樓環中庭木欄廊道與 6 間獨立和室（38 個物資點）",
+            35, 29, 17, 38, JapaneseBuildings::onsenRyokan));
 
         out.accept(new BuildingBlueprint("jp_grand_temple", JAPANESE, "千本大佛殿與藏經閣",
-            "雙層挑高宏偉佛殿：寬闊石階大門廊與香爐石燈籠掩體、朱紅雙排巨柱陣、金身佛壇與禪室廂房、2 樓 U 形空中迴廊與三排藏經閣書架（28 個物資點）",
-            33, 27, 21, 28, JapaneseBuildings::grandTemple));
+            "雙層挑高宏偉佛殿：寬闊石階大門廊與香爐石燈籠掩體、朱紅雙排巨柱陣、金身佛壇與禪室廂房、2 樓 U 形空中迴廊與三排藏經閣書架（34 個物資點）",
+            33, 27, 21, 34, JapaneseBuildings::grandTemple));
+
+        out.accept(new BuildingBlueprint("jp_edo_street", JAPANESE, "江戶二層連棟商店街",
+            "43×35 古街道巷戰區：雙朱紅大鳥居＋青石商店街與木攤掩體、左右對峙 6 棟二層和風町家商鋪（茶屋／刀坊／酒肆／書店／藥鋪／綢緞行）＋跨街木橋（48 個物資點）",
+            43, 35, 17, 48, JapaneseBuildings::edoStreet));
     }
 
     private static void tenshukaku(BuildingCanvas c) {
@@ -153,13 +157,16 @@ final class JapaneseBuildings {
         c.ceilingLights(-7, 7, 17, 8, 22, 6, 6, Blocks.OCHRE_FROGLIGHT);
         c.ceilingLights(-4, 4, 22, 11, 19, 4, 4, Blocks.OCHRE_FROGLIGHT);
 
-        // 32 個物資箱點位
+        c.bunkerCoverL(-4, 1, 24, 2, -2, Blocks.DARK_OAK_PLANKS, Blocks.STONE_BRICK_SLAB);
+        c.bunkerCoverL(4, 1, 24, -2, -2, Blocks.DARK_OAK_PLANKS, Blocks.STONE_BRICK_SLAB);
+
+        // 38 個物資箱點位
         c.loot(-10, 1, 6);  c.loot(-10, 1, 22); c.loot(10, 1, 6);   c.loot(10, 1, 22);  c.loot(0, 1, 15);
-        c.loot(0, 1, 4);    c.loot(0, 1, 25);   c.loot(-12, 1, 13); c.loot(12, 1, 18);
+        c.loot(0, 1, 4);    c.loot(0, 1, 25);   c.loot(-12, 1, 13); c.loot(12, 1, 18);  c.loot(-6, 1, 23); c.loot(6, 1, 23);
         c.loot(-10, 7, 14); c.loot(10, 7, 14);  c.loot(0, 7, 21);   c.loot(0, 7, 6);    c.loot(0, 7, 14);
-        c.loot(-13, 7, 5);  c.loot(13, 7, 5);   c.loot(-13, 7, 25); c.loot(13, 7, 25);
+        c.loot(-13, 7, 5);  c.loot(13, 7, 5);   c.loot(-13, 7, 25); c.loot(13, 7, 25);  c.loot(-13, 7, 15); c.loot(13, 7, 15);
         c.loot(-7, 13, 12); c.loot(7, 13, 12);  c.loot(-7, 13, 21); c.loot(7, 13, 21);
-        c.loot(-11, 13, 15); c.loot(11, 13, 15); c.loot(0, 13, 8);  c.loot(0, 13, 22);
+        c.loot(-11, 13, 15); c.loot(11, 13, 15); c.loot(0, 13, 8);  c.loot(0, 13, 22);  c.loot(-11, 13, 7); c.loot(11, 13, 7);
         c.loot(-9, 19, 15); c.loot(9, 19, 15);  c.loot(0, 19, 12);
         c.loot(0, 19, 7);   c.loot(0, 19, 23);  c.loot(0, 19, 18);
     }
@@ -256,21 +263,24 @@ final class JapaneseBuildings {
             c.counter(13, zBase + 4, 15, zBase + 4, 7, Blocks.DARK_OAK_PLANKS);
         }
 
-        // === 雙寬 2 格樓梯 (1F->2F)＋電梯 ===
+        // === 雙寬 2 格樓梯 (1F->2F，無電梯) ===
         c.staircaseZ(-15, -14, 0, 6, 22, 1, Blocks.CHERRY_STAIRS, Blocks.SPRUCE_PLANKS, Blocks.SPRUCE_PLANKS);
         c.staircaseZ(14, 15, 0, 6, 22, 1, Blocks.CHERRY_STAIRS, Blocks.SPRUCE_PLANKS, Blocks.SPRUCE_PLANKS);
-        c.elevator(0, 26, 0, 6);
+        c.bunkerCoverL(-3, 7, 25, 2, -1, Blocks.CHERRY_PLANKS, Blocks.SPRUCE_SLAB);
+        c.bunkerCoverL(3, 7, 25, -2, -1, Blocks.CHERRY_PLANKS, Blocks.SPRUCE_SLAB);
 
         c.ceilingLights(-14, 14, 5, 5, 26, 7, 6, Blocks.OCHRE_FROGLIGHT);
         c.ceilingLights(-14, 14, 11, 5, 26, 7, 6, Blocks.OCHRE_FROGLIGHT);
 
-        // 32 個物資箱點位
+        // 38 個物資箱點位
         c.loot(-3, 1, 8);   c.loot(3, 1, 8);    c.loot(-12, 1, 8);  c.loot(-12, 1, 19);
         c.loot(12, 1, 7);   c.loot(12, 1, 16);  c.loot(-2, 1, 25);  c.loot(2, 1, 25);
         c.loot(-6, 1, 15);  c.loot(6, 1, 15);   c.loot(-9, 1, 13);  c.loot(-9, 1, 23);  c.loot(9, 1, 14);  c.loot(9, 1, 22);
+        c.loot(-12, 1, 25); c.loot(12, 1, 25);  c.loot(0, 1, 22);
         c.loot(-11, 7, 8);  c.loot(-9, 7, 6);   c.loot(-11, 7, 15); c.loot(-9, 7, 13);  c.loot(-11, 7, 22); c.loot(-9, 7, 20);
         c.loot(11, 7, 8);   c.loot(9, 7, 6);    c.loot(11, 7, 15);  c.loot(9, 7, 13);   c.loot(11, 7, 22);  c.loot(9, 7, 20);
         c.loot(-5, 7, 24);  c.loot(5, 7, 24);   c.loot(0, 7, 6);    c.loot(0, 7, 23);   c.loot(-7, 7, 15);  c.loot(7, 7, 15);
+        c.loot(-7, 7, 8);   c.loot(7, 7, 8);    c.loot(0, 7, 26);
     }
 
     private static void grandTemple(BuildingCanvas c) {
@@ -344,12 +354,94 @@ final class JapaneseBuildings {
 
         c.ceilingLights(-12, 12, 13, 7, 24, 6, 6, Blocks.OCHRE_FROGLIGHT);
 
-        // 28 個物資箱點位
-        c.loot(-10, 1, 2);  c.loot(10, 1, 2);
+        // 34 個物資箱點位
+        c.loot(-10, 1, 2);  c.loot(10, 1, 2);   c.loot(-3, 1, 1);   c.loot(3, 1, 1);
         c.loot(-4, 1, 9);   c.loot(4, 1, 9);    c.loot(-10, 1, 7);  c.loot(10, 1, 7);
         c.loot(-10, 1, 23); c.loot(10, 1, 23);  c.loot(-2, 1, 23);  c.loot(2, 1, 23);
         c.loot(-9, 1, 14);  c.loot(9, 1, 14);   c.loot(-4, 1, 15);  c.loot(4, 1, 15);  c.loot(-10, 1, 18); c.loot(10, 1, 18);
         c.loot(-10, 8, 12); c.loot(10, 8, 12);  c.loot(-10, 8, 23); c.loot(10, 8, 23); c.loot(-3, 8, 24);  c.loot(3, 8, 24);
         c.loot(-10, 8, 7);  c.loot(10, 8, 7);   c.loot(-12, 8, 15); c.loot(12, 8, 15); c.loot(-6, 8, 22);  c.loot(6, 8, 22);
+        c.loot(-8, 8, 18);  c.loot(8, 8, 18);   c.loot(0, 8, 22);   c.loot(0, 1, 7);
+    }
+
+    private static void edoStreet(BuildingCanvas c) {
+        c.foundation(Blocks.COBBLESTONE);
+        c.clear(-21, 0, 0, 21, 17, 34);
+
+        // 43x35 青石古街區：中央 9 格巷戰石道 (x=-4..4)＋南北雙朱紅大鳥居＋木造攤架
+        c.floor(-21, 0, 0, 21, 34, Blocks.COBBLESTONE);
+        c.box(-4, 0, 0, 4, 0, 34, Blocks.STONE_BRICKS);
+        for (int tz : new int[] { 1, 33 }) {
+            c.pillar(-4, 1, 6, tz, Blocks.RED_CONCRETE);
+            c.pillar(4, 1, 6, tz, Blocks.RED_CONCRETE);
+            c.box(-5, 6, tz, 5, 6, tz, Blocks.RED_CONCRETE);
+            c.box(-6, 7, tz, 6, 7, tz, Blocks.BLACK_CONCRETE);
+        }
+        // 中央街道攤販與石燈籠掩體
+        for (int sz : new int[] { 8, 17, 26 }) {
+            c.tallCover(-2, sz, 0, sz, 1, Blocks.OAK_PLANKS, Blocks.OAK_SLAB);
+            c.box(-2, 4, sz, 0, 4, sz, Blocks.RED_WOOL);
+            c.pillar(3, 1, 2, sz, Blocks.STONE_BRICK_WALL);
+            c.set(3, 3, sz, Blocks.OCHRE_FROGLIGHT);
+        }
+
+        // 左右對峙 6 棟二層和風町家 (W: x=-20..-6, E: x=6..20；z段: 2..11, 13..22, 24..33)
+        for (int[] seg : new int[][] { { 2, 11 }, { 13, 22 }, { 24, 33 } }) {
+            int z0 = seg[0], z1 = seg[1];
+            machiyaShop(c, -20, -6, z0, z1, true);
+            machiyaShop(c, 6, 20, z0, z1, false);
+        }
+
+        // 2 樓雙座跨街空中木橋 (z=11..12, 22..23, y=6)＋木欄杆自動相連
+        for (int bz : new int[] { 11, 22 }) {
+            c.box(-6, 6, bz, 6, 6, bz + 1, Blocks.SPRUCE_PLANKS);
+            c.windowX(-6, 7, bz, 6, 7, Blocks.DARK_OAK_FENCE);
+            c.windowX(-6, 7, bz + 1, 6, 7, Blocks.DARK_OAK_FENCE);
+            c.air(-5, 7, bz); c.air(-5, 7, bz + 1);
+            c.air(5, 7, bz);  c.air(5, 7, bz + 1);
+        }
+
+        // 48 個物資箱點位 (每棟上下共 7 × 6 = 42 + 街道攤位與天橋 6 = 48)
+        for (int z0 : new int[] { 2, 13, 24 }) {
+            c.loot(-16, 1, z0 + 2); c.loot(-12, 1, z0 + 6); c.loot(-18, 1, z0 + 7);
+            c.loot(-16, 7, z0 + 2); c.loot(-12, 7, z0 + 6); c.loot(-9, 7, z0 + 2);
+            c.loot(16, 1, z0 + 2);  c.loot(12, 1, z0 + 6);  c.loot(18, 1, z0 + 7);
+            c.loot(16, 7, z0 + 2);  c.loot(12, 7, z0 + 6);  c.loot(9, 7, z0 + 2);
+            c.loot(-8, 1, z0 + 4);  c.loot(8, 1, z0 + 4);
+        }
+        c.loot(0, 1, 10); c.loot(0, 1, 20); c.loot(0, 1, 29); c.loot(0, 1, 4);
+        c.loot(0, 7, 11); c.loot(0, 7, 22);
+    }
+
+    private static void machiyaShop(BuildingCanvas c, int x0, int x1, int z0, int z1, boolean westSide) {
+        int streetWallX = westSide ? x1 : x0;
+        int outerWallX = westSide ? x0 : x1;
+        c.box(x0, 0, z0, x1, 0, z1, Blocks.SPRUCE_PLANKS);
+        c.walls(x0, 1, z0, x1, 5, z1, Blocks.WHITE_CONCRETE);
+        c.box(x0, 6, z0, x1, 6, z1, Blocks.SPRUCE_PLANKS);
+        c.walls(x0, 7, z0, x1, 11, z1, Blocks.WHITE_CONCRETE);
+        c.cornerPillars(x0, 1, z0, x1, 11, z1, Blocks.DARK_OAK_LOG);
+        c.pagodaRoof(x0, 12, z0, x1, z1, 4, Blocks.DEEPSLATE_BRICK_STAIRS, Blocks.DEEPSLATE_TILES);
+
+        int zMid = (z0 + z1) / 2;
+        c.doorwaySide(streetWallX, 1, zMid - 1, 3);
+        c.doorwaySide(outerWallX, 1, zMid - 1, 2);
+        c.windowZ(streetWallX, 2, z0 + 1, z0 + 2, 3, Blocks.WHITE_STAINED_GLASS_PANE);
+        c.windowZ(streetWallX, 8, z0 + 2, z1 - 2, 9, Blocks.WHITE_STAINED_GLASS_PANE);
+        // 2 樓通往跨街木橋門洞
+        if (z0 == 2 || z0 == 13) c.doorway(westSide ? x1 - 3 : x0 + 1, 7, z1, 2);
+        if (z0 == 13 || z0 == 24) c.doorway(westSide ? x1 - 3 : x0 + 1, 7, z0, 2);
+
+        // 室內掩體 (櫃檯、書架、茶几與沙發，無木箱)
+        int midX = (x0 + x1) / 2;
+        c.counter(midX - 2, z0 + 3, midX + 2, z0 + 3, 1, Blocks.DARK_OAK_PLANKS);
+        c.tallCover(midX - 2, z1 - 2, midX + 1, z1 - 2, 7, Blocks.BOOKSHELF, Blocks.SPRUCE_SLAB);
+        c.sofaX(midX - 1, midX + 1, 7, z0 + 2, Blocks.OAK_STAIRS, Direction.NORTH);
+
+        // 寬 2 格樓梯靠外側牆面 0->6
+        int stX0 = westSide ? x0 + 1 : x1 - 2;
+        c.staircaseZ(stX0, stX0 + 1, 0, 6, z0 + 2, 1, Blocks.DARK_OAK_STAIRS, Blocks.SPRUCE_PLANKS, Blocks.DARK_OAK_PLANKS);
+        c.ceilingLights(x0 + 3, x1 - 3, 5, z0 + 3, z1 - 3, 6, 4, Blocks.OCHRE_FROGLIGHT);
+        c.ceilingLights(x0 + 3, x1 - 3, 11, z0 + 3, z1 - 3, 6, 4, Blocks.OCHRE_FROGLIGHT);
     }
 }

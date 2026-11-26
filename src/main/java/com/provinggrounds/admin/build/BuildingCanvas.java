@@ -442,6 +442,58 @@ public final class BuildingCanvas {
         }
     }
 
+    /** 停放車輛掩體（3×5 或 5×3：黑石輪胎＋彩色車身＋青色玻璃窗＋半磚車頂）。 */
+    public void parkedCar(int cx, int yBase, int cz, Block bodyColor, boolean alongZ) {
+        if (alongZ) {
+            set(cx - 1, yBase, cz - 1, Blocks.BLACK_CONCRETE);
+            set(cx + 1, yBase, cz - 1, Blocks.BLACK_CONCRETE);
+            set(cx - 1, yBase, cz + 1, Blocks.BLACK_CONCRETE);
+            set(cx + 1, yBase, cz + 1, Blocks.BLACK_CONCRETE);
+            box(cx - 1, yBase, cz - 2, cx + 1, yBase, cz + 2, bodyColor);
+            set(cx - 1, yBase, cz - 1, Blocks.BLACK_CONCRETE);
+            set(cx + 1, yBase, cz - 1, Blocks.BLACK_CONCRETE);
+            set(cx - 1, yBase, cz + 1, Blocks.BLACK_CONCRETE);
+            set(cx + 1, yBase, cz + 1, Blocks.BLACK_CONCRETE);
+            box(cx - 1, yBase + 1, cz - 1, cx + 1, yBase + 1, cz + 1, Blocks.LIGHT_GRAY_STAINED_GLASS);
+            for (int x = cx - 1; x <= cx + 1; x++) {
+                for (int z = cz - 1; z <= cz + 1; z++) {
+                    bottomSlab(x, yBase + 2, z, Blocks.SMOOTH_STONE_SLAB);
+                }
+            }
+        } else {
+            box(cx - 2, yBase, cz - 1, cx + 2, yBase, cz + 1, bodyColor);
+            set(cx - 1, yBase, cz - 1, Blocks.BLACK_CONCRETE);
+            set(cx - 1, yBase, cz + 1, Blocks.BLACK_CONCRETE);
+            set(cx + 1, yBase, cz - 1, Blocks.BLACK_CONCRETE);
+            set(cx + 1, yBase, cz + 1, Blocks.BLACK_CONCRETE);
+            box(cx - 1, yBase + 1, cz - 1, cx + 1, yBase + 1, cz + 1, Blocks.LIGHT_GRAY_STAINED_GLASS);
+            for (int x = cx - 1; x <= cx + 1; x++) {
+                for (int z = cz - 1; z <= cz + 1; z++) {
+                    bottomSlab(x, yBase + 2, z, Blocks.SMOOTH_STONE_SLAB);
+                }
+            }
+        }
+    }
+
+    /** 規則結構柱陣掩體。 */
+    public void columnGrid(int x0, int x1, int y0, int y1, int z0, int z1, int stepX, int stepZ, Block pillarBlock) {
+        int minX = Math.min(x0, x1), maxX = Math.max(x0, x1);
+        int minZ = Math.min(z0, z1), maxZ = Math.max(z0, z1);
+        for (int x = minX; x <= maxX; x += Math.max(1, stepX)) {
+            for (int z = minZ; z <= maxZ; z += Math.max(1, stepZ)) {
+                pillar(x, y0, y1, z, pillarBlock);
+            }
+        }
+    }
+
+    /** L 型 1.5 格蹲射戰術掩體。 */
+    public void bunkerCoverL(int lx, int yBase, int lz, int dx, int dz, Block base, Block topSlab) {
+        int xEnd = lx + dx;
+        int zEnd = lz + dz;
+        tallCover(Math.min(lx, xEnd), lz, Math.max(lx, xEnd), lz, yBase, base, topSlab);
+        tallCover(lx, Math.min(lz, zEnd), lx, Math.max(lz, zEnd), yBase, base, topSlab);
+    }
+
     /** 直梯（facingDir = 梯子朝外面向的方向，例如 SOUTH 代表貼在內側北牆面、面向前方玩家）。 */
     public void ladder(int lx, int y0, int y1, int lz, Direction facingDir) {
         BlockState st = Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, facingDir);

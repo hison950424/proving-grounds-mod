@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-26（v0.35.0 建築連接修復、樓梯齊平、4 風格各 3 棟大型建築各 28～36 個物資點，以及物資工具準星指向與 3D 預覽框已編譯、開服驗證並發佈，網路版本升為 30）。
+> 最後更新：2026-11-26（v0.36.0 大逃殺電梯平衡機制＋8 大風格共 28 棟超大型無木箱高物資建築已編譯、開服驗證並發佈，網路版本升為 31）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -48,6 +48,10 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
+- **v0.36.0 已發佈（大逃殺電梯戰術平衡＋8 大風格共 28 棟超大型無木箱高物資建築，Gemini 實作）**：
+  1. `block/ElevatorEvents.java`：大逃殺進行中（非創造／旁觀）搭乘電梯需讀條 **1.8 秒**，兩層播放機械警示音與雲霧粒子，離開方塊或受 `LivingHurtEvent` 傷害立即中斷，到達後響鈴並冷卻 **6 秒**（大廳／創造／團隊模式維持即時傳送）。
+  2. `BuildingStyle.java` + `BuildingPickerScreen.java` + `BuildingCatalog.java`：擴充為 **8 大風格**（2 列 × 4 欄分頁）、`MAX_UNDO = 8`、`PGNetwork.VERSION` 升為 `31`。
+  3. 升級既有 4 風格（各補強掩體與物資點＋各新增 1 棟超大型：`mod_prison_fortress`、`ind_oil_refinery`、`jp_edo_street`、`sci_mech_bay`），並新建 `CivicBuildings.java`、`MedievalBuildings.java`、`DesertBuildings.java`、`MaritimeBuildings.java` 各 3 棟（合計 **28 棟**，每棟 **34～52 個物資點**，零木箱，僅 4 棟超高建築留單座電梯）。
 - **v0.35.0 已發佈（建築生成修復、12 棟高物資大型無木箱建築、物資工具準星指向＋3D 預覽框，Gemini 實作）**：
   1. `admin/build/BuildingCanvas.java`：`finalizeShapes()` 改為兩輪 `Block.updateFromNeighbourShapes`（第二輪依 Y 由高到低排序）修復玻璃片／石牆／鐵欄／柵欄／樓梯轉角連接；新增 `staircaseZ`／`staircaseX` 讓最後一階精準與上層地板齊平；補地基深度擴為 16 格；新增無木箱室內掩體與照明輔助函式。
   2. `ModernBuildings.java`、`IndustrialBuildings.java`、`JapaneseBuildings.java`、`ScifiBuildings.java`：刪除舊 40 棟建築，重製 4 風格各 3 棟（共 12 棟，尺寸 `29×25×19`～`39×31×18`，每棟 **28～36 個物資點**）大型／超大型建築與豐富掩體內裝（零木箱／木桶）。

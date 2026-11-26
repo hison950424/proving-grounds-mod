@@ -9,7 +9,7 @@ import static com.provinggrounds.admin.build.BuildingStyle.MODERN;
 
 /**
  * 檔案: ModernBuildings.java
- * 目的: 現代軍事與都市風格 3 棟大型／超大型建築（均無木箱、樓梯最後一階完整齊平、玻璃片／鐵欄／石牆自動連接）。
+ * 目的: 現代軍事與都市風格 4 棟大型／超大型建築（均無木箱、樓梯最後一階完整齊平、玻璃片／鐵欄／石牆自動連接）。
  */
 final class ModernBuildings {
 
@@ -17,16 +17,20 @@ final class ModernBuildings {
 
     static void register(Consumer<BuildingBlueprint> out) {
         out.accept(new BuildingBlueprint("mod_tactical_hq", MODERN, "聯合作戰指揮中心",
-            "3 層裝甲指揮大樓＋天台停機坪：1 樓軍械整備室與戰地急救區、2 樓雷達機房與簡報廳、3 樓長官辦公室與狙擊露台、雙寬樓梯與電梯井（30 個物資點）",
-            31, 27, 22, 30, ModernBuildings::tacticalHq));
+            "3 層裝甲指揮大樓＋天台停機坪：1 樓軍械整備室與戰地急救區、2 樓雷達機房與簡報廳、3 樓長官辦公室與狙擊露台、雙寬樓梯與單座電梯（36 個物資點）",
+            31, 27, 22, 36, ModernBuildings::tacticalHq));
 
         out.accept(new BuildingBlueprint("mod_shopping_mall", MODERN, "都會大型購物中心",
-            "3 層挑空中庭超大型商場：中庭綠植圓環、精品／3C／咖啡／超市多間獨立商鋪、2 樓美食街與書局迷宮、3 樓雙廳影城與採光天窗（36 個物資點）",
-            37, 29, 19, 36, ModernBuildings::shoppingMall));
+            "3 層挑空中庭超大型商場：中庭綠植圓環、精品／3C／咖啡／超市多間獨立商鋪、2 樓美食街與書局迷宮、3 樓雙廳影城與採光天窗（42 個物資點）",
+            37, 29, 19, 42, ModernBuildings::shoppingMall));
 
         out.accept(new BuildingBlueprint("mod_hospital", MODERN, "綜合戰地醫院大樓",
-            "3 層大型現代醫院＋屋頂急救停機坪：1 樓掛號大廳／急診／藥局、2 樓中央護理站與 6 間獨立雙人病房、3 樓無菌手術室與 ICU 觀測長廊（28 個物資點）",
-            29, 25, 19, 28, ModernBuildings::hospital));
+            "3 層大型現代醫院＋屋頂急救停機坪：1 樓掛號大廳／急診／藥局、2 樓中央護理站與 6 間獨立雙人病房、3 樓無菌手術室與 ICU 觀測長廊（36 個物資點）",
+            29, 25, 19, 36, ModernBuildings::hospital));
+
+        out.accept(new BuildingBlueprint("mod_prison_fortress", MODERN, "高戒備聯邦監獄要塞",
+            "45×35 超大型要塞監獄：放風運動操場與沙包哨口、東西兩翼雙層共 12 間鐵柵牢房、中央 3 層圓形監視塔、大型犯人食堂與天台四角碉堡（48 個物資點）",
+            45, 35, 20, 48, ModernBuildings::prisonFortress));
     }
 
     private static void tacticalHq(BuildingCanvas c) {
@@ -176,14 +180,21 @@ final class ModernBuildings {
         c.ceilingLights(-12, 12, 11, 5, 24, 6, 6, Blocks.SEA_LANTERN);
         c.ceilingLights(-12, 12, 17, 7, 24, 6, 6, Blocks.SEA_LANTERN);
 
-        // 30 個物資箱點位
+        c.bunkerCoverL(-8, 1, 20, 2, 2, Blocks.DEEPSLATE_BRICKS, Blocks.SMOOTH_STONE_SLAB);
+        c.bunkerCoverL(8, 1, 20, -2, 2, Blocks.DEEPSLATE_BRICKS, Blocks.SMOOTH_STONE_SLAB);
+        c.bunkerCoverL(-5, 7, 19, 2, 1, Blocks.GRAY_CONCRETE, Blocks.STONE_BRICK_SLAB);
+        c.bunkerCoverL(5, 7, 19, -2, 1, Blocks.GRAY_CONCRETE, Blocks.STONE_BRICK_SLAB);
+
+        // 36 個物資箱點位
         c.loot(-12, 1, 2);   c.loot(12, 1, 2);
         c.loot(-5, 1, 5);    c.loot(5, 1, 5);    c.loot(0, 1, 9);    c.loot(0, 1, 21);
         c.loot(-10, 1, 8);   c.loot(-10, 1, 15); c.loot(10, 1, 8);   c.loot(10, 1, 13);
+        c.loot(-8, 1, 21);   c.loot(8, 1, 21);
         c.loot(-11, 7, 6);   c.loot(-7, 7, 13);  c.loot(10, 7, 7);   c.loot(10, 7, 15);
         c.loot(-5, 7, 8);    c.loot(5, 7, 8);    c.loot(-4, 7, 21);  c.loot(4, 7, 21);
+        c.loot(-6, 7, 19);   c.loot(6, 7, 19);
         c.loot(-9, 13, 6);   c.loot(0, 13, 4);   c.loot(-3, 13, 4);  c.loot(9, 13, 7);
-        c.loot(-8, 13, 14);  c.loot(8, 13, 14);  c.loot(0, 13, 21);
+        c.loot(-8, 13, 14);  c.loot(8, 13, 14);  c.loot(0, 13, 21);  c.loot(-3, 13, 19); c.loot(3, 13, 19);
         c.loot(-10, 19, 5);  c.loot(10, 19, 5);  c.loot(10, 19, 21); c.loot(-6, 19, 21); c.loot(0, 19, 22);
     }
 
@@ -289,25 +300,28 @@ final class ModernBuildings {
         c.staircaseZ(-16, -15, 6, 12, 22, -1, Blocks.QUARTZ_STAIRS, Blocks.SMOOTH_QUARTZ, Blocks.QUARTZ_BLOCK);
         c.staircaseZ(15, 16, 6, 12, 22, -1, Blocks.QUARTZ_STAIRS, Blocks.SMOOTH_QUARTZ, Blocks.QUARTZ_BLOCK);
         c.staircaseZ(-5, -4, 12, 18, 22, 1, Blocks.QUARTZ_STAIRS, Blocks.GRAY_CONCRETE, Blocks.SMOOTH_QUARTZ);
-        c.elevator(0, 26, 0, 6, 12, 18);
-
-        // 屋頂矮牆射擊掩體＋照明
+        // 取消電梯，改以寬雙樓梯與天台掩體提升交火節奏
         c.parapet(-17, 19, 3, 17, 28, Blocks.STONE_BRICK_WALL, true);
         c.tallCover(-12, 8, -9, 8, 19, Blocks.GRAY_CONCRETE, Blocks.STONE_BRICK_SLAB);
         c.tallCover(9, 8, 12, 8, 19, Blocks.GRAY_CONCRETE, Blocks.STONE_BRICK_SLAB);
         c.ceilingLights(-15, 15, 5, 5, 26, 6, 7, Blocks.SEA_LANTERN);
         c.ceilingLights(-15, 15, 11, 5, 26, 6, 7, Blocks.SEA_LANTERN);
         c.ceilingLights(-15, 15, 17, 5, 26, 6, 7, Blocks.SEA_LANTERN);
+        c.bunkerCoverL(-4, 1, 24, 2, -2, Blocks.SMOOTH_QUARTZ, Blocks.SMOOTH_STONE_SLAB);
+        c.bunkerCoverL(4, 1, 24, -2, -2, Blocks.SMOOTH_QUARTZ, Blocks.SMOOTH_STONE_SLAB);
 
-        // 36 個物資箱點位
+        // 42 個物資箱點位
         c.loot(-12, 1, 9);  c.loot(-15, 1, 11); c.loot(-12, 1, 21); c.loot(-15, 1, 22);
         c.loot(12, 1, 9);   c.loot(15, 1, 8);   c.loot(12, 1, 21);  c.loot(15, 1, 23);
         c.loot(-4, 1, 5);   c.loot(4, 1, 5);    c.loot(-4, 1, 25);  c.loot(4, 1, 25);
+        c.loot(0, 1, 9);    c.loot(0, 1, 21);
         c.loot(-2, 7, 25);  c.loot(2, 7, 25);   c.loot(-8, 7, 25);  c.loot(8, 7, 25);
         c.loot(-12, 7, 9);  c.loot(-12, 7, 13); c.loot(-12, 7, 17); c.loot(-8, 7, 14);
         c.loot(11, 7, 10);  c.loot(11, 7, 18);  c.loot(8, 7, 14);   c.loot(0, 7, 6);
+        c.loot(-9, 7, 7);   c.loot(9, 7, 7);
         c.loot(0, 13, 5);   c.loot(-4, 13, 7);  c.loot(4, 13, 7);   c.loot(0, 13, 24);
         c.loot(-12, 13, 12); c.loot(-12, 13, 18); c.loot(12, 13, 12); c.loot(12, 13, 18);
+        c.loot(-9, 13, 10); c.loot(9, 13, 10);
         c.loot(-12, 19, 10); c.loot(-12, 19, 20); c.loot(12, 19, 10); c.loot(12, 19, 20);
     }
 
@@ -400,26 +414,159 @@ final class ModernBuildings {
         c.staircaseZ(-12, -11, 12, 18, 17, 1, Blocks.QUARTZ_STAIRS, Blocks.LIGHT_GRAY_CONCRETE, Blocks.QUARTZ_BLOCK);
         c.windowZ(-10, 7, 17, 23, 7, Blocks.CYAN_STAINED_GLASS_PANE);
         c.windowZ(-10, 19, 17, 23, 19, Blocks.STONE_BRICK_WALL);
-        c.elevator(0, 22, 0, 6, 12, 18);
-
-        // 天台紅十字停機坪與女兒牆
+        // 天台紅十字停機坪與女兒牆（無電梯）
         c.parapet(-13, 19, 3, 13, 24, Blocks.STONE_BRICK_WALL, true);
         c.box(-4, 18, 8, 4, 18, 16, Blocks.WHITE_CONCRETE);
         c.box(-1, 18, 9, 1, 18, 15, Blocks.RED_CONCRETE);
         c.box(-3, 18, 11, 3, 18, 13, Blocks.RED_CONCRETE);
         c.set(-4, 19, 8, Blocks.SEA_LANTERN); c.set(4, 19, 8, Blocks.SEA_LANTERN);
         c.set(-4, 19, 16, Blocks.SEA_LANTERN); c.set(4, 19, 16, Blocks.SEA_LANTERN);
+        c.bunkerCoverL(-8, 19, 12, 2, 2, Blocks.LIGHT_GRAY_CONCRETE, Blocks.SMOOTH_STONE_SLAB);
+        c.bunkerCoverL(8, 19, 12, -2, 2, Blocks.LIGHT_GRAY_CONCRETE, Blocks.SMOOTH_STONE_SLAB);
 
         c.ceilingLights(-11, 11, 5, 5, 22, 5, 6, Blocks.SEA_LANTERN);
         c.ceilingLights(-11, 11, 11, 5, 22, 5, 6, Blocks.SEA_LANTERN);
         c.ceilingLights(-11, 11, 17, 5, 22, 5, 6, Blocks.SEA_LANTERN);
 
-        // 28 個物資箱點位
-        c.loot(-3, 1, 9);  c.loot(3, 1, 9);   c.loot(0, 1, 20);
+        // 36 個物資箱點位
+        c.loot(-3, 1, 9);  c.loot(3, 1, 9);   c.loot(0, 1, 20);  c.loot(0, 1, 14);
         c.loot(-9, 1, 5);  c.loot(-9, 1, 12); c.loot(-11, 1, 19); c.loot(9, 1, 5);  c.loot(9, 1, 15);
-        c.loot(0, 7, 15);  c.loot(0, 7, 9);   c.loot(-3, 7, 11);  c.loot(3, 7, 11);
+        c.loot(-6, 1, 20); c.loot(6, 1, 20);
+        c.loot(0, 7, 15);  c.loot(0, 7, 9);   c.loot(-3, 7, 11);  c.loot(3, 7, 11); c.loot(0, 7, 21);
         c.loot(-8, 7, 7);  c.loot(-8, 7, 13); c.loot(-8, 7, 19);  c.loot(8, 7, 7);  c.loot(8, 7, 13);  c.loot(8, 7, 19);
         c.loot(-9, 13, 7); c.loot(9, 13, 7);  c.loot(-9, 13, 16); c.loot(9, 13, 16); c.loot(0, 13, 9);  c.loot(0, 13, 15);
+        c.loot(-3, 13, 19); c.loot(3, 13, 19);
         c.loot(-8, 19, 6); c.loot(8, 19, 6);  c.loot(-8, 19, 18); c.loot(8, 19, 18);
+        c.loot(0, 19, 6);  c.loot(0, 19, 19);
+    }
+
+    private static void prisonFortress(BuildingCanvas c) {
+        c.foundation(Blocks.DEEPSLATE_BRICKS);
+        c.clear(-22, 0, 0, 22, 20, 34);
+
+        // 45x35 監獄圍牆＋前庭放風操場 (z=0..11)＋兩層牢房主堡 (z=12..33)
+        c.floor(-22, 0, 0, 22, 34, Blocks.POLISHED_ANDESITE);
+        c.walls(-22, 1, 0, 22, 5, 34, Blocks.DEEPSLATE_BRICKS);
+        c.parapet(-22, 6, 0, 22, 34, Blocks.IRON_BARS, false);
+        c.doorway(-2, 1, 0, 5);
+        c.doorway(-2, 1, 34, 5);
+        c.doorwaySide(-22, 1, 6, 3);
+        c.doorwaySide(22, 1, 6, 3);
+
+        // 放風操場掩體＋籃球半場＋哨亭
+        c.box(7, 0, 2, 19, 0, 10, Blocks.TERRACOTTA);
+        c.pillar(18, 1, 4, 6, Blocks.IRON_BLOCK);
+        c.set(17, 4, 6, Blocks.ORANGE_CONCRETE);
+        c.bunkerCoverL(-16, 1, 5, 3, 3, Blocks.SANDSTONE, Blocks.SANDSTONE_SLAB);
+        c.bunkerCoverL(5, 1, 4, 2, 2, Blocks.STONE_BRICKS, Blocks.STONE_BRICK_SLAB);
+        c.walls(-20, 1, 8, -14, 4, 11, Blocks.GRAY_CONCRETE);
+        c.box(-20, 5, 8, -14, 5, 11, Blocks.DEEPSLATE_TILES);
+        c.doorway(-18, 1, 8, 2);
+
+        // 主樓結構 (x=-20..20, z=12..33; 樓板 y=0, 6, 12, 17)
+        c.box(-20, 0, 12, 20, 0, 33, Blocks.SMOOTH_STONE);
+        c.walls(-20, 1, 12, 20, 5, 33, Blocks.LIGHT_GRAY_CONCRETE);
+        c.box(-20, 6, 12, 20, 6, 33, Blocks.POLISHED_ANDESITE);
+        c.walls(-20, 7, 12, 20, 11, 33, Blocks.LIGHT_GRAY_CONCRETE);
+        c.box(-20, 12, 12, 20, 12, 33, Blocks.POLISHED_ANDESITE);
+        c.walls(-20, 13, 12, 20, 16, 33, Blocks.GRAY_CONCRETE);
+        c.box(-20, 17, 12, 20, 17, 33, Blocks.DEEPSLATE_TILES);
+        c.cornerPillars(-20, 1, 12, 20, 17, 33, Blocks.DEEPSLATE_BRICKS);
+
+        // 主樓大門與鐵柵高窗
+        c.doorway(-2, 1, 12, 5);
+        c.doubleDoor(-1, 1, 12, Blocks.IRON_DOOR);
+        c.doorway(-2, 1, 33, 5);
+        c.doorwaySide(-20, 1, 22, 3);
+        c.doorwaySide(20, 1, 22, 3);
+        for (int fy : new int[] { 2, 8, 14 }) {
+            c.windowX(-17, fy, 12, -7, fy + 2, Blocks.IRON_BARS);
+            c.windowX(7, fy, 12, 17, fy + 2, Blocks.IRON_BARS);
+            c.windowZ(-20, fy, 14, 20, fy + 1, Blocks.IRON_BARS);
+            c.windowZ(20, fy, 14, 20, fy + 1, Blocks.IRON_BARS);
+        }
+
+        // 中央挑空監視大廳 (x=-6..6, z=14..23)＋3 層圓形監視塔底座
+        c.box(-5, 6, 14, 5, 11, 23, Blocks.AIR);
+        c.box(-6, 7, 13, 6, 7, 24, Blocks.IRON_BARS);
+        c.box(-5, 7, 14, 5, 7, 23, Blocks.AIR);
+        c.walls(-2, 1, 17, 2, 11, 21, Blocks.DEEPSLATE_BRICKS);
+        c.doorway(-1, 1, 17, 2);
+        c.windowX(-1, 8, 17, 1, 10, Blocks.LIGHT_GRAY_STAINED_GLASS_PANE);
+        c.windowX(-1, 8, 21, 1, 10, Blocks.LIGHT_GRAY_STAINED_GLASS_PANE);
+
+        // 1F & 2F 東西兩翼共 12 間鐵柵牢房 (zBase = 13, 17, 21)
+        for (int fy : new int[] { 1, 7 }) {
+            for (int zBase : new int[] { 13, 17, 21 }) {
+                c.box(-19, fy, zBase + 3, -11, fy + 4, zBase + 3, Blocks.STONE_BRICKS);
+                c.box(-11, fy, zBase, -11, fy + 4, zBase + 3, Blocks.IRON_BARS);
+                c.doorwaySide(-11, fy, zBase + 1, 2);
+                c.bedUnit(-19, zBase + 1, -17, zBase + 1, fy, Blocks.ORANGE_WOOL, Blocks.WHITE_WOOL);
+
+                c.box(11, fy, zBase + 3, 19, fy + 4, zBase + 3, Blocks.STONE_BRICKS);
+                c.box(11, fy, zBase, 11, fy + 4, zBase + 3, Blocks.IRON_BARS);
+                c.doorwaySide(11, fy, zBase + 1, 2);
+                c.bedUnit(17, zBase + 1, 19, zBase + 1, fy, Blocks.ORANGE_WOOL, Blocks.WHITE_WOOL);
+            }
+        }
+
+        // 1F 北側犯人食堂 (z=26..32)＋2F 軍械洗衣房 (z=26..32)
+        c.box(-18, 1, 25, 18, 5, 25, Blocks.GRAY_CONCRETE);
+        c.doorway(-1, 1, 25, 3);
+        c.doorway(-13, 1, 25, 2);
+        c.doorway(12, 1, 25, 2);
+        for (int x : new int[] { -14, -7, 7, 14 }) {
+            c.counter(x - 1, 27, x + 1, 30, 1, Blocks.SMOOTH_STONE);
+            c.sofaZ(x - 2, 1, 27, 30, Blocks.OAK_STAIRS, Direction.EAST);
+        }
+        c.counter(-5, 31, 5, 31, 1, Blocks.IRON_BLOCK);
+        // 2F 北側警備裝備庫
+        c.box(-18, 7, 25, 18, 11, 25, Blocks.GRAY_CONCRETE);
+        c.doorway(-1, 7, 25, 3);
+        c.tallCover(-15, 28, -9, 28, 7, Blocks.DEEPSLATE_BRICKS, Blocks.STONE_BRICK_SLAB);
+        c.tallCover(9, 28, 15, 28, 7, Blocks.DEEPSLATE_BRICKS, Blocks.STONE_BRICK_SLAB);
+        c.serverRack(-4, 7, 30, 3, Blocks.BLAST_FURNACE, Blocks.SEA_LANTERN);
+        c.serverRack(4, 7, 30, 3, Blocks.BLAST_FURNACE, Blocks.SEA_LANTERN);
+
+        // 3F 警衛長官層 (y=13..16)
+        c.bunkerCoverL(-14, 13, 17, 3, 2, Blocks.DEEPSLATE_BRICKS, Blocks.SMOOTH_STONE_SLAB);
+        c.bunkerCoverL(14, 13, 17, -3, 2, Blocks.DEEPSLATE_BRICKS, Blocks.SMOOTH_STONE_SLAB);
+        c.deskUnit(-12, 13, 28, Blocks.DARK_OAK_PLANKS, Blocks.POLISHED_ANDESITE_STAIRS, Direction.NORTH);
+        c.deskUnit(12, 13, 28, Blocks.DARK_OAK_PLANKS, Blocks.POLISHED_ANDESITE_STAIRS, Direction.NORTH);
+        c.box(-4, 13, 28, 4, 15, 28, Blocks.BOOKSHELF);
+
+        // 寬 2 格樓梯 (無電梯)：0->6->12->17
+        c.staircaseZ(-9, -8, 0, 6, 15, 1, Blocks.STONE_BRICK_STAIRS, Blocks.POLISHED_ANDESITE, Blocks.STONE_BRICKS);
+        c.staircaseZ(8, 9, 0, 6, 15, 1, Blocks.STONE_BRICK_STAIRS, Blocks.POLISHED_ANDESITE, Blocks.STONE_BRICKS);
+        c.staircaseZ(-9, -8, 6, 12, 22, -1, Blocks.STONE_BRICK_STAIRS, Blocks.POLISHED_ANDESITE, Blocks.STONE_BRICKS);
+        c.staircaseZ(8, 9, 6, 12, 22, -1, Blocks.STONE_BRICK_STAIRS, Blocks.POLISHED_ANDESITE, Blocks.STONE_BRICKS);
+        c.staircaseZ(-2, -1, 12, 17, 20, 1, Blocks.STONE_BRICK_STAIRS, Blocks.DEEPSLATE_TILES, Blocks.STONE_BRICKS);
+
+        // 屋頂女兒牆與四角碉堡哨塔 (y=17..20)
+        c.parapet(-20, 18, 12, 20, 33, Blocks.DEEPSLATE_BRICK_WALL, true);
+        for (int[] corner : new int[][] { { -19, 13 }, { 15, 13 }, { -19, 28 }, { 15, 28 } }) {
+            c.walls(corner[0], 18, corner[1], corner[0] + 4, 19, corner[1] + 4, Blocks.GRAY_CONCRETE);
+            c.box(corner[0], 20, corner[1], corner[0] + 4, 20, corner[1] + 4, Blocks.DEEPSLATE_BRICKS);
+            c.doorway(corner[0] + 1, 18, corner[1], 2);
+            c.doorway(corner[0] + 1, 18, corner[1] + 4, 2);
+        }
+
+        c.ceilingLights(-18, 18, 5, 14, 31, 6, 6, Blocks.SEA_LANTERN);
+        c.ceilingLights(-18, 18, 11, 14, 31, 6, 6, Blocks.SEA_LANTERN);
+        c.ceilingLights(-18, 18, 16, 14, 31, 6, 6, Blocks.SEA_LANTERN);
+
+        // 48 個物資箱點位
+        c.loot(-17, 1, 9);  c.loot(-12, 1, 4);  c.loot(12, 1, 6);   c.loot(3, 1, 6);
+        c.loot(-14, 1, 14); c.loot(-14, 1, 18); c.loot(-14, 1, 22);
+        c.loot(14, 1, 14);  c.loot(14, 1, 18);  c.loot(14, 1, 22);
+        c.loot(-5, 1, 15);  c.loot(5, 1, 15);   c.loot(-10, 1, 28); c.loot(0, 1, 28);   c.loot(10, 1, 28); c.loot(0, 1, 19);
+        c.loot(-14, 7, 14); c.loot(-14, 7, 18); c.loot(-14, 7, 22);
+        c.loot(14, 7, 14);  c.loot(14, 7, 18);  c.loot(14, 7, 22);
+        c.loot(-12, 7, 28); c.loot(12, 7, 28);  c.loot(0, 7, 28);   c.loot(-5, 7, 14);  c.loot(5, 7, 14);
+        c.loot(-16, 13, 15); c.loot(16, 13, 15); c.loot(-16, 13, 21); c.loot(16, 13, 21);
+        c.loot(-14, 13, 28); c.loot(14, 13, 28); c.loot(-6, 13, 19); c.loot(6, 13, 19);
+        c.loot(0, 13, 15);  c.loot(0, 13, 30);  c.loot(-8, 13, 29); c.loot(8, 13, 29);
+        c.loot(-17, 18, 15); c.loot(17, 18, 15); c.loot(-17, 18, 30); c.loot(17, 18, 30);
+        c.loot(0, 18, 15);  c.loot(-10, 18, 22); c.loot(10, 18, 22); c.loot(-6, 18, 29); c.loot(6, 18, 29);
     }
 }
