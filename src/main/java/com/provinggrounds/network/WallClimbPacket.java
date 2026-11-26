@@ -10,9 +10,15 @@ import java.util.function.Supplier;
 
 /**
  * 檔案: WallClimbPacket.java
- * 目的: 客戶端 → 伺服器：玩家在跳躍浮空時對前方不高於頭部的方塊再按一次空白鍵，請求觸發翻爬。
+ * 目的: 客戶端 → 伺服器：玩家在跳躍浮空時對前方不高於頭部的方塊再按一次空白鍵請求觸發翻爬，
+ *   或於攀爬中按下後退／左／右主動通知伺服器取消攀爬。
  */
 public record WallClimbPacket(BlockPos wallPos, float yaw) {
+
+    /** 建立「取消攀爬」請求封包（沿用相同封包格式，以 yaw = NaN 區分）。 */
+    public static WallClimbPacket cancel() {
+        return new WallClimbPacket(BlockPos.ZERO, Float.NaN);
+    }
 
     public void encode(FriendlyByteBuf buf) {
         buf.writeBlockPos(wallPos);
@@ -26,7 +32,10 @@ public record WallClimbPacket(BlockPos wallPos, float yaw) {
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer sender = ctx.get().getSender();
-            if (sender != null) WallClimb.startServer(sender, wallPos, yaw);
+            if (sender != null) {
+                if (Float.isNaN(yaw)) WallClimb.cancelServer(sender);
+                else WallClimb.startServer(sender, wallPos, yaw);
+            }
         });
         ctx.get().setPacketHandled(true);
     }

@@ -17,6 +17,7 @@
     "LevelSetBlockMixin",
     "ExplosionHitPlayersMixin",
     "FlashShieldMixin",
+    "MeleeGlassMixin",
     "ChestMenuMixin",
     "ArmorAbsorbMixin",
     "BlockCollisionMixin"

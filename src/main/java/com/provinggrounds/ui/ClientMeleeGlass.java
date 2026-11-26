@@ -7,6 +7,7 @@ import com.provinggrounds.network.MeleeGlassPacket;
 import com.provinggrounds.network.PGNetwork;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraftforge.api.distmarker.Dist;
@@ -18,8 +19,8 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * 檔案: ClientMeleeGlass.java
- * 目的: 拿近戰武器左鍵或右鍵攻擊玻璃／玻璃片／鐵欄杆 → 送 MeleeGlassPacket 給伺服器打破（只在客戶端）。
- *   同時監聽 InteractionKeyMappingTriggered 與 MouseButton.Pre，確保就算 lrtactical 攔截右鍵事件也能正常破壞方塊。
+ * 目的: 非 lrtactical 的近戰武器（後備路徑）左／右鍵打玻璃／玻璃片／鐵欄杆時送 MeleeGlassPacket 給伺服器打破。
+ *   lrtactical 刀械改由伺服器端 MeleeGlassMixin 在各自真正的揮刀命中幀打破，避免未完成拔刀或揮刀前就提早破玻璃。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
 public final class ClientMeleeGlass {
@@ -46,7 +47,8 @@ public final class ClientMeleeGlass {
 
     private static void trySend(Minecraft mc, boolean heavy) {
         if (mc.player == null || mc.level == null || com.provinggrounds.special.ActionLock.blocksActions(mc.player)) return;
-        if (!mc.player.getMainHandItem().is(GunCompat.MELEE)) return;
+        ItemStack held = mc.player.getMainHandItem();
+        if (!held.is(GunCompat.MELEE) || GunCompat.isLrtacticalMelee(held)) return;
         if (!(mc.hitResult instanceof BlockHitResult bh) || bh.getType() != HitResult.Type.BLOCK) return;
         if (!BlockLedger.isGlass(mc.level.getBlockState(bh.getBlockPos()))) return;
         long now = System.currentTimeMillis();

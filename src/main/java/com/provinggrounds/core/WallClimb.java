@@ -44,9 +44,11 @@ import java.util.function.Consumer;
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID)
 public final class WallClimb {
 
-    public static final int DURATION_TICKS = 9;
-    public static final int STOW_TICKS = 2;
+    public static final int DURATION_TICKS = 18;
+    public static final int STOW_TICKS = 4;
     public static final int COOLDOWN_TICKS = 10;
+    public static final double CANCEL_PUSH_SPEED = 0.28;
+    public static final double CANCEL_PUSH_UP = 0.06;
     public static final float MAX_YAW_OFFSET = 45.0f;
     public static final double MIN_FACING_DOT = Math.cos(Math.toRadians(45.0));
 
@@ -298,7 +300,7 @@ public final class WallClimb {
         p.stopUsingItem();
         GunCompat.cancelGunAction(p);
         // 爬完客戶端會重新拿槍：那次不要把「收槍時間」算進等待（使用者回饋：舉槍動畫播完還不能開鏡／開槍）
-        com.provinggrounds.compat.TaczRedraw.expect(p, 3000L);
+        com.provinggrounds.compat.TaczRedraw.expect(p, 4000L);
 
         Vec3 start = p.position();
         SERVER_ACTIVE.put(p.getUUID(), new ClimbState(start, target.targetPos(), yaw, stow, DURATION_TICKS, false));
@@ -309,6 +311,19 @@ public final class WallClimb {
             level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.LADDER_STEP, SoundSource.PLAYERS, 0.5f, 1.25f);
         }
         PGNetwork.sendToAll(new WallClimbSyncPacket(p.getId(), start, target.targetPos(), yaw, stow, DURATION_TICKS));
+    }
+
+    /** 伺服器端：玩家於攀爬中按後退／左／右主動取消攀爬，立即結束鎖定並通知所有客戶端恢復姿勢。 */
+    public static void cancelServer(ServerPlayer p) {
+        ClimbState s = SERVER_ACTIVE.remove(p.getUUID());
+        if (s == null) return;
+        ServerLevel level = p.serverLevel();
+        SERVER_COOLDOWN.put(p.getUUID(), level.getGameTime() + COOLDOWN_TICKS);
+        p.fallDistance = 0.0f;
+        MeleeDrawSpeed.restartDraw(p);
+        level.playSound(null, p.getX(), p.getY(), p.getZ(),
+            SoundEvents.ARMOR_EQUIP_LEATHER, SoundSource.PLAYERS, 0.45f, 0.9f);
+        PGNetwork.sendToAll(new WallClimbSyncPacket(p.getId(), p.position(), p.position(), s.yaw, 0, 0));
     }
 
     @SubscribeEvent
@@ -387,6 +402,24 @@ public final class WallClimb {
 
     public static boolean isClientClimbing(int entityId) {
         return CLIENT_ACTIVE.containsKey(entityId);
+    }
+
+    /** 客戶端目前攀爬已經過幾 tick（未攀爬回傳 -1）。 */
+    public static int clientClimbTick(int entityId) {
+        ClimbState s = CLIENT_ACTIVE.get(entityId);
+        return s != null ? s.tick : -1;
+    }
+
+    /** 客戶端：主動朝指定世界水平方向 (dirX, dirZ) 推離並取消攀爬，立刻解鎖操作與重舉手持物品。 */
+    public static boolean cancelClientLocal(Player localPlayer, double dirX, double dirZ) {
+        ClimbState s = CLIENT_ACTIVE.remove(localPlayer.getId());
+        if (s == null || !s.local) return false;
+        clientCooldownUntilMs = System.currentTimeMillis() + COOLDOWN_TICKS * 50L;
+        localPlayer.setDeltaMovement(dirX * CANCEL_PUSH_SPEED, CANCEL_PUSH_UP, dirZ * CANCEL_PUSH_SPEED);
+        localPlayer.fallDistance = 0.0f;
+        Consumer<Player> cb = localFinishHandler;
+        if (cb != null) cb.accept(localPlayer);
+        return true;
     }
 
     /**

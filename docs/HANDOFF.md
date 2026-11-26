@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-27（v0.38.1 已發佈：v0.38.0 樓梯斜坡／柵欄 1 格高／跳躍二段空白鍵翻爬；v0.38.1 翻爬後重新舉槍不算收槍時間（compat/TaczRedraw）、翻爬只有大逃殺能用。都還沒在真正客戶端實測，測試在 docs/TESTING.md 最上面 G1、G2）。
+> 最後更新：2026-11-27（v0.38.2 已實作並準備發佈：近戰破玻璃改掛勾 `lrtactical` 每把刀真實揮刀命中幀 `MeleeGlassMixin`、樓梯移動改為依真實坡度維持 3D 等速於平地 `ui/StairMovement`、攀爬動作減慢 100% 並支援按後退／左／右向該方向取消 `WallClimb`、決賽圈半徑增 5 格至 `7.5` 格 `Circle.FINAL_RADIUS`；前版 v0.38.1 已發佈：翻爬後重新舉槍不算收槍時間 `compat/TaczRedraw`、翻爬只有大逃殺能用。都還沒在真正客戶端實測，測試在 docs/TESTING.md 最上面 I1～I7 與 G1～G2）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -48,7 +48,13 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
-- **v0.38.0 待發佈（樓梯 45° 斜坡、柵欄石牆 1 格高、跳躍二段空白鍵翻爬零抖動與切刀演出，Gemini 實作）**：
+- **v0.38.2（近戰破玻璃依各刀真實揮刀命中幀＋樓梯與平地 3D 等速＋攀爬放慢 100% 與方向取消＋決賽圈半徑 7.5 格，Gemini 實作）**：
+  1. `mixin/MeleeGlassMixin.java` + `provinggrounds.mixins.json` + `compat/GunCompat.java`：新增 `@Pseudo` Mixin 掛勾 `CombatProperties.postAttack` 呼叫 `IMeleeWeapon.attack` 的瞬間，讓伺服器在每把 `lrtactical` 近戰武器各自真正的揮刀命中幀呼叫 `MeleeGlassPacket.tryBreakGlassAtAim`，自動完全遵循每把刀的拔刀時間、左／右鍵與連段揮刀延遲與冷卻。
+  2. `network/MeleeGlassPacket.java` + `ui/ClientMeleeGlass.java`：`lrtactical` 近戰武器不再於滑鼠按下瞬間送包，也不再受 `COOLDOWN_LIGHT = 10` / `COOLDOWN_HEAVY = 14` 固定冷卻限制；封包格式與 `PGNetwork.VERSION = "33"` 維持不變（屬 `small` 更新），僅為非 `lrtactical` 近戰武器保留原本按鍵破玻璃後備路徑。
+  3. `ui/StairMovement.java` + `mixin/StairMovementMixin.java`：移除寫死 `0.70` 減速，改為依玩家實際移動方向對 45° 斜坡量測腳底幾何坡度 `m = |dy| / 0.25`（0.5 格高腳底框避免矮天花板誤擋），套用 `1 / sqrt(1 + m^2)` 使 3D 實際移動速度在直上、直下、斜走、橫走與平地平台皆維持與平地 100% 相同，並補足 3D 距離至 `walkDist` 與下樓 `moveDist` 維持相同視野晃動與腳步聲節奏。
+  4. `core/WallClimb.java` + `ui/ClientWallClimb.java` + `network/WallClimbPacket.java`：攀爬速度減慢 100%（`STOW_TICKS = 4`、`DURATION_TICKS = 18`，共 22 tick ≈ 1.1 秒，`TaczRedraw.expect` 延長至 `4000L`）；攀爬中偵測新按下後退／左／右鍵（或第 2 tick 起持續按後退）即朝該水平方向輕推取消攀爬，本地立即恢復動作與舉槍動畫，並透過 `WallClimbPacket.cancel()`（`yaw = NaN`，不改封包格式與版本 `33`）通知伺服器解除鎖定及同步所有客戶端。
+  5. `modes/br/Circle.java` + `command/CircleCommand.java` + `config/PGConfig.java` + `modes/br/CirclePreset.java`：大逃殺決賽圈固定半徑 `Circle.FINAL_RADIUS` 由 `2.5` 格增加 5 格改為 `7.5` 格（直徑 15 格），並同步更新指令顯示與註解說明。
+- **v0.38.0 已發佈（樓梯 45° 斜坡、柵欄石牆 1 格高、跳躍二段空白鍵翻爬零抖動與切刀演出，Gemini 實作）**：
   1. `core/StairRampShapes.java` + `mixin/BlockCollisionMixin.java`：雙端將所有正放樓梯（`Half.BOTTOM` 含直階與內／外轉角）改為 16 階（每階 0.0625 格）45° 平滑斜坡碰撞箱；並將 `#minecraft:fences`、`#minecraft:walls` 與關閉中 `#minecraft:fence_gates` 碰撞高度改為 1 格高可直接跳過。
   2. `core/WallClimb.java` + `ui/ClientWallClimb.java` + `mixin/StairMovementMixin.java` + `network/WallClimbPacket.java` + `network/WallClimbSyncPacket.java`：改為「跳躍浮空後再按空白鍵」即可攀爬前方 ±45° 內、頂面不高於自身頭頂的任意碰撞方塊；於 `LivingEntity.travel` HEAD 接管本地移動並取消伺服器每 tick `setPos` 回扯，徹底消除第一人稱視角抖動。
   3. 第一人稱與重新切刀／切槍：`ui/ClientWallClimb.java` 于 `RenderHandEvent` 先 2 tick 下收手持物品後改畫雙手前抓向下撐起手臂（`renderPlayerArm` `m_109346_`）；翻完透過 `ClientGunAim.triggerItemDraw`（`AnimateGeoItemRenderer.tryInit` + TACZ `draw`）重播 `lrtactical` 切刀與 `TACZ` 切槍動畫，並以 `MeleeDrawSpeed.restartDraw` 重置伺服器拔刀計時。

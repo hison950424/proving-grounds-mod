@@ -50,7 +50,7 @@ public final class ClientWallClimb {
             com.provinggrounds.client.ClientBRState.get().selfState() == com.provinggrounds.client.ClientBRState.SELF_ALIVE);
     }
 
-    private static boolean jumpWas;
+    private static boolean jumpWas, backWas, leftWas, rightWas;
     private static Field fMainHeight, fOMainHeight, fOffHeight, fOOffHeight;
     private static boolean heightFieldsReady, heightFieldsFailed;
     private static Method mRenderPlayerArm;
@@ -67,8 +67,41 @@ public final class ClientWallClimb {
         boolean jumpPressed = jumpDown && !jumpWas;
         jumpWas = jumpDown;
 
+        boolean backDown = mc.screen == null && mc.options.keyDown.isDown();
+        boolean leftDown = mc.screen == null && mc.options.keyLeft.isDown();
+        boolean rightDown = mc.screen == null && mc.options.keyRight.isDown();
+        boolean backPressed = backDown && !backWas;
+        boolean leftPressed = leftDown && !leftWas;
+        boolean rightPressed = rightDown && !rightWas;
+        backWas = backDown;
+        leftWas = leftDown;
+        rightWas = rightDown;
+
         var in = event.getInput();
         if (WallClimb.isClientClimbing(p.getId())) {
+            boolean cancelTriggered = backPressed || leftPressed || rightPressed
+                || (backDown && WallClimb.clientClimbTick(p.getId()) >= 2);
+            if (cancelTriggered) {
+                float fwd = backDown ? -1.0f : 0.0f;
+                float strafe = (leftDown ? 1.0f : 0.0f) - (rightDown ? 1.0f : 0.0f);
+                if (fwd == 0.0f && strafe == 0.0f) fwd = -1.0f;
+                double len = Math.hypot(strafe, fwd);
+                double nx = strafe / len;
+                double nz = fwd / len;
+                float rad = p.getYRot() * ((float) Math.PI / 180.0F);
+                double sin = Math.sin(rad);
+                double cos = Math.cos(rad);
+                double dirX = nx * cos - nz * sin;
+                double dirZ = nz * cos + nx * sin;
+                if (WallClimb.cancelClientLocal(p, dirX, dirZ)) {
+                    PGNetwork.sendToServer(WallClimbPacket.cancel());
+                    in.forwardImpulse = fwd;
+                    in.leftImpulse = strafe;
+                    in.jumping = false;
+                    in.shiftKeyDown = false;
+                    return;
+                }
+            }
             in.forwardImpulse = 0.0f;
             in.leftImpulse = 0.0f;
             in.jumping = false;
@@ -99,7 +132,7 @@ public final class ClientWallClimb {
         return ClientPlan9Specials.freeSkydiveState(p.getUUID()) != 0;
     }
 
-    /** 攀爬中第一人稱：前 2 tick 收起手上物品／刀／槍，之後隱藏物品並繪製雙手前抓＋撐起手臂動畫。 */
+    /** 攀爬中第一人稱：前 4 tick（STOW_TICKS）收起手上物品／刀／槍，之後隱藏物品並繪製雙手前抓＋撐起手臂動畫。 */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onRenderHand(RenderHandEvent event) {
         Minecraft mc = Minecraft.getInstance();
@@ -176,6 +209,9 @@ public final class ClientWallClimb {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) {
             jumpWas = false;
+            backWas = false;
+            leftWas = false;
+            rightWas = false;
             return;
         }
         WallClimb.tickRemoteClients(mc.player != null ? mc.player.getId() : -1);

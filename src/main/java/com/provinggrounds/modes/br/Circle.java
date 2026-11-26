@@ -8,7 +8,7 @@ import net.minecraft.util.RandomSource;
  *       縮圈時間 = 階段間隔；若圈邊移動速度會超過上限（BR 疾跑速度），就拉長縮圈時間。
  *       圈邊最快速度 = 半徑縮減 + 圈心位移，兩者一起算，保證全速疾跑的玩家永遠跑得贏圈。
  *       下一圈圈心在目前圈內隨機（完全包含在目前圈內），不硬編碼中心點。
- *       計畫書 7 B 決賽圈：方案的各階段（半徑大於 2.5 格的）之後，最後一階段縮到固定半徑 FINAL_RADIUS（2.5 格），
+ *       計畫書 7 B 決賽圈：方案的各階段（半徑大於 7.5 格的）之後，最後一階段縮到固定半徑 FINAL_RADIUS（7.5 格），
  *       接著是「決賽圈」：停留 finalHold 秒，再縮到 0。決賽圈不算在 totalStages（空投時間窗照舊到最後一階段為止）。
  */
 public class Circle {
@@ -16,9 +16,9 @@ public class Circle {
     public enum Event { NONE, SHRINK_STARTED, SHRINK_ENDED }
 
     /** 決賽圈的固定半徑（格）。 */
-    public static final double FINAL_RADIUS = 2.5;
+    public static final double FINAL_RADIUS = 7.5;
 
-    /** 每個階段縮到的半徑（格）：方案的階段、2.5 格、0（決賽圈）。 */
+    /** 每個階段縮到的半徑（格）：方案的階段、7.5 格、0（決賽圈）。 */
     private final double[] radii;
     private final int intervalTicks, finalHoldTicks;
     private final double maxEdgeSpeedPerTick;
@@ -51,7 +51,7 @@ public class Circle {
         planNext();
     }
 
-    /** 方案比例 → 各階段半徑：去掉不大於 2.5 格的（包含原本最後的 0），再接上 2.5 格與 0。 */
+    /** 方案比例 → 各階段半徑：去掉不大於 7.5 格的（包含原本最後的 0），再接上 7.5 格與 0。 */
     public static double[] stageRadii(double mapRadius, double[] ratios) {
         java.util.List<Double> out = new java.util.ArrayList<>();
         for (double q : ratios) {
@@ -116,14 +116,14 @@ public class Circle {
     }
 
     public boolean finished()     { return stageIndex >= radii.length; }
-    /** 決賽圈中（縮到 2.5 格之後的停留、與縮到 0 的過程）。 */
+    /** 決賽圈中（縮到 7.5 格之後的停留、與縮到 0 的過程）。 */
     public boolean inFinal()      { return stageIndex == radii.length - 1; }
     /** 已經縮完的階段數。 */
     public int completedStages()  { return stageIndex; }
     public boolean isShrinking()  { return shrinking; }
     /** 第一次縮圈已經開始（開始前沒有實際邊界：不畫白牆、不扣圈外血）。 */
     public boolean started()      { return shrinking || stageIndex > 0; }
-    /** 一般階段數（含縮到 2.5 格的最後一階段，不含決賽圈）。 */
+    /** 一般階段數（含縮到 7.5 格的最後一階段，不含決賽圈）。 */
     public int totalStages()      { return radii.length - 1; }
     /** 顯示用階段編號（1 起算）；決賽圈與全部縮完後 = totalStages + 1（HUD 顯示「決賽圈」）。 */
     public int displayStage()     { return Math.min(stageIndex + 1, radii.length); }

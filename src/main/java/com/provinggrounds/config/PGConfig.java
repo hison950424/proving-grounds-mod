@@ -230,8 +230,8 @@ public class PGConfig {
         brCustomSpeed = builder.comment("自訂方案：圈移動速度上限 = BR 疾跑速度 × 此倍率").defineInRange("custom_speed_factor_v1", 0.6, 0.1, 2.0);
         brCustomFirstWait = builder.comment("自訂方案：開場第一次縮圈前額外多等幾秒").defineInRange("custom_first_wait_seconds_v1", 60, 0, 600);
         brCustomFinal = builder.comment("自訂方案：最後一圈的半徑 = 地圖半徑的幾 %（0 = 縮到一個點）").defineInRange("custom_final_percent_v1", 0, 0, 50);
-        // 決賽圈（計畫書 7 B）：最後一階段縮到半徑 2.5 格後，停留這麼多秒，再縮到 0
-        brFastFinalHold = builder.comment("快速方案：決賽圈（半徑 2.5 格）停留幾秒後再縮到 0").defineInRange("fast_final_hold_seconds_v1", 30, 0, 600);
+        // 決賽圈（計畫書 7 B）：最後一階段縮到半徑 7.5 格後，停留這麼多秒，再縮到 0
+        brFastFinalHold = builder.comment("快速方案：決賽圈（半徑 7.5 格）停留幾秒後再縮到 0").defineInRange("fast_final_hold_seconds_v1", 30, 0, 600);
         brStandardFinalHold = builder.comment("標準方案：決賽圈停留秒數").defineInRange("standard_final_hold_seconds_v1", 45, 0, 600);
         brSlowFinalHold = builder.comment("慢速方案：決賽圈停留秒數").defineInRange("slow_final_hold_seconds_v1", 60, 0, 600);
         brCustomFinalHold = builder.comment("自訂方案：決賽圈停留秒數（大廳可調）").defineInRange("custom_final_hold_seconds_v1", 45, 0, 600);

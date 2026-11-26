@@ -104,6 +104,29 @@ public final class GunCompat {
         if (active != null && e != null) active.cancelGunAction(e);
     }
 
+    private static volatile Class<?> lrMeleeInterface;
+    private static volatile boolean lrMeleeChecked;
+
+    @javax.annotation.Nullable
+    private static Class<?> lrMeleeInterface() {
+        if (!lrMeleeChecked) {
+            try {
+                lrMeleeInterface = Class.forName("me.xjqsh.lrtactical.api.item.IMeleeWeapon");
+            } catch (Throwable ignored) {
+                lrMeleeInterface = null;
+            }
+            lrMeleeChecked = true;
+        }
+        return lrMeleeInterface;
+    }
+
+    /** 這項物品是不是 lrtactical 的近戰武器（用反射檢查 IMeleeWeapon，沒裝 lrtactical 時回傳 false）。 */
+    public static boolean isLrtacticalMelee(net.minecraft.world.item.ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        Class<?> cls = lrMeleeInterface();
+        return cls != null && cls.isInstance(stack.getItem());
+    }
+
     public static void init() {
 
         if (ModList.get().isLoaded("tacz")) {

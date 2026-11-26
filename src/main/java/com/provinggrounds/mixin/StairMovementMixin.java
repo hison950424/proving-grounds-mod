@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * 檔案: StairMovementMixin.java
  * 目的: 接管本地玩家在樓梯與攀爬時的移動計算（只在客戶端）：
  *   - 攀爬期間於 travel HEAD 直接執行平順曲線並取消原版重力／碰撞擠壓，徹底消除第一人稱視角抖動。
- *   - 樓梯上將水平移動向量降至 70%，travel 結束後執行下樓梯自動降階貼地。
+ *   - 樓梯上依實際 45° 斜坡坡度補償水平輸入，使 3D 移動速度、鏡頭晃動與腳步聲節奏皆與平地相同，travel 結束後執行下樓梯自動降階貼地。
  */
 @Mixin(LivingEntity.class)
 public abstract class StairMovementMixin {
