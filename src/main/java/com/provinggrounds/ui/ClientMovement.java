@@ -44,13 +44,20 @@ public final class ClientMovement {
         return mc.screen == null ? QUIET_WALK.isDown() : Footsteps.localQuiet && QUIET_WALK.isDown();
     }
 
+    private static boolean isProne(LocalPlayer p) {
+        return !p.isInWater() && (ClientProneData.isProne(p.getUUID())
+            || ClientBRState.get().crawling().contains(p.getUUID())
+            || p.getPose() == net.minecraft.world.entity.Pose.SWIMMING);
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
         if (p == null) { Footsteps.localQuiet = false; sentQuiet = false; return; }
-        boolean quiet = quietDown(mc);
+        // 趴下／倒地爬行時不能靜走
+        boolean quiet = !isProne(p) && quietDown(mc);
         Footsteps.localQuiet = quiet;
         if (quiet != sentQuiet) {
             sentQuiet = quiet;
@@ -58,12 +65,19 @@ public final class ClientMovement {
         }
     }
 
-    /** 在原版算完輸入之後：靜走放慢、自動奔跑。 */
+    /** 在原版算完輸入之後：趴下禁用蹲下／靜走、靜走放慢、自動奔跑。 */
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onMovementInput(MovementInputUpdateEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (!(event.getEntity() instanceof LocalPlayer p) || p != mc.player) return;
         var in = event.getInput();
+        // 趴下時不可蹲下、不可靜走
+        if (isProne(p)) {
+            in.shiftKeyDown = false;
+            if (p.isShiftKeyDown()) p.setShiftKeyDown(false);
+            if (p.isSprinting()) p.setSprinting(false);
+            return;
+        }
         double quietSpeed = 0.6;
         boolean auto = true;
         try {

@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-26（v0.33.1 已發佈，網路版本 28，等待使用者於正式客戶端實測 `A1～A6` 回饋）。
+> 最後更新：2026-11-26（v0.33.1 已發佈；v0.33.2 4 項修正已完成並提交在 `feature/phase1-setup`，網路版本維持 28，待發佈）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -47,7 +47,12 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
-- **v0.33.1 已發佈（趴下動畫重製與 Hitbox 全面對齊，Gemini 實作，待正式客戶端實測）**：
+- **v0.33.2 待發佈（蹲下 Hitbox、趴下手感與室內團隊特殊道具精簡，Gemini 實作）**：
+  1. `core/Hitbox.java`：蹲下時補上 `-0.125f` Y 位移（對齊原版 `PlayerRenderer.getRenderOffset`），修復蹲下 Hitbox 整體偏高。
+  2. `ui/ClientMovement.java` + `core/Footsteps.java` + `network/QuietWalkPacket.java` + `core/ProneManager.java`：趴下／倒地爬行時雙端禁止蹲下（`shiftKeyDown = false`）與靜走。
+  3. `ui/ClientForgeEvents.java` + `core/ProneManager.java` + `config/PGConfig.java`：移除 0.5x 趴下動畫放慢（動畫時間減半，約 0.55 秒），冷卻預設改鍵名 `prone.cooldown_seconds_v2 = 0.5`（減半）。
+  4. `special/DomGear.java` + `special/NewSpecials.java`：團隊模式（佔點選單、團隊死鬥隨機池、團隊死鬥賭徒釣竿掉落）排除 6 種不適合室內作戰的道具（三種重新跳傘、擬態、兩把雷神錘）。網路版本維持 28（small 更新），尚未發佈。
+- **v0.33.1 已發佈（趴下動畫重製與 Hitbox 全面對齊，Gemini 實作）**：
   1. `mixin/ProneAnimMixin.java`：接管陸地 `PlayerRenderer.setupRotations`（`m_7523_`），將貼地偏移（`Hitbox.PRONE_Y/Z`）移到 `RX(-90°)` 之前並套用 `proneEase` 平滑曲線，徹底消除插進地板問題。
   2. `core/Hitbox.java` 重寫為原版 `Matrix4f` 轉換鏈＋共用 `computeLimbPose()`：修正四肢走路擺動相反、支援 `swimAmount` 平滑過渡插值（`ProneManager` 伺服器端也同步 0.5x 過渡速度）、完整對齊手持物品／使用動作（舉盾／拉弓／弩／望遠鏡／長矛）／攻擊揮手／TACZ 持槍與開鏡（新增 `GunCompat.aimProgress`）／降落傘／陸地趴下爬行與趴下持槍。
   3. `mixin/HumanoidArmsMixin.java`（priority 1500）：陸地趴下時直接套用 `Hitbox.computeLimbPose()`，取代原版水中划水動作並保證畫面四肢與 Hitbox 100% 一致。

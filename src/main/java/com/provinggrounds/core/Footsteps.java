@@ -34,6 +34,7 @@ public final class Footsteps {
     }
 
     public static boolean quiet(Player p) {
+        if (!p.isInWater() && p.getPose() == net.minecraft.world.entity.Pose.SWIMMING) return false;
         return p.level().isClientSide ? (p.isLocalPlayer() && localQuiet) : QUIET.contains(p.getUUID());
     }
 

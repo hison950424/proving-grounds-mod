@@ -495,8 +495,8 @@ public class PGConfig {
 
         builder.comment("趴下：玩家按鍵（預設 C）趴下／站起來。").push("prone");
         proneEnabled = builder.comment("是否允許玩家自己趴下").define("enabled", true);
-        proneCooldownSeconds = builder.comment("趴下後多久才能站起來、站起來後多久才能再趴下（秒）")
-            .defineInRange("cooldown_seconds", 1.0, 0.0, 10.0);
+        proneCooldownSeconds = builder.comment("趴下後多久才能站起來、站起來後多久才能再趴下（秒；已由 1.0 減半為 0.5）")
+            .defineInRange("cooldown_seconds_v2", 0.5, 0.0, 10.0);
         builder.pop();
 
         builder.comment("移動方式：按方向鍵自動奔跑；按「靜走」鍵（預設 Shift）慢慢走、腳步聲小；蹲下（預設 Ctrl）。按鍵都可以在按鍵設定改。",

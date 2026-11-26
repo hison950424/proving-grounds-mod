@@ -31,21 +31,6 @@ public final class ProneManager {
     private static final Map<UUID, Long> LAST_CHANGE = new HashMap<>();
     private static boolean dirty;
 
-    /** 與客戶端 slowProneAnimation 同步：讓伺服器的 swimAmount 也以一半速度過渡，確保 Hitbox 插值與畫面完全同步。 */
-    @javax.annotation.Nullable private static final java.lang.reflect.Field SWIM_AMOUNT =
-        findField(net.minecraft.world.entity.LivingEntity.class, "f_20931_");
-    @javax.annotation.Nullable private static final java.lang.reflect.Field SWIM_AMOUNT_O =
-        findField(net.minecraft.world.entity.LivingEntity.class, "f_20932_");
-
-    @javax.annotation.Nullable
-    private static java.lang.reflect.Field findField(Class<?> type, String srgName) {
-        try {
-            return net.minecraftforge.fml.util.ObfuscationReflectionHelper.findField(type, srgName);
-        } catch (RuntimeException e) {
-            return null;
-        }
-    }
-
     private ProneManager() {}
 
     public static boolean isProne(UUID id) { return PRONE.contains(id); }
@@ -127,19 +112,8 @@ public final class ProneManager {
             if (!p.isInWater()) {
                 p.yBodyRot = p.getYRot();
                 p.yBodyRotO = p.yRotO;
-            }
-        }
-        // 趴下／站起過渡期間（2 秒內）放慢伺服器端的 swimAmount，與客戶端 slowProneAnimation 保持同步
-        if (SWIM_AMOUNT != null && SWIM_AMOUNT_O != null) {
-            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                Long last = LAST_CHANGE.get(p.getUUID());
-                if (last == null || p.level().getGameTime() - last >= 40) continue;
-                try {
-                    float o = SWIM_AMOUNT_O.getFloat(p), cur = SWIM_AMOUNT.getFloat(p);
-                    SWIM_AMOUNT.setFloat(p, o + (cur - o) * 0.5f);
-                } catch (IllegalAccessException ignored) {
-                    // 取不到就維持原版速度
-                }
+                if (p.isShiftKeyDown()) p.setShiftKeyDown(false);
+                Footsteps.setQuiet(id, false);
             }
         }
         if (dirty) {

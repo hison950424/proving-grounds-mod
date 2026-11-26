@@ -384,8 +384,11 @@ public final class Hitbox {
     public static List<PartBox> computeParts(float bodyYawDeg, PoseInput in) {
         LimbPose pose = computeLimbPose(in);
 
-        // 與 LivingEntityRenderer.render + PlayerRenderer.setupRotations / ProneAnimMixin 完全相同的變換矩陣
+        // 與 LivingEntityRenderer.render + PlayerRenderer.getRenderOffset / setupRotations / ProneAnimMixin 完全相同的變換矩陣
         Matrix4f root = new Matrix4f();
+        if (in.crouching() && in.swimAmount() < 0.01f) {
+            root.translate(0.0f, -0.125f, 0.0f); // 原版 PlayerRenderer.getRenderOffset：蹲下時整個人物往下偏移 0.125 格
+        }
         root.rotateY((float) Math.toRadians(180.0f - bodyYawDeg));
         if (!in.inWater() && in.swimAmount() > 0.0001f) {
             float e = proneEase(in.swimAmount());

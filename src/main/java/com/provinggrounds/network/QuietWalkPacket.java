@@ -20,8 +20,11 @@ public record QuietWalkPacket(boolean quiet) {
         ServerPlayer p = ctx.get().getSender();
         ctx.get().enqueueWork(() -> {
             if (p == null) return;
-            com.provinggrounds.core.Footsteps.setQuiet(p.getUUID(), quiet);
-            if (quiet && p.isSprinting()) p.setSprinting(false);
+            boolean prone = !p.isInWater() && (com.provinggrounds.core.ProneManager.isProne(p.getUUID())
+                || p.getPose() == net.minecraft.world.entity.Pose.SWIMMING);
+            boolean effective = quiet && !prone;
+            com.provinggrounds.core.Footsteps.setQuiet(p.getUUID(), effective);
+            if (effective && p.isSprinting()) p.setSprinting(false);
         });
         ctx.get().setPacketHandled(true);
     }

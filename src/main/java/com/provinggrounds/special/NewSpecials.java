@@ -266,7 +266,8 @@ public final class NewSpecials {
                 int items = (roll == 0 ? 1 : 2) * k;
                 double hp = (roll == 0 ? 5 : 10) * k;
                 for (int i = 0; i < items; i++) {
-                    ItemStack s = SpecialLoot.roll(level);
+                    ItemStack s = com.provinggrounds.modes.arena.ArenaManager.isRunning()
+                        ? DomGear.randomArena(level) : SpecialLoot.roll(level);
                     if (!s.isEmpty() && !DomGear.blockLoot(p)) HotbarRules.dropAtFeet(p, s); // 佔點：整場只有一種，不掉
                 }
                 changeMaxHealth(p, hp);
