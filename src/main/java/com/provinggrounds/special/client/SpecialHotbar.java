@@ -35,9 +35,12 @@ public final class SpecialHotbar {
         return lobby == null || lobby.special();
     }
 
-    /** 特殊物品格裡是佔點的整場特殊物品、而且這回合用過了。 */
-    private static boolean usedThisRound(ItemStack stack) {
-        return com.provinggrounds.client.ClientDomGear.used() && com.provinggrounds.special.DomGear.isGearStack(stack);
+    /** 特殊物品格裡是佔點的整場特殊物品時的剩餘冷卻回合數（0 = 可用）。 */
+    private static int domCooldown(ItemStack stack) {
+        if (!com.provinggrounds.special.DomGear.isGearStack(stack)) return 0;
+        int cd = com.provinggrounds.special.DomGear.cooldownLeft(stack);
+        if (cd > 0) return cd;
+        return com.provinggrounds.client.ClientDomGear.used() ? 1 : 0;
     }
 
     private static void render(GuiGraphics g, int w, int h) {
@@ -56,17 +59,19 @@ public final class SpecialHotbar {
         RenderSystem.disableBlend();
         ItemStack stack = SpecialSlot.get(p);
         Font font = mc.font;
-        boolean used = usedThisRound(stack);
+        int cd = domCooldown(stack);
+        boolean used = cd > 0;
         if (!stack.isEmpty()) {
             g.renderItem(stack, x + 3, y + 3);
             g.renderItemDecorations(font, stack, x + 3, y + 3);
-            if (used) g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(), x + 3, y + 3, x + 19, y + 19, 0xA0000000); // 佔點：這回合用過了
+            if (used) g.fill(net.minecraft.client.renderer.RenderType.guiOverlay(), x + 3, y + 3, x + 19, y + 19, 0xA0000000); // 佔點：冷卻中
         }
         String key = ClientSpecial.USE_KEY.getTranslatedKeyMessage().getString();
         String hint = null;
         if (holdingShield(p)) hint = "[" + key + "] 衝撞";
         else if (pearlFlying) hint = "[" + key + "] 傳送";
-        else if (used) hint = "下回合才能再用";
+        else if (cd == 1) hint = "下回合可用";
+        else if (cd > 1) hint = "冷卻剩 " + cd + " 回合";
         else if (!stack.isEmpty()) hint = "[" + key + "] 使用";
         if (hint == null) return;
         g.pose().pushPose();

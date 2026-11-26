@@ -33,6 +33,8 @@ import java.util.*;
 public final class DomGear {
 
     public static final String TAG = "pg_dom_gear";
+    /** 佔點特殊道具剩餘冷卻回合數（0 = 可用、1 = 下回合可用、2+ = 還需 N 回合；存於代表物品 NBT 同步給客戶端顯示）。 */
+    public static final String COOLDOWN_TAG = "pg_dom_cd";
 
     private DomGear() {}
 
@@ -109,6 +111,22 @@ public final class DomGear {
 
     public static String tierName(int tier) { return switch (tier) { case 1 -> "弱"; case 2 -> "中"; case 3 -> "強"; default -> "—"; }; }
 
+    /** 佔點模式使用後冷卻幾回合（弱 1 = 每回合都能用、中 2 = 隔 1 回合、強 3 = 隔 2 回合）。 */
+    public static int cooldownRounds(int tier) { return Math.max(1, Math.min(3, tier)); }
+
+    public static int cooldownRounds(SpecialType t) { return cooldownRounds(tier(t)); }
+
+    public static String cooldownLabel(int tier) {
+        int r = cooldownRounds(tier);
+        return r <= 1 ? "每回合可用" : "每 " + r + " 回合";
+    }
+
+    /** 從佔點代表物品讀取剩餘冷卻回合數（客戶端 HUD 顯示用）。 */
+    public static int cooldownLeft(ItemStack s) {
+        if (!isGearStack(s) || s.getTag() == null) return 0;
+        return Math.max(0, s.getTag().getInt(COOLDOWN_TAG));
+    }
+
     /** 團隊模式能用的特殊物品（照強度、再照清單順序）。 */
     public static List<SpecialType> allowed() {
         List<SpecialType> out = new ArrayList<>();
@@ -165,7 +183,7 @@ public final class DomGear {
             CHOICE.put(p.getUUID(), t);
             State st = STATES.get(p.getUUID());
             st.type = t;
-            st.used = false;
+            st.cooldown = 0;
             refreshSlot(p, st);
             return;
         }
@@ -179,7 +197,7 @@ public final class DomGear {
 
     private static final class State {
         SpecialType type;
-        boolean used; // 這回合用過了
+        int cooldown; // 剩餘冷卻回合數（0 = 可用；使用後設為弱 1／中 2／強 3，每次新回合開始 -1）
     }
 
     private static final Map<UUID, State> STATES = new HashMap<>();
@@ -208,20 +226,24 @@ public final class DomGear {
         for (ServerPlayer p : players) {
             State st = new State();
             st.type = choice(p.getUUID());
+            st.cooldown = 0;
             STATES.put(p.getUUID(), st);
             refreshSlot(p, st);
             int tier = tier(st.type);
-            p.sendSystemMessage(Component.literal("[佔點] 你的特殊道具：" + st.type.zh + "（" + tierName(tier) + "）。每回合可以用一次，按 Q 使用；"
-                + "商店價格 +" + markupPercent(tier) + "%。").withStyle(ChatFormatting.AQUA));
+            int cd = cooldownRounds(tier);
+            String freq = cd <= 1 ? "每回合可用" : "使用後冷卻 " + cd + " 回合";
+            p.sendSystemMessage(Component.literal("[佔點] 你的特殊道具：" + st.type.zh + "（" + tierName(tier) + "，" + freq + "，按 Q 使用；"
+                + "商店價格 +" + markupPercent(tier) + "%）。").withStyle(ChatFormatting.AQUA));
         }
     }
 
-    /** 每回合戰鬥開始：恢復可以用（DomMode.startRound 呼叫）。 */
+    /** 每回合戰鬥開始：剩餘冷卻回合數 -1，降到 0 即恢復可用（DomMode.startRound 呼叫）。 */
     public static void newRound(MinecraftServer server) {
         for (Map.Entry<UUID, State> e : STATES.entrySet()) {
-            e.getValue().used = false;
+            State st = e.getValue();
+            if (st.cooldown > 0) st.cooldown--;
             ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
-            if (p != null) refreshSlot(p, e.getValue());
+            if (p != null) refreshSlot(p, st);
         }
     }
 
@@ -241,6 +263,7 @@ public final class DomGear {
     private static void refreshSlot(ServerPlayer p, State st) {
         ItemStack s = new ItemStack(SpecialRegistry.item(st.type));
         s.getOrCreateTag().putInt(TAG, 1);
+        s.getOrCreateTag().putInt(COOLDOWN_TAG, st.cooldown);
         SpecialSlot.set(p, s);
         sync(p);
     }
@@ -259,33 +282,34 @@ public final class DomGear {
         DomMode d = dom();
         if (st == null || d == null) { SpecialSlot.clear(p); return "比賽已經結束"; } // 比賽外殘留的代表物品
         if (!d.fighting()) return "準備階段不能使用特殊道具";
-        if (st.used) return "這回合已經用過了，下一回合才能再用";
+        if (st.cooldown == 1) return "冷卻中，下一回合才能再用";
+        if (st.cooldown > 1) return "冷卻中，還需 " + st.cooldown + " 回合才能再用";
         return null;
     }
 
-    /** 用掉了（keep = 回溯點第一次使用只記錄位置，不算用掉）。 */
+    /** 用掉了（keep = 回溯點第一次使用只記錄位置，不算用掉）。依強度設定冷卻回合（弱 1／中 2／強 3）。 */
     public static void afterUse(ServerPlayer p, boolean keep) {
         State st = STATES.get(p.getUUID());
         if (st == null || keep) return;
-        st.used = true;
-        sync(p);
+        st.cooldown = cooldownRounds(st.type);
+        refreshSlot(p, st);
     }
 
     /** 傳送珠飛不出去等「退回」：這回合可以再用。回傳 true = 已處理。 */
     public static boolean refund(ServerPlayer p) {
         State st = STATES.get(p.getUUID());
         if (st == null || dom() == null) return false;
-        st.used = false;
-        sync(p);
+        st.cooldown = 0;
+        refreshSlot(p, st);
         return true;
     }
 
-    /** 回溯點 60 秒沒用完自動消失：算這回合用掉了。回傳 true = 已處理。 */
+    /** 回溯點逾時自動消失：算已使用並進入對應強度冷卻。回傳 true = 已處理。 */
     public static boolean recallExpired(ServerPlayer p) {
         State st = STATES.get(p.getUUID());
         if (st == null || dom() == null) return false;
-        st.used = true;
-        sync(p);
+        st.cooldown = cooldownRounds(st.type);
+        refreshSlot(p, st);
         return true;
     }
 
@@ -302,7 +326,7 @@ public final class DomGear {
 
     public static void sync(ServerPlayer p) {
         State st = dom() == null ? null : STATES.get(p.getUUID());
-        PGNetwork.sendTo(p, new DomGearPacket(st != null, choice(p.getUUID()).ordinal(), st == null ? -1 : st.type.ordinal(), st != null && st.used));
+        PGNetwork.sendTo(p, new DomGearPacket(st != null, choice(p.getUUID()).ordinal(), st == null ? -1 : st.type.ordinal(), st != null && st.cooldown > 0));
     }
 
     @SubscribeEvent

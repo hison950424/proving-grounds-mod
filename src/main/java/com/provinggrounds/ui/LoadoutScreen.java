@@ -244,7 +244,7 @@ public final class LoadoutScreen extends Screen {
             String tag = "【" + DomGear.tierName(tier) + "】";
             int tagColor = tier == 3 ? 0xFFFF7070 : tier == 2 ? 0xFFE8D060 : 0xFF70D0FF;
             g.drawString(font, tag, listX + 5, ry + 4, tagColor, false);
-            String right = "+" + DomGear.markupPercent(tier) + "%";
+            String right = DomGear.cooldownRounds(tier) + "回/+" + DomGear.markupPercent(tier) + "%";
             g.drawString(font, right, listX + listW - 5 - font.width(right), ry + 4, DIM, false);
             int nx = listX + 5 + font.width(tag);
             g.drawString(font, trim(t.zh, listW - (nx - listX) - font.width(right) - 7), nx, ry + 4, sel ? ACCENT : TEXT, false);
@@ -263,7 +263,7 @@ public final class LoadoutScreen extends Screen {
         g.drawString(font, trim(t.zh, maxW), x, y, ACCENT, false);
         y += 13;
         int tierColor = tier == 3 ? 0xFFFF7070 : tier == 2 ? 0xFFE8D060 : 0xFF70D0FF;
-        g.drawString(font, "強度：" + DomGear.tierName(tier) + "　｜　商店價格 +" + DomGear.markupPercent(tier) + "%", x, y, tierColor, false);
+        g.drawString(font, "強度：" + DomGear.tierName(tier) + "｜" + DomGear.cooldownLabel(tier) + "｜商店 +" + DomGear.markupPercent(tier) + "%", x, y, tierColor, false);
         y += 13;
         g.fill(x, y, infoX + infoW - 8, y + 1, BORDER);
         y += 6;
@@ -271,7 +271,7 @@ public final class LoadoutScreen extends Screen {
         y += 11;
         y = drawWrapped(g, t.desc, x, y, maxW, TEXT);
         y += 8;
-        y = drawWrapped(g, "佔點規則：整場固定使用這一種，每回合戰鬥中可使用 1 次（按 Q 使用）。", x, y, maxW, DIM);
+        y = drawWrapped(g, "佔點規則：整場固定使用這一種（按 Q 使用），使用後依強度冷卻（弱 1／中 2／強 3 回合）。", x, y, maxW, DIM);
         if (isForced()) {
             y += 8;
             String note = confirmedLocal ? "✔ 你已確認選擇，正在等待其他玩家…" : "點左下角「確認特殊道具」完成選擇";
