@@ -155,6 +155,14 @@ public final class ArenaManager {
     // ── 事件 ─────────────────────────────────────────────────────────────────
 
     @SubscribeEvent(priority = EventPriority.LOW)
+    public static void onHurt(net.minecraftforge.event.entity.living.LivingHurtEvent event) {
+        if (current == null || event.isCanceled() || event.getAmount() <= 0) return;
+        if (event.getEntity() instanceof ServerPlayer victim && event.getSource().getEntity() instanceof ServerPlayer attacker) {
+            current.recordDamage(victim, attacker);
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOW)
     public static void onDeath(LivingDeathEvent event) {
         if (current == null || event.isCanceled() || !(event.getEntity() instanceof ServerPlayer victim)) return;
         ServerPlayer killer = event.getSource().getEntity() instanceof ServerPlayer k ? k : null;

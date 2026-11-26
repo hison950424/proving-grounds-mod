@@ -17,17 +17,24 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
+import java.util.List;
+
 /**
  * 檔案: HitboxDebugRenderer.java
- * 目的: 管理員按 F3＋B 時，除了原版的碰撞箱，另外畫出「精準命中判定」的實際部位框（只在客戶端）：
- *   兩腳、身體、兩手跟著身體方向轉（黃色），頭跟著頭的方向轉（紅色）；用的是伺服器判定同一份尺寸（Hitbox.parts）。
- *   伺服器另外有 hitbox_tolerance（每個部位往外放寬），這裡畫的是放寬前的大小。趴下、游泳等姿勢照原版碰撞箱，不另外畫。
- *   一般玩家本來就不能開 F3＋B（ClientDebugLock），所以只有管理員看得到。
+ * 目的: 管理員按 F3＋B 時，繪製精準命中判定的實際動畫部位框（只在客戶端；計畫書 10 升級）：
+ *   - 頭（紅色）跟隨頭的偏航與俯仰角轉動；身體與四肢（黃色）跟隨走路、跑步、蹲下、攻擊與爬行動畫擺動。
+ *   - 修復趴下（Pose.SWIMMING）時不顯示 hitbox 的問題：趴下時也會繪製平躺的 6 個部位框。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
 public final class HitboxDebugRenderer {
 
     private HitboxDebugRenderer() {}
+
+    private static final int[][] EDGES = {
+        {0, 1}, {2, 3}, {4, 5}, {6, 7},
+        {0, 2}, {1, 3}, {4, 6}, {5, 7},
+        {0, 4}, {1, 5}, {2, 6}, {3, 7}
+    };
 
     @SubscribeEvent
     public static void onRender(RenderLevelStageEvent event) {
@@ -45,36 +52,37 @@ public final class HitboxDebugRenderer {
             if (p == mc.player && mc.options.getCameraType().isFirstPerson()) continue;
             if (p.isSpectator() || p.isPassenger() || p.isFallFlying()) continue;
             Pose pose = p.getPose();
-            if (pose != Pose.STANDING && pose != Pose.CROUCHING) continue;
-            double x = Mth.lerp(pt, p.xo, p.getX()) - cam.x, y = Mth.lerp(pt, p.yo, p.getY()) - cam.y, z = Mth.lerp(pt, p.zo, p.getZ()) - cam.z;
-            double bodyYaw = Math.toRadians(Mth.rotLerp(pt, p.yBodyRotO, p.yBodyRot));
-            double headYaw = Math.toRadians(Mth.rotLerp(pt, p.yHeadRotO, p.yHeadRot));
-            double[][] parts = Hitbox.parts(pose == Pose.CROUCHING);
-            double px = Hitbox.pixel(), hs = Hitbox.heightScale(p.getBbHeight());
-            for (int i = 0; i < parts.length; i++) {
-                boolean head = i == parts.length - 1;
-                box(lines, m, x, y, z, head ? headYaw : bodyYaw, parts[i], px, hs, head ? 0xFF4040 : 0xFFE040);
+            // 計畫書 10：同時支援站立、蹲下、以及趴下（SWIMMING）的 F3+B 部位判定框
+            if (pose != Pose.STANDING && pose != Pose.CROUCHING && pose != Pose.SWIMMING) continue;
+            double x = Mth.lerp(pt, p.xo, p.getX()) - cam.x;
+            double y = Mth.lerp(pt, p.yo, p.getY()) - cam.y;
+            double z = Mth.lerp(pt, p.zo, p.getZ()) - cam.z;
+            float bodyYaw = Mth.rotLerp(pt, p.yBodyRotO, p.yBodyRot);
+            float headYaw = Mth.rotLerp(pt, p.yHeadRotO, p.yHeadRot);
+            float headPitch = Mth.lerp(pt, p.xRotO, p.getXRot());
+            float walkPos = p.walkAnimation.position(pt);
+            float walkSpeed = p.walkAnimation.speed(pt);
+            float attackAnim = p.getAttackAnim(pt);
+            List<Hitbox.PartBox> parts = Hitbox.computeParts(pose, p.getBbHeight(), bodyYaw, headYaw, headPitch, walkPos, walkSpeed, attackAnim);
+            for (Hitbox.PartBox part : parts) {
+                drawPart(lines, m, x, y, z, part, part.kind() == 5 ? 0xFF4040 : 0xFFE040);
             }
         }
         buf.endBatch(RenderType.lines());
     }
 
-    /** 畫一個跟著 yaw 轉的部位框（12 條邊）。部位座標：x 往右、y 往上、z 往前；面向 = (−sin yaw, cos yaw)。 */
-    private static void box(VertexConsumer vc, Matrix4f m, double ox, double oy, double oz, double yaw, double[] part,
-                            double px, double hs, int rgb) {
-        double x0 = (part[0] - part[3]) * px, x1 = (part[0] + part[3]) * px;
-        double y0 = part[1] * px * hs, y1 = (part[1] + part[4]) * px * hs;
-        double z0 = (part[2] - part[5]) * px, z1 = (part[2] + part[5]) * px;
-        double cos = Math.cos(yaw), sin = Math.sin(yaw);
+    private static void drawPart(VertexConsumer vc, Matrix4f m, double ox, double oy, double oz, Hitbox.PartBox p, int rgb) {
         double[][] c = new double[8][];
         int k = 0;
-        for (double lx : new double[] { x0, x1 }) for (double ly : new double[] { y0, y1 }) for (double lz : new double[] { z0, z1 }) {
-            // 右 = (−cos, −sin)、前 = (−sin, cos)
-            c[k++] = new double[] { ox + lx * -cos + lz * -sin, oy + ly, oz + lx * -sin + lz * cos };
+        for (double lx : new double[] { p.minX(), p.maxX() }) {
+            for (double ly : new double[] { p.minY(), p.maxY() }) {
+                for (double lz : new double[] { p.minZ(), p.maxZ() }) {
+                    c[k++] = Hitbox.partToWorld(ox, oy, oz, p, lx, ly, lz);
+                }
+            }
         }
-        int[][] edges = { {0, 1}, {2, 3}, {4, 5}, {6, 7}, {0, 2}, {1, 3}, {4, 6}, {5, 7}, {0, 4}, {1, 5}, {2, 6}, {3, 7} };
         int r = rgb >> 16 & 255, g = rgb >> 8 & 255, b = rgb & 255;
-        for (int[] e : edges) {
+        for (int[] e : EDGES) {
             double[] a = c[e[0]], bb = c[e[1]];
             float nx = (float) (bb[0] - a[0]), ny = (float) (bb[1] - a[1]), nz = (float) (bb[2] - a[2]);
             float len = Mth.sqrt(nx * nx + ny * ny + nz * nz);

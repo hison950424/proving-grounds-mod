@@ -94,6 +94,8 @@ public abstract class ArenaMode {
     protected final ServerLevel level;
     protected final ArenaConfig cfg = PGConfig.SERVER.arena;
     protected final Map<UUID, ArenaPlayer> players = new LinkedHashMap<>();
+    /** 最近 15 秒內對某位玩家造成過傷害的敵方玩家（victim → attacker → tick），用於助攻音效旗幟與補品（計畫書 10）。 */
+    protected final Map<UUID, Map<UUID, Integer>> recentDamagers = new HashMap<>();
     protected int ticks;
     private int endTicks = -1;
     /** 團隊模式倒地（計畫書 7 E）：開關在大廳設定，開局時設好。 */
@@ -175,6 +177,7 @@ public abstract class ArenaMode {
         for (ServerPlayer p : participants) {
             ArenaPlayer ap = players.get(p.getUUID());
             prepare(p, ap, true);
+            if (kind() == GameManager.GameMode.TDM) com.provinggrounds.modes.br.BRMovement.apply(p); // 計畫書 10：團隊死鬥套用大逃殺移動規則
             teleport(p, spawnOf(ap));
             giveStartSpecial(p);
         }
@@ -225,9 +228,51 @@ public abstract class ArenaMode {
                 give(p, gun);
             }
             refillConsumables(p, ap, false);
+            refillTeamHeals(p, false);
         }
         ensureOne(p, cfg.ammoBox.get());
         p.setHealth(p.getMaxHealth());
+    }
+
+    /** 團隊模式補品（計畫書 10）：兩個 AI-2 急救包。limit = 超過 2 個時收回多的（佔點每回合重置）。 */
+    protected void refillTeamHeals(ServerPlayer p, boolean limit) {
+        if (!usesClasses() || p == null || !p.isAlive()) return;
+        ItemStack tpl = RespawnKit.parse(ArenaClass.Kits.AI2_MEDKIT);
+        if (tpl.isEmpty()) return;
+        int want = ArenaClass.Kits.TEAM_HEAL_COUNT;
+        int have = count(p, tpl);
+        if (have < want) {
+            for (int i = 0; i < want - have; i++) give(p, tpl.copy());
+        } else if (limit && have > want) {
+            remove(p, tpl, have - want);
+        }
+    }
+
+    /** 記錄敵方對 victim 造成傷害（ArenaManager.onHurt 呼叫），作為助攻依據。 */
+    public void recordDamage(ServerPlayer victim, ServerPlayer attacker) {
+        if (victim == attacker || endTicks >= 0) return;
+        ArenaPlayer vp = players.get(victim.getUUID());
+        ArenaPlayer ap = players.get(attacker.getUUID());
+        if (vp == null || ap == null || sameSide(vp, ap)) return;
+        recentDamagers.computeIfAbsent(victim.getUUID(), k -> new HashMap<>()).put(attacker.getUUID(), ticks);
+    }
+
+    /** 結算助攻（所有團隊模式＋槍王之王）：15 秒內造成過傷害的非擊殺敵人獲得助攻音效、旗幟，並於團隊模式補滿 AI-2。 */
+    private void awardAssists(UUID victimId, String victimName, @Nullable ServerPlayer killer) {
+        Map<UUID, Integer> dmgs = recentDamagers.remove(victimId);
+        if (dmgs == null || dmgs.isEmpty()) return;
+        for (Map.Entry<UUID, Integer> en : dmgs.entrySet()) {
+            UUID aid = en.getKey();
+            if (killer != null && aid.equals(killer.getUUID())) continue;
+            if (ticks - en.getValue() > 300) continue; // 超過 15 秒不算助攻
+            ServerPlayer asst = server.getPlayerList().getPlayer(aid);
+            if (asst == null || !players.containsKey(aid)) continue;
+            PlayerDataManager.get().addAssist(asst);
+            com.provinggrounds.core.KillEvents.assist(asst, victimName);
+            if (usesClasses() && asst.isAlive() && !asst.isSpectator()) {
+                refillTeamHeals(asst, false);
+            }
+        }
     }
 
     protected static void applyHealth(ServerPlayer p, double max) {
@@ -277,6 +322,7 @@ public abstract class ArenaMode {
                 onRespawned(p, ap);
             }
             if (ticks % 10 == 0 && usesAntiCamp() && cfg.antiCamp.get() && p.gameMode.getGameModeForPlayer() == GameType.ADVENTURE && p.isAlive()) antiCamp(p, ap);
+            if (kind() == GameManager.GameMode.TDM && p.isAlive() && !p.isSpectator()) com.provinggrounds.modes.br.BRMovement.refresh(p);
             if (usesClasses() && p.isAlive() && !p.isSpectator()) refreshClassSpeed(p, ap);
             if (ticks % 20 == 0 && p.isAlive() && !p.isSpectator()) {
                 ensureOne(p, cfg.ammoBox.get());
@@ -466,7 +512,8 @@ public abstract class ArenaMode {
             k.streak++;
         }
         com.provinggrounds.core.KillEvents.arenaKillOffline(this, server, counted ? killer : null, counted ? k : null, v, lostStreak);
-        if (!counted) return;
+        if (!counted) { recentDamagers.remove(s.owner); return; }
+        awardAssists(s.owner, v.name, killer);
         onKill(killer, k, null, v);
         onClassKill(killer, k);
         if (com.provinggrounds.special.SpecialConfig.enabledSafe()) {
@@ -529,7 +576,8 @@ public abstract class ArenaMode {
             k.streak++;
         }
         com.provinggrounds.core.KillEvents.arenaKill(this, counted ? killer : null, counted ? k : null, victim, v, lostStreak);
-        if (!counted) return;
+        if (!counted) { recentDamagers.remove(victim.getUUID()); return; }
+        awardAssists(victim.getUUID(), v.name, killer);
         onKill(killer, k, victim, v);
         onClassKill(killer, k);
         if (kind() == GameManager.GameMode.TDM) v.tdmDryDeaths++;
@@ -543,9 +591,10 @@ public abstract class ArenaMode {
         }
     }
 
-    /** 職業擊殺效果：突擊兵回 20 HP、工兵刷新手榴彈與瞬爆手榴彈。 */
+    /** 職業擊殺效果：團隊模式補滿 AI-2 急救包；突擊兵回 20 HP、工兵刷新手榴彈與瞬爆手榴彈。 */
     private void onClassKill(ServerPlayer killer, ArenaPlayer k) {
         if (!usesClasses() || killer == null || !killer.isAlive()) return;
+        refillTeamHeals(killer, false);
         if (k.cls == ArenaClass.ASSAULT) {
             killer.heal(20f);
             killer.displayClientMessage(Component.literal("[突擊兵] 擊殺回復 +20 HP").withStyle(ChatFormatting.GREEN), true);
@@ -593,9 +642,11 @@ public abstract class ArenaMode {
 
     /** 真正重生：冒險模式、傳回重生點、10 tick 後發職業消耗品、重生保護。 */
     protected void doRespawn(ServerPlayer p, ArenaPlayer ap) {
+        recentDamagers.remove(p.getUUID());
         p.setGameMode(GameType.ADVENTURE);
         teleport(p, spawnOf(ap));
         prepare(p, ap, false);
+        if (kind() == GameManager.GameMode.TDM) com.provinggrounds.modes.br.BRMovement.apply(p);
         ap.respawnKitTicks = 10;
         // 團隊死鬥保底：連續死亡 3 次都沒有拿到特殊道具 → 獲得 1 個
         if (kind() == GameManager.GameMode.TDM && com.provinggrounds.special.SpecialConfig.enabledSafe() && ap.tdmDryDeaths >= 3) {
@@ -915,6 +966,7 @@ public abstract class ArenaMode {
         if (attr != null) attr.removeModifier(HEALTH_MOD);
         AttributeInstance spd = p.getAttribute(Attributes.MOVEMENT_SPEED);
         if (spd != null) spd.removeModifier(CLASS_SPEED_MOD);
+        com.provinggrounds.modes.br.BRMovement.remove(p);
         p.setGameMode(GameType.ADVENTURE);
         p.setCamera(p);
         PGNetwork.sendTo(p, ArenaStatePacket.NONE);

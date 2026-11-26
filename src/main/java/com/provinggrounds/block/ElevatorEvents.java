@@ -71,13 +71,18 @@ public final class ElevatorEvents {
     /** 站在電梯方塊上時，往上（up = true）或往下找下一個電梯方塊並傳送。 */
     private static void use(ServerPlayer p, boolean up) {
         if (p.isSpectator() || p.isPassenger() || p.isSleeping()) return;
+        BlockPos from = standingOn(p);
+        if (from == null) return;
+
         ServerLevel level = p.serverLevel();
         long now = level.getGameTime();
         Long until = COOLDOWN_UNTIL.get(p.getUUID());
-        if (until != null && now < until) return;
-
-        BlockPos from = standingOn(p);
-        if (from == null) return;
+        if (until != null && now < until) {
+            double left = (until - now) / 20.0;
+            p.displayClientMessage(Component.literal(String.format("電梯冷卻中（剩 %.1f 秒）", left))
+                .withStyle(net.minecraft.ChatFormatting.YELLOW), true);
+            return;
+        }
 
         BlockPos target = null;
         boolean blocked = false;

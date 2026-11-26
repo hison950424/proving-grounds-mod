@@ -50,14 +50,15 @@ import java.util.List;
 public final class ClientPlan9Specials {
 
     private static volatile List<Plan9SyncPacket.DomainInfo> domains = List.of();
+    private static volatile java.util.Map<java.util.UUID, Byte> freeSkydive = java.util.Map.of();
 
     /** 被害妄想症的假敵人地圖標記。 */
     public record FakeEnemy(double x, double z, float yaw, int age) {}
     private static final List<FakeEnemy> FAKE_ENEMIES = new ArrayList<>();
     private static int paranoiaHitCd = 0;
 
-    /** 溜冰鞋滑行速度。 */
-    private static double slideX = 0, slideZ = 0;
+    /** 溜冰鞋滑行狀態（計畫書 10：未撞牆線性加速，高速撞牆發封包受傷）。 */
+    private static double slideDirX = 0, slideDirZ = 0, slideSpeed = 0;
     private static boolean sliding = false;
 
     private ClientPlan9Specials() {}
@@ -66,14 +67,24 @@ public final class ClientPlan9Specials {
         domains = List.copyOf(list);
     }
 
+    public static void setFreeSkydive(java.util.Map<java.util.UUID, Byte> map) {
+        freeSkydive = java.util.Map.copyOf(map);
+    }
+
+    public static byte freeSkydiveState(java.util.UUID id) {
+        Byte b = freeSkydive.get(id);
+        return b == null ? 0 : b;
+    }
+
     public static List<FakeEnemy> fakeEnemies() {
         return FAKE_ENEMIES;
     }
 
     public static void clear() {
         domains = List.of();
+        freeSkydive = java.util.Map.of();
         FAKE_ENEMIES.clear();
-        slideX = slideZ = 0;
+        slideDirX = slideDirZ = slideSpeed = 0;
         sliding = false;
         SpecialHooks.clearClient();
     }
@@ -125,27 +136,46 @@ public final class ClientPlan9Specials {
             paranoiaHitCd = 0;
         }
 
-        // 溜冰鞋：滑行邏輯（碰到方塊停下來）
+        // 溜冰鞋（計畫書 10）：未撞到牆壁時速度線性上漲，速度過快撞牆會依速度比例受傷
         if (p.hasEffect(SpecialRegistry.ICE_SKATES.get())) {
             if (p.horizontalCollision) {
-                slideX = 0;
-                slideZ = 0;
+                if (sliding && slideSpeed >= 0.45) {
+                    com.provinggrounds.network.PGNetwork.sendToServer(new com.provinggrounds.network.IceSkateCrashPacket((float) slideSpeed));
+                }
+                slideDirX = slideDirZ = slideSpeed = 0;
                 sliding = false;
             } else {
-                boolean hasInput = Math.abs(p.input.forwardImpulse) > 0.01f || Math.abs(p.input.leftImpulse) > 0.01f;
+                float fwd = p.input.forwardImpulse, left = p.input.leftImpulse;
+                boolean hasInput = Math.abs(fwd) > 0.01f || Math.abs(left) > 0.01f;
                 Vec3 dm = p.getDeltaMovement();
-                double spd = Math.hypot(dm.x, dm.z);
-                if (hasInput && spd > 0.04) {
-                    double cap = Math.min(0.32, Math.max(0.22, spd));
-                    slideX = dm.x / spd * cap;
-                    slideZ = dm.z / spd * cap;
-                    sliding = true;
-                } else if (!hasInput && sliding) {
-                    p.setDeltaMovement(slideX, dm.y, slideZ);
+                if (hasInput) {
+                    float yawRad = p.getYRot() * ((float) Math.PI / 180f);
+                    double fx = -Math.sin(yawRad), fz = Math.cos(yawRad);
+                    double ix = fx * fwd + fz * left, iz = fz * fwd - fx * left;
+                    double ilen = Math.hypot(ix, iz);
+                    if (ilen > 1e-4) {
+                        ix /= ilen; iz /= ilen;
+                        if (!sliding) {
+                            slideDirX = ix; slideDirZ = iz;
+                            slideSpeed = Math.max(0.24, Math.hypot(dm.x, dm.z));
+                            sliding = true;
+                        } else {
+                            // 緩緩轉向＋速度線性上升
+                            slideDirX = slideDirX * 0.82 + ix * 0.18;
+                            slideDirZ = slideDirZ * 0.82 + iz * 0.18;
+                            double dl = Math.hypot(slideDirX, slideDirZ);
+                            if (dl > 1e-4) { slideDirX /= dl; slideDirZ /= dl; }
+                            slideSpeed = Math.min(1.45, slideSpeed + 0.014);
+                        }
+                        p.setDeltaMovement(slideDirX * slideSpeed, dm.y, slideDirZ * slideSpeed);
+                    }
+                } else if (sliding) {
+                    slideSpeed = Math.min(1.45, slideSpeed + 0.014);
+                    p.setDeltaMovement(slideDirX * slideSpeed, dm.y, slideDirZ * slideSpeed);
                 }
             }
         } else {
-            slideX = slideZ = 0;
+            slideDirX = slideDirZ = slideSpeed = 0;
             sliding = false;
         }
     }

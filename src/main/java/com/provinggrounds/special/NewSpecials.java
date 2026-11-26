@@ -66,7 +66,7 @@ public final class NewSpecials {
     public static final int DRILL_BURN_TICKS = 3 * 20;
     static final int RECALL_TICKS = 20 * 20;            // 計畫書 9：原本 60 秒改為 20 秒
     static final double AIM_RANGE = 100;                // 占位：雷神錘、跳傘指定器的準心最遠距離
-    static final double THOR_RADIUS = 20;              // 計畫書 7 C2：5 → 20
+    static final double THOR_RADIUS = 10;              // 計畫書 10：兩把雷神錘半徑改為 10 格
     static final float THOR_DAMAGE = 8f;                // 占位：雷神錘每道雷的傷害
     static final double THOR_HIT_RADIUS = 2;            // 占位：雷神錘每道雷的命中半徑
     static final float THOR_PLUS_DAMAGE = 6f;           // 占位：雷神錘加強版每道雷的傷害
@@ -328,13 +328,15 @@ public final class NewSpecials {
             Storm s = it.next();
             if (s.age >= THOR_TICKS) { it.remove(); continue; }
             ServerPlayer owner = s.owner == null ? null : server.getPlayerList().getPlayer(s.owner);
-            if (!s.plus && s.age % 4 == 0) { // 每 0.2 秒一道，隨機落在水平 5 格內
+            if (!s.plus && s.age % 4 == 0) { // 計畫書 10：每 0.2 秒隨機落 3 道雷在水平 10 格內
                 var r = s.level.getRandom();
-                double a = r.nextDouble() * Math.PI * 2, d = Math.sqrt(r.nextDouble()) * THOR_RADIUS;
-                double x = s.center.x + Math.cos(a) * d, z = s.center.z + Math.sin(a) * d;
-                Vec3 at = new Vec3(x, groundY(s.level, x, s.center.y, z), z);
-                strike(s.level, at, owner);
-                for (ServerPlayer t : playersHoriz(s.level, at, THOR_HIT_RADIUS, 3)) t.hurt(sourceFor(s.level, owner, t), THOR_DAMAGE);
+                for (int b = 0; b < 3; b++) {
+                    double a = r.nextDouble() * Math.PI * 2, d = Math.sqrt(r.nextDouble()) * THOR_RADIUS;
+                    double x = s.center.x + Math.cos(a) * d, z = s.center.z + Math.sin(a) * d;
+                    Vec3 at = new Vec3(x, groundY(s.level, x, s.center.y, z), z);
+                    strike(s.level, at, owner);
+                    for (ServerPlayer t : playersHoriz(s.level, at, THOR_HIT_RADIUS, 3)) t.hurt(sourceFor(s.level, owner, t), THOR_DAMAGE);
+                }
             } else if (s.plus && s.age % 10 == 0) { // 每 0.5 秒：範圍內每個玩家各被一道雷打中
                 for (ServerPlayer t : playersHoriz(s.level, s.center, THOR_RADIUS, 12)) {
                     strike(s.level, t.position(), owner);
@@ -363,37 +365,166 @@ public final class NewSpecials {
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // E10～E12 重新跳傘
+    // E10～E12 重新跳傘（計畫書 10：非大逃殺模式也可使用，自帶獨立滑翔／開傘控制器）
     // ═════════════════════════════════════════════════════════════════════════
 
-    /** 回傳 false = 沒有人能重新跳傘（物品不消耗，已提示原因）。 */
-    public static boolean reSkydive(ServerPlayer p, SpecialType type) {
+    private static final class FreeDive {
+        byte state; // 1 = GLIDE, 2 = CHUTE, 3 = FREEFALL
+        long lastToggle;
+        int groundTicks;
+        FreeDive(byte state, long now) { this.state = state; this.lastToggle = now; }
+    }
+    private static final Map<UUID, FreeDive> FREE_DIVES = new HashMap<>();
+    private static final java.util.Set<Integer> FREE_CHUTE_SENT = new java.util.HashSet<>();
+
+    /** 給 Plan9SyncPacket 同步目前非大逃殺重新跳傘中的玩家狀態（1=滑翔、2=開傘、3=自由落體）。 */
+    public static Map<UUID, Byte> freeSkydiveStates() {
+        Map<UUID, Byte> out = new HashMap<>();
+        for (Map.Entry<UUID, FreeDive> e : FREE_DIVES.entrySet()) out.put(e.getKey(), e.getValue().state);
+        return out;
+    }
+
+    /** 非大逃殺重新跳傘按空白鍵：滑翔→開傘、開傘↔自由落體。 */
+    public static void onSkydiveKey(ServerPlayer p) {
+        FreeDive d = FREE_DIVES.get(p.getUUID());
+        if (d == null) return;
+        long now = p.server.getTickCount();
+        if (now - d.lastToggle < 10) return;
+        d.lastToggle = now;
+        if (d.state == 1 || d.state == 3) { // GLIDE / FREEFALL -> CHUTE
+            d.state = 2;
+            p.stopFallFlying();
+            com.provinggrounds.modes.br.SkydiveWings.removeAll(p);
+            p.fallDistance = 0;
+            playFreeChuteSound(p, true);
+        } else if (d.state == 2) { // CHUTE -> FREEFALL
+            d.state = 3;
+            playFreeChuteSound(p, false);
+        }
+        Plan9Specials.markDirty();
+    }
+
+    private static void playFreeChuteSound(ServerPlayer p, boolean open) {
+        ServerLevel level = p.serverLevel();
+        double x = p.getX(), y = p.getY() + 1.5, z = p.getZ();
+        if (open) {
+            level.playSound(null, x, y, z, SoundEvents.ENDER_DRAGON_FLAP, SoundSource.PLAYERS, 0.7f, 1.5f);
+            level.playSound(null, x, y, z, SoundEvents.WOOL_PLACE, SoundSource.PLAYERS, 1.0f, 0.7f);
+            level.playSound(null, x, y, z, SoundEvents.ARMOR_EQUIP_ELYTRA, SoundSource.PLAYERS, 1.0f, 1.0f);
+        } else {
+            level.playSound(null, x, y, z, SoundEvents.PHANTOM_FLAP, SoundSource.PLAYERS, 0.8f, 1.6f);
+            level.playSound(null, x, y, z, SoundEvents.WOOL_BREAK, SoundSource.PLAYERS, 1.0f, 1.2f);
+            level.playSound(null, x, y, z, SoundEvents.ARMOR_EQUIP_LEATHER, SoundSource.PLAYERS, 1.0f, 1.3f);
+        }
+    }
+
+    /** 啟動單人的重新跳傘（大逃殺內走 BR 跳傘流程；大逃殺外走獨立跳傘控制器）。 */
+    private static boolean launchSkydive(ServerPlayer t, double x, double baseY, double z) {
         BattleRoyaleMode br = BattleRoyaleMode.get();
-        if (!br.isInPlay()) { msg(p, "只有大逃殺進行中才能使用", ChatFormatting.RED); return false; }
+        if (br.isInPlay() && br.isAliveParticipant(t.getUUID())) {
+            return br.reSkydive(t, x, baseY, z);
+        }
+        if (!t.isAlive() || t.isSpectator() || com.provinggrounds.modes.arena.ArenaManager.isDowned(t.getUUID())) return false;
+        ServerLevel level = t.serverLevel();
+        if (t.isPassenger()) t.stopRiding();
+        com.provinggrounds.modes.br.SkydiveWings.equip(t);
+        t.startFallFlying();
+        double y = Math.min(baseY + 300, level.getMaxBuildHeight() - 2);
+        t.teleportTo(level, x, y, z, t.getYRot(), 0);
+        t.fallDistance = 0;
+        FREE_DIVES.put(t.getUUID(), new FreeDive((byte) 1, t.server.getTickCount()));
+        Plan9Specials.markDirty();
+        return true;
+    }
+
+    /** 重新跳傘（計畫書 10：非大逃殺模式也能用；指定器無敵人時也直接消耗不洩漏資訊）。 */
+    public static boolean reSkydive(ServerPlayer p, SpecialType type) {
         ServerLevel level = p.serverLevel();
         Vec3 me = p.position();
-        int n = 0;
         switch (type) {
-            case RESKYDIVE -> { if (br.reSkydive(p, me.x, me.y, me.z)) n++; }
+            case RESKYDIVE -> {
+                if (!launchSkydive(p, me.x, me.y, me.z)) {
+                    msg(p, "現在不能重新跳傘", ChatFormatting.RED);
+                    return false;
+                }
+            }
             case RESKYDIVE_GROUP -> {
-                for (ServerPlayer t : playersAround(level, me, SKYDIVE_RADIUS)) { // 保持彼此的水平相對位置，不會全部疊在一起
-                    if (br.reSkydive(t, t.getX(), me.y, t.getZ())) n++;
+                for (ServerPlayer t : playersAround(level, me, SKYDIVE_RADIUS)) {
+                    launchSkydive(t, t.getX(), me.y, t.getZ());
                 }
             }
             case RESKYDIVE_TARGET -> {
                 Vec3 at = aimPoint(p);
                 for (ServerPlayer t : playersHoriz(level, at, SKYDIVE_RADIUS, 4)) {
-                    if (br.reSkydive(t, me.x + (t.getX() - at.x), me.y, me.z + (t.getZ() - at.z))) n++;
+                    launchSkydive(t, me.x + (t.getX() - at.x), me.y, me.z + (t.getZ() - at.z));
                 }
             }
             default -> {}
         }
-        if (n == 0) {
-            msg(p, type == SpecialType.RESKYDIVE ? "現在不能重新跳傘（要在地面上、沒有倒地）" : "範圍內沒有可以重新跳傘的玩家", ChatFormatting.RED);
-            return false;
-        }
         level.playSound(null, me.x, me.y, me.z, SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 1.5f, 0.7f);
         return true;
+    }
+
+    private static void tickFreeDives(MinecraftServer server) {
+        if (FREE_DIVES.isEmpty()) {
+            if (!FREE_CHUTE_SENT.isEmpty() && !BattleRoyaleMode.get().isInPlay()) {
+                FREE_CHUTE_SENT.clear();
+                com.provinggrounds.network.PGNetwork.sendToAll(new com.provinggrounds.network.ChuteSyncPacket(new int[0]));
+            }
+            return;
+        }
+        double autoH = 50.0;
+        try { autoH = com.provinggrounds.config.PGConfig.SERVER.skydiveAutoChuteHeight.get(); } catch (IllegalStateException ignored) {}
+        long now = server.getTickCount();
+        java.util.Set<Integer> openIds = new java.util.HashSet<>();
+        for (Iterator<Map.Entry<UUID, FreeDive>> it = FREE_DIVES.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<UUID, FreeDive> en = it.next();
+            ServerPlayer p = server.getPlayerList().getPlayer(en.getKey());
+            FreeDive d = en.getValue();
+            if (p == null || !p.isAlive() || p.isSpectator()) {
+                if (p != null) com.provinggrounds.modes.br.SkydiveWings.removeAll(p);
+                it.remove();
+                Plan9Specials.markDirty();
+                continue;
+            }
+            p.fallDistance = 0;
+            boolean landed = p.onGround() || p.isInWater() || p.getAbilities().flying
+                || !p.level().noCollision(p, p.getBoundingBox().move(0, -0.1, 0));
+            if (landed && now - d.lastToggle > 10) {
+                if (++d.groundTicks >= 2) {
+                    p.stopFallFlying();
+                    com.provinggrounds.modes.br.SkydiveWings.removeAll(p);
+                    p.fallDistance = 0;
+                    it.remove();
+                    Plan9Specials.markDirty();
+                    continue;
+                }
+            } else {
+                d.groundTicks = 0;
+            }
+            if (d.state == 1) { // GLIDE：離地夠近自動開傘
+                if (!p.isFallFlying()) p.startFallFlying();
+                Vec3 from = p.position();
+                BlockHitResult hit = p.level().clip(new ClipContext(from, from.subtract(0, autoH + 1, 0),
+                    ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, p));
+                if (hit.getType() != HitResult.Type.MISS && from.y - hit.getLocation().y <= autoH) {
+                    d.state = 2;
+                    d.lastToggle = now;
+                    p.stopFallFlying();
+                    com.provinggrounds.modes.br.SkydiveWings.removeAll(p);
+                    playFreeChuteSound(p, true);
+                    msg(p, "降落傘已自動打開", ChatFormatting.AQUA);
+                    Plan9Specials.markDirty();
+                }
+            }
+            if (d.state == 2) openIds.add(p.getId());
+        }
+        if (!BattleRoyaleMode.get().isInPlay() && !openIds.equals(FREE_CHUTE_SENT)) {
+            FREE_CHUTE_SENT.clear();
+            FREE_CHUTE_SENT.addAll(openIds);
+            com.provinggrounds.network.PGNetwork.sendToAll(
+                new com.provinggrounds.network.ChuteSyncPacket(openIds.stream().mapToInt(Integer::intValue).toArray()));
+        }
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -404,11 +535,24 @@ public final class NewSpecials {
         long now = server.getTickCount();
         tickRecalls(server, now);
         tickStorms(server);
+        tickFreeDives(server);
     }
 
     public static void cleanup(MinecraftServer server) {
         RECALLS.clear();
         STORMS.clear();
+        for (UUID id : new ArrayList<>(FREE_DIVES.keySet())) {
+            ServerPlayer p = server.getPlayerList().getPlayer(id);
+            if (p != null) {
+                p.stopFallFlying();
+                com.provinggrounds.modes.br.SkydiveWings.removeAll(p);
+            }
+        }
+        FREE_DIVES.clear();
+        if (!FREE_CHUTE_SENT.isEmpty()) {
+            FREE_CHUTE_SENT.clear();
+            com.provinggrounds.network.PGNetwork.sendToAll(new com.provinggrounds.network.ChuteSyncPacket(new int[0]));
+        }
         for (UUID id : new ArrayList<>(GAMBLE.keySet())) {
             ServerPlayer p = server.getPlayerList().getPlayer(id);
             if (p != null) clearGamble(p);

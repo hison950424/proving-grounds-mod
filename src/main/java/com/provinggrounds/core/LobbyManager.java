@@ -66,8 +66,13 @@ public final class LobbyManager {
         SET_TDM_KILLS, SET_TDM_MINUTES, SET_DOM_SCORE, SET_GK_MULTIPLIER, // 管理員：對戰設定（arg = 新的值）
         SET_CIRCLE_HOLD,    // 管理員：自訂縮圈的決賽圈停留秒數（計畫書 7 B）
         SET_ARENA_DOWNED,   // 管理員：團隊模式倒地開（arg 1）／關（arg 0）（計畫書 7 E）
-        SET_FRIENDLY_FIRE   // 管理員：所有模式的友軍誤傷開（arg 1）／關（arg 0）（只限槍械子彈；投擲物與爆炸物強制有友傷）
+        SET_FRIENDLY_FIRE,  // 管理員：所有模式的友軍誤傷開（arg 1）／關（arg 0）（只限槍械子彈；投擲物與爆炸物強制有友傷）
+        CONFIRM_CLASS,      // 計畫書 10：強制選角階段確認職業（arg = ArenaClass 順序）
+        CONFIRM_SPECIAL     // 計畫書 10：佔點強制選特殊道具階段確認道具（arg = SpecialType 順序）
     }
+
+    /** 大廳強制選擇階段：0 = 一般大廳、1 = 強制選職業、2 = 佔點強制選特殊道具。 */
+    public static final int DRAFT_NONE = 0, DRAFT_CLASS = 1, DRAFT_SPECIAL = 2;
 
     public static final String SPECTATOR_TAG = "pg_spectator";
     public static final String JOIN_AFTER_TAG = "pg_join_after";
@@ -153,6 +158,8 @@ public final class LobbyManager {
         return gameMode == GameManager.GameMode.TDM || gameMode == GameManager.GameMode.DOM;
     }
     private final Set<UUID> ready = new HashSet<>();
+    private int draftPhase = DRAFT_NONE;
+    private final Set<UUID> draftDone = new HashSet<>();
     private int countdownTicks = -1; // 強制開始倒數，-1 = 沒在倒數
     private boolean dirty = true;
 
@@ -192,32 +199,70 @@ public final class LobbyManager {
         return true;
     }
 
+    /** 所有參賽者都完成了目前的強制選擇階段（選職業／選特殊道具）。 */
+    private boolean allDraftDone(MinecraftServer server) {
+        List<ServerPlayer> ps = participants(server);
+        if (ps.isEmpty()) return false;
+        for (ServerPlayer p : ps) if (!draftDone.contains(p.getUUID())) return false;
+        return true;
+    }
+
+    /** 推進強制選角／選道具階段：全部選完後進下一階段或進入 10 秒大廳倒數。 */
+    private void checkDraftAdvance(MinecraftServer server) {
+        if (draftPhase == DRAFT_NONE || !allDraftDone(server)) return;
+        if (draftPhase == DRAFT_CLASS && gameMode == GameManager.GameMode.DOM && com.provinggrounds.special.SpecialConfig.enabledSafe()) {
+            draftPhase = DRAFT_SPECIAL;
+            draftDone.clear();
+            broadcastChat(server, Component.literal("[PG] 全員已選好職業！請選擇本場佔點特殊道具！").withStyle(ChatFormatting.AQUA));
+            dirty = true;
+            return;
+        }
+        draftPhase = DRAFT_NONE;
+        draftDone.clear();
+        countdownTicks = ALL_READY_SECONDS * 20;
+        broadcastChat(server, Component.literal("[PG] 全員已確認完成，" + ALL_READY_SECONDS + " 秒後開始遊戲！").withStyle(ChatFormatting.GREEN));
+        dirty = true;
+    }
+
     /** 全員準備後倒數幾秒開始（所有模式；計畫書 6 A20）。 */
     public static final int ALL_READY_SECONDS = 10;
 
     public void tick(MinecraftServer server) {
-        // 大廳裡所有參賽者都準備好 → 倒數 10 秒開始；倒數中有人取消準備就停止倒數
+        // 大廳裡所有參賽者都準備好：
+        //   - 大逃殺：直接開局進入 10 秒登機倒數
+        //   - 團隊死鬥／佔點（計畫書 10）：先強制進入「選職業」畫面，全員選完後（佔點且開特殊道具再選特殊道具），才進入大廳倒數 10 秒
+        //   - 槍王之王：直接進入大廳倒數 10 秒
         if (GameManager.get().isInLobby()) {
             boolean all = allReady(server);
-            if (all && !wasAllReady && countdownTicks < 0 && gameMode == GameManager.GameMode.BATTLE_ROYALE) {
-                // 計畫書 7 A3：大逃殺沒有前置準備階段，全員準備就直接開局，開局後 10 秒倒數登機（倒數中不受傷）
-                broadcastChat(server, Component.literal("[PG] 全員已準備，" + ALL_READY_SECONDS + " 秒後登機！").withStyle(ChatFormatting.GREEN));
-                String error = doStart(server);
-                if (error != null) broadcastChat(server, Component.literal("[PG] 無法開始：" + error).withStyle(ChatFormatting.RED));
+            if (all && !wasAllReady && countdownTicks < 0 && draftPhase == DRAFT_NONE) {
+                if (gameMode == GameManager.GameMode.BATTLE_ROYALE) {
+                    broadcastChat(server, Component.literal("[PG] 全員已準備，" + ALL_READY_SECONDS + " 秒後登機！").withStyle(ChatFormatting.GREEN));
+                    String error = doStart(server);
+                    if (error != null) broadcastChat(server, Component.literal("[PG] 無法開始：" + error).withStyle(ChatFormatting.RED));
+                } else if (gameMode == GameManager.GameMode.TDM || gameMode == GameManager.GameMode.DOM) {
+                    draftPhase = DRAFT_CLASS;
+                    draftDone.clear();
+                    broadcastChat(server, Component.literal("[PG] 全員已準備！請選擇職業，全員選完後開始 10 秒倒數。").withStyle(ChatFormatting.AQUA));
+                } else {
+                    countdownTicks = ALL_READY_SECONDS * 20;
+                    broadcastChat(server, Component.literal("[PG] 全員已準備，" + ALL_READY_SECONDS + " 秒後開始遊戲！").withStyle(ChatFormatting.GREEN));
+                }
                 dirty = true;
-            } else if (all && !wasAllReady && countdownTicks < 0) {
-                countdownTicks = ALL_READY_SECONDS * 20;
-                broadcastChat(server, Component.literal("[PG] 全員已準備，" + ALL_READY_SECONDS + " 秒後開始遊戲！").withStyle(ChatFormatting.GREEN));
-                dirty = true;
-            } else if (!all && countdownTicks >= 0) {
+            } else if (!all && (countdownTicks >= 0 || draftPhase != DRAFT_NONE)) {
                 countdownTicks = -1;
-                broadcastChat(server, Component.literal("[PG] 有人取消準備，開始倒數停止。").withStyle(ChatFormatting.YELLOW));
+                draftPhase = DRAFT_NONE;
+                draftDone.clear();
+                broadcastChat(server, Component.literal("[PG] 有人取消準備，開始流程已停止。").withStyle(ChatFormatting.YELLOW));
                 clearTitles(server);
                 dirty = true;
+            } else if (draftPhase != DRAFT_NONE) {
+                checkDraftAdvance(server);
             }
             wasAllReady = all;
         } else {
             wasAllReady = false;
+            draftPhase = DRAFT_NONE;
+            draftDone.clear();
         }
         if (countdownTicks >= 0) {
 
@@ -260,12 +305,15 @@ public final class LobbyManager {
 
     public void onLogout(ServerPlayer p) {
         ready.remove(p.getUUID());
+        draftDone.remove(p.getUUID());
         dirty = true;
     }
 
     /** 一局結束回到大廳（GameManager.reset 呼叫）：處理「本局結束後加入」的觀戰者。 */
     public void onReturnToLobby(@Nullable MinecraftServer server) {
         ready.clear();
+        draftPhase = DRAFT_NONE;
+        draftDone.clear();
         countdownTicks = -1;
         dirty = true;
         if (server == null) return;
@@ -320,10 +368,27 @@ public final class LobbyManager {
                 if (!ready.remove(sender.getUUID())) ready.add(sender.getUUID());
             }
             case SET_MY_CLASS -> {
-                // 計畫書 6 C1：開始遊戲前先選職業（開局時套用；比賽中在基地商店的「職業」可以再換）
                 com.provinggrounds.modes.arena.ArenaClass[] all = com.provinggrounds.modes.arena.ArenaClass.values();
                 if (arg < 0 || arg >= all.length) return;
                 classChoice.put(sender.getUUID(), all[arg]);
+            }
+            case CONFIRM_CLASS -> {
+                if (isSpectator(sender)) return;
+                com.provinggrounds.modes.arena.ArenaClass[] all = com.provinggrounds.modes.arena.ArenaClass.values();
+                if (arg < 0 || arg >= all.length) return;
+                classChoice.put(sender.getUUID(), all[arg]);
+                if (draftPhase == DRAFT_CLASS) {
+                    draftDone.add(sender.getUUID());
+                    checkDraftAdvance(server);
+                }
+            }
+            case CONFIRM_SPECIAL -> {
+                if (isSpectator(sender)) return;
+                com.provinggrounds.special.DomGear.setChoice(sender, arg);
+                if (draftPhase == DRAFT_SPECIAL) {
+                    draftDone.add(sender.getUUID());
+                    checkDraftAdvance(server);
+                }
             }
             default -> {
                 if (!op) { deny(sender, "只有管理員可以這麼做。"); return; }
@@ -432,15 +497,18 @@ public final class LobbyManager {
                 return false;
             }
             case FORCE_START -> {
-                // 計畫書 6 A20：強制開始改成「強制所有人準備」，接著跟一般全員準備一樣倒數 10 秒
-                if (countdownTicks >= 0) return false;
+                // 計畫書 6 A20：強制開始改成「強制所有人準備」，接著走正常準備後流程（團隊模式先選角再倒數）
+                if (countdownTicks >= 0 || draftPhase != DRAFT_NONE) return false;
                 for (ServerPlayer p : participants(server)) ready.add(p.getUUID());
                 broadcastChat(server, Component.literal("[PG] 管理員讓所有人進入準備狀態。").withStyle(ChatFormatting.GOLD));
             }
             case CANCEL_COUNTDOWN -> {
-                if (countdownTicks < 0) return false;
+                if (countdownTicks < 0 && draftPhase == DRAFT_NONE) return false;
                 countdownTicks = -1;
-                broadcastChat(server, Component.literal("[PG] 管理員取消了開始倒數。").withStyle(ChatFormatting.YELLOW));
+                draftPhase = DRAFT_NONE;
+                draftDone.clear();
+                ready.clear();
+                broadcastChat(server, Component.literal("[PG] 管理員取消了開始流程。").withStyle(ChatFormatting.YELLOW));
                 clearTitles(server);
             }
             default -> { return false; }
@@ -563,7 +631,7 @@ public final class LobbyManager {
             TeamManager.Team t = TeamManager.get().getTeam(p).orElse(null);
             players.add(new LobbyStatePacket.Entry(p.getUUID(), p.getGameProfile().getName(),
                 t == null ? -1 : t.id, ready.contains(p.getUUID()), isSpectator(p), isJoinPending(p), p.hasPermissions(2),
-                chosenClass(p.getUUID()).ordinal()));
+                chosenClass(p.getUUID()).ordinal(), draftDone.contains(p.getUUID())));
         }
         int map = mapId;
         if (MapRegistry.get(server).getMap(map) == null) {
@@ -571,7 +639,7 @@ public final class LobbyManager {
             map = it.hasNext() ? it.next().id : -1;
         }
         return new LobbyStatePacket(GameManager.get().isInLobby(), map, preset.ordinal(), variant.ordinal(),
-            teamMode.ordinal(), teamCount, countdownTicks < 0 ? -1 : (countdownTicks + 19) / 20,
+            teamMode.ordinal(), teamCount, countdownTicks < 0 ? -1 : (countdownTicks + 19) / 20, draftPhase,
             com.provinggrounds.special.SpecialConfig.enabledSafe(), friendlyFire(), com.provinggrounds.core.BlockProtection.explosionMode(), weaponMode.ordinal(),
             gameMode.ordinal(), arenaSettings(), customCircle(preset, mapRadius(server, map)), players);
     }

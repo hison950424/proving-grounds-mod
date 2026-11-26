@@ -174,6 +174,7 @@ public class MainMenuScreen extends Screen {
         settingRows.clear();
         sections.clear();
         sectionNames.clear();
+        numericInputs.clear();
         List<MenuDataPacket.MapEntry> maps = menu != null ? menu.maps() : List.of();
         MenuDataPacket.MapEntry map = findMap(maps, lobby != null ? lobby.mapId() : -1);
         CirclePreset preset = lobby != null ? CirclePreset.values()[lobby.presetOrdinal()] : CirclePreset.STANDARD;
@@ -195,14 +196,14 @@ public class MainMenuScreen extends Screen {
             java.util.Arrays.stream(CirclePreset.values()).map(p -> p.displayName).toList(), preset.ordinal(), canEdit,
             i -> send(LobbyManager.Action.SET_PRESET, i));
         if (preset == CirclePreset.CUSTOM && lobby != null && lobby.customCircle().length >= 5) {
-            // 自訂縮圈（計畫書 6 D2）：－／＋ 調整
+            // 自訂縮圈（計畫書 6 D2、計畫書 10 可直接輸入數字）：－ 輸入框 ＋
             int[] cc = lobby.customCircle();
-            y = stepper(sx, y, sw, "階段數", cc[0] + " 階", canEdit, 1, cc[0], LobbyManager.Action.SET_CIRCLE_STAGES);
-            y = stepper(sx, y, sw, "每階段", cc[1] + " 秒", canEdit, 15, cc[1], LobbyManager.Action.SET_CIRCLE_INTERVAL);
-            y = stepper(sx, y, sw, "圈速度", "×" + String.format("%.1f", cc[2] / 10.0), canEdit, 1, cc[2], LobbyManager.Action.SET_CIRCLE_SPEED);
-            y = stepper(sx, y, sw, "開場等", cc[3] + " 秒", canEdit, 15, cc[3], LobbyManager.Action.SET_CIRCLE_WAIT);
-            y = stepper(sx, y, sw, "最後圈", cc[4] + "%", canEdit, 5, cc[4], LobbyManager.Action.SET_CIRCLE_FINAL);
-            if (cc.length >= 6) y = stepper(sx, y, sw, "決賽圈", cc[5] + " 秒", canEdit, 15, cc[5], LobbyManager.Action.SET_CIRCLE_HOLD);
+            y = stepper(sx, y, sw, "階段數", cc[0] + " 階", canEdit, 1, cc[0], LobbyManager.Action.SET_CIRCLE_STAGES, false);
+            y = stepper(sx, y, sw, "每階段", cc[1] + " 秒", canEdit, 15, cc[1], LobbyManager.Action.SET_CIRCLE_INTERVAL, false);
+            y = stepper(sx, y, sw, "圈速度", "×" + String.format("%.1f", cc[2] / 10.0), canEdit, 1, cc[2], LobbyManager.Action.SET_CIRCLE_SPEED, true);
+            y = stepper(sx, y, sw, "開場等", cc[3] + " 秒", canEdit, 15, cc[3], LobbyManager.Action.SET_CIRCLE_WAIT, false);
+            y = stepper(sx, y, sw, "最後圈", cc[4] + "%", canEdit, 5, cc[4], LobbyManager.Action.SET_CIRCLE_FINAL, false);
+            if (cc.length >= 6) y = stepper(sx, y, sw, "決賽圈", cc[5] + " 秒", canEdit, 15, cc[5], LobbyManager.Action.SET_CIRCLE_HOLD, false);
         }
         y = choice(sx, y, sw, "玩法", variant.displayName, java.util.Arrays.stream(BattleRoyaleMode.Variant.values()).map(v -> v.displayName).toList(),
             variant.ordinal(), canEdit, i -> send(LobbyManager.Action.SET_VARIANT, i));
@@ -232,20 +233,14 @@ public class MainMenuScreen extends Screen {
         y = choice(sx, y, sw, "分隊", teamMode.displayName, TEAM_MODES, teamMode.ordinal(), canEdit,
             i -> send(LobbyManager.Action.SET_TEAM_MODE, i));
         if (canEdit) {
-            // 隊數：－ 值 ＋（值置中在兩個按鈕之間，「全體孤狼」也放得下）
-            settingRows.add(new SettingRow(sx, y, "隊數", null));
-            setting(sx + LABEL_W, y, 16, "－", teamCount > 0, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount - 1));
-            String tc = teamCount == 0 ? "全體孤狼" : String.valueOf(teamCount);
-            int vx = sx + LABEL_W + 18, vw = sw - LABEL_W - 36;
-            settingRows.add(new SettingRow(vx + Math.max(0, (vw - font.width(tc)) / 2), y, null, tc));
-            setting(sx + sw - 16, y, 16, "＋", teamCount < LobbyManager.MAX_TEAMS, () -> send(LobbyManager.Action.SET_TEAM_COUNT, teamCount + 1));
-            y += PITCH;
+            // 隊數：－ 數字輸入框 ＋（0 = 全體孤狼，計畫書 10 支援直接輸入數字）
+            y = stepper(sx, y, sw, "隊數", teamCount == 0 ? "全體孤狼" : String.valueOf(teamCount), true, 1, teamCount, LobbyManager.Action.SET_TEAM_COUNT, false);
             int half = (sw - 6) / 2;
             setting(sx, y, half, Tr.t("lobby.auto_balance"), true, () -> send(LobbyManager.Action.AUTO_BALANCE, 0));
             setting(sx + sw - half, y, half, Tr.t("lobby.clear_teams"), true, () -> send(LobbyManager.Action.CLEAR_TEAMS, 0));
             y += PITCH + 2;
         } else {
-            y = row(sx, y, sw, "隊數", String.valueOf(teamCount), false, () -> {});
+            y = row(sx, y, sw, "隊數", teamCount == 0 ? "全體孤狼" : String.valueOf(teamCount), false, () -> {});
         }
         }
 
@@ -283,7 +278,7 @@ public class MainMenuScreen extends Screen {
             r.active = (inLobby || preparing) && me != null;
             addRenderableWidget(r);
         }
-        boolean counting = lobby != null && lobby.countdownSeconds() >= 0;
+        boolean counting = lobby != null && (lobby.countdownSeconds() >= 0 || lobby.draftPhase() != LobbyManager.DRAFT_NONE);
         if (op && lobby != null && !inLobby) {
             // 遊戲進行中：開始鍵換成「結束遊戲」，要按兩次（3 秒內）才會執行
             boolean confirming = System.currentTimeMillis() < endConfirmUntil;
@@ -315,11 +310,11 @@ public class MainMenuScreen extends Screen {
         y = row(sx, y, sw, "模式", Tr.t(gm == GameManager.GameMode.TDM ? "mode.tdm" : gm == GameManager.GameMode.DOM ? "mode.dom" : "mode.gk"), false, () -> {});
         switch (gm) {
             case TDM -> {
-                y = stepper(sx, y, sw, "目標擊殺", String.valueOf(a.tdmKills()), canEdit, 10, a.tdmKills(), LobbyManager.Action.SET_TDM_KILLS);
-                y = stepper(sx, y, sw, "時間", a.tdmMinutes() + " 分", canEdit, 1, a.tdmMinutes(), LobbyManager.Action.SET_TDM_MINUTES);
+                y = stepper(sx, y, sw, "目標擊殺", String.valueOf(a.tdmKills()), canEdit, 10, a.tdmKills(), LobbyManager.Action.SET_TDM_KILLS, false);
+                y = stepper(sx, y, sw, "時間", a.tdmMinutes() + " 分", canEdit, 1, a.tdmMinutes(), LobbyManager.Action.SET_TDM_MINUTES, false);
             }
-            case DOM -> y = stepper(sx, y, sw, "目標分數", String.valueOf(a.domScore()), canEdit, 100, a.domScore(), LobbyManager.Action.SET_DOM_SCORE);
-            case GK -> y = stepper(sx, y, sw, "擊殺倍率", "×" + a.gkMultiplier(), canEdit, 1, a.gkMultiplier(), LobbyManager.Action.SET_GK_MULTIPLIER);
+            case DOM -> y = stepper(sx, y, sw, "目標分數", String.valueOf(a.domScore()), canEdit, 100, a.domScore(), LobbyManager.Action.SET_DOM_SCORE, false);
+            case GK -> y = stepper(sx, y, sw, "擊殺倍率", "×" + a.gkMultiplier(), canEdit, 1, a.gkMultiplier(), LobbyManager.Action.SET_GK_MULTIPLIER, false);
             default -> {}
         }
         boolean downedOn = a.downed(); // 計畫書 7 E：團隊模式倒地（只有管理員能改，預設關）
@@ -328,41 +323,68 @@ public class MainMenuScreen extends Screen {
         y = choice(sx, y, sw, "友軍誤傷", ff ? "開" : "關", OFF_ON, ff ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_FRIENDLY_FIRE, i));
         boolean special = lobby == null || lobby.special(); // 特殊道具模式
         y = choice(sx, y, sw, "特殊道具", special ? "開" : "關", OFF_ON, special ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_SPECIAL, i));
-        if (gm == GameManager.GameMode.DOM && special) {
-            // 計畫書 8：佔點＋特殊物品模式：整場選一種、每回合用一次；選越強自己商店越貴
-            LobbyStatePacket.Entry me0 = self(lobby);
-            boolean canPick0 = me0 != null && !me0.spectator() && lobby != null && lobby.inLobby();
-            List<com.provinggrounds.special.SpecialType> all = com.provinggrounds.special.DomGear.allowed();
-            List<String> labels = all.stream().map(t -> {
-                int tier = com.provinggrounds.special.DomGear.tier(t);
-                return "【" + com.provinggrounds.special.DomGear.tierName(tier) + "】" + t.zh + "　商店 +" + com.provinggrounds.special.DomGear.markupPercent(tier) + "%";
-            }).toList();
-            com.provinggrounds.special.SpecialType cur = com.provinggrounds.client.ClientDomGear.choice();
-            String value = cur == null ? "—" : "【" + com.provinggrounds.special.DomGear.tierName(com.provinggrounds.special.DomGear.tier(cur)) + "】" + cur.zh;
-            y = choice(sx, y, sw, "我的特殊道具", value, labels, Math.max(0, all.indexOf(cur)), canPick0,
-                k -> PGNetwork.sendToServer(new com.provinggrounds.network.DomGearActionPacket(all.get(k).ordinal())));
-        }
+        // 計畫書 10：移除「我的職業」「我的特殊道具」下拉選單，改為「更改職業」「更改特殊道具」按鈕（點開專用視覺化 UI）
         if (gm != GameManager.GameMode.GK) {
-            // 每個人自己選職業（開始前；計畫書 6 C1），點一下換下一個
             LobbyStatePacket.Entry me = self(lobby);
             com.provinggrounds.modes.arena.ArenaClass[] all = com.provinggrounds.modes.arena.ArenaClass.values();
             com.provinggrounds.modes.arena.ArenaClass mine = all[Math.max(0, Math.min(all.length - 1, me != null ? me.cls() : 0))];
             boolean canPick = me != null && !me.spectator() && lobby != null && lobby.inLobby();
-            y = choice(sx, y, sw, "我的職業", mine.displayName, java.util.Arrays.stream(all).map(c -> c.displayName).toList(), mine.ordinal(), canPick,
-                i -> send(LobbyManager.Action.SET_MY_CLASS, i));
+            setting(sx, y, sw, "更改職業（" + mine.displayName + "）", canPick, () -> {
+                if (minecraft != null) minecraft.setScreen(new LoadoutScreen(LoadoutScreen.Mode.CLASS_PICK, this));
+            });
+            y += PITCH;
+        }
+        if (gm == GameManager.GameMode.DOM && special) {
+            LobbyStatePacket.Entry me0 = self(lobby);
+            boolean canPick0 = me0 != null && !me0.spectator() && lobby != null && lobby.inLobby();
+            com.provinggrounds.special.SpecialType cur = com.provinggrounds.client.ClientDomGear.choice();
+            String spName = cur == null ? "—" : cur.zh;
+            setting(sx, y, sw, "更改特殊道具（" + spName + "）", canPick0, () -> {
+                if (minecraft != null) minecraft.setScreen(new LoadoutScreen(LoadoutScreen.Mode.SPECIAL_PICK, this));
+            });
+            y += PITCH;
         }
         return y;
 
     }
 
-    private int stepper(int x, int y, int w, String label, String value, boolean editable, int step, int current, LobbyManager.Action action) {
+    /** 數字類設定（計畫書 10）：中間為可直接輸入數字的輸入框，左右保留 －／＋ 微調；按 Enter 或移開焦點即套用。 */
+    private record NumericInput(net.minecraft.client.gui.components.EditBox box, boolean decimal, LobbyManager.Action action, int current) {}
+    private final List<NumericInput> numericInputs = new ArrayList<>();
+
+    private int stepper(int x, int y, int w, String label, String value, boolean editable, int step, int current,
+                        LobbyManager.Action action, boolean decimal) {
         if (!editable) return row(x, y, w, label, value, false, () -> {});
         settingRows.add(new SettingRow(x, y, label, null));
         int bw = 16, vx = x + LABEL_W + bw + 2, vw = w - LABEL_W - 2 * bw - 4;
         setting(x + LABEL_W, y, bw, "－", true, () -> send(action, current - step));
-        settingRows.add(new SettingRow(vx + Math.max(0, (vw - font.width(value)) / 2), y, null, value)); // 值置中
+        var box = new net.minecraft.client.gui.components.EditBox(font, vx, y + 1, Math.max(24, vw), BTN_H - 2, Component.literal(label));
+        box.setValue(decimal ? String.format("%.1f", current / 10.0) : String.valueOf(current));
+        box.setMaxLength(8);
+        box.setFilter(s -> decimal ? s.matches("[0-9.]*") : s.matches("[0-9]*"));
+        box.setVisible(leftVisible(y, BTN_H));
+        box.setBordered(true);
+        addRenderableWidget(box);
+        numericInputs.add(new NumericInput(box, decimal, action, current));
         setting(x + w - bw, y, bw, "＋", true, () -> send(action, current + step));
         return y + PITCH;
+    }
+
+    /** 把所有被修改過的數字輸入框送出給伺服器。 */
+    private void commitNumericInputs() {
+        for (NumericInput ni : numericInputs) {
+            String raw = ni.box().getValue().trim();
+            if (raw.isEmpty()) continue;
+            try {
+                int parsed = ni.decimal() ? (int) Math.round(Double.parseDouble(raw) * 10.0) : Integer.parseInt(raw);
+                if (parsed != ni.current()) send(ni.action(), parsed);
+            } catch (NumberFormatException ignored) {}
+        }
+    }
+
+    private boolean isTypingNumber() {
+        for (NumericInput ni : numericInputs) if (ni.box().isFocused()) return true;
+        return false;
     }
 
     /** 設定列（畫面上要畫的文字）：label = 左邊的標籤；value = 只讀時畫的值（null = 這一列是按鈕）。 */
@@ -479,6 +501,8 @@ public class MainMenuScreen extends Screen {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (Dropdown.mouseClicked(mx, my, height)) return true; // 下拉選單展開中：先處理它
+        boolean wasTyping = isTypingNumber();
+        boolean handled = false;
         if (view == View.LOBBY && button == 0) {
             Row row = rowAt(mx, my);
             if (row != null) {
@@ -493,10 +517,12 @@ public class MainMenuScreen extends Screen {
                 } else {
                     onRowClicked(row);
                 }
-                return true;
+                handled = true;
             }
         }
-        return super.mouseClicked(mx, my, button);
+        if (!handled) handled = super.mouseClicked(mx, my, button);
+        if (wasTyping && !isTypingNumber()) commitNumericInputs();
+        return handled;
     }
 
     @Override
@@ -622,6 +648,7 @@ public class MainMenuScreen extends Screen {
 
     @Override
     public void removed() {
+        commitNumericInputs();
         Dropdown.close();
         super.removed();
     }
@@ -763,6 +790,8 @@ public class MainMenuScreen extends Screen {
     @Nullable
     private String lobbyHint(@Nullable LobbyStatePacket lobby, @Nullable MenuDataPacket menu) {
         if (lobby == null || menu == null) return Tr.t("lobby.loading");
+        if (lobby.draftPhase() == LobbyManager.DRAFT_CLASS) return "全員已準備：正在選擇職業中…";
+        if (lobby.draftPhase() == LobbyManager.DRAFT_SPECIAL) return "全員已選完職業：正在選擇佔點特殊道具中…";
         if (lobby.countdownSeconds() >= 0) return Tr.t("lobby.countdown", lobby.countdownSeconds());
         if (!lobby.inLobby()) return Tr.t("lobby.in_game", menu.status());
         long total = lobby.players().stream().filter(e -> !e.spectator()).count();
@@ -777,6 +806,8 @@ public class MainMenuScreen extends Screen {
 
     @Override
     public void tick() {
+        // 正在數字輸入框打字時先不重建，避免中斷輸入
+        if (isTypingNumber()) return;
         // 伺服器資料到了（或更新了）就重建按鈕，讓設定與按鈕狀態正確
         boolean confirming = System.currentTimeMillis() < endConfirmUntil;
         if (ClientMenuData.version() != seenMenu || ClientLobbyData.version() != seenLobby || confirming != wasConfirming
@@ -789,6 +820,18 @@ public class MainMenuScreen extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE && Dropdown.isOpen()) { Dropdown.close(); return true; }
+        if (isTypingNumber()) {
+            if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER) {
+                commitNumericInputs();
+                setFocused(null);
+                return true;
+            }
+            if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+                setFocused(null);
+                return true;
+            }
+            return super.keyPressed(keyCode, scanCode, modifiers);
+        }
         if (ClientModEvents.OPEN_MENU.matches(keyCode, scanCode)) {
             onClose();
             return true;

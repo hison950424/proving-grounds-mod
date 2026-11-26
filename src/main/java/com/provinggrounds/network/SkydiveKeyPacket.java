@@ -24,7 +24,12 @@ public record SkydiveKeyPacket() {
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer p = ctx.get().getSender();
-            if (p != null) BattleRoyaleMode.get().onSkydiveKey(p);
+            if (p == null) return;
+            if (BattleRoyaleMode.get().isInPlay() && BattleRoyaleMode.get().isAliveParticipant(p.getUUID())) {
+                BattleRoyaleMode.get().onSkydiveKey(p);
+            } else {
+                com.provinggrounds.special.NewSpecials.onSkydiveKey(p);
+            }
         });
         ctx.get().setPacketHandled(true);
     }

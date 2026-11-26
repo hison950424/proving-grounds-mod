@@ -30,9 +30,15 @@ public abstract class FlashShieldMixin {
     @Inject(method = {
         "finishUsingItem(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;)Lnet/minecraft/world/item/ItemStack;",
         "m_5922_(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;)Lnet/minecraft/world/item/ItemStack;"
-    }, at = @At("RETURN"), remap = false, require = 0)
+    }, at = @At("RETURN"), cancellable = true, remap = false, require = 0)
     private void provinggrounds$flashEnd(net.minecraft.world.item.ItemStack stack, net.minecraft.world.level.Level level,
                                          net.minecraft.world.entity.LivingEntity user, CallbackInfoReturnable<net.minecraft.world.item.ItemStack> cir) {
-        if (!level.isClientSide) FlashShieldTweaks.end();
+        if (!level.isClientSide) {
+            FlashShieldTweaks.end();
+            if (FlashShieldTweaks.shouldDestroyAfterFlash(user, stack)) {
+                stack.shrink(stack.getCount());
+                cir.setReturnValue(net.minecraft.world.item.ItemStack.EMPTY);
+            }
+        }
     }
 }

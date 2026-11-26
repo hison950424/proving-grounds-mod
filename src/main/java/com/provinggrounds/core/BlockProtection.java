@@ -75,8 +75,30 @@ public final class BlockProtection {
     private static java.lang.reflect.Field interactionField;
     private static boolean interactionFailed;
     private static java.lang.reflect.Field destroyMultiplierField;
+    private static java.lang.reflect.Field radiusField;
+    /** 爆炸武器或投擲物可炸毀爆炸範圍內爆炸抗性低於此值的任何方塊（計畫書 10）。 */
+    private static final float MAX_DESTROY_RESISTANCE = 1000.0f;
     /** 這個 tick 被爆炸炸掉的方塊（炸掉時掉出來的物品要取消，避免滿地方塊；每 tick 結束清空）。 */
     private static final java.util.Set<BlockPos> EXPLODED = new java.util.HashSet<>();
+
+    private static boolean isWeaponOrThrowableExplosion(net.minecraft.world.level.Explosion ex) {
+        net.minecraft.world.entity.Entity src = ex.getDirectSourceEntity();
+        String srcName = src != null ? src.getClass().getName() : "";
+        String exName = ex.getClass().getName();
+        return srcName.startsWith("com.tacz.") || exName.startsWith("com.tacz.")
+            || srcName.startsWith("me.xjqsh.lrtactical.") || exName.startsWith("me.xjqsh.lrtactical.");
+    }
+
+    private static float explosionRadius(net.minecraft.world.level.Explosion ex) {
+        try {
+            if (radiusField == null) {
+                radiusField = net.minecraftforge.fml.util.ObfuscationReflectionHelper.findField(net.minecraft.world.level.Explosion.class, "f_46017_");
+            }
+            float r = radiusField.getFloat(ex);
+            if (r > 0f) return r;
+        } catch (ReflectiveOperationException | RuntimeException ignored) {}
+        return 4.0f;
+    }
 
     /**
      * 爆炸開始：TACZ 爆炸彈與 lrtactical 手榴彈在它們自己的設定裡被設成「不破壞方塊」（KEEP），
@@ -114,9 +136,40 @@ public final class BlockProtection {
         Level level = event.getLevel();
         if (level.isClientSide) return;
         int before = event.getAffectedBlocks().size();
+        net.minecraft.world.level.Explosion ex = event.getExplosion();
+        // 計畫書 10：爆炸武器或投擲物（且允許破壞方塊時）可炸掉爆炸範圍內爆炸抗性 < 1000 的任何方塊（祭壇、墓碑等非物資箱方塊實體除外）
+        if (isWeaponOrThrowableExplosion(ex)) {
+            net.minecraft.world.phys.Vec3 center = ex.getPosition();
+            if (allowsExplosion(level, BlockPos.containing(center), ex)) {
+                float r = Math.min(16f, explosionRadius(ex));
+                double r2 = r * r;
+                java.util.Set<BlockPos> existing = new java.util.HashSet<>(event.getAffectedBlocks());
+                int minX = (int) Math.floor(center.x - r), maxX = (int) Math.ceil(center.x + r);
+                int minY = Math.max(level.getMinBuildHeight(), (int) Math.floor(center.y - r));
+                int maxY = Math.min(level.getMaxBuildHeight() - 1, (int) Math.ceil(center.y + r));
+                int minZ = (int) Math.floor(center.z - r), maxZ = (int) Math.ceil(center.z + r);
+                for (int x = minX; x <= maxX; x++) {
+                    for (int y = minY; y <= maxY; y++) {
+                        for (int z = minZ; z <= maxZ; z++) {
+                            double dx = x + 0.5 - center.x, dy = y + 0.5 - center.y, dz = z + 0.5 - center.z;
+                            if (dx * dx + dy * dy + dz * dz > r2) continue;
+                            BlockPos bp = new BlockPos(x, y, z);
+                            if (existing.contains(bp) || !allowsExplosion(level, bp, ex)) continue;
+                            BlockState st = level.getBlockState(bp);
+                            if (st.isAir() || !st.getFluidState().isEmpty()) continue;
+                            if (st.getDestroySpeed(level, bp) < 0f) continue; // 基岩等不可破壞方塊
+                            if (level.getBlockEntity(bp) != null && !isCrate(level, bp)) continue;
+                            if (st.getExplosionResistance(level, bp, ex) < MAX_DESTROY_RESISTANCE) {
+                                event.getAffectedBlocks().add(bp);
+                                existing.add(bp);
+                            }
+                        }
+                    }
+                }
+            }
+        }
         // 不能炸的：大逃殺範圍外、大廳關掉；箱子、祭壇、墓碑等有內容的方塊（方塊實體）也不炸，避免物資噴出來或祭壇消失
         // 物資箱可以被炸掉（裡面的東西照常噴出，比賽結束不修復物資箱，計畫書 6 A10）
-        net.minecraft.world.level.Explosion ex = event.getExplosion();
         event.getAffectedBlocks().removeIf(pos -> !allowsExplosion(level, pos, ex)
             || (level.dimension() == Level.OVERWORLD && level.getBlockEntity(pos) != null && !isCrate(level, pos)));
         if (level.dimension() == Level.OVERWORLD) {

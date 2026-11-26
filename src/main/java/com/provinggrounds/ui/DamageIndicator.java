@@ -31,18 +31,25 @@ import java.util.List;
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
 public final class DamageIndicator {
 
-    private record Hit(Vec3 from, long startMs, boolean silenced) {}
+    private record Hit(Vec3 from, long startMs, boolean silenced, double yawOffsetRad) {}
 
     private static final List<Hit> HITS = new ArrayList<>();
+    private static final java.util.Random RNG = new java.util.Random();
     private static DamageSource lastSeen;
     private static final int MAX_HITS = 6;
 
     private DamageIndicator() {}
 
+    /** 依是否消音產生隨機角度偏移（弧度）：確保真實方向落在紅條內，但不在正中央（避免面對方塊正中直接鎖定敵人）。 */
+    private static double randomOffset(boolean silenced) {
+        double maxDeg = silenced ? 22.0 : 6.0;
+        return Math.toRadians((RNG.nextDouble() * 2.0 - 1.0) * maxDeg);
+    }
+
     /** 被害妄想症（計畫書 9）：注入假的受擊方向指示器。 */
     public static void addFakeHit(Vec3 from) {
         synchronized (HITS) {
-            HITS.add(new Hit(from, System.currentTimeMillis(), false));
+            HITS.add(new Hit(from, System.currentTimeMillis(), false, randomOffset(false)));
             while (HITS.size() > MAX_HITS) HITS.remove(0);
         }
     }
@@ -58,11 +65,11 @@ public final class DamageIndicator {
         lastSeen = src;
         Vec3 from = sourcePos(src, p);
         if (from == null) return;
-        // 開槍的人的槍裝了消音器：指示器寬 3 倍（只知道大概方向）
+        // 開槍的人的槍裝了消音器：指示器寬 3 倍，並大幅隨機偏移中心角度（無法靠正中央精準定位）
         boolean silenced = src.getEntity() instanceof net.minecraft.world.entity.LivingEntity shooter
             && com.provinggrounds.compat.GunCompat.isSilenced(shooter.getMainHandItem());
         synchronized (HITS) {
-            HITS.add(new Hit(from, System.currentTimeMillis(), silenced));
+            HITS.add(new Hit(from, System.currentTimeMillis(), silenced, randomOffset(silenced)));
             while (HITS.size() > MAX_HITS) HITS.remove(0);
         }
     }
@@ -102,8 +109,10 @@ public final class DamageIndicator {
                 // 換成「相對於面向」的方向：forward = 面向的方向（−sin yaw, cos yaw），right = (−cos yaw, −sin yaw)
                 double fwd = dx * -Mth.sin(yaw) + dz * Mth.cos(yaw);
                 double right = dx * -Mth.cos(yaw) + dz * -Mth.sin(yaw);
-                // 螢幕方向：上 = 前方（螢幕 y 往下為正，所以前方是 −y）
-                double sx = right, sy = -fwd;
+                // 計畫書 10：把顯示角度加上固定隨機偏移（消音器偏移更大），讓真實方向落在紅條內但不在正中間
+                double c = Math.cos(h.yawOffsetRad()), s = Math.sin(h.yawOffsetRad());
+                double sx = right * c - (-fwd) * s;
+                double sy = right * s + (-fwd) * c;
                 float alpha = (float) (1.0 - age / life);
                 drawEdge(g, width, height, sx, sy, alpha, h.silenced() ? 3 : 1);
             }

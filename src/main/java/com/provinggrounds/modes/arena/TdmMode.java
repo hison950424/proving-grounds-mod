@@ -35,8 +35,8 @@ public final class TdmMode extends ArenaMode {
     }
 
     @Override public GameManager.GameMode kind() { return GameManager.GameMode.TDM; }
-    @Override public String title() { return prepSeconds > 0 ? "團隊死鬥・準備選角" : "團隊死鬥・" + stageName(); }
-    @Override public boolean loadoutOpen() { return prepSeconds > 0; }
+    @Override public String title() { return "團隊死鬥・" + stageName(); }
+    @Override public boolean loadoutOpen() { return false; }
 
     private String stageName() { return stage == 0 ? "早期" : stage == 1 ? "中期" : "後期"; }
 
@@ -69,8 +69,8 @@ public final class TdmMode extends ArenaMode {
 
     @Override
     protected void onStart() {
-        prepSeconds = 10; // 開局 10 秒選角準備期
-        fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.BARRIER.defaultBlockState(), true); // 準備期間封住出口
+        prepSeconds = 0; // 計畫書 10：選角改在大廳準備後強制完成，開局即進入戰鬥
+        fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.AIR.defaultBlockState(), true);
         clearSupplyChests();
         clearFloorItems();
     }
@@ -147,6 +147,7 @@ public final class TdmMode extends ArenaMode {
     @Override
     protected void onRespawned(ServerPlayer p, ArenaPlayer ap) {
         refillConsumables(p, ap, false);
+        refillTeamHeals(p, false);
     }
 
     @Override protected Vec3 spawnOf(ArenaPlayer ap) { return randomTeamSpawn(ap.team); }

@@ -1161,6 +1161,7 @@ public class BattleRoyaleMode {
                 if (asp != null) { asp.stats.assists++; asp.stats.xp += xp; }
                 assister.displayClientMessage(Component.literal("助攻 " + part.name + "  +" + xp + " 經驗")
                     .withStyle(ChatFormatting.YELLOW), true);
+                com.provinggrounds.core.KillEvents.assist(assister, part.name);
             }
         }
 

@@ -30,7 +30,7 @@ public final class ShopScreen extends Screen {
 
     private static final int BG = 0xEB0F141E, BORDER = 0xFF2A3344, ACCENT = 0xFFE8D060, TEXT = 0xFFFFFFFF,
         DIM = 0xFFA0A8B8, GOOD = 0xFF4CC864, BAD = 0xFFE04848, HOVER = 0x30FFFFFF;
-    private static final String TAB_TRANSFER = "轉帳";
+    private static final String TAB_TRANSFER = "轉帳", TAB_CLASS_INFO = "職業介紹";
     private static final String MAIN_GUNS = "槍械", MAIN_ATTACH = "配件", MAIN_GEAR = "近戰／投擲", MAIN_ARMOR = "防具", MAIN_OTHER = "其他";
     private static final List<String> GUN_CATS = List.of("手槍", "衝鋒槍", "散彈槍", "步槍", "機槍", "狙擊槍", "重武器");
     private static final List<String> ATTACH_SUBS = List.of("可裝手上的槍", "全部", "瞄具", "槍口", "握把", "槍托", "彈匣", "雷射", "特殊彈藥", "其他");
@@ -79,12 +79,8 @@ public final class ShopScreen extends Screen {
         if (!s.shop()) return;
         addRenderableWidget(new PGButton(left + 136, by, 58, 16, Component.literal("垃圾桶"), false, false,
             () -> PGNetwork.sendToServer(new ArenaActionPacket(ArenaActionPacket.Action.OPEN_TRASH, 0))));
-        if (s.loadoutOpen() && s.classes()) {
-            addRenderableWidget(new PGButton(left + 198, by, 72, 16, Component.literal("選角／道具"), true, false,
-                () -> minecraft.setScreen(new LoadoutScreen())));
-        }
 
-        // 左欄：大分類（已移除「職業」分頁，開局 10 秒由 LoadoutScreen 決定）
+        // 左欄：大分類（計畫書 10：新增只讀的「職業介紹」分頁，局內仍不可換職業）
         List<String> tabs = new ArrayList<>();
         if (ArenaData.shop().stream().anyMatch(i -> GUN_CATS.contains(i.category()) && cls.canBuyCategory(i.category()))) tabs.add(MAIN_GUNS);
         if (hasCat("配件")) tabs.add(MAIN_ATTACH);
@@ -92,6 +88,7 @@ public final class ShopScreen extends Screen {
         if (hasCat("防具")) tabs.add(MAIN_ARMOR);
         if (ArenaData.shop().stream().anyMatch(i -> isOther(i.category()))) tabs.add(MAIN_OTHER);
         tabs.add(TAB_TRANSFER);
+        if (s.classes()) tabs.add(TAB_CLASS_INFO);
         if (!tabs.contains(tab)) tab = tabs.contains(MAIN_GUNS) ? MAIN_GUNS : tabs.get(0);
         int tx = left + 10, ty = top + 30;
         for (String t : tabs) {
@@ -138,6 +135,7 @@ public final class ShopScreen extends Screen {
         headers.clear();
         armorCols.clear();
         if (tab.equals(TAB_TRANSFER)) initTransfer(s);
+        else if (tab.equals(TAB_CLASS_INFO)) { /* 職業介紹：純展示，無額外按鈕 */ }
         else if (tab.equals(MAIN_ARMOR)) initArmor(s);
         else if (tab.equals(MAIN_ATTACH) && (sub.equals("全部") || sub.equals("可裝手上的槍"))) initAttachGroups(cls, sub.equals("可裝手上的槍"));
         else for (ArenaData.ShopItem i : ArenaData.shop()) if (matches(i, cls)) visible.add(i);
@@ -326,6 +324,7 @@ public final class ShopScreen extends Screen {
             String where = s.canShop() ? "在基地內：可以購買" : "不在基地：回到自己的基地才能購買";
             g.drawString(font, where, left + panelW - 20 - font.width(money) - font.width(where), top + 9, s.canShop() ? DIM : BAD, false);
             if (tab.equals(TAB_TRANSFER)) renderTransfer(g, s);
+            else if (tab.equals(TAB_CLASS_INFO)) renderClassInfo(g, s);
             else renderGrid(g, s, mouseX, mouseY);
         } else {
             int y = top + 32;
@@ -401,10 +400,41 @@ public final class ShopScreen extends Screen {
         if (s.transferCooldown() > 0) g.drawString(font, "轉帳冷卻 " + s.transferCooldown() + " 秒", gridX, y + 6, BAD, false);
     }
 
+    /** 職業介紹分頁（計畫書 10）：上方高亮顯示自己的職業詳情，下方列出全部 9 種職業供查閱（局內不可更換）。 */
+    private void renderClassInfo(GuiGraphics g, ArenaStatePacket s) {
+        ArenaClass mine = myClass(s);
+        g.enableScissor(gridX, gridY, gridX + gridW, gridY + gridH);
+        int y = gridY - scroll;
+        // 目前職業卡片
+        int cardH = 54;
+        g.fill(gridX, y, gridX + gridW - 2, y + cardH, 0x35E8D060);
+        g.fill(gridX, y, gridX + 2, y + cardH, ACCENT);
+        g.drawString(font, "目前職業：" + mine.displayName + "　（血量 " + mine.maxHealth + " HP）", gridX + 6, y + 4, ACCENT, false);
+        g.drawString(font, "限定槍械：" + mine.gunSummary(), gridX + 6, y + 16, 0xFF80D8FF, false);
+        g.drawString(font, "補品：2 個 AI-2 急救包（擊殺／助攻／重生補滿）", gridX + 6, y + 28, DIM, false);
+        g.drawString(font, trim("特性：" + mine.description, gridW - 14), gridX + 6, y + 40, TEXT, false);
+        y += cardH + 8;
+
+        g.drawString(font, "全部職業一覽（局內無法更換）", gridX + 2, y, DIM, false);
+        y += 12;
+        for (ArenaClass c : ArenaClass.values()) {
+            boolean isMe = c == mine;
+            int rh = 24;
+            g.fill(gridX, y, gridX + gridW - 2, y + rh - 2, isMe ? 0x28E8D060 : 0x16FFFFFF);
+            String head = (isMe ? "✔ " : "") + c.displayName + "（" + c.maxHealth + " HP）";
+            g.drawString(font, head, gridX + 5, y + 3, isMe ? ACCENT : TEXT, false);
+            String guns = trim(c.gunSummary(), gridW - font.width(head) - 18);
+            g.drawString(font, guns, gridX + gridW - 6 - font.width(guns), y + 3, GOOD, false);
+            g.drawString(font, trim(c.description, gridW - 12), gridX + 5, y + 13, DIM, false);
+            y += rh;
+        }
+        g.disableScissor();
+    }
+
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
-        if (!ClientArenaState.get().shop() || tab.equals(TAB_TRANSFER)) return false;
+        if (!ClientArenaState.get().shop() || tab.equals(TAB_TRANSFER) || tab.equals(TAB_CLASS_INFO)) return false;
         if (mx < gridX || mx >= gridX + gridW || my < gridY || my >= gridY + gridH) return false;
         int col = (int) ((mx - gridX) / cellW()), row = (int) ((my - gridY + scroll) / CELL_H);
         if (col >= cols()) return false;
@@ -416,6 +446,12 @@ public final class ShopScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
+        if (tab.equals(TAB_CLASS_INFO)) {
+            int totalH = 54 + 8 + 12 + ArenaClass.values().length * 24;
+            int max = Math.max(0, totalH - gridH);
+            scroll = Math.max(0, Math.min(max, scroll - (int) (delta * 24)));
+            return true;
+        }
         int rows = (visible.size() + cols() - 1) / cols();
         int max = Math.max(0, rows * CELL_H - gridH);
         scroll = Math.max(0, Math.min(max, scroll - (int) (delta * CELL_H)));

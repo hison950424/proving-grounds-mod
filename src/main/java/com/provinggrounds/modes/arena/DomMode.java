@@ -81,8 +81,8 @@ public final class DomMode extends ArenaMode {
     /** 正在戰鬥（不是準備、結算）。佔點的整場特殊道具只有戰鬥中能用（計畫書 8）。 */
     public boolean fighting() { return phase == Phase.ROUND; }
 
-    /** 第一回合 10 秒準備期：可選擇職業與特殊道具（計畫書 9）。 */
-    @Override public boolean loadoutOpen() { return round == 1 && phase == Phase.PREP; }
+    /** 計畫書 10：職業與特殊道具改在大廳準備後強制選完，局內不再開啟選角介面。 */
+    @Override public boolean loadoutOpen() { return false; }
 
     @Override
     protected void onStart() {
@@ -107,6 +107,7 @@ public final class DomMode extends ArenaMode {
 
     /** 撿裝／準備：清地上、預告據點、傳回基地、封出口、補消耗品。 */
     private void enterPrep() {
+        recentDamagers.clear();
         clearFloorItems();
         for (Point pt : points) { pt.open = false; pt.progress = 0; setFloor(pt, false); }
         openRandomPoint(false);
@@ -125,6 +126,7 @@ public final class DomMode extends ArenaMode {
             teleport(p, spawnOf(ap));
             prepare(p, ap, !hasGun(p)); // 上一回合死掉、東西掉光的人重新發起始槍
             refillConsumables(p, ap, true);
+            refillTeamHeals(p, true);
         }
         String names = String.join(" + ", points.stream().filter(pt -> pt.open).map(pt -> pt.name + " 點").toList());
         broadcastTitle(Component.literal("第 " + round + " 回合").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD),
@@ -140,6 +142,7 @@ public final class DomMode extends ArenaMode {
             ap.alive = true;
             p.setGameMode(GameType.ADVENTURE);
             refillConsumables(p, ap, true);
+            refillTeamHeals(p, true);
         }
         fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.AIR.defaultBlockState(), true);
         com.provinggrounds.special.DomGear.newRound(server); // 每回合可以再用一次特殊物品（計畫書 8）

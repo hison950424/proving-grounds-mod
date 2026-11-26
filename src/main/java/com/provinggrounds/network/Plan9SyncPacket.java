@@ -21,7 +21,8 @@ public record Plan9SyncPacket(
     List<UUID> disguised,
     List<UUID> ethereal,
     Map<UUID, Integer> mimics,
-    List<DomainInfo> domains
+    List<DomainInfo> domains,
+    Map<UUID, Byte> freeSkydive
 ) {
     public record DomainInfo(double x, double y, double z, double radius, int leftTicks) {}
 
@@ -43,6 +44,11 @@ public record Plan9SyncPacket(
             buf.writeDouble(d.radius());
             buf.writeVarInt(d.leftTicks());
         }
+        buf.writeVarInt(freeSkydive.size());
+        for (Map.Entry<UUID, Byte> e : freeSkydive.entrySet()) {
+            buf.writeUUID(e.getKey());
+            buf.writeByte(e.getValue());
+        }
     }
 
     public static Plan9SyncPacket decode(FriendlyByteBuf buf) {
@@ -60,7 +66,10 @@ public record Plan9SyncPacket(
         for (int i = 0; i < ndom; i++) {
             domains.add(new DomainInfo(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readVarInt()));
         }
-        return new Plan9SyncPacket(disguised, ethereal, mimics, domains);
+        int nf = Math.min(buf.readVarInt(), 256);
+        Map<UUID, Byte> freeSkydive = new HashMap<>(nf);
+        for (int i = 0; i < nf; i++) freeSkydive.put(buf.readUUID(), buf.readByte());
+        return new Plan9SyncPacket(disguised, ethereal, mimics, domains, freeSkydive);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
@@ -72,6 +81,7 @@ public record Plan9SyncPacket(
             SpecialHooks.CLIENT_MIMIC.clear();
             SpecialHooks.CLIENT_MIMIC.putAll(mimics);
             com.provinggrounds.special.client.ClientPlan9Specials.setDomains(domains);
+            com.provinggrounds.special.client.ClientPlan9Specials.setFreeSkydive(freeSkydive);
         }));
         ctx.get().setPacketHandled(true);
     }

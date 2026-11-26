@@ -17,8 +17,8 @@ public record ChuteSyncPacket(int[] ids) {
     /** 客戶端：打開降落傘中的實體編號。 */
     private static volatile Set<Integer> open = Set.of();
 
-    /** 大逃殺沒在進行時一律當作沒開傘（比賽結束不會留下傘衣）。 */
-    public static boolean isOpen(int entityId) { return com.provinggrounds.client.ClientBRState.active() && open.contains(entityId); }
+    /** 大逃殺與非大逃殺重新跳傘皆可顯示傘衣。 */
+    public static boolean isOpen(int entityId) { return open.contains(entityId); }
 
     public static void clear() { open = Set.of(); }
 

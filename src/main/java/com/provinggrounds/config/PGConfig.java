@@ -305,8 +305,8 @@ public class PGConfig {
         builder.pop();
 
         builder.push("movement");
-        brSpeedMultiplier = builder.comment("BR 內移動速度倍率（走路與疾跑都套用；速度藥水照原版相乘）")
-            .defineInRange("speed_multiplier", 0.8, 0.1, 2.0);
+        brSpeedMultiplier = builder.comment("BR／團隊死鬥內移動速度倍率（走路與疾跑都套用；速度藥水照原版相乘；v2 預設改為原版 85%）")
+            .defineInRange("speed_multiplier_v2", 0.85, 0.1, 2.0);
         brExplosionBlockDamage = builder.comment("大逃殺：爆炸會不會炸毀方塊（只在這場地圖範圍內；祭壇、墓碑不會被炸掉；被炸掉的方塊不掉落；比賽結束自動還原，物資箱除外）。",
                 "0 = 關、1 = 全部、2 = 只有槍械（爆炸彈、火箭、榴彈）、3 = 只有投擲物（手榴彈等）。大廳選單可以切換（計畫書 6 D3）")
             .defineInRange("explosion_block_damage_mode_v1", 1, 0, 3);

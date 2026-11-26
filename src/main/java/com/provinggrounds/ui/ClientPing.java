@@ -146,9 +146,14 @@ public final class ClientPing {
             String mark = "◆";
             String text = Math.round(mc.player.position().distanceTo(p.pos())) + "m";
             if (!p.self()) text = p.name() + "  " + text;
-            g.drawString(font, mark, x - font.width(mark) / 2, y - 9, color, true);
-            g.fill(x - font.width(text) / 2 - 2, y + 1, x + font.width(text) / 2 + 2, y + 11, (int) (alpha / 255f * 0x70) << 24);
-            g.drawString(font, text, x - font.width(text) / 2, y + 2, color, false);
+            // 計畫書 10：標點大小縮小 50%
+            g.pose().pushPose();
+            g.pose().translate(x, y, 0);
+            g.pose().scale(0.5f, 0.5f, 1f);
+            g.drawString(font, mark, -font.width(mark) / 2, -9, color, true);
+            g.fill(-font.width(text) / 2 - 2, 1, font.width(text) / 2 + 2, 11, (int) (alpha / 255f * 0x70) << 24);
+            g.drawString(font, text, -font.width(text) / 2, 2, color, false);
+            g.pose().popPose();
         }
     };
 }

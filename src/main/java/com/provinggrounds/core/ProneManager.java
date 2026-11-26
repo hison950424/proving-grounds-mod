@@ -120,10 +120,8 @@ public final class ProneManager {
         if (p.isSpectator() || !p.isAlive()) return "現在不能趴下";
         if (BRDowned.isDowned(p)) return "倒地中不能趴下";
         if (p.isPassenger()) return "騎乘中不能趴下";
-        if (BattleRoyaleMode.get().isAirborne(p.getUUID())) return "空中不能趴下";
-        // onGround 是客戶端回報的、會慢一點；另外直接看腳下 0.2 格有沒有方塊（剛跳起來時也擋得住）
-        if (!p.onGround() || p.level().noCollision(p, p.getBoundingBox().move(0, -0.2, 0))) return "要站在地上才能趴下";
-        return null;
+        if (BattleRoyaleMode.get().isAirborne(p.getUUID())) return "跳傘中不能趴下";
+        return null; // 計畫書 10：空中也可以直接趴下
     }
 
     /** 站起來的話會不會卡進方塊。 */

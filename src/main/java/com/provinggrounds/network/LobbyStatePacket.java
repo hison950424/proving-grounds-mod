@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 public record LobbyStatePacket(
     boolean inLobby, int mapId, int presetOrdinal, int variantOrdinal,
     int teamModeOrdinal, int teamCount, int countdownSeconds,
+    int draftPhase, // 計畫書 10：0 = 一般、1 = 強制選職業、2 = 佔點強制選特殊道具
     boolean special, // 特殊道具模式
     boolean friendlyFire, // 所有模式的友軍誤傷（只影響槍械子彈）
     int blockDamage, // 大逃殺：炸毀方塊（0 關、1 全部、2 只有槍械、3 只有投擲物）
@@ -28,8 +29,8 @@ public record LobbyStatePacket(
 ) {
 
     /** team：-1 = 未分隊（開局時是孤狼），0 = 孤狼，1… = 隊伍編號。 */
-    /** cls：大廳預選的職業（ArenaClass 的順序；團隊死鬥、佔點用）。 */
-    public record Entry(UUID id, String name, int team, boolean ready, boolean spectator, boolean joinPending, boolean op, int cls) {}
+    /** cls：大廳預選的職業（ArenaClass 的順序；團隊死鬥、佔點用）；draftDone：目前強制選擇階段是否已確認。 */
+    public record Entry(UUID id, String name, int team, boolean ready, boolean spectator, boolean joinPending, boolean op, int cls, boolean draftDone) {}
 
     public void encode(FriendlyByteBuf buf) {
         buf.writeBoolean(inLobby);
@@ -39,6 +40,7 @@ public record LobbyStatePacket(
         buf.writeVarInt(teamModeOrdinal);
         buf.writeVarInt(teamCount);
         buf.writeVarInt(countdownSeconds);
+        buf.writeVarInt(draftPhase);
         buf.writeBoolean(special);
         buf.writeBoolean(friendlyFire);
         buf.writeVarInt(blockDamage);
@@ -55,7 +57,7 @@ public record LobbyStatePacket(
             buf.writeUUID(e.id());
             buf.writeUtf(e.name(), 32);
             buf.writeVarInt(e.team());
-            byte flags = (byte) ((e.ready() ? 1 : 0) | (e.spectator() ? 2 : 0) | (e.joinPending() ? 4 : 0) | (e.op() ? 8 : 0));
+            byte flags = (byte) ((e.ready() ? 1 : 0) | (e.spectator() ? 2 : 0) | (e.joinPending() ? 4 : 0) | (e.op() ? 8 : 0) | (e.draftDone() ? 16 : 0));
             buf.writeByte(flags);
             buf.writeVarInt(e.cls());
         }
@@ -65,6 +67,7 @@ public record LobbyStatePacket(
         boolean inLobby = buf.readBoolean();
         int map = buf.readVarInt(), preset = buf.readVarInt(), variant = buf.readVarInt();
         int teamMode = buf.readVarInt(), teamCount = buf.readVarInt(), countdown = buf.readVarInt();
+        int draftPhase = buf.readVarInt();
         boolean special = buf.readBoolean();
         boolean friendlyFire = buf.readBoolean();
         int blockDamage = buf.readVarInt();
@@ -80,9 +83,9 @@ public record LobbyStatePacket(
             int team = buf.readVarInt();
             byte f = buf.readByte();
             int cls = buf.readVarInt();
-            players.add(new Entry(id, name, team, (f & 1) != 0, (f & 2) != 0, (f & 4) != 0, (f & 8) != 0, cls));
+            players.add(new Entry(id, name, team, (f & 1) != 0, (f & 2) != 0, (f & 4) != 0, (f & 8) != 0, cls, (f & 16) != 0));
         }
-        return new LobbyStatePacket(inLobby, map, preset, variant, teamMode, teamCount, countdown, special, friendlyFire, blockDamage, weapon, gameMode, arena, customCircle, players);
+        return new LobbyStatePacket(inLobby, map, preset, variant, teamMode, teamCount, countdown, draftPhase, special, friendlyFire, blockDamage, weapon, gameMode, arena, customCircle, players);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {

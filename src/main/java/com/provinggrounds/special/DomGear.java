@@ -49,14 +49,16 @@ public final class DomGear {
         tier(1, SpecialType.ENEMY_SCANNER_BASIC, SpecialType.ENEMY_SCANNER, SpecialType.BLAST_SCANNER_BASIC, SpecialType.BLAST_SCANNER,
             SpecialType.SPRING_SHOES, SpecialType.SMOKE_BURST, SpecialType.SILENT_BOOTS, SpecialType.DECOY, SpecialType.RECON_MINE,
             SpecialType.SNOW_WALL, SpecialType.ARMOR_REPAIR,
-            SpecialType.LOOK_UP_ONE, SpecialType.LOOK_UP_ALL, SpecialType.CRUDE_SWAPPER, SpecialType.ICE_SKATES, SpecialType.MIMIC);
+            SpecialType.LOOK_UP_ONE, SpecialType.LOOK_UP_ALL, SpecialType.CRUDE_SWAPPER, SpecialType.ICE_SKATES, SpecialType.MIMIC,
+            SpecialType.RESKYDIVE);
         // 中：能直接改變一場交火（控場、傷害、救命、整隊資訊）
         tier(2, SpecialType.BLIND_ORB, SpecialType.ADRENALINE, SpecialType.INVIS_CLOAK, SpecialType.ENEMY_SCANNER_PLUS,
             SpecialType.BLAST_SCANNER_PLUS, SpecialType.RADAR_PULSE, SpecialType.KNOCKBACK_SHIELD, SpecialType.WIND_BOMB,
             SpecialType.LAND_MINE, SpecialType.FIRE_MINE, SpecialType.SHOCK_MINE, SpecialType.WARP_PEARL, SpecialType.GAS_GRENADE,
             SpecialType.FIRST_AID_SHOT, SpecialType.ARMOR_REPAIR_PLUS, SpecialType.ROOT_ORB, SpecialType.FIRE_DRILL, SpecialType.RECALL,
             SpecialType.COCKROACH, SpecialType.PARANOIA, SpecialType.MAGNET_GRENADE, SpecialType.MISFIRE_CURSE,
-            SpecialType.SPACE_SWAPPER, SpecialType.ICE_SKATES_ALL, SpecialType.HUD_JAMMER, SpecialType.OVERHEAT_CURSE, SpecialType.ETHEREAL);
+            SpecialType.SPACE_SWAPPER, SpecialType.ICE_SKATES_ALL, SpecialType.HUD_JAMMER, SpecialType.OVERHEAT_CURSE, SpecialType.ETHEREAL,
+            SpecialType.RESKYDIVE_GROUP, SpecialType.RESKYDIVE_TARGET);
         // 強：一個人就能翻盤（免死、大範圍傷害、癱瘓整區、賭命）
         tier(3, SpecialType.TOTEM, SpecialType.SHIELD_BUBBLE, SpecialType.BRAINWASH, SpecialType.RECALL_PLUS,
             SpecialType.GAMBLER_ROD, SpecialType.GAMBLER_ROD_PLUS, SpecialType.THOR_HAMMER, SpecialType.THOR_HAMMER_PLUS,

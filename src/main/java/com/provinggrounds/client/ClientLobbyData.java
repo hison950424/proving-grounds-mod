@@ -13,12 +13,26 @@ public final class ClientLobbyData {
 
     @Nullable private static volatile LobbyStatePacket data;
     private static volatile int version = 0;
+    private static volatile int lastDraftPhase = 0;
+    private static volatile int pendingDraftPhase = 0;
 
     private ClientLobbyData() {}
 
     public static void set(LobbyStatePacket packet) {
         data = packet;
         version++;
+        int dp = packet.inLobby() ? packet.draftPhase() : 0;
+        if (dp != lastDraftPhase) {
+            lastDraftPhase = dp;
+            if (dp != 0) pendingDraftPhase = dp;
+        }
+        if (dp == 0) pendingDraftPhase = 0;
+    }
+
+    public static int consumePendingDraft() {
+        int d = pendingDraftPhase;
+        pendingDraftPhase = 0;
+        return d;
     }
 
     @Nullable
@@ -28,6 +42,8 @@ public final class ClientLobbyData {
 
     public static void clear() {
         data = null;
+        lastDraftPhase = 0;
+        pendingDraftPhase = 0;
         version++;
     }
 }

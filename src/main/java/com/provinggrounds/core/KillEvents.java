@@ -38,6 +38,7 @@ public final class KillEvents {
     public static final int STREAK_ANNOUNCE = 10;
 
     private static final Map<UUID, Integer> MINIDM_STREAK = new HashMap<>();
+    private static final Map<UUID, Map<UUID, Long>> MINIDM_DAMAGERS = new HashMap<>();
     @Nullable private static DamageSource lastSource;
 
     private KillEvents() {}
@@ -90,6 +91,12 @@ public final class KillEvents {
             victim.getGameProfile().getName(), 0xFFFFFF, killer.getMainHandItem().copyWithCount(1), KillNoticePacket.flags(headshot(victim, source)), streak));
     }
 
+    /** 所有模式通用：助攻旗幟與音效（計畫書 10）。 */
+    public static void assist(ServerPlayer assister, String victimName) {
+        PGNetwork.sendTo(assister, new KillNoticePacket(false, true, assister.getGameProfile().getName(), 0xFFFFFF,
+            victimName, 0xFFFFFF, ItemStack.EMPTY, KillNoticePacket.ASSIST, 0));
+    }
+
     private static void announceEnded(net.minecraft.server.MinecraftServer server, String name, int streak, String by) {
         Component msg = Component.literal(name + " 的 " + streak + " 連殺被" + (by.isEmpty() ? "" : " " + by + " ") + "終結了！")
             .withStyle(ChatFormatting.GOLD);
@@ -106,11 +113,20 @@ public final class KillEvents {
         return v != null && "minidm".equals(v.id());
     }
 
+    @SubscribeEvent
+    public static void onMiniDmHurt(net.minecraftforge.event.entity.living.LivingHurtEvent event) {
+        if (event.isCanceled() || event.getAmount() <= 0 || !(event.getEntity() instanceof ServerPlayer victim) || !inMiniDm(victim)) return;
+        if (event.getSource().getEntity() instanceof ServerPlayer atk && atk != victim && inMiniDm(atk)) {
+            MINIDM_DAMAGERS.computeIfAbsent(victim.getUUID(), k -> new HashMap<>()).put(atk.getUUID(), victim.level().getGameTime());
+        }
+    }
+
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onDeath(LivingDeathEvent event) {
         if (event.isCanceled() || !(event.getEntity() instanceof ServerPlayer victim) || !inMiniDm(victim)) return;
         int lost = MINIDM_STREAK.getOrDefault(victim.getUUID(), 0);
         MINIDM_STREAK.remove(victim.getUUID());
+        Map<UUID, Long> dmgs = MINIDM_DAMAGERS.remove(victim.getUUID());
         ServerPlayer killer = event.getSource().getEntity() instanceof ServerPlayer k && k != victim && inMiniDm(k) ? k : null;
         int streak = 0;
         if (killer != null) {
@@ -122,6 +138,14 @@ public final class KillEvents {
                 if (!inMiniDm(p)) continue;
                 PGNetwork.sendTo(p, new KillNoticePacket(true, p == killer, killer.getGameProfile().getName(), 0xFFFFFF,
                     victim.getGameProfile().getName(), 0xFFFFFF, weapon, flags, streak));
+            }
+            if (dmgs != null) {
+                long now = victim.level().getGameTime();
+                for (Map.Entry<UUID, Long> en : dmgs.entrySet()) {
+                    if (en.getKey().equals(killer.getUUID()) || now - en.getValue() > 300) continue;
+                    ServerPlayer asst = victim.server.getPlayerList().getPlayer(en.getKey());
+                    if (asst != null && inMiniDm(asst)) assist(asst, victim.getGameProfile().getName());
+                }
             }
         }
         if (lost >= STREAK_ANNOUNCE) announceEnded(victim.server, victim.getGameProfile().getName(), lost, killer != null ? killer.getGameProfile().getName() : "");
@@ -146,5 +170,5 @@ public final class KillEvents {
     }
 
     /** 離開迷你死鬥（換場地、離線）就歸零。 */
-    public static void resetMiniDm(UUID id) { MINIDM_STREAK.remove(id); }
+    public static void resetMiniDm(UUID id) { MINIDM_STREAK.remove(id); MINIDM_DAMAGERS.remove(id); }
 }

@@ -113,8 +113,16 @@ public final class BRMovement {
             player.setDeltaMovement(v.x, Math.min(v.y, 0), v.z);
             return;
         }
-        if (state.jumpHeight() <= 0 || state.selfState() != ClientBRState.SELF_ALIVE) return;
-        adjustJump(player, state.jumpHeight());
+        // 大逃殺套用伺服器同步的跳躍高度；團隊死鬥（kind == 1）也套用大逃殺的跳躍與取消疾跑前衝規則（計畫書 10）
+        if (state.jumpHeight() > 0 && state.selfState() == ClientBRState.SELF_ALIVE) {
+            adjustJump(player, state.jumpHeight());
+            return;
+        }
+        if (com.provinggrounds.client.ClientArenaState.active() && com.provinggrounds.client.ClientArenaState.get().kind() == 1) {
+            double jh = 1.10;
+            try { jh = PGConfig.SERVER.brJumpHeight.get(); } catch (IllegalStateException ignored) {}
+            if (jh > 0) adjustJump(player, jh);
+        }
     }
 
     private static void adjustJump(Player player, double targetHeight) {

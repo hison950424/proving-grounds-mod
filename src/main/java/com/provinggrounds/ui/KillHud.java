@@ -43,8 +43,11 @@ public final class KillHud {
             while (FEED.size() > 5) FEED.removeLast();
         }
         if (p.mine()) {
-            icon = p;
-            iconTime = now;
+            // 助攻不覆蓋剛跳出的擊殺旗幟（0.6 秒內），但音效照常播放
+            if (!p.assist() || icon == null || icon.assist() || now - iconTime > 600) {
+                icon = p;
+                iconTime = now;
+            }
             playSound(p);
         }
     }
@@ -56,6 +59,12 @@ public final class KillHud {
         if (!cfg.killSoundEnabled.get()) return;
         float vol = cfg.killSoundVolume.get().floatValue();
         if (vol <= 0) return;
+        if (p.assist()) {
+            // 助攻音效（計畫書 10）：清脆高音雙叮聲
+            play(SoundEvents.NOTE_BLOCK_CHIME.value(), 1.35f, vol * 0.85f);
+            play(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.55f, vol * 0.65f);
+            return;
+        }
         float pitch = Math.min(2f, 1.0f + 0.08f * Math.max(0, p.streak() - 1)); // 連殺越多音越高
         play(SoundEvents.NOTE_BLOCK_BELL.value(), pitch, vol);
         play(SoundEvents.EXPERIENCE_ORB_PICKUP, Math.min(2f, pitch + 0.3f), vol * 0.7f);
@@ -84,16 +93,23 @@ public final class KillHud {
         float t = (now - iconTime) / (float) ICON_MS;
         int alpha = (int) (255 * (t < 0.7f ? 1f : (1f - t) / 0.3f));
         if (alpha < 8) return;
-        int color = icon.headshot() ? 0xFFD040 : icon.streak() >= 3 ? 0xFF5050 : 0xFFFFFF;
-        String text = (icon.headshot() ? "爆頭" : "擊殺") + (icon.streak() >= 2 ? "  " + icon.streak() + " 連殺" : "");
+        int color = icon.assist() ? 0x60D8FF : icon.headshot() ? 0xFFD040 : icon.streak() >= 3 ? 0xFF5050 : 0xFFFFFF;
+        String text = icon.assist() ? "助攻"
+            : (icon.headshot() ? "爆頭" : "擊殺") + (icon.streak() >= 2 ? "  " + icon.streak() + " 連殺" : "");
         g.pose().pushPose();
         g.pose().translate(w / 2f, h / 2f + 24, 0);
         float pop = t < 0.1f ? 1.3f - 3f * t : 1f; // 彈出一下
         g.pose().scale(scale * 0.75f * pop, scale * 0.75f * pop, 1);
         int c = (alpha << 24) | color;
-        for (int i = -3; i <= 3; i++) { // 小小的 ╳
-            g.fill(i - 1, i - 1 - 10, i + 1, i + 1 - 10, c);
-            g.fill(i - 1, -i - 1 - 10, i + 1, -i + 1 - 10, c);
+        if (icon.assist()) {
+            // 助攻旗幟：十字星記號（＋）
+            g.fill(-4, -11, 5, -9, c);
+            g.fill(-1, -14, 2, -6, c);
+        } else {
+            for (int i = -3; i <= 3; i++) { // 小小的 ╳
+                g.fill(i - 1, i - 1 - 10, i + 1, i + 1 - 10, c);
+                g.fill(i - 1, -i - 1 - 10, i + 1, -i + 1 - 10, c);
+            }
         }
         g.drawString(font, text, -font.width(text) / 2, 0, c, true);
         g.pose().popPose();

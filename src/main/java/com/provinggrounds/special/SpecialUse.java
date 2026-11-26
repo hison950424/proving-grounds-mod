@@ -153,27 +153,23 @@ public final class SpecialUse {
                 SpecialWorld.noFallFor(p, 100);
                 level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.SLIME_JUMP, SoundSource.PLAYERS, 1f, 1.2f);
             }
-            case ENEMY_SCANNER_BASIC, ENEMY_SCANNER -> { // 6 號依使用者定義：只有使用者本人看得到（與 5 號效果相同，見回報）
+            case ENEMY_SCANNER_BASIC, ENEMY_SCANNER -> { // 計畫書 10：無敵人時也可使用，不提示有沒有掃到人
                 ServerPlayer t = GlowManager.randomEnemy(p);
-                if (t == null) { msg(p, "沒有可以偵測的敵人"); return false; }
-                GlowManager.add(t, GlowManager.Audience.ONE, p, true, glow);
+                if (t != null) GlowManager.add(t, GlowManager.Audience.ONE, p, true, glow);
                 scanSound(p);
             }
             case ENEMY_SCANNER_PLUS -> {
                 List<ServerPlayer> team = GlowManager.randomEnemyTeam(p);
-                if (team.isEmpty()) { msg(p, "沒有可以偵測的敵人"); return false; }
                 for (ServerPlayer t : team) GlowManager.add(t, GlowManager.Audience.TEAM, p, true, glow);
                 scanSound(p);
             }
             case BLAST_SCANNER_BASIC, BLAST_SCANNER -> {
                 ServerPlayer t = GlowManager.randomEnemy(p);
-                if (t == null) { msg(p, "沒有可以偵測的敵人"); return false; }
-                GlowManager.add(t, GlowManager.Audience.ALL, p, type == SpecialType.BLAST_SCANNER, glow);
+                if (t != null) GlowManager.add(t, GlowManager.Audience.ALL, p, type == SpecialType.BLAST_SCANNER, glow);
                 scanSound(p);
             }
             case BLAST_SCANNER_PLUS -> {
                 List<ServerPlayer> team = GlowManager.randomEnemyTeam(p);
-                if (team.isEmpty()) { msg(p, "沒有可以偵測的敵人"); return false; }
                 for (ServerPlayer t : team) GlowManager.add(t, GlowManager.Audience.ALL, p, true, glow);
                 scanSound(p);
             }

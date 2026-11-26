@@ -1,215 +1,318 @@
 package com.provinggrounds.ui;
 
-import com.provinggrounds.client.ClientArenaState;
 import com.provinggrounds.client.ClientDomGear;
+import com.provinggrounds.client.ClientLobbyData;
+import com.provinggrounds.core.LobbyManager;
 import com.provinggrounds.modes.arena.ArenaClass;
-import com.provinggrounds.network.ArenaActionPacket;
-import com.provinggrounds.network.ArenaStatePacket;
 import com.provinggrounds.network.DomGearActionPacket;
+import com.provinggrounds.network.LobbyActionPacket;
+import com.provinggrounds.network.LobbyStatePacket;
 import com.provinggrounds.network.PGNetwork;
 import com.provinggrounds.special.DomGear;
 import com.provinggrounds.special.SpecialType;
-import com.provinggrounds.special.client.SpecialHotbar;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
  * 檔案: LoadoutScreen.java
- * 目的: 開局 10 秒準備期間自動跳出的「選擇職業與特殊道具」介面（計畫書 9）。
- *   - 左欄：九大職業清單，顯示每個職業的限定槍械與被動效果；點擊立即切換（伺服器只在準備期間接受）。
- *   - 右欄（特殊道具模式開啟時顯示）：
- *       佔點（kind == 2）：從可用特殊道具清單中挑選本場使用的一種（顯示強度與商店加價）。
- *       團隊死鬥（kind == 1）：說明團隊死鬥特殊道具獲取規則（開局隨機、每 3 殺／連死 3 次獲得）。
- *   - 倒數結束（loadoutOpen 變成 false）後自動關閉，整場鎖定職業與特殊道具。
+ * 目的: 職業與特殊道具選擇介面（計畫書 10 改版）：
+ *   - CLASS_PICK    ：大廳按「更改職業」打開，瀏覽九大職業（含血量、限定槍種、被動）並可返回大廳選單。
+ *   - SPECIAL_PICK  ：大廳按「更改特殊道具」打開，瀏覽佔點可用特殊道具（含強度、加價、完整說明）並可返回。
+ *   - CLASS_FORCED  ：團隊模式全員準備後強制跳出，全員按「確認職業」後進入下一階段（佔點選道具或 10 秒倒數）。
+ *   - SPECIAL_FORCED：佔點開啟特殊道具時，全員選完職業後強制跳出，全員按「確認特殊道具」後進入 10 秒倒數。
  */
 public final class LoadoutScreen extends Screen {
 
+    public enum Mode { CLASS_PICK, SPECIAL_PICK, CLASS_FORCED, SPECIAL_FORCED }
+
     private static final int BG = 0xEB0F141E, BORDER = 0xFF2A3344, ACCENT = 0xFFE8D060,
-        TEXT = 0xFFFFFFFF, DIM = 0xFFA0A8B8, GOOD = 0xFF4CC864, SEL = 0x40E8D060, HOVER = 0x24FFFFFF;
-    private static final int CLASS_ROW_H = 23;
+        TEXT = 0xFFFFFFFF, DIM = 0xFFA0A8B8, GOOD = 0xFF4CC864, SEL = 0x45E8D060, HOVER = 0x24FFFFFF, CARD = 0xA010141C;
+    private static final int CLASS_ROW_H = 19;
     private static final int SPECIAL_ROW_H = 16;
 
+    private final Mode mode;
+    @Nullable private final Screen parent;
     private int panelW, panelH, left, top;
-    private int clsX, clsY, clsW, clsH, clsScroll;
-    private int spX, spY, spW, spH, spScroll;
-    private int seenArena = -1, seenGear = -1;
-    private List<SpecialType> allowedSpecials = List.of();
+    private int listX, listY, listW, listH, scroll;
+    private int infoX, infoY, infoW, infoH;
 
-    public LoadoutScreen() {
-        super(Component.literal("選擇職業與特殊道具"));
+    private int pickedClass = 0;
+    private int pickedSpecialOrdinal = -1;
+    private List<SpecialType> allowedSpecials = List.of();
+    private boolean confirmedLocal = false;
+
+    public LoadoutScreen(Mode mode, @Nullable Screen parent) {
+        super(Component.literal(isClass(mode) ? "選擇職業" : "選擇特殊道具"));
+        this.mode = mode;
+        this.parent = parent;
+        LobbyStatePacket lobby = ClientLobbyData.get();
+        if (lobby != null && Minecraft.getInstance().player != null) {
+            for (var e : lobby.players()) {
+                if (e.id().equals(Minecraft.getInstance().player.getUUID())) {
+                    pickedClass = e.cls();
+                    confirmedLocal = isForced() && e.draftDone();
+                    break;
+                }
+            }
+        }
+        SpecialType curSp = ClientDomGear.choice();
+        allowedSpecials = DomGear.allowed();
+        if (curSp != null && allowedSpecials.contains(curSp)) {
+            pickedSpecialOrdinal = curSp.ordinal();
+        } else if (!allowedSpecials.isEmpty()) {
+            pickedSpecialOrdinal = allowedSpecials.get(0).ordinal();
+        }
     }
+
+    private static boolean isClass(Mode m) { return m == Mode.CLASS_PICK || m == Mode.CLASS_FORCED; }
+    private boolean isForced() { return mode == Mode.CLASS_FORCED || mode == Mode.SPECIAL_FORCED; }
 
     @Override
     protected void init() {
-        ArenaStatePacket s = ClientArenaState.get();
-        seenArena = ClientArenaState.version();
-        seenGear = ClientDomGear.version();
-        boolean showSpecial = SpecialHotbar.modeOn();
-        boolean domPick = showSpecial && s.kind() == 2;
-        allowedSpecials = domPick ? DomGear.allowed() : List.of();
-
-        panelW = Math.min(showSpecial ? 480 : 320, width - 16);
-        panelH = Math.min(290, height - 16);
+        allowedSpecials = DomGear.allowed();
+        panelW = Math.min(480, width - 16);
+        panelH = Math.min(285, height - 16);
         left = (width - panelW) / 2;
         top = (height - panelH) / 2;
 
-        clsX = left + 10;
-        clsY = top + 34;
-        clsW = showSpecial ? (int) (panelW * 0.56) - 14 : panelW - 20;
-        clsH = panelH - 66;
+        listX = left + 10;
+        listY = top + 32;
+        listW = (int) (panelW * 0.48) - 12;
+        listH = panelH - 64;
 
-        spX = clsX + clsW + 10;
-        spY = top + 34;
-        spW = left + panelW - 10 - spX;
-        spH = clsH;
+        infoX = listX + listW + 10;
+        infoY = listY;
+        infoW = left + panelW - 10 - infoX;
+        infoH = listH;
 
         int by = top + panelH - 24;
-        addRenderableWidget(new PGButton(left + 10, by, 108, 16, Component.literal("確認並打開商店"), true, false, () -> {
-            if (minecraft != null) minecraft.setScreen(new ShopScreen());
-        }));
-        addRenderableWidget(new PGButton(left + panelW - 74, by, 64, 16, Component.literal("關閉"), false, false, this::onClose));
+        if (isForced()) {
+            String confirmLabel = confirmedLocal ? "✔ 已確認（可修改再確認）" : (isClass(mode) ? "確認職業" : "確認特殊道具");
+            addRenderableWidget(new PGButton(left + 10, by, 148, 16, Component.literal(confirmLabel), !confirmedLocal, false, this::confirmForced));
+            addRenderableWidget(new PGButton(left + panelW - 92, by, 82, 16, Component.literal("取消準備"), false, false, () -> {
+                PGNetwork.sendToServer(new LobbyActionPacket(LobbyManager.Action.TOGGLE_READY, 0));
+                onClose();
+            }));
+        } else {
+            addRenderableWidget(new PGButton(left + panelW - 86, by, 76, 16, Component.literal("完成並返回"), true, false, this::closeToParent));
+        }
+    }
+
+    private void confirmForced() {
+        if (isClass(mode)) {
+            PGNetwork.sendToServer(new LobbyActionPacket(LobbyManager.Action.CONFIRM_CLASS, pickedClass));
+        } else if (pickedSpecialOrdinal >= 0) {
+            PGNetwork.sendToServer(new LobbyActionPacket(LobbyManager.Action.CONFIRM_SPECIAL, pickedSpecialOrdinal));
+        }
+        confirmedLocal = true;
+        rebuildWidgets();
+    }
+
+    private void closeToParent() {
+        if (minecraft != null) minecraft.setScreen(parent);
+    }
+
+    @Override
+    public boolean shouldCloseOnEsc() {
+        return !isForced(); // 強制選角／選道具時請按確認或「取消準備」，避免誤關卡住流程
     }
 
     @Override
     public void tick() {
-        ArenaStatePacket s = ClientArenaState.get();
-        if (!ClientArenaState.active() || !s.loadoutOpen()) {
+        LobbyStatePacket lobby = ClientLobbyData.get();
+        if (isForced()) {
+            if (lobby == null || !lobby.inLobby()) { onClose(); return; }
+            int expected = mode == Mode.CLASS_FORCED ? LobbyManager.DRAFT_CLASS : LobbyManager.DRAFT_SPECIAL;
+            if (lobby.draftPhase() != expected) {
+                if (lobby.draftPhase() == LobbyManager.DRAFT_SPECIAL && minecraft != null) {
+                    minecraft.setScreen(new LoadoutScreen(Mode.SPECIAL_FORCED, null));
+                } else {
+                    onClose();
+                }
+            }
+        } else if (lobby != null && !lobby.inLobby()) {
             onClose();
-            return;
-        }
-        if (seenArena != ClientArenaState.version() || seenGear != ClientDomGear.version()) {
-            seenArena = ClientArenaState.version();
-            seenGear = ClientDomGear.version();
         }
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         renderBackground(g);
-        ArenaStatePacket s = ClientArenaState.get();
-        boolean showSpecial = SpecialHotbar.modeOn();
         g.fill(left - 1, top - 1, left + panelW + 1, top + panelH + 1, BORDER);
         g.fill(left, top, left + panelW, top + panelH, BG);
 
-        String title = showSpecial ? "開局準備：選擇職業與特殊道具" : "開局準備：選擇職業";
+        String title = switch (mode) {
+            case CLASS_PICK -> "更改職業（開局後無法更換）";
+            case SPECIAL_PICK -> "更改佔點特殊道具（整場一種）";
+            case CLASS_FORCED -> "全員已準備：請選擇本場職業";
+            case SPECIAL_FORCED -> "佔點模式：請選擇本場特殊道具";
+        };
         g.drawString(font, title, left + 10, top + 9, ACCENT, false);
-        String timer = "剩餘 " + Math.max(0, s.seconds()) + " 秒（開始後無法更換）";
-        g.drawString(font, timer, left + panelW - 10 - font.width(timer), top + 9, GOOD, false);
-        g.fill(left + 10, top + 21, left + panelW - 10, top + 22, BORDER);
 
-        // 左欄標題
-        g.drawString(font, "職業（共 9 種）", clsX, top + 24, DIM, false);
-        renderClasses(g, s, mouseX, mouseY);
-
-        if (showSpecial) {
-            if (s.kind() == 2) {
-                g.drawString(font, "特殊道具（整場一種）", spX, top + 24, DIM, false);
-                renderSpecialList(g, mouseX, mouseY);
-            } else {
-                g.drawString(font, "特殊道具規則", spX, top + 24, DIM, false);
-                renderTdmSpecialInfo(g);
+        if (isForced()) {
+            LobbyStatePacket lobby = ClientLobbyData.get();
+            if (lobby != null) {
+                long total = lobby.players().stream().filter(e -> !e.spectator()).count();
+                long done = lobby.players().stream().filter(e -> !e.spectator() && e.draftDone()).count();
+                String status = "已確認 " + done + " / " + total + " 人";
+                g.drawString(font, status, left + panelW - 10 - font.width(status), top + 9, GOOD, false);
             }
         }
+        g.fill(left + 10, top + 21, left + panelW - 10, top + 22, BORDER);
+
+        if (isClass(mode)) {
+            g.drawString(font, "職業清單（共 9 種）", listX, top + 23, DIM, false);
+            g.drawString(font, "職業介紹", infoX, top + 23, DIM, false);
+            renderClassList(g, mouseX, mouseY);
+            renderClassDetail(g);
+        } else {
+            g.drawString(font, "可用特殊道具（" + allowedSpecials.size() + " 種）", listX, top + 23, DIM, false);
+            g.drawString(font, "道具說明", infoX, top + 23, DIM, false);
+            renderSpecialList(g, mouseX, mouseY);
+            renderSpecialDetail(g);
+        }
+
         super.render(g, mouseX, mouseY, partialTick);
     }
 
-    private void renderClasses(GuiGraphics g, ArenaStatePacket s, int mouseX, int mouseY) {
+    private void renderClassList(GuiGraphics g, int mouseX, int mouseY) {
         ArenaClass[] all = ArenaClass.values();
-        g.fill(clsX - 1, clsY - 1, clsX + clsW + 1, clsY + clsH + 1, BORDER);
-        g.fill(clsX, clsY, clsX + clsW, clsY + clsH, 0xA010141C);
-        g.enableScissor(clsX, clsY, clsX + clsW, clsY + clsH);
+        g.fill(listX - 1, listY - 1, listX + listW + 1, listY + listH + 1, BORDER);
+        g.fill(listX, listY, listX + listW, listY + listH, CARD);
+        g.enableScissor(listX, listY, listX + listW, listY + listH);
         for (int i = 0; i < all.length; i++) {
             ArenaClass c = all[i];
-            int ry = clsY + i * CLASS_ROW_H - clsScroll;
-            if (ry + CLASS_ROW_H < clsY || ry > clsY + clsH) continue;
-            boolean mine = c.ordinal() == s.classOrdinal();
-            boolean over = mouseX >= clsX && mouseX < clsX + clsW && mouseY >= ry && mouseY < ry + CLASS_ROW_H
-                && mouseY >= clsY && mouseY < clsY + clsH;
-            g.fill(clsX + 1, ry + 1, clsX + clsW - 1, ry + CLASS_ROW_H - 1, mine ? SEL : over ? HOVER : 0x12FFFFFF);
-            if (mine) g.fill(clsX + 1, ry + 1, clsX + 3, ry + CLASS_ROW_H - 1, ACCENT);
-            String head = (mine ? "✔ " : "") + c.displayName;
-            g.drawString(font, head, clsX + 6, ry + 3, mine ? ACCENT : TEXT, false);
-            String guns = trim(c.gunSummary(), clsW - 68);
-            g.drawString(font, guns, clsX + clsW - 5 - font.width(guns), ry + 3, GOOD, false);
-            g.drawString(font, trim(c.description, clsW - 12), clsX + 6, ry + 13, DIM, false);
+            int ry = listY + i * CLASS_ROW_H - scroll;
+            if (ry + CLASS_ROW_H < listY || ry > listY + listH) continue;
+            boolean sel = i == pickedClass;
+            boolean over = mouseX >= listX && mouseX < listX + listW && mouseY >= ry && mouseY < ry + CLASS_ROW_H
+                && mouseY >= listY && mouseY < listY + listH;
+            g.fill(listX + 1, ry + 1, listX + listW - 1, ry + CLASS_ROW_H - 1, sel ? SEL : over ? HOVER : 0x12FFFFFF);
+            if (sel) g.fill(listX + 1, ry + 1, listX + 3, ry + CLASS_ROW_H - 1, ACCENT);
+            g.drawString(font, (sel ? "▸ " : "") + c.displayName, listX + 6, ry + 5, sel ? ACCENT : TEXT, false);
+            String hp = c.maxHealth + " HP";
+            int hpColor = c.maxHealth >= 110 ? 0xFF60E080 : c.maxHealth <= 80 ? 0xFFFF8070 : DIM;
+            g.drawString(font, hp, listX + listW - 6 - font.width(hp), ry + 5, hpColor, false);
         }
         g.disableScissor();
+    }
+
+    private void renderClassDetail(GuiGraphics g) {
+        ArenaClass c = ArenaClass.byOrdinal(pickedClass);
+        g.fill(infoX - 1, infoY - 1, infoX + infoW + 1, infoY + infoH + 1, BORDER);
+        g.fill(infoX, infoY, infoX + infoW, infoY + infoH, CARD);
+        int x = infoX + 8, y = infoY + 8, maxW = infoW - 16;
+        g.drawString(font, c.displayName, x, y, ACCENT, false);
+        String hp = "最大血量：" + c.maxHealth + " HP";
+        g.drawString(font, hp, infoX + infoW - 8 - font.width(hp), y, GOOD, false);
+        y += 14;
+        g.fill(x, y, infoX + infoW - 8, y + 1, BORDER);
+        y += 6;
+        y = drawWrapped(g, "限定槍械：" + c.gunSummary(), x, y, maxW, 0xFF80D8FF);
+        y += 4;
+        y = drawWrapped(g, "基礎補品：2 個 AI-2 急救包（擊殺／助攻／重生補滿）", x, y, maxW, DIM);
+        y += 6;
+        g.drawString(font, "專屬特性與被動：", x, y, ACCENT, false);
+        y += 11;
+        y = drawWrapped(g, c.description, x, y, maxW, TEXT);
+        if (isForced()) {
+            y += 10;
+            String note = confirmedLocal ? "✔ 你已確認選擇，正在等待其他玩家…" : "點左下角「確認職業」完成選擇";
+            drawWrapped(g, note, x, y, maxW, confirmedLocal ? GOOD : ACCENT);
+        }
     }
 
     private void renderSpecialList(GuiGraphics g, int mouseX, int mouseY) {
-        SpecialType cur = ClientDomGear.choice();
-        g.fill(spX - 1, spY - 1, spX + spW + 1, spY + spH + 1, BORDER);
-        g.fill(spX, spY, spX + spW, spY + spH, 0xA010141C);
-        g.enableScissor(spX, spY, spX + spW, spY + spH);
-        SpecialType hovered = null;
+        g.fill(listX - 1, listY - 1, listX + listW + 1, listY + listH + 1, BORDER);
+        g.fill(listX, listY, listX + listW, listY + listH, CARD);
+        g.enableScissor(listX, listY, listX + listW, listY + listH);
         for (int i = 0; i < allowedSpecials.size(); i++) {
             SpecialType t = allowedSpecials.get(i);
-            int ry = spY + i * SPECIAL_ROW_H - spScroll;
-            if (ry + SPECIAL_ROW_H < spY || ry > spY + spH) continue;
-            boolean mine = t == cur;
-            boolean over = mouseX >= spX && mouseX < spX + spW && mouseY >= ry && mouseY < ry + SPECIAL_ROW_H
-                && mouseY >= spY && mouseY < spY + spH;
-            if (over) hovered = t;
-            g.fill(spX + 1, ry + 1, spX + spW - 1, ry + SPECIAL_ROW_H - 1, mine ? SEL : over ? HOVER : 0x10FFFFFF);
+            int ry = listY + i * SPECIAL_ROW_H - scroll;
+            if (ry + SPECIAL_ROW_H < listY || ry > listY + listH) continue;
+            boolean sel = t.ordinal() == pickedSpecialOrdinal;
+            boolean over = mouseX >= listX && mouseX < listX + listW && mouseY >= ry && mouseY < ry + SPECIAL_ROW_H
+                && mouseY >= listY && mouseY < listY + listH;
+            g.fill(listX + 1, ry + 1, listX + listW - 1, ry + SPECIAL_ROW_H - 1, sel ? SEL : over ? HOVER : 0x10FFFFFF);
+            if (sel) g.fill(listX + 1, ry + 1, listX + 3, ry + SPECIAL_ROW_H - 1, ACCENT);
             int tier = DomGear.tier(t);
             String tag = "【" + DomGear.tierName(tier) + "】";
             int tagColor = tier == 3 ? 0xFFFF7070 : tier == 2 ? 0xFFE8D060 : 0xFF70D0FF;
-            g.drawString(font, tag, spX + 4, ry + 4, tagColor, false);
+            g.drawString(font, tag, listX + 5, ry + 4, tagColor, false);
             String right = "+" + DomGear.markupPercent(tier) + "%";
-            g.drawString(font, right, spX + spW - 4 - font.width(right), ry + 4, DIM, false);
-            int nameX = spX + 4 + font.width(tag);
-            g.drawString(font, trim(t.zh, spW - (nameX - spX) - font.width(right) - 6), nameX, ry + 4, mine ? ACCENT : TEXT, false);
+            g.drawString(font, right, listX + listW - 5 - font.width(right), ry + 4, DIM, false);
+            int nx = listX + 5 + font.width(tag);
+            g.drawString(font, trim(t.zh, listW - (nx - listX) - font.width(right) - 7), nx, ry + 4, sel ? ACCENT : TEXT, false);
         }
         g.disableScissor();
-        if (hovered != null) {
-            int tier = DomGear.tier(hovered);
-            g.renderComponentTooltip(font, List.of(
-                Component.literal(hovered.zh + "（" + DomGear.tierName(tier) + "・商店 +" + DomGear.markupPercent(tier) + "%）"),
-                Component.literal(hovered.desc)
-            ), mouseX, mouseY);
+    }
+
+    private void renderSpecialDetail(GuiGraphics g) {
+        g.fill(infoX - 1, infoY - 1, infoX + infoW + 1, infoY + infoH + 1, BORDER);
+        g.fill(infoX, infoY, infoX + infoW, infoY + infoH, CARD);
+        SpecialType[] all = SpecialType.values();
+        if (pickedSpecialOrdinal < 0 || pickedSpecialOrdinal >= all.length) return;
+        SpecialType t = all[pickedSpecialOrdinal];
+        int tier = DomGear.tier(t);
+        int x = infoX + 8, y = infoY + 8, maxW = infoW - 16;
+        g.drawString(font, trim(t.zh, maxW), x, y, ACCENT, false);
+        y += 13;
+        int tierColor = tier == 3 ? 0xFFFF7070 : tier == 2 ? 0xFFE8D060 : 0xFF70D0FF;
+        g.drawString(font, "強度：" + DomGear.tierName(tier) + "　｜　商店價格 +" + DomGear.markupPercent(tier) + "%", x, y, tierColor, false);
+        y += 13;
+        g.fill(x, y, infoX + infoW - 8, y + 1, BORDER);
+        y += 6;
+        g.drawString(font, "道具效果：", x, y, DIM, false);
+        y += 11;
+        y = drawWrapped(g, t.desc, x, y, maxW, TEXT);
+        y += 8;
+        y = drawWrapped(g, "佔點規則：整場固定使用這一種，每回合戰鬥中可使用 1 次（按 Q 使用）。", x, y, maxW, DIM);
+        if (isForced()) {
+            y += 8;
+            String note = confirmedLocal ? "✔ 你已確認選擇，正在等待其他玩家…" : "點左下角「確認特殊道具」完成選擇";
+            drawWrapped(g, note, x, y, maxW, confirmedLocal ? GOOD : ACCENT);
         }
     }
 
-    private void renderTdmSpecialInfo(GuiGraphics g) {
-        g.fill(spX - 1, spY - 1, spX + spW + 1, spY + spH + 1, BORDER);
-        g.fill(spX, spY, spX + spW, spY + spH, 0xA010141C);
-        int y = spY + 8;
-        for (String line : List.of(
-            "團隊死鬥・特殊道具規則：",
-            "",
-            "• 開局免費發 1 個隨機特殊道具",
-            "• 之後每累計擊殺 3 人獲得 1 個",
-            "• 連死 3 次未獲得時保底 1 個",
-            "",
-            "按 Q 使用特殊道具！"
-        )) {
-            g.drawString(font, trim(line, spW - 12), spX + 6, y, line.startsWith("•") ? TEXT : line.isEmpty() ? DIM : ACCENT, false);
-            y += 12;
+    private int drawWrapped(GuiGraphics g, String text, int x, int y, int maxW, int color) {
+        for (var line : font.split(Component.literal(text), maxW)) {
+            g.drawString(font, line, x, y, color, false);
+            y += 10;
         }
+        return y;
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
         if (button != 0) return false;
-        if (mx >= clsX && mx < clsX + clsW && my >= clsY && my < clsY + clsH) {
-            int idx = (int) ((my - clsY + clsScroll) / CLASS_ROW_H);
-            ArenaClass[] all = ArenaClass.values();
-            if (idx >= 0 && idx < all.length) {
-                PGButton.playClick(1.0f);
-                PGNetwork.sendToServer(new ArenaActionPacket(ArenaActionPacket.Action.SET_CLASS, all[idx].ordinal()));
-                return true;
-            }
-        }
-        if (!allowedSpecials.isEmpty() && mx >= spX && mx < spX + spW && my >= spY && my < spY + spH) {
-            int idx = (int) ((my - spY + spScroll) / SPECIAL_ROW_H);
-            if (idx >= 0 && idx < allowedSpecials.size()) {
-                PGButton.playClick(1.0f);
-                PGNetwork.sendToServer(new DomGearActionPacket(allowedSpecials.get(idx).ordinal()));
-                return true;
+        if (mx >= listX && mx < listX + listW && my >= listY && my < listY + listH) {
+            if (isClass(mode)) {
+                int idx = (int) ((my - listY + scroll) / CLASS_ROW_H);
+                ArenaClass[] all = ArenaClass.values();
+                if (idx >= 0 && idx < all.length) {
+                    PGButton.playClick(1.0f);
+                    pickedClass = idx;
+                    if (mode == Mode.CLASS_PICK) {
+                        PGNetwork.sendToServer(new LobbyActionPacket(LobbyManager.Action.SET_MY_CLASS, idx));
+                    }
+                    return true;
+                }
+            } else {
+                int idx = (int) ((my - listY + scroll) / SPECIAL_ROW_H);
+                if (idx >= 0 && idx < allowedSpecials.size()) {
+                    PGButton.playClick(1.0f);
+                    pickedSpecialOrdinal = allowedSpecials.get(idx).ordinal();
+                    if (mode == Mode.SPECIAL_PICK) {
+                        PGNetwork.sendToServer(new DomGearActionPacket(pickedSpecialOrdinal));
+                    }
+                    return true;
+                }
             }
         }
         return false;
@@ -217,14 +320,11 @@ public final class LoadoutScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
-        if (mx >= clsX && mx < clsX + clsW && my >= clsY && my < clsY + clsH) {
-            int max = Math.max(0, ArenaClass.values().length * CLASS_ROW_H - clsH);
-            clsScroll = Math.max(0, Math.min(max, clsScroll - (int) (delta * CLASS_ROW_H)));
-            return true;
-        }
-        if (!allowedSpecials.isEmpty() && mx >= spX && mx < spX + spW && my >= spY && my < spY + spH) {
-            int max = Math.max(0, allowedSpecials.size() * SPECIAL_ROW_H - spH);
-            spScroll = Math.max(0, Math.min(max, spScroll - (int) (delta * SPECIAL_ROW_H * 2)));
+        if (mx >= listX && mx < listX + listW && my >= listY && my < listY + listH) {
+            int rowH = isClass(mode) ? CLASS_ROW_H : SPECIAL_ROW_H;
+            int total = isClass(mode) ? ArenaClass.values().length : allowedSpecials.size();
+            int max = Math.max(0, total * rowH - listH);
+            scroll = Math.max(0, Math.min(max, scroll - (int) (delta * rowH * 2)));
             return true;
         }
         return super.mouseScrolled(mx, my, delta);

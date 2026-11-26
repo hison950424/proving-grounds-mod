@@ -113,6 +113,8 @@ public final class Plan9Specials {
     private static boolean syncDirty = true;
     private static int lastSyncHash = 0;
 
+    public static void markDirty() { syncDirty = true; }
+
     private static void msg(ServerPlayer p, String text, ChatFormatting color) {
         p.displayClientMessage(Component.literal(text).withStyle(color), true);
     }
@@ -163,13 +165,16 @@ public final class Plan9Specials {
         };
     }
 
-    // 1. 欸你看
+    // 1. 欸你看（計畫書 10：無敵人時也能使用，不提示有沒有人受到效果）
     private static boolean lookUpOne(ServerPlayer p) {
         ServerPlayer target = nearestEnemy(p, RADIUS_20);
-        if (target == null) { msg(p, "20 格內沒有敵人", ChatFormatting.RED); return false; }
-        forceLookUp(target);
-        msg(target, "欸你看！", ChatFormatting.YELLOW);
-        p.serverLevel().playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1f, 1.8f);
+        if (target != null) {
+            forceLookUp(target);
+            msg(target, "欸你看！", ChatFormatting.YELLOW);
+            p.serverLevel().playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1f, 1.8f);
+        } else {
+            p.serverLevel().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.6f, 1.8f);
+        }
         return true;
     }
 
@@ -188,31 +193,32 @@ public final class Plan9Specials {
         PGNetwork.sendTo(t, SpecialFxPacket.of(SpecialFxPacket.FORCE_LOOK_UP, 0, 0));
     }
 
-    // 3. 欸幹你手上有蟑螂
+    // 3. 欸幹你手上有蟑螂（計畫書 10：無敵人或敵人空手時也可使用，不提示有沒有人受影響）
     private static boolean cockroach(ServerPlayer p) {
         ServerPlayer target = nearestEnemy(p, RADIUS_20);
-        if (target == null) { msg(p, "20 格內沒有敵人", ChatFormatting.RED); return false; }
-        ItemStack held = target.getMainHandItem();
-        if (held.isEmpty()) { msg(p, "最近的敵人手上沒有東西", ChatFormatting.RED); return false; }
-        ItemStack copy = held.copy();
-        target.getInventory().setItem(target.getInventory().selected, ItemStack.EMPTY);
-        FORCED_DROP.add(target.getUUID());
-        try {
-            ItemEntity dropped = target.drop(copy, true, false);
-            if (dropped != null) dropped.setPickUpDelay(35); // 1.75 秒後才撿得回來
-        } finally {
-            FORCED_DROP.remove(target.getUUID());
+        if (target != null && !target.getMainHandItem().isEmpty()) {
+            ItemStack copy = target.getMainHandItem().copy();
+            target.getInventory().setItem(target.getInventory().selected, ItemStack.EMPTY);
+            FORCED_DROP.add(target.getUUID());
+            try {
+                ItemEntity dropped = target.drop(copy, true, false);
+                if (dropped != null) dropped.setPickUpDelay(35); // 1.75 秒後才撿得回來
+            } finally {
+                FORCED_DROP.remove(target.getUUID());
+            }
+            target.inventoryMenu.broadcastChanges();
+            msg(target, "欸幹你手上有蟑螂！！你嚇到把東西丟掉了！", ChatFormatting.RED);
+            p.serverLevel().playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.SILVERFISH_HURT, SoundSource.PLAYERS, 1.2f, 1.5f);
+        } else {
+            p.serverLevel().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.SILVERFISH_HURT, SoundSource.PLAYERS, 0.7f, 1.5f);
         }
-        target.inventoryMenu.broadcastChanges();
-        msg(target, "欸幹你手上有蟑螂！！你嚇到把東西丟掉了！", ChatFormatting.RED);
-        msg(p, "已讓 " + target.getGameProfile().getName() + " 丟出手上物品", ChatFormatting.GREEN);
-        p.serverLevel().playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.SILVERFISH_HURT, SoundSource.PLAYERS, 1.2f, 1.5f);
         return true;
     }
 
-    // 4. 領域展開，但你沒抓到訣竅
+    // 4. 領域展開:刀戰（計畫書 10：95% 沒抓到訣竅全員沒收除刀外物品，5% 抓到訣竅自己不沒收；使用後銷毀不歸還領域展開本身）
     private static boolean domainExpansion(ServerPlayer p) {
         ServerLevel level = p.serverLevel();
+        boolean mastered = level.getRandom().nextDouble() < 0.05; // 5% 抓到訣竅
         Domain d = new Domain();
         d.level = level;
         d.center = p.position();
@@ -220,16 +226,22 @@ public final class Plan9Specials {
         d.leftTicks = TICKS_15S;
         for (ServerPlayer t : NewSpecials.playersAround(level, d.center, d.radius)) {
             d.inside.add(t.getUUID());
-            confiscateNonMelee(d, t);
-            sendTitle(t, "領域展開", ChatFormatting.DARK_PURPLE, "但你沒抓到訣竅！15 秒內只能用刀", ChatFormatting.LIGHT_PURPLE, 40);
+            boolean isCaster = t == p;
+            if (mastered && isCaster) {
+                sendTitle(t, "領域展開:刀戰", ChatFormatting.GOLD, "你抓到訣竅了！你的物品不會被沒收！", ChatFormatting.YELLOW, 45);
+            } else {
+                confiscateNonMelee(d, t, isCaster);
+                String sub = mastered ? "對方抓到訣竅了！15 秒內你只能用刀" : "但你沒抓到訣竅！15 秒內所有人只能用刀";
+                sendTitle(t, "領域展開:刀戰", ChatFormatting.DARK_PURPLE, sub, ChatFormatting.LIGHT_PURPLE, 40);
+            }
         }
         DOMAINS.add(d);
         syncDirty = true;
-        level.playSound(null, d.center.x, d.center.y, d.center.z, SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 1.2f, 0.7f);
+        level.playSound(null, d.center.x, d.center.y, d.center.z, SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 1.2f, mastered ? 1.1f : 0.7f);
         return true;
     }
 
-    private static void confiscateNonMelee(Domain d, ServerPlayer p) {
+    private static void confiscateNonMelee(Domain d, ServerPlayer p, boolean isCaster) {
         SavedGear sg = new SavedGear();
         Inventory inv = p.getInventory();
         for (int i = 0; i < inv.items.size(); i++) {
@@ -244,8 +256,9 @@ public final class Plan9Specials {
             sg.offhand = off.copy();
             inv.offhand.set(0, ItemStack.EMPTY);
         }
+        // 施法者特殊道具格裡的「領域展開:刀戰」本身即將消耗銷毀，不能存進歸還清單！
         ItemStack sp = SpecialSlot.get(p);
-        if (!sp.isEmpty() && !DomGear.isGearStack(sp)) {
+        if (!isCaster && !sp.isEmpty() && !DomGear.isGearStack(sp)) {
             sg.special = sp.copy();
             SpecialSlot.clear(p);
         }
@@ -398,13 +411,15 @@ public final class Plan9Specials {
         return true;
     }
 
-    // 10. 簡陋的空間交換器
+    // 10. 簡陋的空間交換器（計畫書 10：人數不足也可使用，不提示有沒有人）
     private static boolean crudeSwapper(ServerPlayer p) {
         List<ServerPlayer> list = NewSpecials.playersAround(p.serverLevel(), p.position(), RADIUS_20);
-        if (list.size() < 2) { msg(p, "20 格內不足兩位玩家，無法交換", ChatFormatting.RED); return false; }
-        Collections.shuffle(list);
-        ServerPlayer a = list.get(0), b = list.get(1);
-        swapTwo(a, b);
+        if (list.size() >= 2) {
+            Collections.shuffle(list);
+            swapTwo(list.get(0), list.get(1));
+        } else {
+            p.serverLevel().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 0.7f, 1.1f);
+        }
         return true;
     }
 
@@ -424,10 +439,13 @@ public final class Plan9Specials {
         msg(b, "空間交換！你和 " + a.getGameProfile().getName() + " 互換了位置", ChatFormatting.AQUA);
     }
 
-    // 11. 空間交換器
+    // 11. 空間交換器（計畫書 10：人數不足也可使用，不提示有沒有人）
     private static boolean spaceSwapper(ServerPlayer p) {
         List<ServerPlayer> list = NewSpecials.playersAround(p.serverLevel(), p.position(), RADIUS_20);
-        if (list.size() < 2) { msg(p, "20 格內不足兩位玩家，無法交換", ChatFormatting.RED); return false; }
+        if (list.size() < 2) {
+            p.serverLevel().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 0.7f, 0.9f);
+            return true;
+        }
         List<Vec3> positions = new ArrayList<>();
         List<float[]> rots = new ArrayList<>();
         for (ServerPlayer t : list) {
@@ -453,16 +471,34 @@ public final class Plan9Specials {
         return true;
     }
 
-    // 12 & 13. 溜冰鞋
+    // 12 & 13. 溜冰鞋（計畫書 10：滑行線性加速，高速撞牆依速度比例受傷）
+    private static final Map<UUID, Long> LAST_SKATE_CRASH = new HashMap<>();
+
     private static boolean iceSkates(ServerPlayer p, boolean all) {
         ServerLevel level = p.serverLevel();
         List<ServerPlayer> targets = all ? NewSpecials.playersAround(level, p.position(), RADIUS_20) : List.of(p);
         for (ServerPlayer t : targets) {
             Engines.effect(t, SpecialRegistry.ICE_SKATES.get(), TICKS_15S, 0);
-            msg(t, "穿上溜冰鞋！15 秒內放開方向鍵將一路滑行，撞到方塊才會停下", ChatFormatting.AQUA);
+            msg(t, "穿上溜冰鞋！滑行會持續加速，速度太快撞牆會受傷！", ChatFormatting.AQUA);
         }
         level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.GLASS_STEP, SoundSource.PLAYERS, 1.0f, 1.5f);
         return true;
+    }
+
+    /** 溜冰鞋高速撞牆傷害（IceSkateCrashPacket 呼叫）。 */
+    public static void onIceSkateCrash(ServerPlayer p, float speed) {
+        if (!p.isAlive() || p.isSpectator() || !p.hasEffect(SpecialRegistry.ICE_SKATES.get())) return;
+        long now = p.server.getTickCount();
+        Long last = LAST_SKATE_CRASH.get(p.getUUID());
+        if (last != null && now - last < 8) return; // 防單次碰撞連發
+        float s = Math.max(0f, Math.min(2.0f, speed));
+        if (s < 0.45f) return;
+        LAST_SKATE_CRASH.put(p.getUUID(), now);
+        float dmg = Math.max(2f, (s - 0.38f) * 38f); // 依撞牆速度線性比例受傷（約 3~45 HP）
+        p.hurt(p.serverLevel().damageSources().flyIntoWall(), dmg);
+        p.serverLevel().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.PLAYER_BIG_FALL, SoundSource.PLAYERS, 1.0f, 0.85f);
+        p.serverLevel().sendParticles(ParticleTypes.CRIT, p.getX(), p.getY() + 1.0, p.getZ(), 14, 0.3, 0.4, 0.3, 0.15);
+        msg(p, "滑行過快撞牆！-" + Math.round(dmg) + " HP", ChatFormatting.RED);
     }
 
     // 14. 顯示干擾器
@@ -497,15 +533,22 @@ public final class Plan9Specials {
         return true;
     }
 
-    // 17. 擬態
+    // 17. 擬態（計畫書 10：自動對準離自己最近的方塊正中心）
     private static boolean mimic(ServerPlayer p) {
         int kind = p.getRandom().nextInt(3); // 0 木箱、1 鐵箱、2 金箱
+        double cx = Math.floor(p.getX()) + 0.5;
+        double cz = Math.floor(p.getZ()) + 0.5;
+        double cy = p.getY();
+        if (p.isPassenger()) p.stopRiding();
+        p.teleportTo(p.serverLevel(), cx, cy, cz, p.getYRot(), p.getXRot());
+        p.setDeltaMovement(Vec3.ZERO);
+        p.hurtMarked = true;
         Engines.effect(p, SpecialRegistry.MIMIC.get(), TICKS_60S, kind);
-        MIMIC_ORIGIN.put(p.getUUID(), p.position());
+        MIMIC_ORIGIN.put(p.getUUID(), new Vec3(cx, cy, cz));
         syncDirty = true;
         String name = kind == 0 ? "木箱（低階）" : kind == 1 ? "鐵箱（中階）" : "金箱（高階）";
         msg(p, "擬態為 " + name + "！移動或受到傷害會解除（最多 60 秒）", ChatFormatting.GOLD);
-        p.serverLevel().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.WOOD_PLACE, SoundSource.PLAYERS, 1.0f, 1.0f);
+        p.serverLevel().playSound(null, cx, cy, cz, SoundEvents.WOOD_PLACE, SoundSource.PLAYERS, 1.0f, 1.0f);
         return true;
     }
 
@@ -688,11 +731,12 @@ public final class Plan9Specials {
         }
         List<Plan9SyncPacket.DomainInfo> doms = new ArrayList<>();
         for (Domain d : DOMAINS) doms.add(new Plan9SyncPacket.DomainInfo(d.center.x, d.center.y, d.center.z, d.radius, d.leftTicks));
-        int hash = Objects.hash(disguised, ethereal, mimics, doms.size());
+        Map<UUID, Byte> freeDive = NewSpecials.freeSkydiveStates();
+        int hash = Objects.hash(disguised, ethereal, mimics, doms.size(), freeDive);
         if (syncDirty || hash != lastSyncHash || (!doms.isEmpty() && server.getTickCount() % 20 == 0)) {
             syncDirty = false;
             lastSyncHash = hash;
-            PGNetwork.sendToAll(new Plan9SyncPacket(disguised, ethereal, mimics, doms));
+            PGNetwork.sendToAll(new Plan9SyncPacket(disguised, ethereal, mimics, doms, freeDive));
         }
     }
 
@@ -785,7 +829,8 @@ public final class Plan9Specials {
         MIMIC_ORIGIN.clear();
         ETHEREAL_TRACK.clear();
         FORCED_DROP.clear();
+        LAST_SKATE_CRASH.clear();
         syncDirty = true;
-        PGNetwork.sendToAll(new Plan9SyncPacket(List.of(), List.of(), Map.of(), List.of()));
+        PGNetwork.sendToAll(new Plan9SyncPacket(List.of(), List.of(), Map.of(), List.of(), Map.of()));
     }
 }

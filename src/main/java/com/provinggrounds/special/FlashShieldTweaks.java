@@ -54,6 +54,21 @@ public final class FlashShieldTweaks {
         PENDING.clear();
     }
 
+    /** 計畫書 10：閃光盾長按右鍵完成閃光後自動銷毀。回傳 true 表示確實觸發了閃光（可銷毀）。 */
+    public static boolean shouldDestroyAfterFlash(LivingEntity user, net.minecraft.world.item.ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        try {
+            int maxTick = (int) stack.getItem().getClass().getMethod("getMaxUsingTick", net.minecraft.world.item.ItemStack.class)
+                .invoke(stack.getItem(), stack);
+            if (user.getTicksUsingItem() < maxTick) return false;
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // finishUsingItem 本身就只在長按結束時呼叫
+        }
+        user.level().playSound(null, user.getX(), user.getY(), user.getZ(),
+            net.minecraft.sounds.SoundEvents.SHIELD_BREAK, net.minecraft.sounds.SoundSource.PLAYERS, 0.9f, 1.0f);
+        return true;
+    }
+
     @SubscribeEvent
     public static void onEffectAdded(MobEffectEvent.Added event) {
         if (!recording || event.getEntity().level().isClientSide) return;

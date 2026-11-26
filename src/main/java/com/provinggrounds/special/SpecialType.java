@@ -48,16 +48,16 @@ public enum SpecialType {
     GAMBLER_ROD("gambler_rod", "賭徒釣竿", "Gambler's Rod", "各 25%：掉 1 個特殊道具＋最大生命 +5｜掉 2 個＋最大生命 +10｜受 25 傷害、最大生命 -5、震盪 5 秒｜受 75 傷害、最大生命 -10、震盪 5 秒", 0xD0A040),
     RECALL_PLUS("recall_plus", "回溯點加強版", "Recall Point+", "同回溯點（20 秒內可用），另外記錄血量：回去時血量恢復成記錄時的值", 0x2080F0),
     GAMBLER_ROD_PLUS("gambler_rod_plus", "沒救的賭徒釣竿", "Hopeless Gambler's Rod", "各 25%：掉 2 個特殊道具＋最大生命 +10｜掉 4 個＋最大生命 +20｜受 50 傷害、最大生命 -10、震盪 5 秒｜受 100 傷害、最大生命 -20、震盪 5 秒", 0xB02020),
-    THOR_HAMMER("thor_hammer", "雷神錘", "Thor's Hammer", "準心指的地點水平半徑 20 格內隨機落雷，每 0.2 秒一道，持續 5 秒（包括自己）", 0x80A0FF),
-    THOR_HAMMER_PLUS("thor_hammer_plus", "雷神錘加強版", "Thor's Hammer+", "準心指的地點水平半徑 20 格內的所有玩家，每 0.5 秒被雷打中一次，持續 5 秒（包括自己）", 0x4060FF),
-    RESKYDIVE("reskydive", "重新跳傘器", "Re-Skydiver", "（大逃殺）把自己傳送到目前位置上方 300 格，重新跳傘", 0x60B0E0),
-    RESKYDIVE_GROUP("reskydive_group", "多人重新跳傘器", "Group Re-Skydiver", "（大逃殺）自身半徑 5 格內所有玩家（包括自己）傳送到你上方 300 格，重新跳傘", 0x3090C0),
-    RESKYDIVE_TARGET("reskydive_target", "多人重新跳傘指定器", "Targeted Re-Skydiver", "（大逃殺）準心指的地點水平半徑 5 格內所有玩家傳送到你上方 300 格，重新跳傘", 0x2070A0),
+    THOR_HAMMER("thor_hammer", "雷神錘", "Thor's Hammer", "準心指的地點水平半徑 10 格內每 0.2 秒隨機落 3 道雷，持續 5 秒（包括自己）", 0x80A0FF),
+    THOR_HAMMER_PLUS("thor_hammer_plus", "雷神錘加強版", "Thor's Hammer+", "準心指的地點水平半徑 10 格內的所有玩家，每 0.5 秒被雷打中一次，持續 5 秒（包括自己）", 0x4060FF),
+    RESKYDIVE("reskydive", "重新跳傘器", "Re-Skydiver", "把自己傳送到目前位置上方 300 格，重新跳傘（所有模式皆可使用）", 0x60B0E0),
+    RESKYDIVE_GROUP("reskydive_group", "多人重新跳傘器", "Group Re-Skydiver", "自身半徑 5 格內所有玩家（包括自己）傳送到你上方 300 格，重新跳傘（所有模式皆可使用）", 0x3090C0),
+    RESKYDIVE_TARGET("reskydive_target", "多人重新跳傘指定器", "Targeted Re-Skydiver", "準心指的地點水平半徑 5 格內所有玩家傳送到你上方 300 格，重新跳傘（所有模式皆可使用）", 0x2070A0),
     // ── 計畫書 9：新增 17 種特殊道具 ──
     LOOK_UP_ONE("look_up_one", "欸你看", "Hey Look!", "強制以自身半徑 20 格內距離自己最近的敵人看向最上方", 0xF0D060),
     LOOK_UP_ALL("look_up_all", "欸你們看", "Hey Everyone Look!", "強制以自身半徑 20 格內所有人（包含自己）看向最上方", 0xE0B030),
     COCKROACH("cockroach", "欸幹你手上有蟑螂", "Bug On Your Hand!", "強制以自身半徑 20 格內距離自己最近的敵人丟出手上物品", 0x784828),
-    DOMAIN_EXPANSION("domain_expansion", "領域展開，但你沒抓到訣竅", "Domain Expansion (Clueless)", "展開半徑 20 格封閉領域 15 秒（出入禁止、無法破壞、子彈進不去），沒收結界內所有人（含自己）除刀外的所有物品，結束後歸還", 0x7030B0),
+    DOMAIN_EXPANSION("domain_expansion", "領域展開:刀戰", "Domain Expansion: Knife Fight", "展開半徑 20 格封閉領域 15 秒（出入禁止、無法破壞、子彈進不去）；95% 沒抓到訣竅沒收所有人除刀外物品，5% 抓到訣竅自己不沒收，結束後歸還", 0x7030B0),
     FRIEND_OR_FOE("friend_or_foe", "敵我不分", "Friend or Foe", "半徑 20 格內所有玩家（含自己）15 秒內互看變史蒂夫、隱藏頭頂 ID 與隊友標記、強制開啟友軍誤傷", 0xD05080),
     PARANOIA("paranoia", "被害妄想症", "Paranoia", "半徑 20 格內所有玩家（含自己）15 秒內隨機顯示受傷方向提示與假敵人地圖紅點", 0xB02040),
     RED_LIGHT("red_light", "123木頭人", "Red Light Green Light", "半徑 20 格內所有玩家（含自己）15 秒內隨機同步倒數 3、2、1、0，數到 0 時還在移動的人受 25 傷害", 0xE06020),
@@ -65,12 +65,12 @@ public enum SpecialType {
     MISFIRE_CURSE("misfire_curse", "走火詛咒", "Misfire Curse", "半徑 20 格內所有玩家（含自己）15 秒內只要拿著槍就會強制開火", 0xF05020),
     CRUDE_SWAPPER("crude_swapper", "簡陋的空間交換器", "Crude Space Swapper", "將自身半徑 20 格內的隨機兩位玩家交換位置", 0x40C0D0),
     SPACE_SWAPPER("space_swapper", "空間交換器", "Space Swapper", "將自身半徑 20 格內的所有玩家（含自己）的位置隨機交換", 0x2080E0),
-    ICE_SKATES("ice_skates", "一雙溜冰鞋", "Ice Skates", "15 秒內移動放開方向鍵不再減速而是一路滑行，直到撞到方塊停下來", 0x80E0FF),
-    ICE_SKATES_ALL("ice_skates_all", "送大家一雙溜冰鞋", "Ice Skates For All", "半徑 20 格內所有玩家（含自己）15 秒內移動放開方向鍵不再減速而是一路滑行，直到撞到方塊停下來", 0x50B8F0),
+    ICE_SKATES("ice_skates", "一雙溜冰鞋", "Ice Skates", "15 秒內放開方向鍵一路滑行且速度線性上漲，撞到牆壁才停下，速度過快撞牆會依速度比例受傷", 0x80E0FF),
+    ICE_SKATES_ALL("ice_skates_all", "送大家一雙溜冰鞋", "Ice Skates For All", "半徑 20 格內所有玩家（含自己）15 秒內一路滑行且速度線性上漲，速度過快撞牆會依速度比例受傷", 0x50B8F0),
     HUD_JAMMER("hud_jammer", "顯示干擾器", "HUD Jammer", "半徑 20 格內所有玩家（含自己）15 秒內隱藏準心、血條、彈藥數、快捷欄、小地圖等所有抬頭顯示器", 0x505060),
     OVERHEAT_CURSE("overheat_curse", "過熱詛咒", "Overheat Curse", "半徑 20 格內所有玩家（含自己）15 秒內持續拿著同一格快捷欄物品超過 3 秒就會灼傷並震盪", 0xF08020),
     ETHEREAL("ethereal", "無實體化", "Ethereal", "5 秒內進入半透明幽靈狀態，無法攻擊也不受傷害，但可以直接穿過厚度 1 格的任何方塊", 0xB0E0FF),
-    MIMIC("mimic", "擬態", "Mimic", "原地隨機變成一種物資箱，受到傷害或移動時自動解除，最多持續 60 秒", 0xC09040);
+    MIMIC("mimic", "擬態", "Mimic", "自動對準最近方塊中心並隨機變成一種物資箱，受到傷害或移動時自動解除，最多持續 60 秒", 0xC09040);
 
     public final String id, zh, en, desc;
     public final int color;

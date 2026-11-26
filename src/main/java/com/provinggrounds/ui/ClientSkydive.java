@@ -64,16 +64,27 @@ public final class ClientSkydive {
         boolean pressed = false;
         while (mc.options.keyJump.consumeClick()) pressed = true; // 一律消耗掉，避免累積到下次跳傘才觸發
         if (!pressed || mc.player == null || mc.screen != null) return;
-        byte self = ClientBRState.get().selfState();
+        byte self = effectiveState(mc.player);
         if (self == ClientBRState.SELF_PLANE || self == ClientBRState.SELF_GLIDE
                 || self == ClientBRState.SELF_FREEFALL || self == ClientBRState.SELF_CHUTE) {
             PGNetwork.sendToServer(new SkydiveKeyPacket());
         }
     }
 
+    /** 有效跳傘狀態：大逃殺內看 ClientBRState，非大逃殺（重新跳傘器）看 ClientPlan9Specials。 */
+    private static byte effectiveState(LocalPlayer p) {
+        if (ClientBRState.active()) return ClientBRState.get().selfState();
+        return switch (com.provinggrounds.special.client.ClientPlan9Specials.freeSkydiveState(p.getUUID())) {
+            case 1 -> ClientBRState.SELF_GLIDE;
+            case 2 -> ClientBRState.SELF_CHUTE;
+            case 3 -> ClientBRState.SELF_FREEFALL;
+            default -> ClientBRState.SELF_ALIVE;
+        };
+    }
+
     /** 鞘翅滑翔中：視角從正下方最多往上抬 glide_pitch_up_max 度（鞘翅本身的速度、操作都不改）。 */
     private static void limitGlide(LocalPlayer p) {
-        if (!p.isFallFlying() || ClientBRState.get().selfState() != ClientBRState.SELF_GLIDE) return;
+        if (!p.isFallFlying() || effectiveState(p) != ClientBRState.SELF_GLIDE) return;
         double pitchUp = 75;
         try {
             pitchUp = PGConfig.SERVER.glidePitchUpMax.get();
@@ -92,7 +103,7 @@ public final class ClientSkydive {
         if (!(event.player instanceof LocalPlayer p) || !p.level().isClientSide) return;
         limitGlide(p);
         if (event.phase != TickEvent.Phase.START) return;
-        if (ClientBRState.get().selfState() != ClientBRState.SELF_CHUTE) return;
+        if (effectiveState(p) != ClientBRState.SELF_CHUTE) return;
         if (p.onGround() || p.isInWater()) return;
         double sink = 5, horiz = 12, drift = 4;
         try {

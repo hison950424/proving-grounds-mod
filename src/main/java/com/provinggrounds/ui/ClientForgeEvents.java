@@ -37,8 +37,23 @@ public final class ClientForgeEvents {
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null && com.provinggrounds.client.ClientArenaState.consumePendingLoadout()) {
-            mc.setScreen(new LoadoutScreen());
+        if (mc.player != null) {
+            int draft = com.provinggrounds.client.ClientLobbyData.consumePendingDraft();
+            var lobby = com.provinggrounds.client.ClientLobbyData.get();
+            if (draft == 0 && lobby != null && lobby.inLobby() && lobby.draftPhase() != 0 && mc.screen == null) {
+                // 強制選角／選道具階段中若尚未確認且畫面空著，自動重新顯示
+                for (var e : lobby.players()) {
+                    if (e.id().equals(mc.player.getUUID()) && !e.spectator() && !e.draftDone()) {
+                        draft = lobby.draftPhase();
+                        break;
+                    }
+                }
+            }
+            if (draft == com.provinggrounds.core.LobbyManager.DRAFT_CLASS) {
+                mc.setScreen(new LoadoutScreen(LoadoutScreen.Mode.CLASS_FORCED, null));
+            } else if (draft == com.provinggrounds.core.LobbyManager.DRAFT_SPECIAL) {
+                mc.setScreen(new LoadoutScreen(LoadoutScreen.Mode.SPECIAL_FORCED, null));
+            }
         }
         while (ClientModEvents.OPEN_MENU.consumeClick()) {
             if (mc.player == null || mc.screen != null) continue;
@@ -60,12 +75,7 @@ public final class ClientForgeEvents {
             // 本地先擋一次冷卻（避免連按灌封包）；真正的判斷在伺服器
             long now = System.currentTimeMillis();
             if (now - lastProneRequest < 250) continue;
-            // 跳起來（腳離地）時不能趴下（使用者回饋：跳起來能趴、趴下卻不能跳，不一致）；本地當下判斷最準
-            if (!mc.player.onGround() && !com.provinggrounds.client.ClientProneData.isProne(mc.player.getUUID())) {
-                mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("要站在地上才能趴下")
-                    .withStyle(net.minecraft.ChatFormatting.GRAY), true);
-                continue;
-            }
+            // 計畫書 10：在空中就可以直接趴下（移除 onGround 限制）
             lastProneRequest = now;
             PGNetwork.sendToServer(new com.provinggrounds.network.ProneTogglePacket());
         }
