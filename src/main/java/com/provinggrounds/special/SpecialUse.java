@@ -255,24 +255,25 @@ public final class SpecialUse {
         p.serverLevel().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.NOTE_BLOCK_PLING.value(), SoundSource.PLAYERS, 0.8f, 1.8f);
     }
 
-    /** 修復所有護甲；強化版另外讓耐久上限 +50%（記在物品 NBT pg_dura_bonus，ItemStackMixin 計算上限）。 */
+    /** 修復所有護甲：普通版增加耐久上限 +25%（不可疊加）；強化版增加抗彈係數 +1.5%（不可疊加）。 */
     private static void repairArmor(ServerPlayer p, boolean plus) {
-        SpecialConfig s = SpecialConfig.get();
         for (EquipmentSlot slot : new EquipmentSlot[] { EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET }) {
             ItemStack a = p.getItemBySlot(slot);
             if (!(a.getItem() instanceof ArmorItem)) continue;
             if (plus) {
-                int n = a.getOrCreateTag().getInt(DURA_TAG);
-                int max = s.armorPlusMaxStacks.get();
-                if (max <= 0 || n < max) a.getOrCreateTag().putInt(DURA_TAG, n + 1);
+                a.getOrCreateTag().putBoolean(BULLETPROOF_TAG, true);
+            } else {
+                a.getOrCreateTag().putInt(DURA_TAG, 1);
             }
             a.setDamageValue(0);
         }
         p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ANVIL_USE, SoundSource.PLAYERS, 0.6f, 1.4f);
     }
 
-    /** 強化護甲修復包疊加次數（物品 NBT）。 */
+    /** 護甲修復包耐久上限 +25% 標記（不可疊加，物品 NBT）。 */
     public static final String DURA_TAG = "pg_dura_bonus";
+    /** 強化護甲修復包抗彈係數 +1.5% 標記（不可疊加，物品 NBT）。 */
+    public static final String BULLETPROOF_TAG = "pg_bp_bonus";
 
     /** 在面前 1 格的地板放假箱（同階真箱的方塊，外觀完全一樣）。 */
     private static boolean placeFakeCrate(ServerPlayer p, SpecialType type) {

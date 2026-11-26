@@ -231,4 +231,19 @@ public final class ClientForgeEvents {
             return 1;
         }));
     }
+
+    /** 護甲修復包／強化護甲修復包強化過的防具，在滑鼠懸停提示顯示已套用的強化效果。 */
+    @SubscribeEvent
+    public static void onItemTooltip(net.minecraftforge.event.entity.player.ItemTooltipEvent event) {
+        net.minecraft.world.item.ItemStack stack = event.getItemStack();
+        if (!(stack.getItem() instanceof net.minecraft.world.item.ArmorItem)) return;
+        net.minecraft.nbt.CompoundTag tag = stack.getTag();
+        if (tag == null) return;
+        if (tag.getInt(com.provinggrounds.special.SpecialUse.DURA_TAG) > 0) {
+            event.getToolTip().add(net.minecraft.network.chat.Component.literal("護甲強化：耐久上限 +25%").withStyle(net.minecraft.ChatFormatting.AQUA));
+        }
+        if (tag.getBoolean(com.provinggrounds.special.SpecialUse.BULLETPROOF_TAG)) {
+            event.getToolTip().add(net.minecraft.network.chat.Component.literal("護甲強化：抗彈係數 +1.5%").withStyle(net.minecraft.ChatFormatting.GOLD));
+        }
+    }
 }

@@ -44,7 +44,7 @@ public final class SpecialConfig {
     public final ForgeConfigSpec.DoubleValue gasSeconds, gasLingerSeconds, gasPoisonSeconds;
     public final ForgeConfigSpec.DoubleValue selfReviveSeconds;
     public final ForgeConfigSpec.BooleanValue flashShieldHalved, flashShield045, flashShield50;
-    public final ForgeConfigSpec.DoubleValue armorPlusBonus;
+    public final ForgeConfigSpec.DoubleValue armorPlusBonus, armorRepairDuraBonus, armorPlusBulletproofBonus;
     public final ForgeConfigSpec.IntValue armorPlusMaxStacks;
     public final ForgeConfigSpec.DoubleValue shelterSeconds, shelterBonus;
     public final ForgeConfigSpec.DoubleValue radarRange, radarSeconds;
@@ -121,8 +121,10 @@ public final class SpecialConfig {
             .define("flash_shield_durability_halved_v1", false);
         flashShield50 = b.comment("內部用：是否已把閃光盾耐久設成 50（使用者回饋，只做一次）").define("flash_shield_durability_50_v1", false);
         flashShield045 = b.comment("內部用：是否已把閃光盾耐久再改成當時的 45%（使用者回饋，只做一次）").define("flash_shield_durability_045_v1", false);
-        armorPlusBonus = b.comment("強化護甲修復包：每次增加的耐久上限（0.5 = +50% 原始值，可疊加）").defineInRange("armor_plus_bonus", 0.5, 0.0, 10.0);
-        armorPlusMaxStacks = b.comment("強化護甲修復包：最多疊加幾次（0 = 不設上限）").defineInRange("armor_plus_max_stacks", 0, 0, 1000);
+        armorPlusBonus = b.comment("（舊版保留鍵）強化護甲修復包舊耐久參數").defineInRange("armor_plus_bonus", 0.5, 0.0, 10.0);
+        armorPlusMaxStacks = b.comment("（舊版保留鍵）強化護甲修復包舊疊加參數").defineInRange("armor_plus_max_stacks", 0, 0, 1000);
+        armorRepairDuraBonus = b.comment("護甲修復包：每件護甲增加的耐久上限比例（0.25 = +25%，不可疊加）").defineInRange("armor_repair_dura_bonus_v1", 0.25, 0.0, 5.0);
+        armorPlusBulletproofBonus = b.comment("強化護甲修復包：每件護甲增加的抗彈係數（0.015 = +1.5%，不可疊加）").defineInRange("armor_plus_bulletproof_bonus_v1", 0.015, 0.0, 0.5);
         shelterSeconds = b.comment("圈外庇護：持續秒數").defineInRange("shelter_seconds", 15.0, 1.0, 600.0);
         shelterBonus = b.comment("圈外庇護：在圈外時的移動速度加成（0.25 = +25%）").defineInRange("shelter_bonus", 0.25, 0.0, 5.0);
         radarRange = b.comment("雷達脈衝：掃描半徑（格，含高低差）").defineInRange("radar_range", 40.0, 1.0, 500.0);

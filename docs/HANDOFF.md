@@ -51,7 +51,8 @@
   1. `core/Hitbox.java`：蹲下時補上 `-0.125f` Y 位移（對齊原版 `PlayerRenderer.getRenderOffset`），修復蹲下 Hitbox 整體偏高。
   2. `ui/ClientMovement.java` + `core/Footsteps.java` + `network/QuietWalkPacket.java` + `core/ProneManager.java`：趴下／倒地爬行時雙端禁止蹲下（`shiftKeyDown = false`）與靜走。
   3. `ui/ClientForgeEvents.java` + `core/ProneManager.java` + `config/PGConfig.java`：移除 0.5x 趴下動畫放慢（動畫時間減半，約 0.55 秒），冷卻預設改鍵名 `prone.cooldown_seconds_v2 = 0.5`（減半）。
-  4. `special/DomGear.java` + `special/NewSpecials.java`：團隊模式（佔點選單、團隊死鬥隨機池、團隊死鬥賭徒釣竿掉落）排除 6 種不適合室內作戰的道具（三種重新跳傘、擬態、兩把雷神錘）。網路版本維持 28（small 更新），尚未發佈。
+  4. `special/DomGear.java` + `special/NewSpecials.java`：團隊模式（佔點選單、團隊死鬥隨機池、團隊死鬥賭徒釣竿掉落）排除 6 種不適合室內作戰的道具（三種重新跳傘、擬態、兩把雷神錘）。
+  5. `special/SpecialType.java` + `special/SpecialUse.java` + `special/SpecialConfig.java` + `mixin/ItemStackMixin.java` + `events/ArmorEvents.java` + `ui/ClientForgeEvents.java` + 語系檔：殘影分身改為可用 2 次；護甲修復包新增耐久上限 +25%（不可疊加，`pg_dura_bonus`）；強化護甲修復包改為抗彈係數 +1.5%（不可疊加，`pg_bp_bonus`），並於防具提示顯示強化效果。網路版本維持 28（small 更新），尚未發佈。
 - **v0.33.1 已發佈（趴下動畫重製與 Hitbox 全面對齊，Gemini 實作）**：
   1. `mixin/ProneAnimMixin.java`：接管陸地 `PlayerRenderer.setupRotations`（`m_7523_`），將貼地偏移（`Hitbox.PRONE_Y/Z`）移到 `RX(-90°)` 之前並套用 `proneEase` 平滑曲線，徹底消除插進地板問題。
   2. `core/Hitbox.java` 重寫為原版 `Matrix4f` 轉換鏈＋共用 `computeLimbPose()`：修正四肢走路擺動相反、支援 `swimAmount` 平滑過渡插值（`ProneManager` 伺服器端也同步 0.5x 過渡速度）、完整對齊手持物品／使用動作（舉盾／拉弓／弩／望遠鏡／長矛）／攻擊揮手／TACZ 持槍與開鏡（新增 `GunCompat.aimProgress`）／降落傘／陸地趴下爬行與趴下持槍。

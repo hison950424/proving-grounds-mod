@@ -35,11 +35,11 @@ public enum SpecialType {
     SILENT_BOOTS("silent_boots", "靜音靴", "Silent Boots", "15 秒內移動不會發出聲音、移動速度 +100%（不和拿刀、強心劑的速度疊加）", 0x404060),
     GAS_GRENADE("gas_grenade", "毒氣彈", "Gas Grenade", "投出毒氣彈（可反彈牆壁 1 次，落地馬上觸發），範圍內的敵人視野模糊、咳嗽、中毒", 0x60C020),
     FIRST_AID_SHOT("first_aid_shot", "急救針", "First Aid Shot", "扶隊友時：立刻扶起並回滿血｜自己倒地時：10 秒後自救｜沒倒地時：立刻回復 25 血", 0xF0F0F0),
-    ARMOR_REPAIR("armor_repair", "護甲修復包", "Armor Repair Kit", "身上所有護甲的耐久度修到滿", 0x6080A0),
-    ARMOR_REPAIR_PLUS("armor_repair_plus", "強化護甲修復包", "Armor Repair Kit+", "修滿所有護甲，並讓每件護甲的耐久上限 +50%（可疊加）", 0x4060C0),
+    ARMOR_REPAIR("armor_repair", "護甲修復包", "Armor Repair Kit", "身上所有護甲的耐久度修到滿，並讓每件護甲的耐久上限 +25%（不可疊加）", 0x6080A0),
+    ARMOR_REPAIR_PLUS("armor_repair_plus", "強化護甲修復包", "Armor Repair Kit+", "身上所有護甲的耐久度修到滿，並讓每件護甲的抗彈係數 +1.5%（不可疊加）", 0x4060C0),
     ZONE_SHELTER("zone_shelter", "圈外庇護", "Zone Shelter", "15 秒內不受圈外傷害，在圈外時移動速度 +25%", 0xC0F0C0),
     RADAR_PULSE("radar_pulse", "雷達脈衝", "Radar Pulse", "掃描 40 格內的敵人，讓他們發光並顯示在地圖上 3 秒（只有你看得到）", 0x40F0A0),
-    DECOY("decoy", "殘影分身", "Decoy", "產生一個跟你一模一樣的分身，往前奔跑 10 秒", 0xA0A0F0),
+    DECOY("decoy", "殘影分身", "Decoy", "產生一個跟你一模一樣的分身，往前奔跑 10 秒（可以用 2 次）", 0xA0A0F0),
     // ── 計畫書 6 E 章 ──
     BRAINWASH("brainwash", "不可控的洗腦工具", "Uncontrollable Brainwasher", "自身半徑 25 格內所有玩家（包括自己）15 秒內不能開物品欄、不能按 F 互動、不能切換快捷欄，並失去方向感", 0xC040C0),
     ROOT_ORB("root_orb", "定身球", "Root Orb", "投出（可反彈牆壁 1 次，落地馬上觸發），觸發後半徑 4.5 格內所有玩家（包括自己）3 秒不能移動（可以轉視角）", 0x50E0B0),
@@ -90,8 +90,8 @@ public enum SpecialType {
 
     public boolean isFakeCrate() { return this == FAKE_CRATE_LOW || this == FAKE_CRATE_MID || this == FAKE_CRATE_HIGH; }
 
-    /** 可以用 2 次（臨時雪牆、所有地雷；計畫書 7 C11）。剩餘次數存在物品 NBT pg_uses。 */
-    public boolean twoUses() { return this == SNOW_WALL || isMine(); }
+    /** 可以用 2 次（臨時雪牆、殘影分身、所有地雷）。剩餘次數存在物品 NBT pg_uses。 */
+    public boolean twoUses() { return this == SNOW_WALL || this == DECOY || isMine(); }
 
     public boolean isMine() { return this == RECON_MINE || this == LAND_MINE || this == FIRE_MINE || this == SHOCK_MINE; }
 

@@ -81,7 +81,14 @@ public class ArmorEvents {
         ItemStack piece = target.getItemBySlot(slot);
         if (!(piece.getItem() instanceof ArmorItem armor)) return; // 那個部位沒穿：不減傷
         float amount = event.getAmount();
-        float reduced = (float) (amount * (1.0 - fullSetReduction(armor.getMaterial(), cfg)));
+        double reduction = fullSetReduction(armor.getMaterial(), cfg);
+        // 強化護甲修復包：該件護甲抗彈係數 +1.5%（不可疊加）
+        if (piece.getTag() != null && piece.getTag().getBoolean(com.provinggrounds.special.SpecialUse.BULLETPROOF_TAG)) {
+            double bonus;
+            try { bonus = cfg.special.armorPlusBulletproofBonus.get(); } catch (IllegalStateException e) { bonus = 0.015; }
+            reduction = Math.min(0.95, reduction + bonus);
+        }
+        float reduced = (float) (amount * (1.0 - reduction));
         if (!cfg.bulletIgnoresVanillaArmor.get()) { // 預設 true：子彈只算防彈率，不吃原版護甲值
             reduced = net.minecraft.world.damagesource.CombatRules.getDamageAfterAbsorb(reduced, armor.getDefense(), armor.getToughness());
         }
