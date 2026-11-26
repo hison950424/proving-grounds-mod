@@ -101,7 +101,18 @@ public final class SpecialUse {
         keepItem = false;
         if (!use(p, type)) return;
         LAST_USE.put(p.getUUID(), now);
-        if (DomGear.isGearStack(stack)) { // 佔點：整場的特殊物品用完不刪，這回合不能再用
+        if (DomGear.isGearStack(stack)) { // 佔點：整場的特殊物品用完不刪，依強度進入冷卻（可用 2 次者兩次用完才進冷卻）
+            if (!keepItem && type.twoUses()) {
+                int left = SpecialItem.usesLeft(stack) - 1;
+                if (left > 0) {
+                    ItemStack rest = stack.copy();
+                    rest.getOrCreateTag().putInt(SpecialItem.USES_TAG, left);
+                    SpecialSlot.set(p, rest);
+                    DomGear.markPartialUsed(p);
+                    p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.5f, 1.6f);
+                    return;
+                }
+            }
             DomGear.afterUse(p, keepItem);
             p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.5f, 1.6f);
             return;
@@ -144,14 +155,17 @@ public final class SpecialUse {
                 Engines.effect(p, SpecialRegistry.CLOAK.get(), t, 0);
             }
             case SPRING_SHOES -> {
+                int usesLeft = SpecialItem.usesLeft(SpecialSlot.get(p));
+                double mult = usesLeft >= 2 ? 0.6 : 0.4; // 可用 2 次：第一次 60%、第二次 40%
                 Vec3 look = p.getLookAngle();
-                double power = s.springPower.get();
-                p.setDeltaMovement(look.x * power, Math.max(0.3, look.y * power + 0.3), look.z * power);
+                double power = s.springPower.get() * mult;
+                double lift = 0.3 * mult;
+                p.setDeltaMovement(look.x * power, Math.max(lift, look.y * power + lift), look.z * power);
                 com.provinggrounds.events.BulletHitEvents.allow(p); // 彈簧鞋：自己的移動
                 p.hurtMarked = true;
                 p.fallDistance = 0;
                 SpecialWorld.noFallFor(p, 100);
-                level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.SLIME_JUMP, SoundSource.PLAYERS, 1f, 1.2f);
+                level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.SLIME_JUMP, SoundSource.PLAYERS, 1f, usesLeft >= 2 ? 1.2f : 1.5f);
             }
             case ENEMY_SCANNER_BASIC, ENEMY_SCANNER -> { // 計畫書 10：無敵人時也可使用，不提示有沒有掃到人
                 ServerPlayer t = GlowManager.randomEnemy(p);

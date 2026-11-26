@@ -123,7 +123,7 @@
   "item.provinggrounds.invis_cloak": "隱形斗篷",
   "item.provinggrounds.invis_cloak.desc": "5 秒隱身、移動速度 +25%；期間不能開箱、不能使用任何物品",
   "item.provinggrounds.spring_shoes": "彈簧鞋",
-  "item.provinggrounds.spring_shoes.desc": "朝面向方向衝刺（任何方向，包含往上）",
+  "item.provinggrounds.spring_shoes.desc": "朝面向方向衝刺（任何方向，包含往上），可用 2 次：第一次 60% 強度、第二次 40% 強度",
   "item.provinggrounds.enemy_scanner_basic": "簡略的敵人偵測器",
   "item.provinggrounds.enemy_scanner_basic.desc": "隨機一名敵人發光並顯示在地圖上（只有你看得到）",
   "item.provinggrounds.enemy_scanner": "敵人偵測器",

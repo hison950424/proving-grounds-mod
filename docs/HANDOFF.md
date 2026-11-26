@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-26（v0.33.1 已發佈；v0.33.2 4 項修正已完成並提交在 `feature/phase1-setup`，網路版本維持 28，待發佈）。
+> 最後更新：2026-11-26（v0.33.2 已發佈，網路版本維持 28，等待使用者於正式客戶端實測 `B1～B8` 回饋）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -16,6 +16,7 @@
   - 開始前：先讀本檔，跑 `git status`、`git log -3` 看上一個 AI 做到哪；有不是自己改的、還沒提交的檔案就先問使用者，不要覆蓋、不要 stash、不要切分支。
   - 結束前：全部提交，並更新本檔的「最後更新」與「進行中／待決定」，讓下一個 AI 接得上。
   - 提交訊息結尾寫實際做事的 AI（例如 Gemini 寫自己的名字），不要冒用別的 AI 的名字。
+- **發佈與驗證節奏（使用者 2026-11-26 新規則）**：連續修改調整期間先改程式與文件，**等使用者決定要發佈時再一次執行 `gradlew build`、開發伺服器開機檢查與 `git commit`**，避免每改一小項就等編譯開服。
 - **發佈**：先問「伺服器和客戶端都關了嗎？」，得到回覆、確認沒有 java 程序，才跑
   `powershell -ExecutionPolicy Bypass -File tools\release.ps1 -Level big|small -NotesFile <說明.md>`（在模組資料夾執行，不要加 `*>&1`）。
   大型計畫書一路做完再發佈一次；小回饋做完就問。版本規則：`docs/VERSIONS.md`（新系統／操作改變／網路版本變 = big；修正與數值 = small）。發佈後傳 `docs/TESTING.md` 給使用者。
@@ -47,13 +48,14 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
-- **v0.33.2 待發佈（蹲下 Hitbox、趴下手感與室內團隊特殊道具精簡，Gemini 實作）**：
+- **v0.33.2 已發佈（蹲下 Hitbox、趴下手感、室內團隊精簡、護甲修復包／殘影／彈簧鞋、佔點冷卻與獨立定價，Gemini 實作，待正式客戶端實測）**：
   1. `core/Hitbox.java`：蹲下時補上 `-0.125f` Y 位移（對齊原版 `PlayerRenderer.getRenderOffset`），修復蹲下 Hitbox 整體偏高。
   2. `ui/ClientMovement.java` + `core/Footsteps.java` + `network/QuietWalkPacket.java` + `core/ProneManager.java`：趴下／倒地爬行時雙端禁止蹲下（`shiftKeyDown = false`）與靜走。
   3. `ui/ClientForgeEvents.java` + `core/ProneManager.java` + `config/PGConfig.java`：移除 0.5x 趴下動畫放慢（動畫時間減半，約 0.55 秒），冷卻預設改鍵名 `prone.cooldown_seconds_v2 = 0.5`（減半）。
   4. `special/DomGear.java` + `special/NewSpecials.java`：團隊模式（佔點選單、團隊死鬥隨機池、團隊死鬥賭徒釣竿掉落）排除 6 種不適合室內作戰的道具（三種重新跳傘、擬態、兩把雷神錘）。
   5. `special/SpecialType.java` + `special/SpecialUse.java` + `special/SpecialConfig.java` + `mixin/ItemStackMixin.java` + `events/ArmorEvents.java` + `ui/ClientForgeEvents.java` + 語系檔：殘影分身改為可用 2 次；護甲修復包新增耐久上限 +25%（不可疊加，`pg_dura_bonus`）；強化護甲修復包改為抗彈係數 +1.5%（不可疊加，`pg_bp_bonus`），並於防具提示顯示強化效果。
-  6. `special/DomGear.java` + `modes/arena/ArenaConfig.java` + `modes/arena/ArenaMode.java` + `client/ClientDomGear.java` + `special/client/SpecialHotbar.java` + `ui/LoadoutScreen.java` + `ui/ShopScreen.java`：佔點模式特殊道具改為依強度冷卻回合（弱 1／中 2／強 3，以 NBT `pg_dom_cd` 同步顯示），並調降商店加價為 51 種道具各自獨立定價（弱 +2%～+8%、中 +8%～+16%、強 +18%～+28%，支援 `item_markup_overrides_v1` 單獨覆寫），網路協定維持 28（small 更新），尚未發佈。
+  6. `special/DomGear.java` + `modes/arena/ArenaConfig.java` + `modes/arena/ArenaMode.java` + `client/ClientDomGear.java` + `special/client/SpecialHotbar.java` + `ui/LoadoutScreen.java` + `ui/ShopScreen.java`：佔點模式特殊道具改為依強度冷卻回合（弱 1／中 2／強 3，以 NBT `pg_dom_cd` 同步顯示），並調降商店加價為 51 種道具各自獨立定價（弱 +2%～+8%、中 +8%～+16%、強 +18%～+28%，支援 `item_markup_overrides_v1` 單獨覆寫），網路協定維持 28（small 更新）。
+  7. `special/SpecialType.java` + `special/SpecialUse.java` + `special/DomGear.java` + 語系檔：彈簧鞋改為可用 2 次（第 1 次 60% 衝刺強度、第 2 次 40% 強度），並讓佔點模式中所有 `twoUses()` 道具可同回合用 2 次；全部已通過 `gradlew build` 與 `gradlew runServer`（0 ERROR），已發佈為 `v0.33.2`。
 - **v0.33.1 已發佈（趴下動畫重製與 Hitbox 全面對齊，Gemini 實作）**：
   1. `mixin/ProneAnimMixin.java`：接管陸地 `PlayerRenderer.setupRotations`（`m_7523_`），將貼地偏移（`Hitbox.PRONE_Y/Z`）移到 `RX(-90°)` 之前並套用 `proneEase` 平滑曲線，徹底消除插進地板問題。
   2. `core/Hitbox.java` 重寫為原版 `Matrix4f` 轉換鏈＋共用 `computeLimbPose()`：修正四肢走路擺動相反、支援 `swimAmount` 平滑過渡插值（`ProneManager` 伺服器端也同步 0.5x 過渡速度）、完整對齊手持物品／使用動作（舉盾／拉弓／弩／望遠鏡／長矛）／攻擊揮手／TACZ 持槍與開鏡（新增 `GunCompat.aimProgress`）／降落傘／陸地趴下爬行與趴下持槍。

@@ -10,7 +10,7 @@ public enum SpecialType {
     BLIND_ORB("blind_orb", "致盲珠", "Blinding Orb", "往前方推出一團 3×3 黑霧（可穿牆），碰到的人致盲 5 秒", 0x202020),
     ADRENALINE("adrenaline", "強心劑", "Stimulant", "使用時自己受到 10 傷害（不會致死）；15 秒內移動速度 +50%（不和拿刀的速度疊加）；期間倒地的話，倒地後前 5 秒可以使用任何物品", 0xE04040),
     INVIS_CLOAK("invis_cloak", "隱形斗篷", "Invisibility Cloak", "5 秒隱身、移動速度 +25%；期間不能開箱、不能使用任何物品", 0x8080C0),
-    SPRING_SHOES("spring_shoes", "彈簧鞋", "Spring Shoes", "朝面向方向衝刺（任何方向，包含往上）", 0x40C040),
+    SPRING_SHOES("spring_shoes", "彈簧鞋", "Spring Shoes", "朝面向方向衝刺（任何方向，包含往上），可用 2 次：第一次 60% 強度、第二次 40% 強度", 0x40C040),
     ENEMY_SCANNER_BASIC("enemy_scanner_basic", "簡略的敵人偵測器", "Basic Enemy Scanner", "隨機一名敵人發光並顯示在地圖上（只有你看得到）", 0x40A0E0),
     ENEMY_SCANNER("enemy_scanner", "敵人偵測器", "Enemy Scanner", "隨機一名敵人發光並顯示在地圖上（只有你看得到）", 0x2080E0),
     ENEMY_SCANNER_PLUS("enemy_scanner_plus", "敵人偵測器加強版", "Enemy Scanner+", "其中一隊的所有敵人發光並顯示在地圖上（你的整隊看得到）", 0x1050C0),
@@ -90,8 +90,8 @@ public enum SpecialType {
 
     public boolean isFakeCrate() { return this == FAKE_CRATE_LOW || this == FAKE_CRATE_MID || this == FAKE_CRATE_HIGH; }
 
-    /** 可以用 2 次（臨時雪牆、殘影分身、所有地雷）。剩餘次數存在物品 NBT pg_uses。 */
-    public boolean twoUses() { return this == SNOW_WALL || this == DECOY || isMine(); }
+    /** 可以用 2 次（臨時雪牆、彈簧鞋、殘影分身、所有地雷）。剩餘次數存在物品 NBT pg_uses。 */
+    public boolean twoUses() { return this == SNOW_WALL || this == SPRING_SHOES || this == DECOY || isMine(); }
 
     public boolean isMine() { return this == RECON_MINE || this == LAND_MINE || this == FIRE_MINE || this == SHOCK_MINE; }
 

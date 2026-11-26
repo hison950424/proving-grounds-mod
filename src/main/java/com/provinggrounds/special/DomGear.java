@@ -278,6 +278,7 @@ public final class DomGear {
     private static final class State {
         SpecialType type;
         int cooldown; // 剩餘冷卻回合數（0 = 可用；使用後設為弱 1／中 2／強 3，每次新回合開始 -1）
+        boolean partialUsed; // 可用 2 次的道具本回合已用 1 次（若回合結束未用第 2 次，下回合仍視為本回合已使用）
     }
 
     private static final Map<UUID, State> STATES = new HashMap<>();
@@ -328,7 +329,12 @@ public final class DomGear {
     public static void newRound(MinecraftServer server) {
         for (Map.Entry<UUID, State> e : STATES.entrySet()) {
             State st = e.getValue();
-            if (st.cooldown > 0) st.cooldown--;
+            if (st.cooldown > 0) {
+                st.cooldown--;
+            } else if (st.partialUsed) {
+                st.cooldown = Math.max(0, cooldownRounds(st.type) - 1);
+            }
+            st.partialUsed = false;
             ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
             if (p != null) refreshSlot(p, st);
         }
@@ -374,10 +380,17 @@ public final class DomGear {
         return null;
     }
 
+    /** 可用 2 次的道具在本回合用掉第 1 次時標記（避免中階地雷每回合只用 1 次規避冷卻）。 */
+    public static void markPartialUsed(ServerPlayer p) {
+        State st = STATES.get(p.getUUID());
+        if (st != null) st.partialUsed = true;
+    }
+
     /** 用掉了（keep = 回溯點第一次使用只記錄位置，不算用掉）。依強度設定冷卻回合（弱 1／中 2／強 3）。 */
     public static void afterUse(ServerPlayer p, boolean keep) {
         State st = STATES.get(p.getUUID());
         if (st == null || keep) return;
+        st.partialUsed = false;
         st.cooldown = cooldownRounds(st.type);
         refreshSlot(p, st);
     }
