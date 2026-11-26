@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-26（v0.33.0 已發佈；趴下動畫重製與四肢／持槍 Hitbox 全面對齊 6 項已完成並提交在 `feature/phase1-setup`，網路版本維持 28，尚未發佈為 v0.33.1）。
+> 最後更新：2026-11-26（v0.33.1 已發佈，網路版本 28，等待使用者於正式客戶端實測 `A1～A6` 回饋）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -47,12 +47,12 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
-- **趴下動畫重製與 Hitbox 全面對齊（待發佈為 v0.33.1，Gemini 實作）**：
+- **v0.33.1 已發佈（趴下動畫重製與 Hitbox 全面對齊，Gemini 實作，待正式客戶端實測）**：
   1. `mixin/ProneAnimMixin.java`：接管陸地 `PlayerRenderer.setupRotations`（`m_7523_`），將貼地偏移（`Hitbox.PRONE_Y/Z`）移到 `RX(-90°)` 之前並套用 `proneEase` 平滑曲線，徹底消除插進地板問題。
   2. `core/Hitbox.java` 重寫為原版 `Matrix4f` 轉換鏈＋共用 `computeLimbPose()`：修正四肢走路擺動相反、支援 `swimAmount` 平滑過渡插值（`ProneManager` 伺服器端也同步 0.5x 過渡速度）、完整對齊手持物品／使用動作（舉盾／拉弓／弩／望遠鏡／長矛）／攻擊揮手／TACZ 持槍與開鏡（新增 `GunCompat.aimProgress`）／降落傘／陸地趴下爬行與趴下持槍。
-  3. `mixin/HumanoidArmsMixin.java`（priority 1500）：陸地趴下時直接套用 `Hitbox.computeLimbPose()`，取代原版水中划水並保證畫面四肢與 Hitbox 100% 一致。
+  3. `mixin/HumanoidArmsMixin.java`（priority 1500）：陸地趴下時直接套用 `Hitbox.computeLimbPose()`，取代原版水中划水動作並保證畫面四肢與 Hitbox 100% 一致。
   4. `ui/ClientForgeEvents.java` + `core/ProneManager.java`：每 tick 與每渲染幀將趴下玩家的 `yBodyRot` 鎖定跟隨視角，消除 45° 轉向延遲。
-  5. 網路版本維持 28（small 更新）；`gradlew build` 與 `gradlew runServer` 已驗證，**尚未在正式客戶端實測**，發佈前先問使用者伺服器和客戶端關了沒。
+  5. 網路版本維持 28；`gradlew build`、`gradlew runServer` 與 `release.ps1 -Level small`（v0.33.1）皆已通過，等待使用者實測 `TESTING.md` 的 `A1～A6`。
 - **v0.33.0 已發佈（計畫書 10＋領域展開實體碰撞，Gemini 實作）**：詳細說明在 `docs/PLAN10.md`。
 - **v0.32.0／v0.32.1 已發佈（計畫書 9＋熱修）**：詳細紀錄在 `docs/PLAN9.md`。
 - **未發佈（下一版 v0.30.2）**：標點不被方塊擋住＋顯示在地圖、致盲珠速度 ×2、閃光盾耐久 50、強心劑自傷不擊退、距離減傷兩段、刀打玻璃要冷卻、墓碑重力、近戰傷害平衡（左鍵 20／右鍵 55）。說明在 `docs/NEXT_RELEASE_NOTES.md`，測試在 `docs/TESTING.md` 最上面 L1～L8。都已提交、建置與開發伺服器通過，還沒實測、還沒發佈（發佈前照規則問伺服器與客戶端關了沒）。
