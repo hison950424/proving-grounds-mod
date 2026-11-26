@@ -1,12 +1,19 @@
 package com.provinggrounds.core;
 
+import com.provinggrounds.compat.GunCompat;
 import com.provinggrounds.config.PGConfig;
+import com.provinggrounds.network.ChuteSyncPacket;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -14,10 +21,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 檔案: Hitbox.java
- * 目的: 精準命中判定（伺服器端；計畫書 10 升級為四肢跟隨動畫移動＋支援趴下姿勢）。
- *   - 每個部位用有向包圍盒（PartBox：樞軸點、相對於樞軸的局部範圍、偏航角 yaw、俯仰角 pitch）表示。
- *   - 走路／跑步／蹲下／揮擊／趴下爬行時，左右手與左右腳都會依原版 walkAnimation / attackAnim 擺動。
- *   - 客戶端的 F3+B 除錯畫框（HitboxDebugRenderer）直接使用同一份 computeParts()，確保看到的框與伺服器判定一致。
+ * 目的: 精準命中判定與姿勢計算中心（伺服器＋客戶端共用同一套數學）。
+ *   - 使用與原版 Minecraft LivingEntityRenderer + PlayerRenderer + ModelPart 完全一致的 Matrix4f 轉換鏈：
+ *     RY(180° - bodyYaw) → 貼地趴下平移與旋轉 → scale(0.9375) → scale(-1, -1, 1) → translate(0, -1.501, 0)
+ *     → 各部位樞軸 translate(x/16, y/16, z/16) → RZ(zRot) * RY(yRot) * RX(xRot)。
+ *   - 走路擺動、蹲下、揮擊、拿原版物品／舉盾／拉弓、拿 TACZ 槍械與開鏡、降落傘舉手、
+ *     以及陸地趴下過渡（0→1 與 1→0）與爬行動畫，全部與客戶端模型渲染 100% 同步。
+ *   - 客戶端 ProneAnimMixin、HumanoidArmsMixin、HitboxDebugRenderer 與伺服器子彈判定全部共用這套算式。
  */
 public final class Hitbox {
 
@@ -26,40 +36,132 @@ public final class Hitbox {
     /** 一像素（玩家模型縮放 0.9375）。 */
     private static final double PX = 0.9375 / 16.0;
 
-    /**
-     * 一個部位的有向包圍盒（單位：格，已乘上 PX 與高度縮放）。
-     * 旋轉順序：先在樞軸 (pivX, pivY, pivZ) 局部空間繞 X 軸轉 pitch，再繞 Y 軸轉 yaw。
-     * slot：對應的防具部位（HEAD / CHEST / LEGS；腿部細分護腿與靴子依命中高度決定）。
-     */
-    public record PartBox(
-        double pivX, double pivY, double pivZ,
-        double minX, double minY, double minZ,
-        double maxX, double maxY, double maxZ,
-        double yawRad, double pitchRad,
-        int kind // 0=左腳, 1=右腳, 2=身體, 3=左手, 4=右手, 5=頭
-    ) {}
+    /** 陸地趴下完全平躺時的貼地偏移（套用在 RX(-90°) 之前，任何過渡幀都不會插進地面）。 */
+    public static final float PRONE_Y = 0.24f;
+    public static final float PRONE_Z = 1.05f;
 
-    /** 某一個時間點的姿勢、位置與四肢動畫狀態。 */
-    private record Snap(
-        double x, double y, double z,
-        float bodyYaw, float headYaw, float headPitch,
-        float height, Pose pose,
-        float walkPos, float walkSpeed, float attackAnim
-    ) {
-        Snap(Player p) {
-            this(p.getX(), p.getY(), p.getZ(), p.yBodyRot, p.yHeadRot, p.getXRot(),
-                p.getBbHeight(), p.getPose(), p.walkAnimation.position(), p.walkAnimation.speed(), p.getAttackAnim(1f));
+    /** 趴下／站起的平滑曲線（smoothstep），過渡柔和且頭尾速度平緩。 */
+    public static float proneEase(float swimAmount) {
+        float t = Mth.clamp(swimAmount, 0.0f, 1.0f);
+        return t * t * (3.0f - 2.0f * t);
+    }
+
+    /** 對應 Minecraft ModelPart 的單一部位樞軸與歐拉角（單位：像素與弧度）。 */
+    public static final class PartTransform {
+        public float x, y, z;
+        public float xRot, yRot, zRot;
+
+        public PartTransform(float x, float y, float z) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
         }
     }
 
-    /** 每位玩家最近 HISTORY_TICKS 個 tick 的位置（伺服器每 tick 記錄）。 */
+    /** 玩家 6 個部位的模型空間姿勢（與 HumanoidModel 欄位一一對應）。 */
+    public static final class LimbPose {
+        public final PartTransform head     = new PartTransform(0.0f, 0.0f, 0.0f);
+        public final PartTransform body     = new PartTransform(0.0f, 0.0f, 0.0f);
+        public final PartTransform rightArm = new PartTransform(-5.0f, 2.0f, 0.0f);
+        public final PartTransform leftArm  = new PartTransform(5.0f, 2.0f, 0.0f);
+        public final PartTransform rightLeg = new PartTransform(-1.9f, 12.0f, 0.0f);
+        public final PartTransform leftLeg  = new PartTransform(1.9f, 12.0f, 0.0f);
+    }
+
+    /** 計算姿勢所需的全部輸入參數（純資料，伺服器與客戶端皆可用）。 */
+    public record PoseInput(
+        boolean crouching,
+        boolean inWater,
+        float swimAmount,
+        float netHeadYawDeg,
+        float headPitchDeg,
+        float walkPos,
+        float walkSpeed,
+        float attackAnim,
+        boolean rightHanded,
+        boolean holdsGun,
+        float gunAimProgress,
+        boolean mainHasItem,
+        boolean offHasItem,
+        UseAnim mainUseAnim,
+        UseAnim offUseAnim,
+        boolean chuteOpen
+    ) {
+        public static PoseInput fromPlayer(Player p, float pt, float bodyYawDeg, float headYawDeg, float headPitchDeg) {
+            boolean holdsGun = GunCompat.holdsGun(p);
+            float aim = holdsGun ? GunCompat.aimProgress(p) : 0.0f;
+            UseAnim mainUse = (p.isUsingItem() && p.getUsedItemHand() == InteractionHand.MAIN_HAND)
+                ? p.getUseItem().getUseAnimation() : UseAnim.NONE;
+            UseAnim offUse = (p.isUsingItem() && p.getUsedItemHand() == InteractionHand.OFF_HAND)
+                ? p.getUseItem().getUseAnimation() : UseAnim.NONE;
+            return new PoseInput(
+                p.isCrouching(),
+                p.isInWater(),
+                p.getSwimAmount(pt),
+                Mth.wrapDegrees(headYawDeg - bodyYawDeg),
+                headPitchDeg,
+                p.walkAnimation.position(pt),
+                p.walkAnimation.speed(pt),
+                p.getAttackAnim(pt),
+                p.getMainArm() == HumanoidArm.RIGHT,
+                holdsGun,
+                aim,
+                !p.getMainHandItem().isEmpty(),
+                !p.getOffhandItem().isEmpty(),
+                mainUse,
+                offUse,
+                ChuteSyncPacket.isOpen(p.getId())
+            );
+        }
+    }
+
+    /**
+     * 一個部位的有向包圍盒：
+     * partToEntity 把部位局部方塊座標（像素 / 16）轉換到以玩家腳底為原點的世界偏移座標。
+     * kind：0=左腳, 1=右腳, 2=身體, 3=左手, 4=右手, 5=頭。
+     */
+    public record PartBox(
+        Matrix4f partToEntity,
+        float minX, float minY, float minZ,
+        float maxX, float maxY, float maxZ,
+        int kind
+    ) {}
+
+    /** 某一個時間點的完整玩家快照（伺服器每 tick 記錄）。 */
+    private record Snap(
+        double x, double y, double z,
+        float bodyYaw,
+        Pose pose,
+        PoseInput input
+    ) {
+        static Snap capture(Player p) {
+            float bodyYaw = p.yBodyRot;
+            float headYaw = p.yHeadRot;
+            if (!p.isInWater() && (p.getPose() == Pose.SWIMMING || ProneManager.isProne(p.getUUID()))) {
+                bodyYaw = p.getYRot();
+                headYaw = p.getYRot();
+            }
+            return new Snap(
+                p.getX(), p.getY(), p.getZ(),
+                bodyYaw,
+                p.getPose(),
+                PoseInput.fromPlayer(p, 1.0f, bodyYaw, headYaw, p.getXRot())
+            );
+        }
+    }
+
+    /** 每位玩家最近 HISTORY_TICKS 個 tick 的狀態（伺服器每 tick 記錄）。 */
     private static final Map<UUID, Deque<Snap>> HISTORY = new ConcurrentHashMap<>();
     private static final int HISTORY_TICKS = 12;
 
-    /** 每 tick 記錄一次（SpecialEvents.onPlayerTick）。 */
+    /** 每 tick 記錄一次（WorldEvents / SpecialEvents 呼叫），順便同步陸地趴下者的身體轉向。 */
     public static void record(Player p) {
+        if (!p.isInWater() && !p.isFallFlying() && (p.getPose() == Pose.SWIMMING || ProneManager.isProne(p.getUUID()))) {
+            p.yBodyRot = p.getYRot();
+            p.yBodyRotO = p.yRotO;
+        }
         Deque<Snap> d = HISTORY.computeIfAbsent(p.getUUID(), k -> new ArrayDeque<>());
-        d.addFirst(new Snap(p));
+        d.addFirst(Snap.capture(p));
         while (d.size() > HISTORY_TICKS) d.removeLast();
     }
 
@@ -67,75 +169,261 @@ public final class Hitbox {
 
     public static double pixel() { return PX; }
 
-    public static double heightScale(float bbHeight) { return bbHeight / (32 * PX); }
-
     /**
-     * 計算玩家 6 個部位（左腳、右腳、身體、左手、右手、頭）的動畫有向包圍盒。
-     * 伺服器與客戶端 F3+B 共用這套算式。
+     * 計算玩家 6 個部位在原版模型空間中的姿勢（與 HumanoidModel.setupAnim + TACZ + 陸地趴下完全一致）。
+     * HumanoidArmsMixin（客戶端渲染）與 Hitbox.computeParts（命中判定與 F3+B）共用此函式。
      */
-    public static List<PartBox> computeParts(Pose pose, float bbHeight, float bodyYawDeg, float headYawDeg, float headPitchDeg,
-                                             float walkPos, float walkSpeed, float attackAnim) {
-        double bodyYaw = Math.toRadians(bodyYawDeg);
-        double headYaw = Math.toRadians(headYawDeg);
-        double headPitch = Math.toRadians(Mth.clamp(headPitchDeg, -85f, 85f));
-        float spd = Math.min(1.0f, walkSpeed);
+    public static LimbPose computeLimbPose(PoseInput in) {
+        LimbPose p = new LimbPose();
+        float degToRad = (float) Math.PI / 180.0f;
+        float headYawRad = in.netHeadYawDeg() * degToRad;
+        float headPitchRad = Mth.clamp(in.headPitchDeg(), -89.0f, 89.0f) * degToRad;
+        float spd = Math.min(1.0f, Math.max(0.0f, in.walkSpeed()));
 
-        if (pose == Pose.SWIMMING) {
-            // 趴下／游泳姿勢：全身水平朝向 bodyYaw 趴在地面上（頭在前 +z、軀幹居中、兩腿在後 -z），爬行時四肢微幅擺動
-            double crawlArm = Math.cos(walkPos * 0.6662) * 0.35 * spd;
-            double crawlLeg = Math.cos(walkPos * 0.6662) * 0.25 * spd;
-            double cy = 0.24; // 趴下中心高度約 0.24 格（貼地）
-            double p90 = Math.PI / 2.0; // 平躺基準（+y 轉到 +z 前方）
-            List<PartBox> out = new ArrayList<>(6);
-            // 0 左腳（從骨盆往後伸）
-            out.add(new PartBox(-2 * PX, cy, -5 * PX, -2 * PX, -12 * PX, -2 * PX, 2 * PX, 0, 2 * PX, bodyYaw, p90 + crawlLeg, 0));
-            // 1 右腳
-            out.add(new PartBox(2 * PX, cy, -5 * PX, -2 * PX, -12 * PX, -2 * PX, 2 * PX, 0, 2 * PX, bodyYaw, p90 - crawlLeg, 1));
-            // 2 身體（居中平躺）
-            out.add(new PartBox(0, cy, -5 * PX, -4 * PX, 0, -2 * PX, 4 * PX, 12 * PX, 2 * PX, bodyYaw, p90, 2));
-            // 3 左手（從肩膀往前／旁伸）
-            out.add(new PartBox(-6 * PX, cy, 5 * PX, -2 * PX, -12 * PX, -2 * PX, 2 * PX, 0, 2 * PX, bodyYaw, p90 - crawlArm, 3));
-            // 4 右手
-            out.add(new PartBox(6 * PX, cy, 5 * PX, -2 * PX, -12 * PX, -2 * PX, 2 * PX, 0, 2 * PX, bodyYaw, p90 + crawlArm, 4));
-            // 5 頭（在身體最前方）
-            double hPitch = Math.toRadians(Mth.clamp(headPitchDeg * 0.5f, -45f, 45f));
-            out.add(new PartBox(0, cy + 0.04, 7 * PX, -4 * PX, -4 * PX, 0, 4 * PX, 4 * PX, 8 * PX, headYaw, hPitch, 5));
-            return out;
+        // 1. 頭部朝向
+        p.head.yRot = headYawRad;
+        p.head.xRot = headPitchRad;
+
+        // 2. 原版走路四肢擺動（與 HumanoidModel.setupAnim 100% 相同）
+        p.rightArm.xRot = Mth.cos(in.walkPos() * 0.6662f + (float) Math.PI) * 2.0f * spd * 0.5f;
+        p.leftArm.xRot  = Mth.cos(in.walkPos() * 0.6662f) * 2.0f * spd * 0.5f;
+        p.rightLeg.xRot = Mth.cos(in.walkPos() * 0.6662f) * 1.4f * spd;
+        p.leftLeg.xRot  = Mth.cos(in.walkPos() * 0.6662f + (float) Math.PI) * 1.4f * spd;
+
+        // 3. 原版手持物品／使用物品姿勢（未持槍時套用）
+        boolean crouchActive = in.crouching() && in.swimAmount() < 0.01f;
+        if (!in.holdsGun()) {
+            PartTransform mainArm = in.rightHanded() ? p.rightArm : p.leftArm;
+            PartTransform offArm  = in.rightHanded() ? p.leftArm  : p.rightArm;
+            boolean mainIsRight = in.rightHanded();
+            boolean offIsRight  = !in.rightHanded();
+
+            // 副手先套用，再套用主手（雙手動作如拉弓／弩由主動手覆蓋）
+            applyItemArmPose(offArm, mainArm, p.head, offIsRight, in.offHasItem(), in.offUseAnim(), crouchActive);
+            applyItemArmPose(mainArm, offArm, p.head, mainIsRight, in.mainHasItem(), in.mainUseAnim(), crouchActive);
         }
 
-        boolean crouch = pose == Pose.CROUCHING;
-        double hs = crouch ? (bbHeight / (28.0 * PX)) : heightScale(bbHeight);
-        // 原版 HumanoidModel 擺動角度（弧度）：walkPos * 0.6662
-        double rightLegSwing = Math.cos(walkPos * 0.6662) * 1.4 * spd;
-        double leftLegSwing  = Math.cos(walkPos * 0.6662 + Math.PI) * 1.4 * spd;
-        double rightArmSwing = Math.cos(walkPos * 0.6662 + Math.PI) * 1.0 * spd;
-        double leftArmSwing  = Math.cos(walkPos * 0.6662) * 1.0 * spd;
-        if (attackAnim > 0.01f) {
-            rightArmSwing += Math.sin(attackAnim * Math.PI) * 1.3; // 揮拳／揮刀時右手往前舉
+        // 4. 原版攻擊揮手動畫（未持槍時套用）
+        if (!in.holdsGun() && in.attackAnim() > 0.001f) {
+            applyAttackAnimation(p, in.attackAnim(), in.rightHanded());
         }
-        // 在我們的局部空間中：+y 向上、+z 向前；手臂／腿從樞軸往下伸（minY < 0），所以 pitch = -swing 讓末端往前擺
-        double hipY = (crouch ? 10.5 : 12.0) * PX * hs;
-        double hipZ = crouch ? -3.0 * PX : 0.0;
-        double shoulderY = (crouch ? 20.5 : 22.0) * PX * hs;
-        double shoulderZ = crouch ? 1.0 * PX : 0.0;
-        double neckY = (crouch ? 21.5 : 24.0) * PX * hs;
-        double neckZ = crouch ? 1.5 * PX : 0.0;
-        double torsoPitch = crouch ? 0.45 : 0.0; // 蹲下時軀幹前傾
+
+        // 5. 原版蹲下姿勢（未進入趴下時）
+        if (crouchActive) {
+            p.body.xRot = 0.5f;
+            p.rightArm.xRot += 0.4f;
+            p.leftArm.xRot += 0.4f;
+            p.rightLeg.z = 4.0f;
+            p.leftLeg.z = 4.0f;
+            p.rightLeg.y = 12.2f;
+            p.leftLeg.y = 12.2f;
+            p.head.y = 4.2f;
+            p.body.y = 3.2f;
+            p.leftArm.y = 5.2f;
+            p.rightArm.y = 5.2f;
+        }
+
+        // 6. TACZ 第三人稱持槍／開鏡姿勢（與 ThirdPersonManager$1 完全一致，套用在蹲下之後）
+        if (in.holdsGun() && !in.chuteOpen()) {
+            float aim = Mth.clamp(in.gunAimProgress(), 0.0f, 1.0f);
+            float yOff = Mth.lerp(aim, 0.3f, 0.35f);
+            float xOff = Mth.lerp(aim, 1.4f, 1.6f);
+            p.rightArm.yRot = -yOff + p.head.yRot;
+            p.leftArm.yRot  =  0.8f + p.head.yRot;
+            p.rightArm.xRot = -xOff + p.head.xRot;
+            p.leftArm.xRot  = -xOff + p.head.xRot;
+            p.rightArm.zRot = 0.0f;
+            p.leftArm.zRot  = 0.0f;
+        }
+
+        // 7. 降落傘舉手
+        if (in.chuteOpen()) {
+            p.rightArm.xRot = (float) Math.PI + 0.15f;
+            p.leftArm.xRot  = (float) Math.PI + 0.15f;
+            p.rightArm.yRot = 0.0f;
+            p.leftArm.yRot  = 0.0f;
+            p.rightArm.zRot = 0.35f;
+            p.leftArm.zRot  = -0.35f;
+        }
+
+        // 8. 陸地趴下過渡與爬行動畫（e = 0 站立 → e = 1 完全趴下，過渡期間平滑插值，絕不瞬切）
+        if (!in.inWater() && in.swimAmount() > 0.0001f) {
+            float e = proneEase(in.swimAmount());
+            float phase = in.walkPos() * 0.6662f;
+
+            // 頭：平躺時抬頭朝前看（不低頭插地），並隨上下視角微幅俯仰
+            float proneHeadX = Mth.clamp(-1.15f + headPitchRad * 0.45f, -1.55f, -0.35f);
+            p.head.xRot = Mth.lerp(e, p.head.xRot, proneHeadX);
+            p.head.yRot = Mth.lerp(e, p.head.yRot, headYawRad * 0.5f);
+            p.head.zRot = 0.0f;
+            p.head.y = Mth.lerp(e, p.head.y, 0.0f);
+
+            // 軀幹：平直貼地
+            p.body.xRot = Mth.lerp(e, p.body.xRot, 0.0f);
+            p.body.yRot = Mth.lerp(e, p.body.yRot, 0.0f);
+            p.body.zRot = 0.0f;
+            p.body.y = Mth.lerp(e, p.body.y, 0.0f);
+
+            // 雙腿：自然微外八貼地，爬行時雙腳交替微抬蹬地（不往下插進地板）
+            float legKickR = 0.12f + Math.max(0.0f, Mth.cos(phase)) * 0.32f * spd;
+            float legKickL = 0.12f + Math.max(0.0f, Mth.cos(phase + (float) Math.PI)) * 0.32f * spd;
+            p.rightLeg.xRot = Mth.lerp(e, p.rightLeg.xRot, legKickR);
+            p.leftLeg.xRot  = Mth.lerp(e, p.leftLeg.xRot, legKickL);
+            p.rightLeg.yRot = Mth.lerp(e, p.rightLeg.yRot, 0.0f);
+            p.leftLeg.yRot  = Mth.lerp(e, p.leftLeg.yRot, 0.0f);
+            p.rightLeg.zRot = Mth.lerp(e, p.rightLeg.zRot,  0.14f);
+            p.leftLeg.zRot  = Mth.lerp(e, p.leftLeg.zRot, -0.14f);
+            p.rightLeg.y = Mth.lerp(e, p.rightLeg.y, 12.0f);
+            p.leftLeg.y  = Mth.lerp(e, p.leftLeg.y, 12.0f);
+            p.rightLeg.z = Mth.lerp(e, p.rightLeg.z, 0.0f);
+            p.leftLeg.z  = Mth.lerp(e, p.leftLeg.z, 0.0f);
+
+            // 雙手樞軸回到標準肩位
+            p.rightArm.x = Mth.lerp(e, p.rightArm.x, -5.0f);
+            p.rightArm.y = Mth.lerp(e, p.rightArm.y,  2.0f);
+            p.rightArm.z = Mth.lerp(e, p.rightArm.z,  0.0f);
+            p.leftArm.x  = Mth.lerp(e, p.leftArm.x,   5.0f);
+            p.leftArm.y  = Mth.lerp(e, p.leftArm.y,   2.0f);
+            p.leftArm.z  = Mth.lerp(e, p.leftArm.z,   0.0f);
+
+            if (!in.chuteOpen()) {
+                if (in.holdsGun()) {
+                    // 趴下持槍：整個趴下／站起過程槍口持續朝前瞄準，雙手內收托槍
+                    float aim = Mth.clamp(in.gunAimProgress(), 0.0f, 1.0f);
+                    float gunPitch = Mth.clamp(headPitchRad * 0.55f, -0.50f, 0.30f);
+                    float proneGunX = -(float) Math.PI - Mth.lerp(aim, 0.16f, 0.24f) + gunPitch;
+                    p.rightArm.xRot = Mth.lerp(e, p.rightArm.xRot, proneGunX);
+                    p.leftArm.xRot  = Mth.lerp(e, p.leftArm.xRot, proneGunX);
+                    p.rightArm.yRot = Mth.lerp(e, p.rightArm.yRot, 0.0f);
+                    p.leftArm.yRot  = Mth.lerp(e, p.leftArm.yRot, 0.0f);
+                    p.rightArm.zRot = Mth.lerp(e, p.rightArm.zRot,  0.22f);
+                    p.leftArm.zRot  = Mth.lerp(e, p.leftArm.zRot, -0.52f);
+                } else {
+                    // 趴下未持槍：雙手往前撐地，移動時呈低姿匍匐交替划動
+                    float crawlR = Mth.cos(phase + (float) Math.PI) * 0.45f * spd;
+                    float crawlL = Mth.cos(phase) * 0.45f * spd;
+                    float armRX = -2.96f - Math.abs(crawlR) * 0.28f;
+                    float armLX = -2.96f - Math.abs(crawlL) * 0.28f;
+                    float armRZ = -0.22f - crawlR * 0.50f;
+                    float armLZ =  0.22f + crawlL * 0.50f;
+                    p.rightArm.xRot = Mth.lerp(e, p.rightArm.xRot, armRX);
+                    p.leftArm.xRot  = Mth.lerp(e, p.leftArm.xRot, armLX);
+                    p.rightArm.yRot = Mth.lerp(e, p.rightArm.yRot, 0.0f);
+                    p.leftArm.yRot  = Mth.lerp(e, p.leftArm.yRot, 0.0f);
+                    p.rightArm.zRot = Mth.lerp(e, p.rightArm.zRot, armRZ);
+                    p.leftArm.zRot  = Mth.lerp(e, p.leftArm.zRot, armLZ);
+                }
+            }
+        }
+
+        return p;
+    }
+
+    private static void applyItemArmPose(PartTransform arm, PartTransform otherArm, PartTransform head,
+                                         boolean isRight, boolean hasItem, UseAnim use, boolean crouch) {
+        if (use == UseAnim.BLOCK) {
+            arm.xRot = arm.xRot * 0.5f - 0.9424779f;
+            arm.yRot = isRight ? -0.5235988f : 0.5235988f;
+        } else if (use == UseAnim.BOW) {
+            arm.yRot = (isRight ? -0.1f : 0.1f) + head.yRot;
+            otherArm.yRot = (isRight ? 0.5f : -0.5f) + head.yRot;
+            arm.xRot = -((float) Math.PI / 2.0f) + head.xRot;
+            otherArm.xRot = -((float) Math.PI / 2.0f) + head.xRot;
+        } else if (use == UseAnim.CROSSBOW) {
+            arm.yRot = (isRight ? -0.3f : 0.3f) + head.yRot;
+            otherArm.yRot = (isRight ? 0.6f : -0.6f) + head.yRot;
+            arm.xRot = -((float) Math.PI / 2.0f) + head.xRot + 0.1f;
+            otherArm.xRot = -1.5f + head.xRot;
+        } else if (use == UseAnim.SPYGLASS) {
+            arm.xRot = Mth.clamp(head.xRot - 1.9198622f - (crouch ? 0.2617994f : 0.0f), -2.4f, 3.3f);
+            arm.yRot = head.yRot + (isRight ? -0.2617994f : 0.2617994f);
+        } else if (use == UseAnim.SPEAR) {
+            arm.xRot = arm.xRot * 0.5f - (float) Math.PI;
+            arm.yRot = 0.0f;
+        } else if (hasItem) {
+            arm.xRot = arm.xRot * 0.5f - ((float) Math.PI / 10.0f);
+            arm.yRot = 0.0f;
+        }
+    }
+
+    private static void applyAttackAnimation(LimbPose p, float attackAnim, boolean rightHanded) {
+        float f = 1.0f - attackAnim;
+        f = f * f;
+        f = f * f;
+        f = 1.0f - f;
+        float f1 = Mth.sin(f * (float) Math.PI);
+        float f2 = Mth.sin(attackAnim * (float) Math.PI) * -(p.head.xRot - 0.7f) * 0.75f;
+
+        p.body.yRot = Mth.sin(Mth.sqrt(attackAnim) * ((float) Math.PI * 2.0f)) * 0.2f;
+        if (!rightHanded) p.body.yRot *= -1.0f;
+
+        p.rightArm.z = Mth.sin(p.body.yRot) * 5.0f;
+        p.rightArm.x = -Mth.cos(p.body.yRot) * 5.0f;
+        p.leftArm.z  = -Mth.sin(p.body.yRot) * 5.0f;
+        p.leftArm.x  = Mth.cos(p.body.yRot) * 5.0f;
+        p.rightArm.yRot += p.body.yRot;
+        p.leftArm.yRot  += p.body.yRot;
+        p.leftArm.xRot  += p.body.yRot;
+
+        PartTransform main = rightHanded ? p.rightArm : p.leftArm;
+        main.xRot -= f1 * 1.2f + f2;
+        main.yRot += p.body.yRot * 2.0f;
+        main.zRot += Mth.sin(attackAnim * (float) Math.PI) * -0.4f;
+    }
+
+    /** 依玩家當下狀態計算 6 個部位的精準動畫有向包圍盒（客戶端 F3+B 直接呼叫）。 */
+    public static List<PartBox> computeParts(Player p, float pt) {
+        float bodyYaw = Mth.rotLerp(pt, p.yBodyRotO, p.yBodyRot);
+        float headYaw = Mth.rotLerp(pt, p.yHeadRotO, p.yHeadRot);
+        float headPitch = Mth.lerp(pt, p.xRotO, p.getXRot());
+        PoseInput in = PoseInput.fromPlayer(p, pt, bodyYaw, headYaw, headPitch);
+        return computeParts(bodyYaw, in);
+    }
+
+    /** 依指定的 bodyYaw 與 PoseInput 計算 6 個部位的有向包圍盒（伺服器與客戶端共用）。 */
+    public static List<PartBox> computeParts(float bodyYawDeg, PoseInput in) {
+        LimbPose pose = computeLimbPose(in);
+
+        // 與 LivingEntityRenderer.render + PlayerRenderer.setupRotations / ProneAnimMixin 完全相同的變換矩陣
+        Matrix4f root = new Matrix4f();
+        root.rotateY((float) Math.toRadians(180.0f - bodyYawDeg));
+        if (!in.inWater() && in.swimAmount() > 0.0001f) {
+            float e = proneEase(in.swimAmount());
+            root.translate(0.0f, PRONE_Y * e, PRONE_Z * e);
+            root.rotateX((float) Math.toRadians(-90.0f * e));
+        } else if (in.inWater() && in.swimAmount() > 0.0001f) {
+            float f3 = -90.0f - in.headPitchDeg();
+            float f4 = Mth.lerp(in.swimAmount(), 0.0f, f3);
+            root.rotateX((float) Math.toRadians(f4));
+            root.translate(0.0f, -1.0f, 0.3f);
+        }
+        root.scale(0.9375f, 0.9375f, 0.9375f);
+        root.scale(-1.0f, -1.0f, 1.0f);
+        root.translate(0.0f, -1.501f, 0.0f);
 
         List<PartBox> out = new ArrayList<>(6);
-        // 0 左腳（樞軸在髖關節，往下 12 像素）
-        out.add(new PartBox(-2 * PX, hipY, hipZ, -2 * PX, -12 * PX * hs, -2 * PX, 2 * PX, 0, 2 * PX, bodyYaw, -leftLegSwing, 0));
-        // 1 右腳
-        out.add(new PartBox(2 * PX, hipY, hipZ, -2 * PX, -12 * PX * hs, -2 * PX, 2 * PX, 0, 2 * PX, bodyYaw, -rightLegSwing, 1));
-        // 2 身體（樞軸在腰部，往上 12 像素）
-        out.add(new PartBox(0, hipY, hipZ, -4 * PX, 0, -2 * PX, 4 * PX, 12 * PX * hs, 2 * PX, bodyYaw, torsoPitch, 2));
-        // 3 左手（樞軸在左肩，往上 2 像素、往下 10 像素）
-        out.add(new PartBox(-6 * PX, shoulderY, shoulderZ, -2 * PX, -10 * PX * hs, -2 * PX, 2 * PX, 2 * PX * hs, 2 * PX, bodyYaw, -leftArmSwing + (crouch ? 0.25 : 0), 3));
-        // 4 右手
-        out.add(new PartBox(6 * PX, shoulderY, shoulderZ, -2 * PX, -10 * PX * hs, -2 * PX, 2 * PX, 2 * PX * hs, 2 * PX, bodyYaw, -rightArmSwing + (crouch ? 0.25 : 0), 4));
-        // 5 頭（樞軸在脖子，往上 8 像素，跟隨 headYaw 與 headPitch）
-        out.add(new PartBox(0, neckY, neckZ, -4 * PX, 0, -4 * PX, 4 * PX, 8 * PX * hs, 4 * PX, headYaw, headPitch, 5));
+        // 標準 Minecraft PlayerModel 像素方盒（單位：像素 / 16）
+        out.add(buildPart(root, pose.leftLeg,  -2f,  0f, -2f,  2f, 12f, 2f, 0));
+        out.add(buildPart(root, pose.rightLeg, -2f,  0f, -2f,  2f, 12f, 2f, 1));
+        out.add(buildPart(root, pose.body,     -4f,  0f, -2f,  4f, 12f, 2f, 2));
+        out.add(buildPart(root, pose.leftArm,  -1f, -2f, -2f,  3f, 10f, 2f, 3));
+        out.add(buildPart(root, pose.rightArm, -3f, -2f, -2f,  1f, 10f, 2f, 4));
+        out.add(buildPart(root, pose.head,     -4f, -8f, -4f,  4f,  0f, 4f, 5));
         return out;
+    }
+
+    private static PartBox buildPart(Matrix4f root, PartTransform pt,
+                                     float minXpx, float minYpx, float minZpx,
+                                     float maxXpx, float maxYpx, float maxZpx, int kind) {
+        Matrix4f m = new Matrix4f(root);
+        m.translate(pt.x / 16.0f, pt.y / 16.0f, pt.z / 16.0f);
+        if (pt.zRot != 0.0f) m.rotateZ(pt.zRot);
+        if (pt.yRot != 0.0f) m.rotateY(pt.yRot);
+        if (pt.xRot != 0.0f) m.rotateX(pt.xRot);
+        return new PartBox(m,
+            minXpx / 16.0f, minYpx / 16.0f, minZpx / 16.0f,
+            maxXpx / 16.0f, maxYpx / 16.0f, maxZpx / 16.0f,
+            kind);
     }
 
     /** 子彈路線（a → b）有沒有打到人物模型。 */
@@ -149,7 +437,7 @@ public final class Hitbox {
             return true;
         }
         if (p.isPassenger() || p.isFallFlying() || p.isSleeping()) return true;
-        if (check(new Snap(p), a, b, tol)) return true;
+        if (check(Snap.capture(p), a, b, tol)) return true;
         Deque<Snap> hist = HISTORY.get(p.getUUID());
         if (hist != null) for (Snap s : hist) if (check(s, a, b, tol)) return true;
         return false;
@@ -157,30 +445,32 @@ public final class Hitbox {
 
     private static boolean check(Snap s, Vec3 a, Vec3 b, double tol) {
         Pose pose = s.pose();
-        if (pose != Pose.STANDING && pose != Pose.CROUCHING) return true; // 趴下／游泳：原版碰撞箱已極小，避免誤漏判定
-        List<PartBox> parts = computeParts(pose, s.height(), s.bodyYaw(), s.headYaw(), s.headPitch(), s.walkPos(), s.walkSpeed(), s.attackAnim());
+        if (pose != Pose.STANDING && pose != Pose.CROUCHING && pose != Pose.SWIMMING) return true;
+        // 趴下過半後原版碰撞箱已縮成 0.6×0.6 貼地小框，避免誤漏判定
+        if (s.input().swimAmount() > 0.5f) return true;
+        List<PartBox> parts = computeParts(s.bodyYaw(), s.input());
         for (PartBox part : parts) {
             if (segmentEntry(a, b, s.x(), s.y(), s.z(), part, tol) != null) return true;
         }
         return false;
     }
 
-    /** 子彈打到哪個防具部位（頭盔／胸甲／護腿／靴子）。支援站立、蹲下與趴下姿勢。 */
+    /** 子彈打到哪個防具部位（頭盔／胸甲／護腿／靴子）。支援站立、蹲下、趴下與所有過渡狀態。 */
     @Nullable
     public static EquipmentSlot armorSlotHit(Entity target, Vec3 a, Vec3 b) {
         if (!(target instanceof Player p) || p.isPassenger() || p.isFallFlying() || p.isSleeping()) return null;
         double tol;
         try { tol = PGConfig.SERVER.hitboxTolerance.get(); } catch (IllegalStateException e) { tol = 0.06; }
         List<Snap> snaps = new ArrayList<>();
-        snaps.add(new Snap(p));
+        snaps.add(Snap.capture(p));
         Deque<Snap> hist = HISTORY.get(p.getUUID());
         if (hist != null) snaps.addAll(hist);
         for (Snap s : snaps) {
             Pose pose = s.pose();
             if (pose != Pose.STANDING && pose != Pose.CROUCHING && pose != Pose.SWIMMING) return null;
-            List<PartBox> parts = computeParts(pose, s.height(), s.bodyYaw(), s.headYaw(), s.headPitch(), s.walkPos(), s.walkSpeed(), s.attackAnim());
+            List<PartBox> parts = computeParts(s.bodyYaw(), s.input());
             PartBox best = null;
-            double bestT = 2, bestLocalY = 0;
+            double bestT = 2.0, bestLocalY = 0.0;
             for (PartBox part : parts) {
                 double[] hit = segmentEntry(a, b, s.x(), s.y(), s.z(), part, tol);
                 if (hit != null && hit[0] < bestT) { bestT = hit[0]; bestLocalY = hit[1]; best = part; }
@@ -188,63 +478,42 @@ public final class Hitbox {
             if (best == null) continue;
             if (best.kind() == 5) return EquipmentSlot.HEAD;
             if (best.kind() >= 2) return EquipmentSlot.CHEST;
-            // 腿的局部 y 是 [-12*PX, 0]：下 1/3（< -8*PX）算靴子，其餘算護腿
-            return bestLocalY < best.minY() + (best.maxY() - best.minY()) * 0.34 ? EquipmentSlot.FEET : EquipmentSlot.LEGS;
+            // 原版模型空間中 +Y 向下：腿部 y ∈ [0, 12/16]，下 1/3（> 8/16）算靴子，其餘算護腿
+            return bestLocalY > best.minY() + (best.maxY() - best.minY()) * 0.66 ? EquipmentSlot.FEET : EquipmentSlot.LEGS;
         }
         return null;
     }
 
-    /** 把世界點轉進 PartBox 的局部座標（繞 Y 轉 -yaw、減樞軸、繞 X 轉 -pitch），回傳 {進入點 t, 局部 y}。 */
+    /** 把世界線段 (a → b) 用反矩陣轉進 PartBox 的局部模型空間做 AABB 相交，回傳 {進入點 t, 局部 y}。 */
     @Nullable
     private static double[] segmentEntry(Vec3 a, Vec3 b, double ox, double oy, double oz, PartBox p, double tol) {
-        double[] la = worldToPart(a, ox, oy, oz, p);
-        double[] lb = worldToPart(b, ox, oy, oz, p);
-        double[] lo = { p.minX() - tol, p.minY() - tol, p.minZ() - tol };
-        double[] hi = { p.maxX() + tol, p.maxY() + tol, p.maxZ() + tol };
-        double t0 = 0, t1 = 1;
+        Matrix4f inv = new Matrix4f(p.partToEntity()).invert();
+        Vector3f la = inv.transformPosition((float) (a.x - ox), (float) (a.y - oy), (float) (a.z - oz), new Vector3f());
+        Vector3f lb = inv.transformPosition((float) (b.x - ox), (float) (b.y - oy), (float) (b.z - oz), new Vector3f());
+        float ltol = (float) (tol / 0.9375);
+        double[] pa = { la.x, la.y, la.z };
+        double[] pb = { lb.x, lb.y, lb.z };
+        double[] lo = { p.minX() - ltol, p.minY() - ltol, p.minZ() - ltol };
+        double[] hi = { p.maxX() + ltol, p.maxY() + ltol, p.maxZ() + ltol };
+        double t0 = 0.0, t1 = 1.0;
         for (int i = 0; i < 3; i++) {
-            double d = lb[i] - la[i];
+            double d = pb[i] - pa[i];
             if (Math.abs(d) < 1e-9) {
-                if (la[i] < lo[i] || la[i] > hi[i]) return null;
+                if (pa[i] < lo[i] || pa[i] > hi[i]) return null;
                 continue;
             }
-            double u = (lo[i] - la[i]) / d, v = (hi[i] - la[i]) / d;
-            if (u > v) { double t = u; u = v; v = t; }
+            double u = (lo[i] - pa[i]) / d, v = (hi[i] - pa[i]) / d;
+            if (u > v) { double tmp = u; u = v; v = tmp; }
             t0 = Math.max(t0, u);
             t1 = Math.min(t1, v);
             if (t0 > t1) return null;
         }
-        return new double[] { t0, la[1] + (lb[1] - la[1]) * t0 };
+        return new double[] { t0, pa[1] + (pb[1] - pa[1]) * t0 };
     }
 
-    /** 世界座標 → 部位樞軸局部座標。 */
-    private static double[] worldToPart(Vec3 w, double ox, double oy, double oz, PartBox p) {
-        double dx = w.x - ox, dy = w.y - oy, dz = w.z - oz;
-        double cy = Math.cos(p.yawRad()), sy = Math.sin(p.yawRad());
-        // 玩家局部座標：right = (-cos, -sin), fwd = (-sin, cos)
-        double rx = -dx * cy - dz * sy - p.pivX();
-        double ry = dy - p.pivY();
-        double rz = -dx * sy + dz * cy - p.pivZ();
-        // 逆向繞 X 軸轉 (-pitch)
-        double cp = Math.cos(p.pitchRad()), sp = Math.sin(p.pitchRad());
-        double py = ry * cp + rz * sp;
-        double pz = -ry * sp + rz * cp;
-        return new double[] { rx, py, pz };
-    }
-
-    /** 部位樞軸局部點 (lx, ly, lz) → 相對於 (ox, oy, oz) 的世界偏移座標（HitboxDebugRenderer 畫框用）。 */
-    public static double[] partToWorld(double ox, double oy, double oz, PartBox p, double lx, double ly, double lz) {
-        // 繞 X 軸轉 +pitch
-        double cp = Math.cos(p.pitchRad()), sp = Math.sin(p.pitchRad());
-        double ry = ly * cp - lz * sp + p.pivY();
-        double rz = ly * sp + lz * cp + p.pivZ();
-        double rx = lx + p.pivX();
-        // 繞 Y 軸轉回世界座標（right = (-cos, -sin), fwd = (-sin, cos)）
-        double cy = Math.cos(p.yawRad()), sy = Math.sin(p.yawRad());
-        return new double[] {
-            ox + rx * -cy + rz * -sy,
-            oy + ry,
-            oz + rx * -sy + rz * cy
-        };
+    /** 部位局部點 (lx, ly, lz) → 相對於 (ox, oy, oz) 的世界偏移座標（HitboxDebugRenderer 畫框用）。 */
+    public static double[] partToWorld(double ox, double oy, double oz, PartBox p, float lx, float ly, float lz) {
+        Vector3f v = p.partToEntity().transformPosition(lx, ly, lz, new Vector3f());
+        return new double[] { ox + v.x, oy + v.y, oz + v.z };
     }
 }

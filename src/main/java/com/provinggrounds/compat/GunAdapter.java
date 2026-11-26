@@ -118,5 +118,8 @@ public interface GunAdapter {
 
     /** 註冊「真的開了一槍」的通知（沒被取消才算；兩端都會觸發）。@return 是否成功掛上 */
     default boolean registerShootListener(java.util.function.Consumer<LivingEntity> listener) { return false; }
+
+    /** 實體目前的開鏡進度（0 = 腰射、1 = 完全開鏡；兩端都可呼叫）。 */
+    default float aimProgress(LivingEntity entity) { return 0f; }
 }
 

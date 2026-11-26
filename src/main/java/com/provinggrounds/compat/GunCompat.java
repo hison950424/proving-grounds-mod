@@ -94,6 +94,11 @@ public final class GunCompat {
         return classify(e.getMainHandItem()) != GunClass.NONE;
     }
 
+    /** 實體目前的開鏡進度（0 = 腰射、1 = 完全開鏡；沒有槍械模組時一律 0）。 */
+    public static float aimProgress(net.minecraft.world.entity.LivingEntity e) {
+        return active == null ? 0f : active.aimProgress(e);
+    }
+
     public static void init() {
 
         if (ModList.get().isLoaded("tacz")) {

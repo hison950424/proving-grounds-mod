@@ -572,6 +572,29 @@ public class TaczGunAdapter implements GunAdapter {
         }
     }
 
+    private static Method fromLivingEntity, getSynAimingProgress;
+    private static boolean aimApiReady, aimApiFailed;
+
+    @Override
+    public float aimProgress(LivingEntity entity) {
+        if (entity == null || aimApiFailed) return 0f;
+        try {
+            if (!aimApiReady) {
+                Class<?> op = Class.forName("com.tacz.guns.api.entity.IGunOperator");
+                fromLivingEntity = op.getMethod("fromLivingEntity", LivingEntity.class);
+                getSynAimingProgress = op.getMethod("getSynAimingProgress");
+                aimApiReady = true;
+            }
+            Object operator = fromLivingEntity.invoke(null, entity);
+            if (operator == null) return 0f;
+            Object val = getSynAimingProgress.invoke(operator);
+            return val instanceof Number n ? n.floatValue() : 0f;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            aimApiFailed = true;
+            return 0f;
+        }
+    }
+
     private static Method findShooterGetter(Class<?> type) {
 
         try {

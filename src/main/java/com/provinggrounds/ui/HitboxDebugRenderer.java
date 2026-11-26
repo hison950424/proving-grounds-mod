@@ -21,9 +21,9 @@ import java.util.List;
 
 /**
  * 檔案: HitboxDebugRenderer.java
- * 目的: 管理員按 F3＋B 時，繪製精準命中判定的實際動畫部位框（只在客戶端；計畫書 10 升級）：
- *   - 頭（紅色）跟隨頭的偏航與俯仰角轉動；身體與四肢（黃色）跟隨走路、跑步、蹲下、攻擊與爬行動畫擺動。
- *   - 修復趴下（Pose.SWIMMING）時不顯示 hitbox 的問題：趴下時也會繪製平躺的 6 個部位框。
+ * 目的: 管理員按 F3＋B 時，繪製精準命中判定的實際動畫部位框（只在客戶端）：
+ *   - 頭（紅色）與身體／四肢（黃色）直接使用 Hitbox.computeParts(player, partialTick)，
+ *     完整跟隨走路擺動、蹲下、拿物品／舉盾／拉弓、拿 TACZ 槍械／開鏡、趴下過渡插值與趴下爬行動畫。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
 public final class HitboxDebugRenderer {
@@ -50,20 +50,13 @@ public final class HitboxDebugRenderer {
         Matrix4f m = ps.last().pose();
         for (Player p : mc.level.players()) {
             if (p == mc.player && mc.options.getCameraType().isFirstPerson()) continue;
-            if (p.isSpectator() || p.isPassenger() || p.isFallFlying()) continue;
+            if (p.isSpectator() || p.isPassenger() || p.isFallFlying() || p.isSleeping()) continue;
             Pose pose = p.getPose();
-            // 計畫書 10：同時支援站立、蹲下、以及趴下（SWIMMING）的 F3+B 部位判定框
-            if (pose != Pose.STANDING && pose != Pose.CROUCHING && pose != Pose.SWIMMING) continue;
+            if (pose != Pose.STANDING && pose != Pose.CROUCHING && pose != Pose.SWIMMING && p.getSwimAmount(pt) <= 0.0001f) continue;
             double x = Mth.lerp(pt, p.xo, p.getX()) - cam.x;
             double y = Mth.lerp(pt, p.yo, p.getY()) - cam.y;
             double z = Mth.lerp(pt, p.zo, p.getZ()) - cam.z;
-            float bodyYaw = Mth.rotLerp(pt, p.yBodyRotO, p.yBodyRot);
-            float headYaw = Mth.rotLerp(pt, p.yHeadRotO, p.yHeadRot);
-            float headPitch = Mth.lerp(pt, p.xRotO, p.getXRot());
-            float walkPos = p.walkAnimation.position(pt);
-            float walkSpeed = p.walkAnimation.speed(pt);
-            float attackAnim = p.getAttackAnim(pt);
-            List<Hitbox.PartBox> parts = Hitbox.computeParts(pose, p.getBbHeight(), bodyYaw, headYaw, headPitch, walkPos, walkSpeed, attackAnim);
+            List<Hitbox.PartBox> parts = Hitbox.computeParts(p, pt);
             for (Hitbox.PartBox part : parts) {
                 drawPart(lines, m, x, y, z, part, part.kind() == 5 ? 0xFF4040 : 0xFFE040);
             }
@@ -74,9 +67,9 @@ public final class HitboxDebugRenderer {
     private static void drawPart(VertexConsumer vc, Matrix4f m, double ox, double oy, double oz, Hitbox.PartBox p, int rgb) {
         double[][] c = new double[8][];
         int k = 0;
-        for (double lx : new double[] { p.minX(), p.maxX() }) {
-            for (double ly : new double[] { p.minY(), p.maxY() }) {
-                for (double lz : new double[] { p.minZ(), p.maxZ() }) {
+        for (float lx : new float[] { p.minX(), p.maxX() }) {
+            for (float ly : new float[] { p.minY(), p.maxY() }) {
+                for (float lz : new float[] { p.minZ(), p.maxZ() }) {
                     c[k++] = Hitbox.partToWorld(ox, oy, oz, p, lx, ly, lz);
                 }
             }

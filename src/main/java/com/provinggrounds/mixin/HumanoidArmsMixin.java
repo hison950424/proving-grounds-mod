@@ -1,9 +1,15 @@
 package com.provinggrounds.mixin;
 
-import com.provinggrounds.item.ParachuteItem;
+import com.provinggrounds.compat.GunCompat;
+import com.provinggrounds.core.Hitbox;
+import com.provinggrounds.network.ChuteSyncPacket;
 import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.UseAnim;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -11,28 +17,79 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * 檔案: HumanoidArmsMixin.java
- * 目的: 降落傘打開時雙手舉高抓住傘繩（只在客戶端）。原版每一幀算好人物姿勢（setupAnim）之後，
- *   如果這個玩家手上拿著打開的降落傘，就把兩隻手臂改成舉過頭頂、稍微往外張。
- *   玩家模型的袖子（第二層皮膚）會在這之後照手臂的角度複製，所以袖子也會跟著舉起來。
- *   方法名稱同時寫開發環境名稱與 SRG 名稱（setupAnim = m_6973_），不需要 refmap。
+ * 目的: 玩家四肢動畫覆寫（只在客戶端，priority = 1500 確保在原版與 TACZ 第三人稱持槍之後執行）：
+ *   1. 陸地趴下過渡與爬行動畫（swimAmount > 0 且不在水中）：取代原版在水裡的蛙式划水動作，
+ *      直接套用 Hitbox.computeLimbPose() 算出的平滑姿勢（含趴下持槍瞄準、趴下低姿匍匐），
+ *      讓畫面上的四肢、第二層皮膚（袖子／褲管）與伺服器／F3+B 的 Hitbox 100% 同步。
+ *   2. 降落傘打開時雙手舉高抓住傘繩。
  */
-@Mixin(HumanoidModel.class)
+@Mixin(value = HumanoidModel.class, priority = 1500)
 public abstract class HumanoidArmsMixin {
 
     @Inject(method = {
         "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V",
         "m_6973_(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V"
     }, at = @At("TAIL"), remap = false)
-    private void provinggrounds$parachuteArms(LivingEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks,
-                                              float netHeadYaw, float headPitch, CallbackInfo ci) {
-        if (!(entity instanceof Player p) || !com.provinggrounds.network.ChuteSyncPacket.isOpen(p.getId())) return; // 開傘中（計畫書 6 D4）
+    private void provinggrounds$customPose(LivingEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks,
+                                           float netHeadYaw, float headPitch, CallbackInfo ci) {
+        if (!(entity instanceof Player p)) return;
         HumanoidModel<?> m = (HumanoidModel<?>) (Object) this;
-        float sway = (float) Math.sin(ageInTicks * 0.08f) * 0.05f; // 輕微晃動
+        boolean chuteOpen = ChuteSyncPacket.isOpen(p.getId());
+
+        // 陸地趴下／站起過渡與爬行：直接使用與 Hitbox 相同的算式，徹底消除原版划水與 Hitbox 偏差
+        if (!p.isInWater() && !p.isFallFlying() && !p.isSleeping() && m.swimAmount > 0.0001f) {
+            boolean holdsGun = GunCompat.holdsGun(p);
+            float aim = holdsGun ? GunCompat.aimProgress(p) : 0.0f;
+            UseAnim mainUse = (p.isUsingItem() && p.getUsedItemHand() == InteractionHand.MAIN_HAND)
+                ? p.getUseItem().getUseAnimation() : UseAnim.NONE;
+            UseAnim offUse = (p.isUsingItem() && p.getUsedItemHand() == InteractionHand.OFF_HAND)
+                ? p.getUseItem().getUseAnimation() : UseAnim.NONE;
+
+            Hitbox.PoseInput input = new Hitbox.PoseInput(
+                m.crouching,
+                false,
+                m.swimAmount,
+                netHeadYaw,
+                headPitch,
+                limbSwing,
+                limbSwingAmount,
+                m.attackTime,
+                p.getMainArm() == HumanoidArm.RIGHT,
+                holdsGun,
+                aim,
+                !p.getMainHandItem().isEmpty(),
+                !p.getOffhandItem().isEmpty(),
+                mainUse,
+                offUse,
+                chuteOpen
+            );
+            Hitbox.LimbPose pose = Hitbox.computeLimbPose(input);
+            copyToPart(pose.head, m.head);
+            copyToPart(pose.body, m.body);
+            copyToPart(pose.rightArm, m.rightArm);
+            copyToPart(pose.leftArm, m.leftArm);
+            copyToPart(pose.rightLeg, m.rightLeg);
+            copyToPart(pose.leftLeg, m.leftLeg);
+            return;
+        }
+
+        // 開傘中：雙手舉高抓傘繩（帶輕微風吹晃動）
+        if (!chuteOpen) return;
+        float sway = (float) Math.sin(ageInTicks * 0.08f) * 0.05f;
         m.rightArm.xRot = (float) Math.PI + 0.15f + sway;
         m.leftArm.xRot = (float) Math.PI + 0.15f - sway;
         m.rightArm.yRot = 0f;
         m.leftArm.yRot = 0f;
         m.rightArm.zRot = 0.35f;
         m.leftArm.zRot = -0.35f;
+    }
+
+    private static void copyToPart(Hitbox.PartTransform src, ModelPart dst) {
+        dst.x = src.x;
+        dst.y = src.y;
+        dst.z = src.z;
+        dst.xRot = src.xRot;
+        dst.yRot = src.yRot;
+        dst.zRot = src.zRot;
     }
 }
