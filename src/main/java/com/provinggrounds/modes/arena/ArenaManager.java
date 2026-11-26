@@ -133,11 +133,11 @@ public final class ArenaManager {
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onAttack(net.minecraftforge.event.entity.living.LivingAttackEvent event) {
         if (current == null || !(event.getEntity() instanceof ServerPlayer victim)) return;
-        if (current.isProtected(victim.getUUID()) && !event.getSource().is(net.minecraft.world.damagesource.DamageTypes.FELL_OUT_OF_WORLD)) {
+        if ((current.loadoutOpen() || current.isProtected(victim.getUUID())) && !event.getSource().is(net.minecraft.world.damagesource.DamageTypes.FELL_OUT_OF_WORLD)) {
             event.setCanceled(true);
             return;
         }
-        if (event.getSource().getEntity() instanceof ServerPlayer attacker && current.isProtected(attacker.getUUID())) event.setCanceled(true);
+        if (event.getSource().getEntity() instanceof ServerPlayer attacker && (current.loadoutOpen() || current.isProtected(attacker.getUUID()))) event.setCanceled(true);
     }
 
     /** 管理員強制結束、或重置：立刻還原（finish 會呼叫 GameManager.reset）。 */

@@ -79,7 +79,7 @@ public final class HudLayout {
         KILL_ICON("擊殺圖示", 2, Pivot.CENTER, (w, h) -> new Box(w / 2 - 36, h / 2 + 12, 72, 20)),
         INTERACT("互動提示", 2, Pivot.TOP_CENTER, (w, h) -> new Box(w / 2 - 40, h / 2 + 11, 80, 10)),
         TITLE("上方標題", 2, Pivot.TOP_CENTER, (w, h) -> new Box(w / 2 - 100, 58, 200, 22)),
-        SPECIAL("特殊物品格", 2, Pivot.BOTTOM_CENTER, (w, h) -> new Box(w / 2 + 99, h - 32, 22, 32)),
+        SPECIAL("特殊道具格", 2, Pivot.BOTTOM_CENTER, (w, h) -> new Box(w / 2 + 99, h - 32, 22, 32)),
         /** 原版藥水效果圖示（右上角；計畫書 6 B4）。 */
         EFFECTS("藥水效果圖示", 2, Pivot.TOP_RIGHT, (w, h) -> new Box(w - 126, 0, 126, 52)),
         /** 打開箱子時的背包與箱子位置（計畫書 7 A4；不能縮放、不能隱藏）。預設：背包在左、箱子在右。 */

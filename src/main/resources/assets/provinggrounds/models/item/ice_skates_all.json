@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "provinggrounds:item/ice_skates_all"
+  }
+}

@@ -65,7 +65,8 @@ public final class LobbyManager {
         SET_GAME_MODE,      // 管理員：選模式（arg = GameManager.GameMode 的順序）
         SET_TDM_KILLS, SET_TDM_MINUTES, SET_DOM_SCORE, SET_GK_MULTIPLIER, // 管理員：對戰設定（arg = 新的值）
         SET_CIRCLE_HOLD,    // 管理員：自訂縮圈的決賽圈停留秒數（計畫書 7 B）
-        SET_ARENA_DOWNED    // 管理員：團隊模式倒地開（arg 1）／關（arg 0）（計畫書 7 E）
+        SET_ARENA_DOWNED,   // 管理員：團隊模式倒地開（arg 1）／關（arg 0）（計畫書 7 E）
+        SET_FRIENDLY_FIRE   // 管理員：所有模式的友軍誤傷開（arg 1）／關（arg 0）（只限槍械子彈；投擲物與爆炸物強制有友傷）
     }
 
     public static final String SPECTATOR_TAG = "pg_spectator";
@@ -90,6 +91,13 @@ public final class LobbyManager {
     /** 團隊死鬥／佔點／槍王之王的設定（沒調過就用伺服器設定的預設值）。 */
     /** 團隊模式倒地開關（計畫書 7 E；null = 用設定檔的預設值）。 */
     @Nullable private Boolean arenaDowned;
+    /** 所有模式的友軍誤傷開關（計畫書 9；null = 用設定檔的預設值）。只影響槍械子彈，投擲物與爆炸物永遠有友傷。 */
+    @Nullable private Boolean friendlyFire;
+
+    public boolean friendlyFire() {
+        if (friendlyFire != null) return friendlyFire;
+        try { return PGConfig.SERVER.friendlyFireDefault.get(); } catch (IllegalStateException e) { return false; }
+    }
 
     public com.provinggrounds.modes.arena.ArenaManager.Settings arenaSettings() {
         var c = PGConfig.SERVER.arena;
@@ -134,6 +142,10 @@ public final class LobbyManager {
 
     public com.provinggrounds.modes.arena.ArenaClass chosenClass(UUID id) {
         return classChoice.getOrDefault(id, com.provinggrounds.modes.arena.ArenaClass.FREELANCER);
+    }
+
+    public void rememberClass(UUID id, com.provinggrounds.modes.arena.ArenaClass cls) {
+        classChoice.put(id, cls);
     }
 
     /** 團隊死鬥、佔點：固定紅藍兩隊，沒有孤狼（計畫書 6 A1）。 */
@@ -371,6 +383,7 @@ public final class LobbyManager {
             case SET_DOM_SCORE -> domScore = Math.max(100, Math.min(100_000, arg));
             case SET_GK_MULTIPLIER -> gkMultiplier = Math.max(1, Math.min(20, arg));
             case SET_ARENA_DOWNED -> arenaDowned = arg != 0;
+            case SET_FRIENDLY_FIRE -> friendlyFire = arg != 0;
             case SET_TEAM_MODE -> {
                 TeamMode[] all = TeamMode.values();
                 if (arg < 0 || arg >= all.length) return false;
@@ -559,7 +572,7 @@ public final class LobbyManager {
         }
         return new LobbyStatePacket(GameManager.get().isInLobby(), map, preset.ordinal(), variant.ordinal(),
             teamMode.ordinal(), teamCount, countdownTicks < 0 ? -1 : (countdownTicks + 19) / 20,
-            com.provinggrounds.special.SpecialConfig.enabledSafe(), com.provinggrounds.core.BlockProtection.explosionMode(), weaponMode.ordinal(),
+            com.provinggrounds.special.SpecialConfig.enabledSafe(), friendlyFire(), com.provinggrounds.core.BlockProtection.explosionMode(), weaponMode.ordinal(),
             gameMode.ordinal(), arenaSettings(), customCircle(preset, mapRadius(server, map)), players);
     }
 }

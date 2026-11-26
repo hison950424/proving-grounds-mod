@@ -29,10 +29,19 @@ import java.lang.reflect.Method;
 public final class ClientGunAim {
 
     private static boolean ready, failed, wasDrawing;
-    private static Method fromLiving, getDrawCoolDown, fromLocal, isAim, aim;
+    private static Method fromLiving, getDrawCoolDown, fromLocal, isAim, aim, shoot;
     private static KeyMapping aimKey;
 
     private ClientGunAim() {}
+
+    /** 走火詛咒（計畫書 9）：客戶端強制開火（透過 TACZ 客戶端操作介面反射呼叫，不在 compat/ 以外引用 TACZ）。 */
+    public static void forceShoot(LocalPlayer p) {
+        if (p == null || !init() || shoot == null) return;
+        try {
+            Object cop = fromLocal.invoke(null, p);
+            if (cop != null) shoot.invoke(cop);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {}
+    }
 
     private static boolean init() {
         if (ready) return true;
@@ -45,6 +54,7 @@ public final class ClientGunAim {
             fromLocal = cop.getMethod("fromLocalPlayer", LocalPlayer.class);
             isAim = cop.getMethod("isAim");
             aim = cop.getMethod("aim", boolean.class);
+            shoot = cop.getMethod("shoot");
             aimKey = (KeyMapping) Class.forName("com.tacz.guns.client.input.AimKey").getField("AIM_KEY").get(null);
             ready = true;
             return true;

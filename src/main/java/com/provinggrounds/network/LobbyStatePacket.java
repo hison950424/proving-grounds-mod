@@ -17,7 +17,8 @@ import java.util.function.Supplier;
 public record LobbyStatePacket(
     boolean inLobby, int mapId, int presetOrdinal, int variantOrdinal,
     int teamModeOrdinal, int teamCount, int countdownSeconds,
-    boolean special, // 特殊物品模式
+    boolean special, // 特殊道具模式
+    boolean friendlyFire, // 所有模式的友軍誤傷（只影響槍械子彈）
     int blockDamage, // 大逃殺：炸毀方塊（0 關、1 全部、2 只有槍械、3 只有投擲物）
     int weaponModeOrdinal, // 槍械模式（WeaponMode）
     int gameModeOrdinal, // 大廳選的模式（GameManager.GameMode）
@@ -39,6 +40,7 @@ public record LobbyStatePacket(
         buf.writeVarInt(teamCount);
         buf.writeVarInt(countdownSeconds);
         buf.writeBoolean(special);
+        buf.writeBoolean(friendlyFire);
         buf.writeVarInt(blockDamage);
         buf.writeVarInt(weaponModeOrdinal);
         buf.writeVarInt(gameModeOrdinal);
@@ -64,6 +66,7 @@ public record LobbyStatePacket(
         int map = buf.readVarInt(), preset = buf.readVarInt(), variant = buf.readVarInt();
         int teamMode = buf.readVarInt(), teamCount = buf.readVarInt(), countdown = buf.readVarInt();
         boolean special = buf.readBoolean();
+        boolean friendlyFire = buf.readBoolean();
         int blockDamage = buf.readVarInt();
         int weapon = buf.readVarInt();
         int gameMode = buf.readVarInt();
@@ -79,7 +82,7 @@ public record LobbyStatePacket(
             int cls = buf.readVarInt();
             players.add(new Entry(id, name, team, (f & 1) != 0, (f & 2) != 0, (f & 4) != 0, (f & 8) != 0, cls));
         }
-        return new LobbyStatePacket(inLobby, map, preset, variant, teamMode, teamCount, countdown, special, blockDamage, weapon, gameMode, arena, customCircle, players);
+        return new LobbyStatePacket(inLobby, map, preset, variant, teamMode, teamCount, countdown, special, friendlyFire, blockDamage, weapon, gameMode, arena, customCircle, players);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {

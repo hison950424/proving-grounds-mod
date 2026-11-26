@@ -39,6 +39,14 @@ public final class DamageIndicator {
 
     private DamageIndicator() {}
 
+    /** 被害妄想症（計畫書 9）：注入假的受擊方向指示器。 */
+    public static void addFakeHit(Vec3 from) {
+        synchronized (HITS) {
+            HITS.add(new Hit(from, System.currentTimeMillis(), false));
+            while (HITS.size() > MAX_HITS) HITS.remove(0);
+        }
+    }
+
     /** 每個客戶端 tick 檢查有沒有新的受傷（原版每次受傷都會換一個新的 DamageSource 物件）。 */
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {

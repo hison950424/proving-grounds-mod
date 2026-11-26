@@ -54,10 +54,23 @@ public final class Footsteps {
         SoundType st = state.getSoundType(p.level(), pos, p);
         float[] m = material(st);
         float vol = (float) (st.getVolume() * 0.15f * mode * (1 + (m[0] - 1) * contrast));
+        // 刺客：走路聲音降低 50%（伺服器端與客戶端自己都套用）
+        if (isAssassin(p)) vol *= 0.5f;
         float pitch = (float) (st.getPitch() * (1 + (m[1] - 1) * contrast));
         if (vol <= 0.001f) return true;
         p.playSound(st.getStepSound(), vol, pitch);
         return true;
+    }
+
+    private static boolean isAssassin(Player p) {
+        if (!p.level().isClientSide) {
+            return p instanceof net.minecraft.server.level.ServerPlayer sp
+                && com.provinggrounds.modes.arena.ClassCombatEvents.isClass(sp, com.provinggrounds.modes.arena.ArenaClass.ASSASSIN);
+        }
+        return p.isLocalPlayer()
+            && com.provinggrounds.client.ClientArenaState.active()
+            && com.provinggrounds.client.ClientArenaState.get().classes()
+            && com.provinggrounds.client.ClientArenaState.get().classOrdinal() == com.provinggrounds.modes.arena.ArenaClass.ASSASSIN.ordinal();
     }
 
     /** 材質的 {音量倍率, 音調倍率}。 */

@@ -97,14 +97,14 @@ public final class SpecialWorld {
     }
 
     public static void addSnowTrail(ServerPlayer p) {
-        Snowball ball = new Snowball(p.level(), p);
-        ball.shootFromRotation(p, p.getXRot(), p.getYRot(), 0, 1.5f, 0.5f);
-        p.level().addFreshEntity(ball);
-        SnowTrail t = new SnowTrail();
-        t.ball = ball;
-        t.start = ball.position();
-        SNOW.add(t);
+        SpecialProjectile.throwFrom(p, SpecialType.SNOW_WALL, 1.5f);
         p.serverLevel().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.SNOWBALL_THROW, SoundSource.PLAYERS, 1f, 0.8f);
+    }
+
+    /** 臨時雪牆投擲物飛過一格時呼叫：0.5 秒後在該格地面升起雪牆。 */
+    public static void recordSnowColumn(ServerLevel level, int x, int z, double ballY) {
+        long now = level.getServer().getTickCount();
+        COLUMNS.add(new SnowColumn(level, x, z, ballY, now + 10));
     }
 
     private static final String ANCHOR_TAG = "pg_special_anchor";
@@ -130,6 +130,7 @@ public final class SpecialWorld {
         tickGas(server, now);
         tickSnow(server, now);
         NewSpecials.tick(server);
+        Plan9Specials.tick(server);
         if (now % 20 == 0) {
             NO_FALL.values().removeIf(t -> t < now);
             for (ServerLevel l : server.getAllLevels()) expireSnow(l);
@@ -311,6 +312,7 @@ public final class SpecialWorld {
         KnockbackShield.restoreAll(server);
         SpecialUse.reset();
         NewSpecials.cleanup(server);
+        Plan9Specials.cleanup(server);
         for (ServerLevel level : server.getAllLevels()) {
             Ledger l = Ledger.getIfLoaded(level);
             if (l != null) {
@@ -336,7 +338,9 @@ public final class SpecialWorld {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             for (var eff : List.of(SpecialRegistry.CONCUSSION, SpecialRegistry.CLOAK, SpecialRegistry.ADRENALINE, SpecialRegistry.SILENT,
                     SpecialRegistry.SHIELD_BUBBLE, SpecialRegistry.BUBBLE_SPEED, SpecialRegistry.ZONE_SHELTER, SpecialRegistry.GASSED,
-                    SpecialRegistry.TOTEM_HELD)) {
+                    SpecialRegistry.TOTEM_HELD, SpecialRegistry.BRAINWASH, SpecialRegistry.ROOTED,
+                    SpecialRegistry.FRIEND_OR_FOE, SpecialRegistry.PARANOIA, SpecialRegistry.MISFIRE, SpecialRegistry.ICE_SKATES,
+                    SpecialRegistry.HUD_JAM, SpecialRegistry.OVERHEAT, SpecialRegistry.ETHEREAL, SpecialRegistry.MIMIC)) {
                 p.removeEffect(eff.get());
             }
             Totem.remove(p);

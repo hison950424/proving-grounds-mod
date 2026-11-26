@@ -65,8 +65,8 @@ public final class HotbarRules {
     public static final String MSG_BACKPACK_HAVE = "已經裝著同等級或更高級的背包";
 
     private static final String MSG_DROPPED = "放不下的物品已掉在腳邊";
-    public static final String MSG_SPECIAL_FULL = "特殊物品欄已經有物品（在箱子裡 Shift＋左鍵可以互換）";
-    private static final String MSG_SPECIAL_ONLY = "特殊物品只能放在特殊物品欄（背包欄上方）";
+    public static final String MSG_SPECIAL_FULL = "特殊道具欄已經有物品（在箱子裡 Shift＋左鍵可以互換）";
+    private static final String MSG_SPECIAL_ONLY = "特殊道具只能放在特殊道具欄（背包欄上方）";
 
     private static final Map<UUID, Long> lastMessage = new HashMap<>();
 
@@ -364,7 +364,7 @@ public final class HotbarRules {
                         if (slot.mayPlace(old)) {
                             com.provinggrounds.special.SpecialSlot.set(p, stack.copy());
                             slot.set(old);
-                            message(p, "已替換特殊物品（原本的放回箱子）");
+                            message(p, "已替換特殊道具（原本的放回箱子）");
                             return true;
                         }
                     }

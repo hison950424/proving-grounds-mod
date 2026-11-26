@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-26（v0.30.1 已發佈；v0.30.2 的修改與佔點特殊物品裝備（計畫書 8）都已提交、還沒發佈）。
+> 最後更新：2026-11-26（v0.30.1 已發佈；v0.30.2、計畫書 8、計畫書 9 都已提交在 `feature/phase1-setup`，尚未發佈）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -43,6 +43,7 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
+- **計畫書 9（`docs/PLAN9.md`）已完成、已提交、未發佈**：友軍誤傷開關（全模式、僅限槍彈／近戰；爆炸與投擲物強制自傷＋友軍傷害）、標點修復（`AFTER_TRANSLUCENT_BLOCKS` 修正準星方向、略過玩家標記方塊、音量 -75%）、倒地移速 ×2（`speed_penalty_v3 = 0.4`）、團隊倒地扶起 5.5 秒無復活牌、商店減法（7 類 × 5 把 = 35 把槍＋108 相容配件，`tools/curate_shop.py`，同頁分類可裝配件）、9 職業重製＋開局 10 秒自動彈出選角／道具介面（`LoadoutScreen`，取消局內換職）、全面改名「特殊道具」、回溯點 20 秒、定身球 4.5 格、球類反彈 1 次＋落地觸發、火焰鑽頭穿牆 7 格、團隊死鬥 3 殺／連死 3 次給道具、新增 17 種特殊道具（總計 62 種，核心在 `Plan9Specials.java`／`ClientPlan9Specials.java`／4 個新 Mixin）。網路版本 27。`gradlew build` 與 `gradlew runServer`（0 ERROR）皆已通過，**尚未在正式客戶端與多人實測**，發佈前先問使用者伺服器和客戶端關了沒。
 - **未發佈（下一版 v0.30.2）**：標點不被方塊擋住＋顯示在地圖、致盲珠速度 ×2、閃光盾耐久 50、強心劑自傷不擊退、距離減傷兩段、刀打玻璃要冷卻、墓碑重力、近戰傷害平衡（左鍵 20／右鍵 55）。說明在 `docs/NEXT_RELEASE_NOTES.md`，測試在 `docs/TESTING.md` 最上面 L1～L8。都已提交、建置與開發伺服器通過，還沒實測、還沒發佈（發佈前照規則問伺服器與客戶端關了沒）。
 - **佔點特殊物品裝備（計畫書 8）已完成、未發佈**（eab405c）：佔點移除職業、自選三個（冷卻制）、商店一次性特殊物品、長按 5 特殊物品輪盤、佔點投擲物改長按 6、每回合冷卻歸零。強度表與做法在 `docs/PLAN8_DOM_SPECIALS.md` 最後；核心在 `special/DomGear.java`；網路版本 25。測試 D1～D11 在 `docs/TESTING.md` 最上面。建置與開發伺服器通過，**還沒在真正客戶端實測**。使用者說不確定怎麼設計比較好玩，設計是 Claude 決定的，回饋後可能要調。
 - 這個對話（「電腦4.0」）做過的重點：計畫書 7 全部（v0.29.0）、標點（X，近戰改 Y）、防彈只算被打中部位（`mixin/ArmorAbsorbMixin`＋`events/ArmorEvents`，防彈率已減半）、一行匯入地圖（`/pg map import auto`）、移除跑酷方塊（`events/LegacyCleanup` 清排行榜）、子彈穿透方塊（改伺服器與客戶端 `tacz/immersive_ballistic/data/tacz/tags/blocks/bullet_ignore.json`，原檔備份 `C:\mcdatapackackupsullet_ignore_20261125`）、隊友一律藍色（`ui/ClientTeamColors`）、刀子距離 1.75（`events/MeleeReach`）、下拉選單（`ui/Dropdown`）。

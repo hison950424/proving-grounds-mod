@@ -56,15 +56,15 @@ public final class NewSpecials {
     // ── 數值 ─────────────────────────────────────────────────────────────────
     static final double BRAINWASH_RADIUS = 25;
     public static final int BRAINWASH_TICKS = 15 * 20;
-    public static final double ROOT_RADIUS = 2.5;
+    public static final double ROOT_RADIUS = 4.5;      // 計畫書 9：原本 2.5，半徑增加 2 格
     public static final int ROOT_TICKS = 3 * 20;
     public static final int DRILL_FLY_TICKS = 10 * 20;
     public static final int DRILL_STUCK_TICKS = 7 * 20;
-    public static final double DRILL_DEPTH = 4.5;       // 從撞到的方塊表面往後算（含方塊本身那 1 格，後面約 4 格）
+    public static final double DRILL_DEPTH = 4.5;       // 從穿透後的對面出口往後算
     public static final double DRILL_HALF_WIDTH = 2.0;  // 扇形最寬處的一半（寬 4 格）
     public static final float DRILL_BURN_DPS = 5f;
     public static final int DRILL_BURN_TICKS = 3 * 20;
-    static final int RECALL_TICKS = 60 * 20;
+    static final int RECALL_TICKS = 20 * 20;            // 計畫書 9：原本 60 秒改為 20 秒
     static final double AIM_RANGE = 100;                // 占位：雷神錘、跳傘指定器的準心最遠距離
     static final double THOR_RADIUS = 20;              // 計畫書 7 C2：5 → 20
     static final float THOR_DAMAGE = 8f;                // 占位：雷神錘每道雷的傷害
@@ -185,11 +185,11 @@ public final class NewSpecials {
         }
     }
 
-    /** 鑽頭黏住時的火焰粒子：從方塊後面往後噴。 */
+    /** 鑽頭穿透到對面時的火焰粒子：從對面出口往後噴成扇形。 */
     public static void drillParticles(ServerLevel level, Vec3 surface, Vec3 dir) {
         var r = level.getRandom();
-        for (int i = 0; i < 4; i++) {
-            double d = 1 + r.nextDouble() * (DRILL_DEPTH - 1);
+        for (int i = 0; i < 6; i++) {
+            double d = 0.2 + r.nextDouble() * (DRILL_DEPTH - 0.2);
             double w = Math.min(DRILL_HALF_WIDTH, 0.6 + d * 0.45);
             Vec3 jitter = new Vec3(r.nextGaussian(), r.nextGaussian(), r.nextGaussian()).scale(w * 0.4);
             Vec3 at = surface.add(dir.scale(d)).add(jitter);
@@ -208,7 +208,7 @@ public final class NewSpecials {
         Recall r = RECALLS.get(p.getUUID());
         if (r == null || r.until() < now) {
             RECALLS.put(p.getUUID(), new Recall(type, p.level().dimension(), p.position(), p.getHealth(), now + RECALL_TICKS));
-            msg(p, "已記錄回溯點：60 秒內再按一次使用鍵回到這裡", ChatFormatting.AQUA);
+            msg(p, "已記錄回溯點：20 秒內再按一次使用鍵回到這裡", ChatFormatting.AQUA);
             p.serverLevel().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 0.7f, 1.6f);
             return 0;
         }
@@ -271,7 +271,7 @@ public final class NewSpecials {
                 }
                 changeMaxHealth(p, hp);
                 p.heal((float) hp);
-                msg(p, "賭贏了！掉出 " + items + " 個特殊物品，最大生命 +" + (int) hp, ChatFormatting.GOLD);
+                msg(p, "賭贏了！掉出 " + items + " 個特殊道具，最大生命 +" + (int) hp, ChatFormatting.GOLD);
                 level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1f, 1.2f);
                 level.sendParticles(ParticleTypes.HAPPY_VILLAGER, p.getX(), p.getY() + 1, p.getZ(), 20, 0.5, 0.6, 0.5, 0);
             }

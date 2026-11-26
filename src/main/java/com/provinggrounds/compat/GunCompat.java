@@ -104,8 +104,10 @@ public final class GunCompat {
             }
             adapter.registerHitListener(ArmorEvents::recordHit); // 防彈：記錄爆頭
             adapter.registerDamageBalancer(); // 槍械平衡（GunBalance）
-            // 精準命中：子彈這一 tick 的路線（往前後各延伸一段）要打到人物模型才算數
+            // 精準命中＋友軍誤傷＋領域展開過濾：子彈這一 tick 的路線要打到人物模型，且通過友軍誤傷／領域規則才算數
             adapter.registerHitFilter((target, bullet) -> {
+                if (!com.provinggrounds.events.FriendlyFireEvents.allowBulletHit(target, bullet)) return false;
+                if (com.provinggrounds.special.Plan9Specials.blocksBullet(target, bullet)) return false;
                 net.minecraft.world.phys.Vec3 v = bullet.getDeltaMovement();
                 return com.provinggrounds.core.Hitbox.hitsModel(target, bullet.position().subtract(v), bullet.position().add(v));
             });

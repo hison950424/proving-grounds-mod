@@ -20,25 +20,23 @@ import java.util.Map;
 
 /**
  * 檔案: ShopScreen.java
- * 目的: 團隊死鬥／佔點的 UI 商店（M 開啟，取代舊版的書本商店）。
- *   左邊大分類（職業、槍械、配件、近戰／投擲、防具、其他、轉帳），格子上方一排小分類（例如槍械 → 手槍、步槍…；
- *   配件 → 可裝手上的槍、瞄具、槍口…）；右邊是商品格，點一下購買。手上槍可以裝的配件格子背景是橘黃色。
- *   底部「垃圾桶」：打開一個暫時的箱子，放進去的東西在關掉時刪除。
- *   自由人顯示八折價。只能在自己的基地買（伺服器檢查，介面上也會提示）。
- *   槍王之王沒有商店：只顯示戰況與「選單」按鈕。
+ * 目的: 團隊死鬥／佔點的 UI 商店（M 開啟，計畫書 9 改版）。
+ *   - 取消局內更換職業（開局 10 秒由 LoadoutScreen 選角，準備期可點底部「選角」鈕回去調整）。
+ *   - 依職業限定槍械分類顯示對應的槍械與可裝配件（自由人無限制且八折）。
+ *   - 「可裝手上的槍」與「全部」配件都在同一個頁面中依配件種類（瞄具、槍口、握把…）分組顯示。
+ *   - 底部「垃圾桶」：打開暫時箱子，關掉時刪除裡面的東西。
  */
 public final class ShopScreen extends Screen {
 
     private static final int BG = 0xEB0F141E, BORDER = 0xFF2A3344, ACCENT = 0xFFE8D060, TEXT = 0xFFFFFFFF,
         DIM = 0xFFA0A8B8, GOOD = 0xFF4CC864, BAD = 0xFFE04848, HOVER = 0x30FFFFFF;
-    private static final String TAB_CLASS = "職業", TAB_TRANSFER = "轉帳";
-    /** 大分類（左欄）→ 小分類（格子上方一排）。計畫書 6 B7：先分大方向再細分，畫面不再一長串。 */
+    private static final String TAB_TRANSFER = "轉帳";
     private static final String MAIN_GUNS = "槍械", MAIN_ATTACH = "配件", MAIN_GEAR = "近戰／投擲", MAIN_ARMOR = "防具", MAIN_OTHER = "其他";
-    private static final List<String> GUN_CATS = List.of("手槍", "衝鋒槍", "散彈槍", "步槍", "機槍", "狙擊槍", "重武器", "其他槍械");
-    private static final List<String> ATTACH_SUBS = List.of("全部", "可裝手上的槍", "瞄具", "槍口", "握把", "槍托", "彈匣", "雷射", "特殊彈藥", "其他");
+    private static final List<String> GUN_CATS = List.of("手槍", "衝鋒槍", "散彈槍", "步槍", "機槍", "狙擊槍", "重武器");
+    private static final List<String> ATTACH_SUBS = List.of("可裝手上的槍", "全部", "瞄具", "槍口", "握把", "槍托", "彈匣", "雷射", "特殊彈藥", "其他");
+    private static final List<String> ATTACH_TYPES = List.of("瞄具", "槍口", "握把", "槍托", "彈匣", "雷射", "特殊彈藥", "其他");
     private static final List<String> GEAR_CATS = List.of("近戰", "投擲物");
     private static String sub = "";
-    /** 手上槍可以裝的配件：格子背景改成這個顏色（計畫書 6 B6）。 */
     private static final int COMPAT_BG = 0x60FFB300;
     private static final int CELL_W = 118, CELL_H = 24;
 
@@ -48,15 +46,16 @@ public final class ShopScreen extends Screen {
 
     private int panelW, panelH, left, top, gridX, gridY, gridW, gridH, scroll;
     private int seen = -1;
-    /** 商品格（null = 空格：配件分組的標題列、防具沒有的部位）。 */
     private final List<ArenaData.ShopItem> visible = new ArrayList<>();
-    /** 配件「全部」的分組標題：格子編號（一列的開頭）→ 組名（計畫書 7 A7）。 */
     private final Map<Integer, String> headers = new HashMap<>();
-    /** 防具頁顯示的材質（ArenaMode.ARMOR_SETS 的順序；只放商店裡有的）。 */
     private final List<Integer> armorCols = new ArrayList<>();
 
     public ShopScreen() {
         super(Component.literal("商店"));
+    }
+
+    private ArenaClass myClass(ArenaStatePacket s) {
+        return s.classes() ? ArenaClass.byOrdinal(s.classOrdinal()) : ArenaClass.FREELANCER;
     }
 
     @Override
@@ -67,24 +66,27 @@ public final class ShopScreen extends Screen {
         top = (height - panelH) / 2;
         seen = ClientArenaState.version();
         ArenaStatePacket s = ClientArenaState.get();
-        int by = top + panelH - 23; // 介面大小 3 為基準：底部按鈕高 16
-        addRenderableWidget(new PGButton(left + 10, by, 64, 16, Component.literal("選單"), false, false, () -> {
+        ArenaClass cls = myClass(s);
+        int by = top + panelH - 23;
+        addRenderableWidget(new PGButton(left + 10, by, 58, 16, Component.literal("選單"), false, false, () -> {
             MainMenuScreen.openLobbyView();
             PGNetwork.sendToServer(new MenuRequestPacket());
             minecraft.setScreen(new MainMenuScreen());
         }));
-        addRenderableWidget(new PGButton(left + 80, by, 64, 16, Component.literal("HUD 設定"), false, false,
-            () -> minecraft.setScreen(new HudEditScreen(this)))); // 比賽中也能調 HUD 版面
-        addRenderableWidget(new PGButton(left + panelW - 74, by, 64, 16, Component.literal("關閉"), false, false, this::onClose));
+        addRenderableWidget(new PGButton(left + 72, by, 60, 16, Component.literal("HUD 設定"), false, false,
+            () -> minecraft.setScreen(new HudEditScreen(this))));
+        addRenderableWidget(new PGButton(left + panelW - 70, by, 60, 16, Component.literal("關閉"), false, false, this::onClose));
         if (!s.shop()) return;
-        // 垃圾桶（計畫書 6 B8）：把身上的東西丟進去，關掉垃圾桶畫面時才真的刪掉
-        addRenderableWidget(new PGButton(left + 150, by, 64, 16, Component.literal("垃圾桶"), false, false,
+        addRenderableWidget(new PGButton(left + 136, by, 58, 16, Component.literal("垃圾桶"), false, false,
             () -> PGNetwork.sendToServer(new ArenaActionPacket(ArenaActionPacket.Action.OPEN_TRASH, 0))));
+        if (s.loadoutOpen() && s.classes()) {
+            addRenderableWidget(new PGButton(left + 198, by, 72, 16, Component.literal("選角／道具"), true, false,
+                () -> minecraft.setScreen(new LoadoutScreen())));
+        }
 
-        // 左欄：大分類
+        // 左欄：大分類（已移除「職業」分頁，開局 10 秒由 LoadoutScreen 決定）
         List<String> tabs = new ArrayList<>();
-        if (s.classes()) tabs.add(TAB_CLASS);
-        if (ArenaData.shop().stream().anyMatch(i -> GUN_CATS.contains(i.category()))) tabs.add(MAIN_GUNS);
+        if (ArenaData.shop().stream().anyMatch(i -> GUN_CATS.contains(i.category()) && cls.canBuyCategory(i.category()))) tabs.add(MAIN_GUNS);
         if (hasCat("配件")) tabs.add(MAIN_ATTACH);
         if (ArenaData.shop().stream().anyMatch(i -> GEAR_CATS.contains(i.category()))) tabs.add(MAIN_GEAR);
         if (hasCat("防具")) tabs.add(MAIN_ARMOR);
@@ -106,10 +108,16 @@ public final class ShopScreen extends Screen {
         gridY = top + 30;
         gridW = panelW - 102;
 
-        // 小分類：格子上方一排（放不下自動換行）
-        List<String> subs = subsOf(tab);
+        List<String> subs = subsOf(tab, cls);
         if (!subs.isEmpty()) {
-            if (!subs.contains(sub)) sub = subs.get(0);
+            if (!subs.contains(sub)) {
+                if (tab.equals(MAIN_ATTACH)) {
+                    boolean holdingGun = minecraft != null && minecraft.player != null && com.provinggrounds.compat.GunCompat.holdsGun(minecraft.player);
+                    sub = holdingGun ? "可裝手上的槍" : "全部";
+                } else {
+                    sub = subs.get(0);
+                }
+            }
             int sx = gridX, sy = gridY;
             for (String t : subs) {
                 int w = font.width(t) + 10;
@@ -129,19 +137,26 @@ public final class ShopScreen extends Screen {
         visible.clear();
         headers.clear();
         armorCols.clear();
-        if (tab.equals(TAB_CLASS)) initClasses(s);
-        else if (tab.equals(TAB_TRANSFER)) initTransfer(s);
+        if (tab.equals(TAB_TRANSFER)) initTransfer(s);
         else if (tab.equals(MAIN_ARMOR)) initArmor(s);
-        else if (tab.equals(MAIN_ATTACH) && sub.equals("全部")) initAttachGroups();
-        else for (ArenaData.ShopItem i : ArenaData.shop()) if (matches(i)) visible.add(i);
+        else if (tab.equals(MAIN_ATTACH) && (sub.equals("全部") || sub.equals("可裝手上的槍"))) initAttachGroups(cls, sub.equals("可裝手上的槍"));
+        else for (ArenaData.ShopItem i : ArenaData.shop()) if (matches(i, cls)) visible.add(i);
     }
 
-    /** 配件「全部」：同類型排在一起，每組從新的一列開始、上面一列是組名（計畫書 7 A7）。 */
-    private void initAttachGroups() {
+    /** 配件分組顯示（同一個頁面依類型分組：瞄具、槍口、握把…；onlyHeld = 只顯示可裝手上那把槍的配件）。 */
+    private void initAttachGroups(ArenaClass cls, boolean onlyHeld) {
         int cols = cols();
-        for (String g : ATTACH_SUBS.subList(2, ATTACH_SUBS.size())) {
+        for (String g : ATTACH_TYPES) {
             List<ArenaData.ShopItem> list = new ArrayList<>();
-            for (ArenaData.ShopItem i : ArenaData.shop()) if (i.category().equals("配件") && attachType(i).equals(g)) list.add(i);
+            for (ArenaData.ShopItem i : ArenaData.shop()) {
+                if (!i.category().equals("配件") || !attachType(i).equals(g)) continue;
+                if (onlyHeld) {
+                    if (!compatible(i)) continue;
+                } else {
+                    if (!classAllowsAttach(i, cls)) continue;
+                }
+                list.add(i);
+            }
             if (list.isEmpty()) continue;
             while (visible.size() % cols != 0) visible.add(null);
             headers.put(visible.size(), g + "（" + list.size() + "）");
@@ -150,7 +165,22 @@ public final class ShopScreen extends Screen {
         }
     }
 
-    /** 防具（計畫書 7 A8）：由左到右是材質（照強度）、由上到下是 帽、胸甲、褲、靴；每一欄下面有「購買整套」。 */
+    /** 這個配件能否裝在「這個職業能買的任一把商店槍（或手上正在拿的槍）」上。 */
+    private boolean classAllowsAttach(ArenaData.ShopItem att, ArenaClass cls) {
+        if (compatible(att)) return true;
+        if (cls == ArenaClass.FREELANCER) return true;
+        return CLASS_ATTACH_CACHE.computeIfAbsent(cls.ordinal() + ":" + att.index(), k -> {
+            ItemStack attStack = icon(att);
+            for (ArenaData.ShopItem gun : ArenaData.shop()) {
+                if (!GUN_CATS.contains(gun.category()) || !cls.canBuyCategory(gun.category())) continue;
+                if (com.provinggrounds.compat.GunCompat.canAttach(icon(gun), attStack)) return true;
+            }
+            return false;
+        });
+    }
+
+    private static final Map<String, Boolean> CLASS_ATTACH_CACHE = new HashMap<>();
+
     private void initArmor(ArenaStatePacket s) {
         for (int m = 0; m < com.provinggrounds.modes.arena.ArenaMode.ARMOR_SETS.length; m++) {
             for (ArenaData.ShopItem i : com.provinggrounds.modes.arena.ArenaMode.armorSet(m)) if (i != null) { armorCols.add(m); break; }
@@ -159,7 +189,6 @@ public final class ShopScreen extends Screen {
         for (int k = 0; k < 4; k++) {
             for (int c = 0; c < cols; c++) visible.add(c < armorCols.size() ? com.provinggrounds.modes.arena.ArenaMode.armorSet(armorCols.get(c))[k] : null);
         }
-        // 不屬於套裝的防具（例如海龜殼）：放在最後
         int setCount = visible.size();
         for (ArenaData.ShopItem i : ArenaData.shop()) {
             if (i.category().equals("防具") && !visible.subList(0, setCount).contains(i)) visible.add(i);
@@ -176,7 +205,6 @@ public final class ShopScreen extends Screen {
             b.active = enough && s.canShop();
             addRenderableWidget(b);
         }
-        // 套裝以外的防具往下排：留出「購買整套」那一列
         if (visible.size() > setCount) {
             List<ArenaData.ShopItem> rest = new ArrayList<>(visible.subList(setCount, visible.size()));
             visible.subList(setCount, visible.size()).clear();
@@ -185,7 +213,6 @@ public final class ShopScreen extends Screen {
         }
     }
 
-    /** 格子寬度：防具頁要放得下所有材質，其他頁固定。 */
     private int cellW() {
         if (tab.equals(MAIN_ARMOR) && !armorCols.isEmpty()) return Math.max(70, gridW / Math.max(1, armorCols.size()));
         return CELL_W;
@@ -196,35 +223,34 @@ public final class ShopScreen extends Screen {
     }
 
     private static boolean isOther(String c) {
-        return !GUN_CATS.contains(c) && !GEAR_CATS.contains(c) && !c.equals("配件") && !c.equals("防具");
+        return !GUN_CATS.contains(c) && !GEAR_CATS.contains(c) && !c.equals("配件") && !c.equals("防具") && !c.equals("其他槍械");
     }
 
-    private static List<String> subsOf(String main) {
-        if (main.equals(MAIN_GUNS)) return GUN_CATS.stream().filter(ShopScreen::hasCat).toList();
+    private static List<String> subsOf(String main, ArenaClass cls) {
+        if (main.equals(MAIN_GUNS)) return GUN_CATS.stream().filter(c -> cls.canBuyCategory(c) && hasCat(c)).toList();
         if (main.equals(MAIN_ATTACH)) return ATTACH_SUBS;
         if (main.equals(MAIN_GEAR)) return GEAR_CATS.stream().filter(ShopScreen::hasCat).toList();
         return List.of();
     }
 
-    /** 這個商品在目前的大分類／小分類裡嗎。 */
-    private boolean matches(ArenaData.ShopItem i) {
+    private boolean matches(ArenaData.ShopItem i, ArenaClass cls) {
         String c = i.category();
         return switch (tab) {
-            case MAIN_GUNS, MAIN_GEAR -> c.equals(sub);
+            case MAIN_GUNS -> c.equals(sub) && cls.canBuyCategory(c);
+            case MAIN_GEAR -> c.equals(sub);
             case MAIN_ARMOR -> c.equals("防具");
             case MAIN_OTHER -> isOther(c);
             case MAIN_ATTACH -> c.equals("配件") && switch (sub) {
-                case "全部" -> true;
+                case "全部" -> classAllowsAttach(i, cls);
                 case "可裝手上的槍" -> compatible(i);
-                default -> attachType(i).equals(sub);
+                default -> attachType(i).equals(sub) && classAllowsAttach(i, cls);
             };
             default -> false;
         };
     }
 
-    /** 配件的種類：看配件 ID 裡的關鍵字（TACZ 沒有給分類，這樣最穩）。 */
     private static String attachType(ArenaData.ShopItem i) {
-        if (!i.atype().isEmpty()) return i.atype(); // 槍械包裡的類型（tools/sort_shop_attachments.py）
+        if (!i.atype().isEmpty()) return i.atype();
         String s = i.item().toLowerCase(java.util.Locale.ROOT);
         if (s.contains("ammo_mod")) return "特殊彈藥";
         if (s.contains("scope") || s.contains("sight")) return "瞄具";
@@ -236,7 +262,6 @@ public final class ShopScreen extends Screen {
         return "其他";
     }
 
-    /** 這個配件能不能裝在手上的槍（透過槍械適配層，TACZ 自己的相容資料）。 */
     private boolean compatible(ArenaData.ShopItem i) {
         if (minecraft == null || minecraft.player == null) return false;
         if (!com.provinggrounds.compat.GunCompat.holdsGun(minecraft.player)) return false;
@@ -244,21 +269,8 @@ public final class ShopScreen extends Screen {
         return COMPAT_CACHE.computeIfAbsent(i.index(), k -> com.provinggrounds.compat.GunCompat.canAttach(gun, icon(i)));
     }
 
-    /** 相容結果快取（手上的槍換了就重新算）。 */
     private static final Map<Integer, Boolean> COMPAT_CACHE = new HashMap<>();
     private static ItemStack compatGun = ItemStack.EMPTY;
-
-    private void initClasses(ArenaStatePacket s) {
-        int y = gridY;
-        for (ArenaClass c : ArenaClass.values()) {
-            boolean mine = c.ordinal() == s.classOrdinal();
-            PGButton b = new PGButton(gridX, y + 2, 90, 16, Component.literal(c.displayName), mine, false,
-                () -> PGNetwork.sendToServer(new ArenaActionPacket(ArenaActionPacket.Action.SET_CLASS, c.ordinal())));
-            b.active = !mine && s.canShop();
-            addRenderableWidget(b);
-            y += 30;
-        }
-    }
 
     private void initTransfer(ArenaStatePacket s) {
         int x = gridX, y = gridY;
@@ -290,11 +302,10 @@ public final class ShopScreen extends Screen {
         if (minecraft != null && minecraft.player != null && !ItemStack.isSameItemSameTags(minecraft.player.getMainHandItem(), compatGun)) {
             compatGun = minecraft.player.getMainHandItem().copy();
             COMPAT_CACHE.clear();
-            if (tab.equals(MAIN_ATTACH) && sub.equals("可裝手上的槍")) { rebuildWidgets(); return; }
+            if (tab.equals(MAIN_ATTACH)) { rebuildWidgets(); return; }
         }
         if (!ClientArenaState.active()) { onClose(); return; }
         if (seen != ClientArenaState.version()) {
-            // 金錢、在不在基地、冷卻有變：重建按鈕（保留捲動位置）
             int keep = scroll;
             rebuildWidgets();
             scroll = keep;
@@ -307,14 +318,14 @@ public final class ShopScreen extends Screen {
         ArenaStatePacket s = ClientArenaState.get();
         g.fill(left - 1, top - 1, left + panelW + 1, top + panelH + 1, BORDER);
         g.fill(left, top, left + panelW, top + panelH, BG);
-        g.drawString(font, s.title(), left + 10, top + 9, ACCENT, false);
+        String header = s.title() + (s.classes() ? "・" + myClass(s).displayName : "");
+        g.drawString(font, header, left + 10, top + 9, ACCENT, false);
         if (s.shop()) {
             String money = "$" + s.money();
             g.drawString(font, money, left + panelW - 10 - font.width(money), top + 9, GOOD, false);
             String where = s.canShop() ? "在基地內：可以購買" : "不在基地：回到自己的基地才能購買";
             g.drawString(font, where, left + panelW - 20 - font.width(money) - font.width(where), top + 9, s.canShop() ? DIM : BAD, false);
-            if (tab.equals(TAB_CLASS)) renderClasses(g, s);
-            else if (tab.equals(TAB_TRANSFER)) renderTransfer(g, s);
+            if (tab.equals(TAB_TRANSFER)) renderTransfer(g, s);
             else renderGrid(g, s, mouseX, mouseY);
         } else {
             int y = top + 32;
@@ -340,13 +351,16 @@ public final class ShopScreen extends Screen {
         int cols = cols();
         ArenaData.ShopItem hovered = null;
         int cw = cellW();
+        if (visible.isEmpty() && tab.equals(MAIN_ATTACH) && sub.equals("可裝手上的槍")) {
+            g.drawString(font, "請先手持一把槍，這裡會依類型列出所有可裝配件", gridX + 6, gridY + 8, DIM, false);
+        }
         for (int i = 0; i < visible.size(); i++) {
             ArenaData.ShopItem item = visible.get(i);
             int cx = gridX + (i % cols) * cw, cy = gridY + (i / cols) * CELL_H - scroll;
             if (cy + CELL_H < gridY || cy > gridY + gridH) continue;
             if (item == null) {
                 String h = headers.get(i);
-                if (h != null) { // 配件分組標題（計畫書 7 A7）
+                if (h != null) {
                     g.drawString(font, h, cx + 2, cy + 10, ACCENT, false);
                     g.fill(cx + 4 + font.width(h), cy + 14, gridX + gridW - 4, cy + 15, 0x40FFFFFF);
                 }
@@ -356,9 +370,9 @@ public final class ShopScreen extends Screen {
                 && mouseY >= gridY && mouseY < gridY + gridH;
             if (over) hovered = item;
             g.fill(cx, cy, cx + cw - 2, cy + CELL_H - 2, over ? HOVER : 0x18FFFFFF);
-            if (item.category().equals("配件") && compatible(item)) g.fill(cx, cy, cx + cw - 2, cy + CELL_H - 2, COMPAT_BG); // 手上的槍可以裝
+            if (item.category().equals("配件") && compatible(item)) g.fill(cx, cy, cx + cw - 2, cy + CELL_H - 2, COMPAT_BG);
             g.renderItem(icon(item), cx + 3, cy + 3);
-            int price = com.provinggrounds.client.ClientDomGear.price(free ? item.free() : item.price()); // 佔點選了強的特殊物品要加價
+            int price = com.provinggrounds.client.ClientDomGear.price(free ? item.free() : item.price());
             g.drawString(font, trim(item.name(), cw - 26), cx + 22, cy + 3, TEXT, false);
             g.drawString(font, "$" + price, cx + 22, cy + 13, s.money() >= price ? GOOD : BAD, false);
         }
@@ -368,20 +382,10 @@ public final class ShopScreen extends Screen {
             List<Component> tip = new ArrayList<>();
             tip.add(Component.literal(hovered.name()));
             tip.add(Component.literal("價格 $" + price + (free ? "（自由人八折）" : "")
-                + (price != (free ? hovered.free() : hovered.price()) ? "（特殊物品加價）" : "")));
+                + (price != (free ? hovered.free() : hovered.price()) ? "（特殊道具加價）" : "")));
             tip.add(Component.literal(s.canShop() ? "點一下購買" : "回基地才能購買"));
             g.renderComponentTooltip(font, tip, mouseX, mouseY);
         }
-    }
-
-    private void renderClasses(GuiGraphics g, ArenaStatePacket s) {
-        int y = gridY;
-        for (ArenaClass c : ArenaClass.values()) {
-            g.drawString(font, "血量 " + c.maxHealth + "　" + c.description, gridX + 96, y + 2, TEXT, false);
-            g.drawString(font, "起始槍 " + c.gun, gridX + 96, y + 12, DIM, false);
-            y += 30;
-        }
-        if (!s.canShop()) g.drawString(font, "回到基地才能換職業", gridX, y + 4, BAD, false);
     }
 
     private void renderTransfer(GuiGraphics g, ArenaStatePacket s) {
@@ -400,7 +404,7 @@ public final class ShopScreen extends Screen {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
-        if (!ClientArenaState.get().shop() || tab.equals(TAB_CLASS) || tab.equals(TAB_TRANSFER)) return false;
+        if (!ClientArenaState.get().shop() || tab.equals(TAB_TRANSFER)) return false;
         if (mx < gridX || mx >= gridX + gridW || my < gridY || my >= gridY + gridH) return false;
         int col = (int) ((mx - gridX) / cellW()), row = (int) ((my - gridY + scroll) / CELL_H);
         if (col >= cols()) return false;

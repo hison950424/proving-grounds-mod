@@ -37,6 +37,9 @@ public final class ClientForgeEvents {
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && com.provinggrounds.client.ClientArenaState.consumePendingLoadout()) {
+            mc.setScreen(new LoadoutScreen());
+        }
         while (ClientModEvents.OPEN_MENU.consumeClick()) {
             if (mc.player == null || mc.screen != null) continue;
             byte phase = ClientBRState.get().phase();
@@ -216,6 +219,7 @@ public final class ClientForgeEvents {
         com.provinggrounds.client.ClientProneData.clear();
         ClientStatsBoard.clear();
         SpawnPointRenderer.clear();
+        com.provinggrounds.special.client.ClientSpecial.clear();
         FORCED_CRAWL.clear();
     }
 

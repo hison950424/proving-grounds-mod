@@ -386,6 +386,14 @@ CATEGORY = {
     "brainwash": "brain", "root_orb": "orb", "fire_drill": "drill", "recall": "clock", "recall_plus": "clock",
     "gambler_rod": "rod", "gambler_rod_plus": "rod", "thor_hammer": "hammer", "thor_hammer_plus": "hammer",
     "reskydive": "chute", "reskydive_group": "chute", "reskydive_target": "chute",
+    # 計畫書 9：17 種新特殊道具
+    "look_up_one": "star", "look_up_all": "star", "cockroach": "mine",
+    "domain_expansion": "ring", "friend_or_foe": "person", "paranoia": "brain",
+    "red_light": "clock", "magnet_grenade": "orb", "misfire_curse": "gun",
+    "crude_swapper": "ring", "space_swapper": "ring",
+    "ice_skates": "boots", "ice_skates_all": "boots",
+    "hud_jammer": "scanner", "overheat_curse": "drill",
+    "ethereal": "cloak", "mimic": "crate",
 }
 
 def shade(rgb, f):
@@ -425,7 +433,10 @@ def main():
     effects = {"concussion": ("star", (190, 190, 190)), "cloak": ("cloak", (128, 128, 192)), "adrenaline": ("syringe", (224, 64, 64)),
                "silent": ("boots", (64, 64, 96)), "shield_bubble": ("ring", (96, 192, 255)), "bubble_speed": ("ring", (96, 192, 255)),
                "zone_shelter": ("ring", (192, 240, 192)), "gassed": ("orb", (96, 192, 32)), "totem_held": ("totem", (240, 208, 64)),
-               "brainwash": ("brain", (192, 64, 192)), "downed": ("person", (160, 40, 40)), "stim_free": ("syringe", (224, 64, 64)), "rooted": ("orb", (80, 224, 176))}
+               "brainwash": ("brain", (192, 64, 192)), "downed": ("person", (160, 40, 40)), "stim_free": ("syringe", (224, 64, 64)), "rooted": ("orb", (80, 224, 176)),
+               "friend_or_foe": ("person", (208, 80, 128)), "paranoia": ("brain", (176, 32, 64)), "misfire": ("gun", (240, 80, 32)),
+               "ice_skates": ("boots", (128, 224, 255)), "hud_jam": ("scanner", (80, 80, 96)), "overheat": ("drill", (240, 128, 32)),
+               "ethereal": ("cloak", (176, 224, 255)), "mimic": ("crate", (192, 144, 64))}
     for name, (shape, rgb) in effects.items():
         rows = [[(0, 0, 0, 0)] * 18] + [[(0, 0, 0, 0)] + r + [(0, 0, 0, 0)] for r in render(shape, rgb)] + [[(0, 0, 0, 0)] * 18]
         png(os.path.join(ROOT, "resources", "assets", "provinggrounds", "textures", "mob_effect", name + ".png"), rows, 18)

@@ -45,6 +45,23 @@
     "provinggrounds:thor_hammer_plus",
     "provinggrounds:reskydive",
     "provinggrounds:reskydive_group",
-    "provinggrounds:reskydive_target"
+    "provinggrounds:reskydive_target",
+    "provinggrounds:look_up_one",
+    "provinggrounds:look_up_all",
+    "provinggrounds:cockroach",
+    "provinggrounds:domain_expansion",
+    "provinggrounds:friend_or_foe",
+    "provinggrounds:paranoia",
+    "provinggrounds:red_light",
+    "provinggrounds:magnet_grenade",
+    "provinggrounds:misfire_curse",
+    "provinggrounds:crude_swapper",
+    "provinggrounds:space_swapper",
+    "provinggrounds:ice_skates",
+    "provinggrounds:ice_skates_all",
+    "provinggrounds:hud_jammer",
+    "provinggrounds:overheat_curse",
+    "provinggrounds:ethereal",
+    "provinggrounds:mimic"
   ]
 }

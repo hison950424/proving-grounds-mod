@@ -228,6 +228,91 @@
           "type": "minecraft:item",
           "name": "provinggrounds:reskydive_target",
           "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:look_up_one",
+          "weight": 8
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:look_up_all",
+          "weight": 7
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:cockroach",
+          "weight": 7
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:domain_expansion",
+          "weight": 4
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:friend_or_foe",
+          "weight": 5
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:paranoia",
+          "weight": 6
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:red_light",
+          "weight": 5
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:magnet_grenade",
+          "weight": 7
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:misfire_curse",
+          "weight": 5
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:crude_swapper",
+          "weight": 7
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:space_swapper",
+          "weight": 5
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:ice_skates",
+          "weight": 7
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:ice_skates_all",
+          "weight": 6
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:hud_jammer",
+          "weight": 5
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:overheat_curse",
+          "weight": 6
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:ethereal",
+          "weight": 5
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:mimic",
+          "weight": 7
         }
       ]
     }

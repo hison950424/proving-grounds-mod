@@ -56,6 +56,7 @@ public abstract class ArenaMode {
 
     public static final int RED = 1, BLUE = 2;
     private static final UUID HEALTH_MOD = UUID.fromString("2f6b1c84-9d3e-4a57-b0c2-71e5d8a9f314");
+    private static final UUID CLASS_SPEED_MOD = UUID.fromString("8a4c2f91-7b3d-4e65-a12c-5d9e0f4b8c22");
 
     /** 一位參賽者的對戰資料。 */
     public static final class ArenaPlayer {
@@ -78,6 +79,10 @@ public abstract class ArenaMode {
         public int campTicks;               // 在敵方重生區裡待了幾 tick
         public int offlineSince = -1;       // 掉線的 tick；-1 = 在線
         public int streak;                  // 連殺數
+        // 計畫書 9：九大職業計時與團隊死鬥特殊道具累計
+        public int reconSec, supportSec;    // 偵察兵 20 秒掃描、支援兵 30 秒補投擲物
+        public int tdmSpecialKills;         // 團隊死鬥累計擊殺（每 3 殺獲得 1 個特殊道具）
+        public int tdmDryDeaths;            // 團隊死鬥連續死亡未獲特殊道具次數（滿 3 次保底 1 個）
 
         ArenaPlayer(UUID id, String name) { this.id = id; this.name = name; }
     }
@@ -134,6 +139,8 @@ public abstract class ArenaMode {
     protected int moneyCap() { return 0; }
     /** 現在能不能買東西（另外還要在基地裡）。 */
     protected boolean shopOpen() { return true; }
+    /** 開局前 10 秒選角／選特殊道具期間（團隊死鬥開局準備、佔點第一回合準備）。 */
+    public boolean loadoutOpen() { return false; }
 
     // ── 開局 ────────────────────────────────────────────────────────────────
 
@@ -168,10 +175,12 @@ public abstract class ArenaMode {
             ArenaPlayer ap = players.get(p.getUUID());
             prepare(p, ap, true);
             teleport(p, spawnOf(ap));
-            giveSpawnSpecial(p);
+            giveStartSpecial(p);
         }
+        syncHud(); // 立即同步一次，讓開局 10 秒選角介面馬上彈出
         broadcastTitle(Component.literal(title()).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD),
-            Component.literal(usesShop() ? "在基地裡按 M 打開商店" : "擊殺敵人升級武器").withStyle(ChatFormatting.YELLOW), 60);
+            Component.literal(loadoutOpen() ? "準備期間 10 秒：請選擇職業" + (com.provinggrounds.special.SpecialConfig.enabledSafe() ? "與特殊道具" : "")
+                : (usesShop() ? "在基地裡按 M 打開商店" : "擊殺敵人升級武器")).withStyle(ChatFormatting.YELLOW), 60);
         playAll(SoundEvents.WITHER_SPAWN, 0.5f, 0.5f);
         ProvingGroundsMod.LOGGER.info("Arena {} started with {} players", kind(), participants.size());
         return null;
@@ -267,6 +276,7 @@ public abstract class ArenaMode {
                 onRespawned(p, ap);
             }
             if (ticks % 10 == 0 && usesAntiCamp() && cfg.antiCamp.get() && p.gameMode.getGameModeForPlayer() == GameType.ADVENTURE && p.isAlive()) antiCamp(p, ap);
+            if (usesClasses() && p.isAlive() && !p.isSpectator()) refreshClassSpeed(p, ap);
             if (ticks % 20 == 0 && p.isAlive() && !p.isSpectator()) {
                 ensureOne(p, cfg.ammoBox.get());
                 removeLooseAmmo(p);
@@ -278,19 +288,79 @@ public abstract class ArenaMode {
         if (ticks % 10 == 0) syncHud();
     }
 
-    /** 職業被動（每秒）。 */
-    private void classPassive(ServerPlayer p, ArenaPlayer ap) {
-        if (ap.cls == ArenaClass.ASSAULT) {
-            p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 40, 1, false, false, true));
+    /** 職業移動速度加成（每 tick 更新，支援刺客拔刀 +30%、突擊兵 +20%、偵察兵 +10%、重裝兵 -15%）。 */
+    private void refreshClassSpeed(ServerPlayer p, ArenaPlayer ap) {
+        AttributeInstance attr = p.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (attr == null) return;
+        double want = ap.cls.speedBonus;
+        if (ap.cls.meleeSpeedBonus != 0 && com.provinggrounds.events.MeleeDrawSpeed.drawn(p)) {
+            want += ap.cls.meleeSpeedBonus;
         }
-        if (ap.cls == ArenaClass.SENTINEL) {
-            Vec3 pos = p.position();
-            boolean still = p.isShiftKeyDown() && ap.lastPos != null && ap.lastPos.distanceToSqr(pos) < 0.01;
-            ap.lastPos = pos;
-            if (still) {
-                p.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 40, 0, false, false, true));
-                addMoney(p, ap, 1, null);
+        AttributeModifier cur = attr.getModifier(CLASS_SPEED_MOD);
+        if (Math.abs(want) < 1e-6) {
+            if (cur != null) attr.removeModifier(CLASS_SPEED_MOD);
+            return;
+        }
+        if (cur != null && Math.abs(cur.getAmount() - want) < 1e-6) return;
+        attr.removeModifier(CLASS_SPEED_MOD);
+        attr.addTransientModifier(new AttributeModifier(CLASS_SPEED_MOD, "pg_class_speed", want, AttributeModifier.Operation.MULTIPLY_TOTAL));
+    }
+
+    /** 職業被動（每秒；計畫書 9 重製）。 */
+    private void classPassive(ServerPlayer p, ArenaPlayer ap) {
+        if (loadoutOpen()) return; // 開局選角準備期不觸發掃描與補給
+        switch (ap.cls) {
+            case RECON -> {
+                // 偵察兵：每 20 秒發光最近的敵人 1 秒（自己與同隊可見）
+                if (++ap.reconSec >= 20) {
+                    ap.reconSec = 0;
+                    ServerPlayer nearest = null;
+                    double best = Double.MAX_VALUE;
+                    for (ServerPlayer o : online()) {
+                        ArenaPlayer oa = players.get(o.getUUID());
+                        if (oa == null || sameSide(ap, oa) || !o.isAlive() || o.isSpectator()) continue;
+                        if (kind() == GameManager.GameMode.DOM && !oa.alive) continue;
+                        double d = o.distanceToSqr(p);
+                        if (d < best) { best = d; nearest = o; }
+                    }
+                    if (nearest != null) {
+                        com.provinggrounds.special.GlowManager.add(nearest, com.provinggrounds.special.GlowManager.Audience.TEAM, p, true, 1.0, false);
+                        p.playNotifySound(SoundEvents.NOTE_BLOCK_PLING.value(), SoundSource.PLAYERS, 0.3f, 1.8f);
+                    }
+                }
             }
+            case SUPPORT -> {
+                // 支援兵：身邊 4 格內的所有隊友（包含自己）每 30 秒補一顆隨機投擲物
+                if (++ap.supportSec >= 30) {
+                    ap.supportSec = 0;
+                    List<String> pool = ArenaClass.Kits.SUPPORT_THROWABLES;
+                    for (ServerPlayer mate : online()) {
+                        ArenaPlayer ma = players.get(mate.getUUID());
+                        if (ma == null || !sameSide(ap, ma) || !mate.isAlive() || mate.isSpectator()) continue;
+                        if (mate.distanceToSqr(p) > 16.0) continue; // 4 格內
+                        String tid = pool.get(level.random.nextInt(pool.size()));
+                        ItemStack stack = RespawnKit.parse(ArenaClass.Kits.throwable(tid));
+                        if (!stack.isEmpty()) {
+                            give(mate, stack);
+                            mate.displayClientMessage(Component.literal("[支援兵] 補給一顆隨機投擲物").withStyle(ChatFormatting.AQUA), true);
+                            mate.playNotifySound(SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.4f, 1.2f);
+                        }
+                    }
+                }
+            }
+            case MEDIC -> {
+                // 醫護兵：身邊 4 格內的隊友每秒回 1 HP
+                for (ServerPlayer mate : online()) {
+                    ArenaPlayer ma = players.get(mate.getUUID());
+                    if (mate == p || ma == null || !sameSide(ap, ma) || !mate.isAlive() || mate.isSpectator()) continue;
+                    if (downedEnabled && downed.isDowned(mate.getUUID())) continue;
+                    if (mate.distanceToSqr(p) <= 16.0 && mate.getHealth() < mate.getMaxHealth()) {
+                        mate.heal(1f);
+                        level.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, mate.getX(), mate.getY() + 1.8, mate.getZ(), 1, 0.2, 0.1, 0.2, 0);
+                    }
+                }
+            }
+            default -> {}
         }
     }
 
@@ -397,13 +467,15 @@ public abstract class ArenaMode {
         com.provinggrounds.core.KillEvents.arenaKillOffline(this, server, counted ? killer : null, counted ? k : null, v, lostStreak);
         if (!counted) return;
         onKill(killer, k, null, v);
+        onClassKill(killer, k);
         if (com.provinggrounds.special.SpecialConfig.enabledSafe()) {
-            if (kind() == GameManager.GameMode.TDM) com.provinggrounds.special.DomGear.giveRandom(killer, "擊殺 " + v.name); // 計畫書 8
+            if (kind() == GameManager.GameMode.TDM) grantTdmKillSpecial(killer, k);
             else if (kind() == GameManager.GameMode.GK) {
                 ItemStack sp = com.provinggrounds.special.SpecialLoot.roll(level);
                 if (!sp.isEmpty()) level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level, s.pos.x, s.pos.y + 0.5, s.pos.z, sp));
             }
         }
+        if (kind() == GameManager.GameMode.TDM) v.tdmDryDeaths++;
     }
 
     private void removeTimedOut() {
@@ -458,13 +530,37 @@ public abstract class ArenaMode {
         com.provinggrounds.core.KillEvents.arenaKill(this, counted ? killer : null, counted ? k : null, victim, v, lostStreak);
         if (!counted) return;
         onKill(killer, k, victim, v);
-        if (com.provinggrounds.special.SpecialConfig.enabledSafe()) { // 特殊物品模式（大廳開關）
-            // 計畫書 8：團隊死鬥擊殺直接拿一個隨機特殊物品；佔點是整場一種（不掉）；槍王之王照舊掉在地上
-            if (kind() == GameManager.GameMode.TDM) com.provinggrounds.special.DomGear.giveRandom(killer, "擊殺 " + v.name);
+        onClassKill(killer, k);
+        if (kind() == GameManager.GameMode.TDM) v.tdmDryDeaths++;
+        if (com.provinggrounds.special.SpecialConfig.enabledSafe()) { // 特殊道具模式（大廳開關）
+            // 計畫書 9：團隊死鬥每累計 3 殺獲得 1 個特殊道具（連死 3 次未獲得則於重生保底 1 個）；佔點整場一種；槍王之王照舊掉在地上
+            if (kind() == GameManager.GameMode.TDM) grantTdmKillSpecial(killer, k);
             else if (kind() == GameManager.GameMode.GK) {
                 ItemStack sp = com.provinggrounds.special.SpecialLoot.roll(level);
                 if (!sp.isEmpty()) victim.spawnAtLocation(sp);
             }
+        }
+    }
+
+    /** 職業擊殺效果：突擊兵回 20 HP、工兵刷新手榴彈與瞬爆手榴彈。 */
+    private void onClassKill(ServerPlayer killer, ArenaPlayer k) {
+        if (!usesClasses() || killer == null || !killer.isAlive()) return;
+        if (k.cls == ArenaClass.ASSAULT) {
+            killer.heal(20f);
+            killer.displayClientMessage(Component.literal("[突擊兵] 擊殺回復 +20 HP").withStyle(ChatFormatting.GREEN), true);
+        } else if (k.cls == ArenaClass.ENGINEER) {
+            refillConsumables(killer, k, false);
+            killer.displayClientMessage(Component.literal("[工兵] 擊殺刷新手榴彈與瞬爆手榴彈").withStyle(ChatFormatting.GOLD), true);
+        }
+    }
+
+    /** 團隊死鬥：每累計擊殺 3 人獲得 1 個隨機特殊道具。 */
+    private void grantTdmKillSpecial(ServerPlayer killer, ArenaPlayer k) {
+        k.tdmSpecialKills++;
+        if (k.tdmSpecialKills >= 3) {
+            k.tdmSpecialKills = 0;
+            k.tdmDryDeaths = 0;
+            com.provinggrounds.special.DomGear.giveRandom(killer, "累計擊殺 3 人");
         }
     }
 
@@ -500,7 +596,11 @@ public abstract class ArenaMode {
         teleport(p, spawnOf(ap));
         prepare(p, ap, false);
         ap.respawnKitTicks = 10;
-        giveSpawnSpecial(p);
+        // 團隊死鬥保底：連續死亡 3 次都沒有拿到特殊道具 → 獲得 1 個
+        if (kind() == GameManager.GameMode.TDM && com.provinggrounds.special.SpecialConfig.enabledSafe() && ap.tdmDryDeaths >= 3) {
+            ap.tdmDryDeaths = 0;
+            com.provinggrounds.special.DomGear.giveRandom(p, "連死 3 次保底");
+        }
         int protect = cfg.spawnProtect.get();
         if (protect > 0) ap.protectUntil = ticks + protect * 20;
     }
@@ -534,9 +634,10 @@ public abstract class ArenaMode {
         respawn(p, ap);
     }
 
-    /** 丟東西：不能丟的立刻撿回來。回傳 true = 要取消丟出。 */
+    /** 丟東西：不能丟的立刻撿回來。回傳 true = 要取消丟出。「欸幹你手上有蟑螂」強制丟出時例外。 */
     public boolean handleToss(ServerPlayer p, ItemStack stack) {
         if (!players.containsKey(p.getUUID())) return false;
+        if (com.provinggrounds.special.Plan9Specials.isForcedDrop(p)) return false;
         return !allowToss(stack);
     }
 
@@ -635,6 +736,10 @@ public abstract class ArenaMode {
         if (ap == null || !usesShop() || index < 0 || index >= shop.size()) return;
         if (!canShop(p, ap)) { deny(p, "必須在自己的基地內才能購買！"); return; }
         ArenaData.ShopItem item = shop.get(index);
+        if (usesClasses() && !ap.cls.canBuyCategory(item.category())) {
+            deny(p, "你的職業（" + ap.cls.displayName + "）無法購買" + item.category() + "！");
+            return;
+        }
         int price = shopPrice(p, ap, item);
         if (ap.money < price) { deny(p, "金錢不足！還差 $" + (price - ap.money)); return; }
         ItemStack stack = RespawnKit.parse(item.item() + " " + item.count());
@@ -656,10 +761,10 @@ public abstract class ArenaMode {
         syncHud();
     }
 
-    /** 團隊死鬥＋特殊物品模式：每次出生（含開局）隨機拿一個特殊物品（計畫書 8）。 */
-    private void giveSpawnSpecial(ServerPlayer p) {
+    /** 團隊死鬥＋特殊道具模式：只有開局時免費發給所有人一個隨機特殊道具（計畫書 9）。 */
+    private void giveStartSpecial(ServerPlayer p) {
         if (kind() == GameManager.GameMode.TDM && com.provinggrounds.special.SpecialConfig.enabledSafe()) {
-            com.provinggrounds.special.DomGear.giveRandom(p, "出生");
+            com.provinggrounds.special.DomGear.giveRandom(p, "開局");
         }
     }
 
@@ -711,9 +816,9 @@ public abstract class ArenaMode {
     public void setClass(ServerPlayer p, int ordinal) {
         ArenaPlayer ap = players.get(p.getUUID());
         if (ap == null || !usesClasses()) return;
+        if (!loadoutOpen()) { deny(p, "比賽開始後無法更換職業！"); return; }
         ArenaClass c = ArenaClass.byOrdinal(ordinal);
         if (c == ap.cls) return;
-        if (!canShop(p, ap)) { deny(p, "必須在自己的基地內才能換職業！"); return; }
         // 拿掉舊職業的起始槍與固有消耗品，換成新的
         removeGun(p, ap.cls.gun);
         for (String spec : ap.cls.consumables) {
@@ -721,8 +826,10 @@ public abstract class ArenaMode {
             if (!t.isEmpty()) remove(p, t, Integer.MAX_VALUE);
         }
         ap.cls = c;
+        com.provinggrounds.core.LobbyManager.get().rememberClass(p.getUUID(), c);
         prepare(p, ap, true);
-        p.sendSystemMessage(Component.literal("[職業] 已切換為 " + c.displayName + "（" + c.description + "）").withStyle(ChatFormatting.AQUA));
+        refreshClassSpeed(p, ap);
+        p.sendSystemMessage(Component.literal("[職業] 已選擇 " + c.displayName + "（" + c.description + "）").withStyle(ChatFormatting.AQUA));
         p.playNotifySound(SoundEvents.ARMOR_EQUIP_IRON, SoundSource.MASTER, 1f, 1f);
         syncHud();
     }
@@ -803,6 +910,8 @@ public abstract class ArenaMode {
         p.removeAllEffects();
         AttributeInstance attr = p.getAttribute(Attributes.MAX_HEALTH);
         if (attr != null) attr.removeModifier(HEALTH_MOD);
+        AttributeInstance spd = p.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (spd != null) spd.removeModifier(CLASS_SPEED_MOD);
         p.setGameMode(GameType.ADVENTURE);
         p.setCamera(p);
         PGNetwork.sendTo(p, ArenaStatePacket.NONE);
@@ -846,7 +955,7 @@ public abstract class ArenaMode {
             }
             long wait = Math.max(0, ap.lastTransferTick + cfg.transferCooldown.get() * 20L - ticks);
             PGNetwork.sendTo(p, new ArenaStatePacket(kindByte(), title(), timerSeconds(), timerLabel(), statusLine(ap),
-                scoreLines(ap), ap.money, ap.cls.ordinal(), usesShop(), usesClasses(), canShop(p, ap), ap.team,
+                scoreLines(ap), ap.money, ap.cls.ordinal(), usesShop(), usesClasses(), canShop(p, ap), loadoutOpen(), ap.team,
                 (int) ((wait + 19) / 20), ap.kills, ap.deaths, mates, markers(ap), board));
 
         }

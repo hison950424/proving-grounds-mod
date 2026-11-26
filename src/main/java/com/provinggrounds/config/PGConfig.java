@@ -29,6 +29,7 @@ public class PGConfig {
     public final ForgeConfigSpec.IntValue minPlayersToStart;
     public final ForgeConfigSpec.IntValue forceStartSeconds;
     public final ForgeConfigSpec.DoubleValue endSoundVolume;
+    public final ForgeConfigSpec.BooleanValue friendlyFireDefault;
 
     // ── BR：縮圈 ──────────────────────────────────────────────────────────────
     public final ForgeConfigSpec.IntValue brGameDurationSeconds;
@@ -186,6 +187,8 @@ public class PGConfig {
             .defineInRange("end_sound_volume", 0.5, 0.0, 1.0);
         minPlayersToStart = builder.comment("最少開始人數（1 = 方便單人測試）")
             .defineInRange("min_players", 1, 1, 100);
+        friendlyFireDefault = builder.comment("所有模式的友軍誤傷預設值（只影響槍械子彈；投擲物與爆炸物永遠強制有友軍傷害與自傷；大廳可切換）")
+            .define("friendly_fire_v1", false);
         builder.pop();
 
         builder.push("battle_royale");
@@ -359,8 +362,8 @@ public class PGConfig {
             .defineInRange("bleed_per_second", 1.0, 0.05, 100.0);
         brDownedHealth = builder.comment("倒地時的血量（超過最大血量時以最大血量為準）。會隨時間流血，敵人也可以直接打掉")
             .defineInRange("downed_health", 100.0, 1.0, 1024.0);
-        brDownedSpeedPenalty = builder.comment("倒地時移動速度減少的比例（0.7 = 減少 70%，剩原本的 30%）。v2：原本 0.8（剩 20%），倒地爬行加快 50%")
-            .defineInRange("speed_penalty_v2", 0.7, 0.0, 1.0);
+        brDownedSpeedPenalty = builder.comment("倒地時移動速度減少的比例（0.4 = 減少 40%，剩原本的 60%）。v3：原本 0.7（剩 30%），倒地移動速度改為原本的 2 倍")
+            .defineInRange("speed_penalty_v3", 0.4, 0.0, 1.0);
         brReviveSeconds = builder.comment("隊友蹲下扶起需要的秒數")
             .defineInRange("revive_seconds", 10, 1, 60);
         brReviveRange = builder.comment("扶起距離（格）")

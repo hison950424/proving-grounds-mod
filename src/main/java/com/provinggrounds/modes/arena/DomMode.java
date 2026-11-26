@@ -78,8 +78,11 @@ public final class DomMode extends ArenaMode {
 
     private int captureMax() { return cfg.domCaptureSeconds.get(); }
 
-    /** 正在戰鬥（不是準備、結算）。佔點的整場特殊物品只有戰鬥中能用（計畫書 8）。 */
+    /** 正在戰鬥（不是準備、結算）。佔點的整場特殊道具只有戰鬥中能用（計畫書 8）。 */
     public boolean fighting() { return phase == Phase.ROUND; }
+
+    /** 第一回合 10 秒準備期：可選擇職業與特殊道具（計畫書 9）。 */
+    @Override public boolean loadoutOpen() { return round == 1 && phase == Phase.PREP; }
 
     @Override
     protected void onStart() {

@@ -55,7 +55,7 @@ public final class KnockbackShield {
         inv.setItem(slot, shield);
         p.inventoryMenu.broadcastChanges();
         p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ARMOR_EQUIP_IRON, SoundSource.PLAYERS, 1f, 0.8f);
-        p.displayClientMessage(Component.literal("已舉起擊退盾：再按一次使用特殊物品鍵向前衝撞").withStyle(ChatFormatting.AQUA), true);
+        p.displayClientMessage(Component.literal("已舉起擊退盾：再按一次使用特殊道具鍵向前衝撞").withStyle(ChatFormatting.AQUA), true);
         return true;
     }
 

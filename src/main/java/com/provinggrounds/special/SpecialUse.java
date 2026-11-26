@@ -78,8 +78,8 @@ public final class SpecialUse {
 
     public static void onKey(ServerPlayer p) {
         boolean dom = DomGear.active(p); // 佔點的整場特殊物品（計畫書 8）
-        if (!SpecialConfig.enabledSafe() && !dom) { msg(p, "特殊物品模式已關閉"); return; }
-        if (!canUseNow(p)) { msg(p, "觀戰中不能使用特殊物品"); return; }
+        if (!SpecialConfig.enabledSafe() && !dom) { msg(p, "特殊道具模式已關閉"); return; }
+        if (!canUseNow(p)) { msg(p, "觀戰中不能使用特殊道具"); return; }
         if (KnockbackShield.active(p)) {
             if (ActionLock.blocksSpecial(p)) { msg(p, "現在不能使用"); return; }
             KnockbackShield.charge(p);
@@ -91,8 +91,8 @@ public final class SpecialUse {
 
         ItemStack stack = SpecialSlot.get(p);
         SpecialType type = SpecialItem.typeOf(stack);
-        if (type == null) { msg(p, "特殊物品欄是空的"); return; }
-        if (ActionLock.blocksSpecial(p)) { msg(p, ActionLock.cloaked(p) ? "隱形中不能使用任何物品" : "現在不能使用特殊物品"); return; }
+        if (type == null) { msg(p, "特殊道具欄是空的"); return; }
+        if (ActionLock.blocksSpecial(p)) { msg(p, ActionLock.cloaked(p) ? "隱形中不能使用任何物品" : "現在不能使用特殊道具"); return; }
         String why = DomGear.blockReason(p, stack);
         if (why != null) { msg(p, why); return; }
         long now = p.server.getTickCount();
@@ -244,6 +244,12 @@ public final class SpecialUse {
             case THOR_HAMMER_PLUS -> NewSpecials.thor(p, true);
             case RESKYDIVE, RESKYDIVE_GROUP, RESKYDIVE_TARGET -> {
                 if (!NewSpecials.reSkydive(p, type)) return false;
+            }
+            // ── 計畫書 9：新增 17 種特殊道具 ──
+            case LOOK_UP_ONE, LOOK_UP_ALL, COCKROACH, DOMAIN_EXPANSION, FRIEND_OR_FOE, PARANOIA,
+                 RED_LIGHT, MAGNET_GRENADE, MISFIRE_CURSE, CRUDE_SWAPPER, SPACE_SWAPPER,
+                 ICE_SKATES, ICE_SKATES_ALL, HUD_JAMMER, OVERHEAT_CURSE, ETHEREAL, MIMIC -> {
+                if (!Plan9Specials.use(p, type)) return false;
             }
         }
         return true;

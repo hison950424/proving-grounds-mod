@@ -18,13 +18,17 @@
     "ExplosionHitPlayersMixin",
     "FlashShieldMixin",
     "ChestMenuMixin",
-    "ArmorAbsorbMixin"
+    "ArmorAbsorbMixin",
+    "BlockCollisionMixin"
   ],
   "client": [
     "HumanoidArmsMixin",
     "DamageSoundMixin",
     "ContainerScreenBgMixin",
-    "GuiGraphicsFillMixin"
+    "GuiGraphicsFillMixin",
+    "PlayerSkinMixin",
+    "ArmorHideMixin",
+    "LivingRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 0

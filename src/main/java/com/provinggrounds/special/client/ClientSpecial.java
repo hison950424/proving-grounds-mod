@@ -90,6 +90,7 @@ public final class ClientSpecial {
         gasLevel = 0;
         SpecialHotbar.pearlFlying = false;
         radarStart = -1;
+        ClientPlan9Specials.clear();
     }
 
     public static List<GlowSyncPacket.Entry> mapTargets() {
@@ -118,6 +119,7 @@ public final class ClientSpecial {
         switch (fx.kind()) {
             case SpecialFxPacket.COUGH -> coughTicks = 0;
             case SpecialFxPacket.PEARL -> SpecialHotbar.pearlFlying = fx.a() != 0;
+            case SpecialFxPacket.FORCE_LOOK_UP -> ClientPlan9Specials.forceLookUp();
             case SpecialFxPacket.DISORIENT -> { } // 舊版伺服器的通知：現在由客戶端在毒氣效果期間自己處理
             case SpecialFxPacket.RADAR -> {
                 radarStart = System.currentTimeMillis();

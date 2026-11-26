@@ -60,6 +60,15 @@ public final class SpecialRegistry {
     public static final RegistryObject<MobEffect> STIM_FREE    = effect("stim_free", MobEffectCategory.BENEFICIAL, 0xE04040); // 計畫書 7 C10：強心劑倒地後可行動
     public static final RegistryObject<MobEffect> DOWNED_MARK  = effect("downed", MobEffectCategory.HARMFUL, 0xA02020); // 計畫書 7 E：團隊模式倒地（讓客戶端知道自己倒地）
     public static final RegistryObject<MobEffect> ROOTED       = effect("rooted", MobEffectCategory.HARMFUL, 0x50E0B0);    // 計畫書 6 E2
+    // 計畫書 9 新增效果
+    public static final RegistryObject<MobEffect> FRIEND_OR_FOE = effect("friend_or_foe", MobEffectCategory.HARMFUL, 0xD05080);
+    public static final RegistryObject<MobEffect> PARANOIA      = effect("paranoia", MobEffectCategory.HARMFUL, 0xB02040);
+    public static final RegistryObject<MobEffect> MISFIRE       = effect("misfire", MobEffectCategory.HARMFUL, 0xF05020);
+    public static final RegistryObject<MobEffect> ICE_SKATES    = effect("ice_skates", MobEffectCategory.NEUTRAL, 0x80E0FF);
+    public static final RegistryObject<MobEffect> HUD_JAM       = effect("hud_jam", MobEffectCategory.HARMFUL, 0x505060);
+    public static final RegistryObject<MobEffect> OVERHEAT      = effect("overheat", MobEffectCategory.HARMFUL, 0xF08020);
+    public static final RegistryObject<MobEffect> ETHEREAL      = effect("ethereal", MobEffectCategory.BENEFICIAL, 0xB0E0FF);
+    public static final RegistryObject<MobEffect> MIMIC         = effect("mimic", MobEffectCategory.BENEFICIAL, 0xC09040);
 
     // ── 實體 ─────────────────────────────────────────────────────────────────
     public static final RegistryObject<EntityType<MineEntity>> MINE = ENTITIES.register("mine",

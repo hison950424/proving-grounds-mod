@@ -48,15 +48,19 @@ public final class DomGear {
         // 弱：只給一點資訊、一點機動、或防守用的小工具
         tier(1, SpecialType.ENEMY_SCANNER_BASIC, SpecialType.ENEMY_SCANNER, SpecialType.BLAST_SCANNER_BASIC, SpecialType.BLAST_SCANNER,
             SpecialType.SPRING_SHOES, SpecialType.SMOKE_BURST, SpecialType.SILENT_BOOTS, SpecialType.DECOY, SpecialType.RECON_MINE,
-            SpecialType.SNOW_WALL, SpecialType.ARMOR_REPAIR);
+            SpecialType.SNOW_WALL, SpecialType.ARMOR_REPAIR,
+            SpecialType.LOOK_UP_ONE, SpecialType.LOOK_UP_ALL, SpecialType.CRUDE_SWAPPER, SpecialType.ICE_SKATES, SpecialType.MIMIC);
         // 中：能直接改變一場交火（控場、傷害、救命、整隊資訊）
         tier(2, SpecialType.BLIND_ORB, SpecialType.ADRENALINE, SpecialType.INVIS_CLOAK, SpecialType.ENEMY_SCANNER_PLUS,
             SpecialType.BLAST_SCANNER_PLUS, SpecialType.RADAR_PULSE, SpecialType.KNOCKBACK_SHIELD, SpecialType.WIND_BOMB,
             SpecialType.LAND_MINE, SpecialType.FIRE_MINE, SpecialType.SHOCK_MINE, SpecialType.WARP_PEARL, SpecialType.GAS_GRENADE,
-            SpecialType.FIRST_AID_SHOT, SpecialType.ARMOR_REPAIR_PLUS, SpecialType.ROOT_ORB, SpecialType.FIRE_DRILL, SpecialType.RECALL);
+            SpecialType.FIRST_AID_SHOT, SpecialType.ARMOR_REPAIR_PLUS, SpecialType.ROOT_ORB, SpecialType.FIRE_DRILL, SpecialType.RECALL,
+            SpecialType.COCKROACH, SpecialType.PARANOIA, SpecialType.MAGNET_GRENADE, SpecialType.MISFIRE_CURSE,
+            SpecialType.SPACE_SWAPPER, SpecialType.ICE_SKATES_ALL, SpecialType.HUD_JAMMER, SpecialType.OVERHEAT_CURSE, SpecialType.ETHEREAL);
         // 強：一個人就能翻盤（免死、大範圍傷害、癱瘓整區、賭命）
         tier(3, SpecialType.TOTEM, SpecialType.SHIELD_BUBBLE, SpecialType.BRAINWASH, SpecialType.RECALL_PLUS,
-            SpecialType.GAMBLER_ROD, SpecialType.GAMBLER_ROD_PLUS, SpecialType.THOR_HAMMER, SpecialType.THOR_HAMMER_PLUS);
+            SpecialType.GAMBLER_ROD, SpecialType.GAMBLER_ROD_PLUS, SpecialType.THOR_HAMMER, SpecialType.THOR_HAMMER_PLUS,
+            SpecialType.DOMAIN_EXPANSION, SpecialType.FRIEND_OR_FOE, SpecialType.RED_LIGHT);
         // 沒寫的 = 0（團隊模式用不到）：信號槍（空投）、三種假箱（沒有箱子）、圈外庇護（沒有毒圈）、三種重新跳傘
     }
 
@@ -125,14 +129,14 @@ public final class DomGear {
     /** 團隊死鬥：發一個隨機特殊物品到特殊物品格（格子有東西就不給）。 */
     public static void giveRandom(ServerPlayer p, String why) {
         if (!SpecialSlot.get(p).isEmpty()) {
-            p.displayClientMessage(Component.literal(why + "：特殊物品欄已經有東西，這次沒有拿到").withStyle(ChatFormatting.GRAY), true);
+            p.displayClientMessage(Component.literal(why + "：特殊道具欄已經有東西，這次沒有拿到").withStyle(ChatFormatting.GRAY), true);
             return;
         }
         ItemStack s = randomArena(p.serverLevel());
         if (s.isEmpty()) return;
         SpecialType t = SpecialItem.typeOf(s);
         SpecialSlot.set(p, s);
-        p.displayClientMessage(Component.literal(why + "：獲得 " + (t == null ? "特殊物品" : t.zh) + "（按 Q 使用）").withStyle(ChatFormatting.GOLD), true);
+        p.displayClientMessage(Component.literal(why + "：獲得 " + (t == null ? "特殊道具" : t.zh) + "（按 Q 使用）").withStyle(ChatFormatting.GOLD), true);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -147,13 +151,22 @@ public final class DomGear {
         return c == null || tier(c) == 0 ? DEFAULT : c;
     }
 
-    /** 大廳選特殊物品（比賽中不能換：整場只能一種）。 */
+    /** 大廳或佔點開局 10 秒準備期選特殊道具（戰鬥開始後不能換：整場只能一種）。 */
     public static void setChoice(ServerPlayer p, int typeOrdinal) {
         SpecialType[] all = SpecialType.values();
         if (typeOrdinal < 0 || typeOrdinal >= all.length) return;
         SpecialType t = all[typeOrdinal];
         if (tier(t) == 0) { msg(p, t.zh + " 在團隊模式不能用"); return; }
-        if (STATES.containsKey(p.getUUID()) && dom() != null) { msg(p, "比賽中不能換，整場只能用一種"); return; }
+        DomMode d = dom();
+        if (STATES.containsKey(p.getUUID()) && d != null) {
+            if (!d.loadoutOpen()) { msg(p, "比賽開始後不能換，整場只能用一種"); return; }
+            CHOICE.put(p.getUUID(), t);
+            State st = STATES.get(p.getUUID());
+            st.type = t;
+            st.used = false;
+            refreshSlot(p, st);
+            return;
+        }
         CHOICE.put(p.getUUID(), t);
         sync(p);
     }
@@ -196,7 +209,7 @@ public final class DomGear {
             STATES.put(p.getUUID(), st);
             refreshSlot(p, st);
             int tier = tier(st.type);
-            p.sendSystemMessage(Component.literal("[佔點] 你的特殊物品：" + st.type.zh + "（" + tierName(tier) + "）。每回合可以用一次，按 Q 使用；"
+            p.sendSystemMessage(Component.literal("[佔點] 你的特殊道具：" + st.type.zh + "（" + tierName(tier) + "）。每回合可以用一次，按 Q 使用；"
                 + "商店價格 +" + markupPercent(tier) + "%。").withStyle(ChatFormatting.AQUA));
         }
     }
@@ -243,7 +256,7 @@ public final class DomGear {
         State st = STATES.get(p.getUUID());
         DomMode d = dom();
         if (st == null || d == null) { SpecialSlot.clear(p); return "比賽已經結束"; } // 比賽外殘留的代表物品
-        if (!d.fighting()) return "準備階段不能使用特殊物品";
+        if (!d.fighting()) return "準備階段不能使用特殊道具";
         if (st.used) return "這回合已經用過了，下一回合才能再用";
         return null;
     }

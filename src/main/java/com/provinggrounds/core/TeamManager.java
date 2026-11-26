@@ -147,7 +147,7 @@ public class TeamManager {
                 team.setDisplayName(Component.literal(t.displayName));
                 team.setColor(t.color);
                 team.setNameTagVisibility(Visibility.HIDE_FOR_OTHER_TEAMS);
-                team.setAllowFriendlyFire(false);
+                team.setAllowFriendlyFire(true); // 友軍誤傷改由 FriendlyFireEvents 精細控管（避免原版擋掉自己與隊友的爆炸／投擲物）
                 team.setSeeFriendlyInvisibles(true);
             }
             sb.addPlayerToTeam(p.getScoreboardName(), team);

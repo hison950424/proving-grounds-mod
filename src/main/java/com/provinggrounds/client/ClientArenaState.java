@@ -10,12 +10,27 @@ public final class ClientArenaState {
 
     private static volatile ArenaStatePacket state = ArenaStatePacket.NONE;
     private static volatile int version;
+    /** 剛進入開局 10 秒準備選角階段：由 ClientForgeEvents 自動彈出 LoadoutScreen。 */
+    private static volatile boolean pendingOpenLoadout;
 
     private ClientArenaState() {}
 
     public static void set(ArenaStatePacket p) {
+        boolean wasOpen = state.loadoutOpen();
         state = p;
         version++;
+        if (p.kind() != 0 && p.classes() && p.loadoutOpen() && !wasOpen) {
+            pendingOpenLoadout = true;
+        }
+        if (p.kind() == 0 || !p.loadoutOpen()) {
+            pendingOpenLoadout = false;
+        }
+    }
+
+    public static boolean consumePendingLoadout() {
+        if (!pendingOpenLoadout) return false;
+        pendingOpenLoadout = false;
+        return true;
     }
 
     public static ArenaStatePacket get() { return state; }

@@ -167,7 +167,7 @@ public final class SpecialEvents {
                     .then(Commands.literal("on").executes(ctx -> mode(ctx.getSource(), true)))
                     .then(Commands.literal("off").executes(ctx -> mode(ctx.getSource(), false))))
                 .then(Commands.literal("list").executes(ctx -> {
-                    StringBuilder sb = new StringBuilder("[PG] 特殊物品（" + ids.length + " 種）：");
+                    StringBuilder sb = new StringBuilder("[PG] 特殊道具（" + ids.length + " 種）：");
                     for (SpecialType t : SpecialType.values()) sb.append("\n  ").append(t.id).append("  ").append(t.zh);
                     ctx.getSource().sendSuccess(() -> Component.literal(sb.toString()).withStyle(ChatFormatting.AQUA), false);
                     return ids.length;
@@ -179,7 +179,7 @@ public final class SpecialEvents {
                             ServerPlayer p = ctx.getSource().getPlayerOrException();
                             SpecialType t = SpecialType.byId(StringArgumentType.getString(ctx, "id"));
                             if (t == null) {
-                                ctx.getSource().sendFailure(Component.literal("[PG] 沒有這個特殊物品，用 /pg special list 查看全部 ID"));
+                                ctx.getSource().sendFailure(Component.literal("[PG] 沒有這個特殊道具，用 /pg special list 查看全部 ID"));
                                 return 0;
                             }
                             ItemStack stack = new ItemStack(SpecialRegistry.item(t));
@@ -195,7 +195,7 @@ public final class SpecialEvents {
     /** 特殊物品模式開關（同大廳選單的按鈕）。 */
     private static int mode(net.minecraft.commands.CommandSourceStack src, boolean on) {
         SpecialConfig.setEnabled(on);
-        src.sendSuccess(() -> Component.literal("[PG] 特殊物品模式：" + (on ? "開" : "關")).withStyle(ChatFormatting.GREEN), true);
+        src.sendSuccess(() -> Component.literal("[PG] 特殊道具模式：" + (on ? "開" : "關")).withStyle(ChatFormatting.GREEN), true);
         return 1;
     }
 
@@ -212,7 +212,7 @@ public final class SpecialEvents {
             got.merge(t, 1, Integer::sum);
             total++;
         }
-        StringBuilder sb = new StringBuilder(String.format("[PG] 模擬 %d 箱：出現特殊物品 %d 件（平均每 %.1f 箱 1 件）",
+        StringBuilder sb = new StringBuilder(String.format("[PG] 模擬 %d 箱：出現特殊道具 %d 件（平均每 %.1f 箱 1 件）",
             count, total, total == 0 ? 0.0 : count / (double) total));
         got.entrySet().stream().sorted((a, b) -> b.getValue() - a.getValue())
             .forEach(e -> sb.append("\n  ").append(e.getKey().zh).append("：").append(e.getValue()));

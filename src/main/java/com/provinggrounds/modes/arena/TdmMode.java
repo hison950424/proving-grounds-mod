@@ -24,6 +24,9 @@ public final class TdmMode extends ArenaMode {
     private final int targetKills, totalSeconds;
     private int redKills, blueKills;
     private int stage; // 0 早期、1 中期、2 後期
+    /** 計畫書 9：開局 10 秒準備期間（封住基地出口、自動跳出選角介面）。 */
+    private int prepSeconds;
+    private int fightTicks;
 
     public TdmMode(MinecraftServer server, int targetKills, int minutes) {
         super(server);
@@ -32,7 +35,8 @@ public final class TdmMode extends ArenaMode {
     }
 
     @Override public GameManager.GameMode kind() { return GameManager.GameMode.TDM; }
-    @Override public String title() { return "團隊死鬥・" + stageName(); }
+    @Override public String title() { return prepSeconds > 0 ? "團隊死鬥・準備選角" : "團隊死鬥・" + stageName(); }
+    @Override public boolean loadoutOpen() { return prepSeconds > 0; }
 
     private String stageName() { return stage == 0 ? "早期" : stage == 1 ? "中期" : "後期"; }
 
@@ -40,7 +44,7 @@ public final class TdmMode extends ArenaMode {
 
     private int timeOffset; // 測試指令 skipstage 往後跳的秒數
 
-    private int elapsed() { return ticks / 20 + timeOffset; }
+    private int elapsed() { return fightTicks / 20 + timeOffset; }
 
     @Override
     public String debug(String action, String arg, int n) {
@@ -65,13 +69,30 @@ public final class TdmMode extends ArenaMode {
 
     @Override
     protected void onStart() {
-        fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.AIR.defaultBlockState(), true); // 拆掉基地出口屏障
+        prepSeconds = 10; // 開局 10 秒選角準備期
+        fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.BARRIER.defaultBlockState(), true); // 準備期間封住出口
         clearSupplyChests();
         clearFloorItems();
     }
 
     @Override
+    protected void onFinish() {
+        fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.AIR.defaultBlockState(), true);
+    }
+
+    @Override
     protected void tickRules() {
+        if (prepSeconds > 0) {
+            if (ticks % 20 == 0 && --prepSeconds <= 0) {
+                fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.AIR.defaultBlockState(), true); // 拆掉基地出口屏障
+                broadcastTitle(Component.literal("⚔ 戰鬥開始！").withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
+                    Component.literal("在基地裡按 M 打開商店").withStyle(ChatFormatting.YELLOW), 40);
+                playAll(SoundEvents.RAID_HORN.value(), 0.6f, 1.2f);
+                syncHud();
+            }
+            return;
+        }
+        fightTicks++;
         if (ticks % 20 != 0) return;
         int e = elapsed();
         int newStage = e >= totalSeconds * 2 / 3 ? 2 : e >= totalSeconds / 3 ? 1 : 0;
@@ -136,8 +157,8 @@ public final class TdmMode extends ArenaMode {
             new ScoreLine(rgb(ChatFormatting.BLUE), "藍隊", blueKills, targetKills, ""));
     }
 
-    @Override protected int timerSeconds() { return Math.max(0, totalSeconds - elapsed()); }
-    @Override protected String timerLabel() { return "剩餘時間"; }
+    @Override protected int timerSeconds() { return prepSeconds > 0 ? prepSeconds : Math.max(0, totalSeconds - elapsed()); }
+    @Override protected String timerLabel() { return prepSeconds > 0 ? "準備選角" : "剩餘時間"; }
 
     @Override
     protected String statusLine(ArenaPlayer viewer) {

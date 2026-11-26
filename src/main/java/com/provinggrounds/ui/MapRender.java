@@ -158,6 +158,8 @@ public final class MapRender {
 
     private static void drawMarkers0(GuiGraphics g, Font font, View v, boolean names) {
         long now = System.currentTimeMillis();
+        net.minecraft.client.player.LocalPlayer me = Minecraft.getInstance().player;
+        boolean hideMates = me != null && me.hasEffect(com.provinggrounds.special.SpecialRegistry.FRIEND_OR_FOE.get()); // 敵我不分：隱藏隊友標記
         for (MapMarkersPacket.Marker m : ClientMapData.markers()) {
             int sx = (int) v.px(m.x()), sz = (int) v.pz(m.z());
             switch (m.kind()) {
@@ -169,19 +171,28 @@ public final class MapRender {
                     arrow(g, font, sx, sz, m.yaw(), withAlpha(ENEMY, alpha));
                 }
                 case MapMarkersPacket.TEAMMATE_DOWNED -> {
+                    if (hideMates) break;
                     int c = (now / 300) % 2 == 0 ? ENEMY : 0xFFFFFFFF;
                     box(g, sx, sz, 2, c);
                     if (names) label(g, font, sx, sz, Tr.t("map.downed_name", m.name()), c);
                 }
                 default -> { // 隊友（一律藍色，使用者回饋）、觀戰時的所有玩家（照隊伍顏色）
+                    if (hideMates && m.kind() == MapMarkersPacket.TEAMMATE) break;
                     int c = 0xFF000000 | (m.kind() == MapMarkersPacket.TEAMMATE ? ClientTeamColors.MATE : m.color());
                     arrow(g, font, sx, sz, m.yaw(), c);
                     if (names) label(g, font, sx, sz, m.name(), c);
                 }
             }
         }
-        // 標點（自己黃色、隊友藍色；使用者回饋）
+        // 被害妄想症（計畫書 9）：假敵人紅點
+        for (var f : com.provinggrounds.special.client.ClientPlan9Specials.fakeEnemies()) {
+            int sx = (int) v.px(f.x()), sz = (int) v.pz(f.z());
+            float alpha = 1f - Math.min(1f, f.age() / 60f) * 0.7f;
+            arrow(g, font, sx, sz, f.yaw(), withAlpha(ENEMY, alpha));
+        }
+        // 標點（自己黃色、隊友藍色；敵我不分期間隱藏隊友標點）
         for (ClientPing.MapPing p : ClientPing.mapPings()) {
+            if (hideMates && !p.self()) continue;
             int sx = (int) v.px(p.x()), sz = (int) v.pz(p.z());
             int c = (p.alpha() << 24) | (p.self() ? 0xFFE040 : ClientTeamColors.MATE);
             g.drawString(font, "◆", sx - font.width("◆") / 2, sz - 4, c, true);

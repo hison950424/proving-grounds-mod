@@ -6,6 +6,7 @@ import com.provinggrounds.ProvingGroundsMod;
 import com.provinggrounds.network.PGNetwork;
 import com.provinggrounds.network.PingPacket;
 import com.provinggrounds.network.PingSyncPacket;
+import net.minecraft.client.Camera;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -13,7 +14,8 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -54,7 +56,7 @@ public final class ClientPing {
         Minecraft mc = Minecraft.getInstance();
         boolean self = mc.player != null && mc.player.getUUID().equals(p.owner());
         PINGS.put(p.owner(), new Ping(new Vec3(p.x(), p.y(), p.z()), p.name(), self, System.currentTimeMillis())); // 取代同一個人的舊標點
-        mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_PLING.value(), self ? 1.8f : 1.5f, 0.5f));
+        mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_PLING.value(), self ? 1.8f : 1.5f, 0.125f)); // 音量降低 75%（原本 0.5 → 0.125）
     }
 
     @SubscribeEvent
@@ -72,10 +74,18 @@ public final class ClientPing {
         }
     }
 
-    /** 準星指著的位置：近的實體（原版準星判定）優先，否則往前找方塊（最遠 PingPacket.MAX_RANGE 格）。 */
+    /** 準星指著的位置：略過玩家與實體，直接從相機沿準星方向標記到方塊上（最遠 PingPacket.MAX_RANGE 格）。 */
     private static Vec3 aimed(Minecraft mc, LocalPlayer p) {
-        if (mc.hitResult instanceof EntityHitResult eh) return eh.getEntity().position().add(0, eh.getEntity().getBbHeight() * 0.6, 0);
-        HitResult hit = p.pick(PingPacket.MAX_RANGE - 1, 1f, false);
+        Camera cam = mc.gameRenderer.getMainCamera();
+        Vec3 eye = cam.getPosition();
+        org.joml.Vector3f lookF = cam.getLookVector();
+        Vec3 look = new Vec3(lookF.x(), lookF.y(), lookF.z());
+        if (look.lengthSqr() < 1e-6) {
+            eye = p.getEyePosition(mc.getFrameTime());
+            look = p.getViewVector(mc.getFrameTime());
+        }
+        Vec3 end = eye.add(look.scale(PingPacket.MAX_RANGE - 1));
+        BlockHitResult hit = p.level().clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
         return hit.getType() == HitResult.Type.MISS ? null : hit.getLocation();
     }
 
@@ -96,10 +106,10 @@ public final class ClientPing {
         return out;
     }
 
-    /** 把標點的世界座標換成畫面座標（相機後面的不畫）。 */
+    /** 把標點的世界座標換成畫面座標（相機後面的不畫）。用 AFTER_TRANSLUCENT_BLOCKS 取得正確的相機視角矩陣（Forge 1.20.1 的 AFTER_LEVEL 傳的是投影矩陣）。 */
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
         SCREEN.clear();
         if (PINGS.isEmpty()) return;
         Minecraft mc = Minecraft.getInstance();
@@ -123,8 +133,10 @@ public final class ClientPing {
         if (mc.player == null || mc.options.hideGui || SCREEN.isEmpty()) return;
         long now = System.currentTimeMillis();
         Font font = mc.font;
+        boolean fof = mc.player.hasEffect(com.provinggrounds.special.SpecialRegistry.FRIEND_OR_FOE.get());
         for (Screen sc : SCREEN) {
             Ping p = sc.ping();
+            if (fof && !p.self()) continue; // 敵我不分期間隱藏隊友標記
             long age = now - p.start();
             if (age > SHOW_MS) continue;
             int alpha = age < SOLID_MS ? 0xFF : 0x59; // 0～2 秒 100%、2～5 秒 35%

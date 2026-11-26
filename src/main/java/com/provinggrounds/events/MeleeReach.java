@@ -43,7 +43,12 @@ public final class MeleeReach {
         try {
             boolean heavy = event.getAmount() >= 100f; // 右鍵重擊是左鍵的 10 倍
             double dmg = heavy ? PGConfig.SERVER.meleeHeavyDamage.get() : PGConfig.SERVER.meleeLightDamage.get();
-            if (behind(attacker, event.getEntity())) dmg *= PGConfig.SERVER.meleeBackstabMultiplier.get(); // 背刺（使用者回饋）
+            if (behind(attacker, event.getEntity())) {
+                // 刺客背刺 ×3，其他職業照設定（預設 ×2）
+                double mult = com.provinggrounds.modes.arena.ClassCombatEvents.isClass(attacker, com.provinggrounds.modes.arena.ArenaClass.ASSASSIN)
+                    ? 3.0 : PGConfig.SERVER.meleeBackstabMultiplier.get();
+                dmg *= mult;
+            }
             event.setAmount((float) dmg);
         } catch (IllegalStateException ignored) {
             // 設定還沒載入：照原本

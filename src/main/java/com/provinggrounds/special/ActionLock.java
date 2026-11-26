@@ -39,7 +39,7 @@ public final class ActionLock {
 
     /** 不能使用一般物品、攻擊、開槍、放置破壞方塊、開箱子。 */
     public static boolean blocksActions(Entity e) {
-        if (cloaked(e)) return true;
+        if (cloaked(e) || SpecialHooks.isEthereal(e)) return true;
         // 強心劑（計畫書 7 C10）：倒地後前 5 秒可以使用任何物品（效果 stim_free 會同步給自己，兩端都能判斷）
         if (e instanceof LivingEntity l && l.hasEffect(SpecialRegistry.STIM_FREE.get()) && BRDowned.isDowned(e)) return false;
         return BRDowned.cannotAct(e);

@@ -147,7 +147,7 @@ public final class ArenaDowned {
 
     public void tick() {
         PGConfig cfg = c();
-        int total = Math.max(1, cfg.brReviveSeconds.get() * 20);
+        int baseTotal = Math.max(1, (int) Math.round(cfg.arena.arenaReviveSeconds.get() * 20.0));
         double range = cfg.brReviveRange.get();
         Set<UUID> busy = new HashSet<>();
         for (UUID id : new ArrayList<>(downed.keySet())) {
@@ -160,6 +160,7 @@ public final class ArenaDowned {
             if (helper != null) {
                 busy.add(helper.getUUID());
                 if (!helper.getUUID().equals(s.reviver)) { s.reviver = helper.getUUID(); s.reviveTicks = 0; }
+                int total = reviveTicksFor(helper, baseTotal);
                 s.reviveTicks++; // 扶的期間流血暫停
                 int pct = Math.min(100, s.reviveTicks * 100 / total);
                 if (s.reviveTicks % 5 == 0) {
@@ -222,6 +223,13 @@ public final class ArenaDowned {
             if (p != null && ap != null && !hasStandingMate(ap)) toKill.add(p);
         }
         for (ServerPlayer p : toKill) if (downed.containsKey(p.getUUID())) finalKill(p);
+    }
+
+    /** 扶起所需 tick：醫護兵只需 2 秒（40 tick），其他職業照 arena.revive_seconds_v1（5.5 秒 = 110 tick）。 */
+    private int reviveTicksFor(ServerPlayer helper, int baseTotal) {
+        ArenaMode.ArenaPlayer hp = mode.player(helper.getUUID());
+        if (hp != null && mode.usesClasses() && hp.cls.fastReviveTicks() > 0) return hp.cls.fastReviveTicks();
+        return baseTotal;
     }
 
     /** 比賽結束、模式停止：全部解除。 */

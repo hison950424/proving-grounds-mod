@@ -208,7 +208,9 @@ public class MainMenuScreen extends Screen {
             variant.ordinal(), canEdit, i -> send(LobbyManager.Action.SET_VARIANT, i));
         y = choice(sx, y, sw, "槍械", weapon.displayName, java.util.Arrays.stream(com.provinggrounds.core.WeaponMode.values()).map(m -> m.displayName).toList(),
             weapon.ordinal(), canEdit, i -> send(LobbyManager.Action.SET_WEAPON_MODE, i));
-        y = choice(sx, y, sw, "特殊物品", special ? "開" : "關", OFF_ON, special ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_SPECIAL, i));
+        y = choice(sx, y, sw, "特殊道具", special ? "開" : "關", OFF_ON, special ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_SPECIAL, i));
+        boolean ff = lobby != null && lobby.friendlyFire();
+        y = choice(sx, y, sw, "友軍誤傷", ff ? "開" : "關", OFF_ON, ff ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_FRIENDLY_FIRE, i));
         int blockDamage = lobby == null ? 1 : lobby.blockDamage(); // 爆炸炸毀方塊（比賽結束自動還原；計畫書 6 D3）
         String[] bdNames = { "關", "全部", "只有槍械", "只有投擲物" };
         int bd = Math.max(0, Math.min(3, blockDamage));
@@ -322,8 +324,10 @@ public class MainMenuScreen extends Screen {
         }
         boolean downedOn = a.downed(); // 計畫書 7 E：團隊模式倒地（只有管理員能改，預設關）
         y = choice(sx, y, sw, "倒地", downedOn ? "開" : "關", OFF_ON, downedOn ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_ARENA_DOWNED, i));
-        boolean special = lobby == null || lobby.special(); // 特殊物品模式：擊殺敵人掉落特殊物品（商店不賣）
-        y = choice(sx, y, sw, "特殊物品", special ? "開" : "關", OFF_ON, special ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_SPECIAL, i));
+        boolean ff = lobby != null && lobby.friendlyFire(); // 計畫書 9：所有模式皆可設定友軍誤傷（只影響槍械子彈）
+        y = choice(sx, y, sw, "友軍誤傷", ff ? "開" : "關", OFF_ON, ff ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_FRIENDLY_FIRE, i));
+        boolean special = lobby == null || lobby.special(); // 特殊道具模式
+        y = choice(sx, y, sw, "特殊道具", special ? "開" : "關", OFF_ON, special ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_SPECIAL, i));
         if (gm == GameManager.GameMode.DOM && special) {
             // 計畫書 8：佔點＋特殊物品模式：整場選一種、每回合用一次；選越強自己商店越貴
             LobbyStatePacket.Entry me0 = self(lobby);
@@ -335,7 +339,7 @@ public class MainMenuScreen extends Screen {
             }).toList();
             com.provinggrounds.special.SpecialType cur = com.provinggrounds.client.ClientDomGear.choice();
             String value = cur == null ? "—" : "【" + com.provinggrounds.special.DomGear.tierName(com.provinggrounds.special.DomGear.tier(cur)) + "】" + cur.zh;
-            y = choice(sx, y, sw, "我的特殊物品", value, labels, Math.max(0, all.indexOf(cur)), canPick0,
+            y = choice(sx, y, sw, "我的特殊道具", value, labels, Math.max(0, all.indexOf(cur)), canPick0,
                 k -> PGNetwork.sendToServer(new com.provinggrounds.network.DomGearActionPacket(all.get(k).ordinal())));
         }
         if (gm != GameManager.GameMode.GK) {

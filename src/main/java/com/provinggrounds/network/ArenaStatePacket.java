@@ -17,7 +17,7 @@ import java.util.function.Supplier;
 public record ArenaStatePacket(
     byte kind, String title, int seconds, String timerLabel, String status,
     List<ArenaMode.ScoreLine> scores,
-    int money, int classOrdinal, boolean shop, boolean classes, boolean canShop, int team,
+    int money, int classOrdinal, boolean shop, boolean classes, boolean canShop, boolean loadoutOpen, int team,
     int transferCooldown, int kills, int deaths, List<Mate> mates,
     List<Marker> markers, List<Row> board
 ) {
@@ -35,7 +35,7 @@ public record ArenaStatePacket(
     public record Row(String name, int color, int kills, int deaths, int money, boolean online) {}
 
     public static final ArenaStatePacket NONE = new ArenaStatePacket((byte) 0, "", -1, "", "", List.of(),
-        0, 0, false, false, false, 0, 0, 0, 0, List.of(), List.of(), List.of());
+        0, 0, false, false, false, false, 0, 0, 0, 0, List.of(), List.of(), List.of());
 
     public void encode(FriendlyByteBuf buf) {
         buf.writeByte(kind);
@@ -54,7 +54,7 @@ public record ArenaStatePacket(
         }
         buf.writeVarInt(money);
         buf.writeVarInt(classOrdinal);
-        buf.writeByte((shop ? 1 : 0) | (classes ? 2 : 0) | (canShop ? 4 : 0));
+        buf.writeByte((shop ? 1 : 0) | (classes ? 2 : 0) | (canShop ? 4 : 0) | (loadoutOpen ? 8 : 0));
         buf.writeVarInt(team);
         buf.writeVarInt(transferCooldown);
         buf.writeVarInt(kills);
@@ -113,7 +113,7 @@ public record ArenaStatePacket(
             board.add(new Row(buf.readUtf(32), buf.readInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt() - 1, buf.readBoolean()));
         }
         return new ArenaStatePacket(kind, title, seconds, timerLabel, status, scores, money, cls,
-            (f & 1) != 0, (f & 2) != 0, (f & 4) != 0, team, cd, kills, deaths, mates, markers, board);
+            (f & 1) != 0, (f & 2) != 0, (f & 4) != 0, (f & 8) != 0, team, cd, kills, deaths, mates, markers, board);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
