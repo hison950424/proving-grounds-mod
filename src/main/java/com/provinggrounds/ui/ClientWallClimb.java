@@ -45,6 +45,9 @@ public final class ClientWallClimb {
                 triggerEquipRaise(Minecraft.getInstance(), lp);
             }
         });
+        // 只有大逃殺裡、自己落地存活時能翻爬（大廳、團隊死鬥、佔點、槍王之王按空白鍵只是普通跳躍）
+        WallClimb.setClientModeAllowed(p ->
+            com.provinggrounds.client.ClientBRState.get().selfState() == com.provinggrounds.client.ClientBRState.SELF_ALIVE);
     }
 
     private static boolean jumpWas;

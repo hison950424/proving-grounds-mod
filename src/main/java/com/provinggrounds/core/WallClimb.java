@@ -191,7 +191,22 @@ public final class WallClimb {
         if (p.isInWater() || p.isInLava()) return false;
         if (PoseOverride.mustCrawl(p) || p.getPose() == Pose.SWIMMING) return false;
         if (!p.level().isClientSide && BattleRoyaleMode.get().isAirborne(p.getUUID())) return false;
+        // 只有大逃殺能翻爬（使用者決定）：伺服器看「大逃殺進行中＋活著的參賽者」，客戶端看自己的大逃殺狀態
+        if (p.level().isClientSide) {
+            java.util.function.Predicate<Player> allowed = clientModeAllowed;
+            if (allowed == null || !allowed.test(p)) return false;
+        } else {
+            BattleRoyaleMode br = BattleRoyaleMode.get();
+            if (!br.isInPlay() || !br.isAliveParticipant(p.getUUID())) return false;
+        }
         return true;
+    }
+
+    /** 客戶端：現在的模式能不能翻爬（由 ClientWallClimb 註冊，避免共用類別直接依賴客戶端類別）。 */
+    private static volatile @Nullable java.util.function.Predicate<Player> clientModeAllowed;
+
+    public static void setClientModeAllowed(java.util.function.Predicate<Player> allowed) {
+        clientModeAllowed = allowed;
     }
 
     /** 先垂直拉起超過牆頂、後半段再平滑向前跨上平台，確保碰撞箱絕不會擦到前方牆面造成抖動。 */
