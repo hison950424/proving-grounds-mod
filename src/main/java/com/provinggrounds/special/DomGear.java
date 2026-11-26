@@ -43,26 +43,72 @@ public final class DomGear {
     // ═════════════════════════════════════════════════════════════════════════
 
     private static final Map<SpecialType, Integer> BUILTIN = new EnumMap<>(SpecialType.class);
+    /** 每種特殊道具各自的獨立商店加價（%）：因為已改為弱 1／中 2／強 3 回合冷卻，整體加價懲罰大幅調降。 */
+    private static final Map<SpecialType, Integer> BUILTIN_MARKUP = new EnumMap<>(SpecialType.class);
 
-    private static void tier(int t, SpecialType... types) { for (SpecialType s : types) BUILTIN.put(s, t); }
+    private static void gear(int t, SpecialType type, int markupPct) {
+        BUILTIN.put(type, t);
+        BUILTIN_MARKUP.put(type, markupPct);
+    }
 
     static {
-        // 弱：只給一點資訊、一點機動、或防守用的小工具
-        tier(1, SpecialType.ENEMY_SCANNER_BASIC, SpecialType.ENEMY_SCANNER, SpecialType.BLAST_SCANNER_BASIC, SpecialType.BLAST_SCANNER,
-            SpecialType.SPRING_SHOES, SpecialType.SMOKE_BURST, SpecialType.SILENT_BOOTS, SpecialType.DECOY, SpecialType.RECON_MINE,
-            SpecialType.SNOW_WALL, SpecialType.ARMOR_REPAIR,
-            SpecialType.LOOK_UP_ONE, SpecialType.LOOK_UP_ALL, SpecialType.CRUDE_SWAPPER, SpecialType.ICE_SKATES);
-        // 中：能直接改變一場交火（控場、傷害、救命、整隊資訊）
-        tier(2, SpecialType.BLIND_ORB, SpecialType.ADRENALINE, SpecialType.INVIS_CLOAK, SpecialType.ENEMY_SCANNER_PLUS,
-            SpecialType.BLAST_SCANNER_PLUS, SpecialType.RADAR_PULSE, SpecialType.KNOCKBACK_SHIELD, SpecialType.WIND_BOMB,
-            SpecialType.LAND_MINE, SpecialType.FIRE_MINE, SpecialType.SHOCK_MINE, SpecialType.WARP_PEARL, SpecialType.GAS_GRENADE,
-            SpecialType.FIRST_AID_SHOT, SpecialType.ARMOR_REPAIR_PLUS, SpecialType.ROOT_ORB, SpecialType.FIRE_DRILL, SpecialType.RECALL,
-            SpecialType.COCKROACH, SpecialType.PARANOIA, SpecialType.MAGNET_GRENADE, SpecialType.MISFIRE_CURSE,
-            SpecialType.SPACE_SWAPPER, SpecialType.ICE_SKATES_ALL, SpecialType.HUD_JAMMER, SpecialType.OVERHEAT_CURSE, SpecialType.ETHEREAL);
-        // 強：一個人就能翻盤（免死、大範圍傷害、癱瘓整區、賭命）
-        tier(3, SpecialType.TOTEM, SpecialType.SHIELD_BUBBLE, SpecialType.BRAINWASH, SpecialType.RECALL_PLUS,
-            SpecialType.GAMBLER_ROD, SpecialType.GAMBLER_ROD_PLUS,
-            SpecialType.DOMAIN_EXPANSION, SpecialType.FRIEND_OR_FOE, SpecialType.RED_LIGHT);
+        // 弱（每回合可用，原一律 +10% → 依實戰價值細分為 +2%～+8%）
+        gear(1, SpecialType.LOOK_UP_ALL,         2);
+        gear(1, SpecialType.CRUDE_SWAPPER,       2);
+        gear(1, SpecialType.ICE_SKATES,          3);
+        gear(1, SpecialType.BLAST_SCANNER_BASIC, 3);
+        gear(1, SpecialType.ENEMY_SCANNER_BASIC, 4);
+        gear(1, SpecialType.LOOK_UP_ONE,         4);
+        gear(1, SpecialType.DECOY,               4);
+        gear(1, SpecialType.BLAST_SCANNER,       5);
+        gear(1, SpecialType.ENEMY_SCANNER,       5);
+        gear(1, SpecialType.RECON_MINE,          5);
+        gear(1, SpecialType.SPRING_SHOES,        5);
+        gear(1, SpecialType.SMOKE_BURST,         6);
+        gear(1, SpecialType.SNOW_WALL,           6);
+        gear(1, SpecialType.ARMOR_REPAIR,        7);
+        gear(1, SpecialType.SILENT_BOOTS,        8);
+
+        // 中（每 2 回合可用，原一律 +25% → 依實戰價值細分為 +8%～+16%）
+        gear(2, SpecialType.ICE_SKATES_ALL,      8);
+        gear(2, SpecialType.SPACE_SWAPPER,       9);
+        gear(2, SpecialType.PARANOIA,            9);
+        gear(2, SpecialType.OVERHEAT_CURSE,      9);
+        gear(2, SpecialType.MISFIRE_CURSE,       10);
+        gear(2, SpecialType.HUD_JAMMER,          10);
+        gear(2, SpecialType.SHOCK_MINE,          10);
+        gear(2, SpecialType.FIRE_MINE,           11);
+        gear(2, SpecialType.MAGNET_GRENADE,      11);
+        gear(2, SpecialType.WIND_BOMB,           11);
+        gear(2, SpecialType.BLAST_SCANNER_PLUS,  11);
+        gear(2, SpecialType.LAND_MINE,           12);
+        gear(2, SpecialType.BLIND_ORB,           12);
+        gear(2, SpecialType.COCKROACH,           12);
+        gear(2, SpecialType.FIRE_DRILL,          12);
+        gear(2, SpecialType.GAS_GRENADE,         12);
+        gear(2, SpecialType.ROOT_ORB,            13);
+        gear(2, SpecialType.KNOCKBACK_SHIELD,    13);
+        gear(2, SpecialType.FIRST_AID_SHOT,      13);
+        gear(2, SpecialType.ENEMY_SCANNER_PLUS,  13);
+        gear(2, SpecialType.RADAR_PULSE,         14);
+        gear(2, SpecialType.WARP_PEARL,          14);
+        gear(2, SpecialType.ADRENALINE,          14);
+        gear(2, SpecialType.RECALL,              14);
+        gear(2, SpecialType.ARMOR_REPAIR_PLUS,   15);
+        gear(2, SpecialType.ETHEREAL,            15);
+        gear(2, SpecialType.INVIS_CLOAK,         16);
+
+        // 強（每 3 回合可用，原一律 +50% → 依實戰價值細分為 +18%～+28%）
+        gear(3, SpecialType.GAMBLER_ROD,         18);
+        gear(3, SpecialType.FRIEND_OR_FOE,       19);
+        gear(3, SpecialType.RED_LIGHT,           20);
+        gear(3, SpecialType.GAMBLER_ROD_PLUS,    20);
+        gear(3, SpecialType.BRAINWASH,           22);
+        gear(3, SpecialType.RECALL_PLUS,         23);
+        gear(3, SpecialType.DOMAIN_EXPANSION,    24);
+        gear(3, SpecialType.SHIELD_BUBBLE,       25);
+        gear(3, SpecialType.TOTEM,               28);
+
         // 沒寫的 = 0（室內團隊模式排除）：
         //   大逃殺專屬：信號槍（無空投）、三種假箱與擬態（無物資箱）、圈外庇護（無毒圈）
         //   室內戰場不合理：三種重新跳傘（會飛出屋頂／場外）、兩把雷神錘（室內天降落雷與跨樓層雷擊）
@@ -70,6 +116,8 @@ public final class DomGear {
 
     private static List<? extends String> cachedList;
     private static Map<SpecialType, Integer> cachedOverrides = Map.of();
+    private static List<? extends String> cachedMarkupList;
+    private static Map<SpecialType, Integer> cachedMarkupOverrides = Map.of();
 
     /** 強度：1 弱、2 中、3 強、0 團隊模式不能用。 */
     public static int tier(SpecialType t) {
@@ -92,10 +140,35 @@ public final class DomGear {
         return BUILTIN.getOrDefault(t, 0);
     }
 
-    /** 佔點選了這個強度時，商店價格加幾 %。 */
+    /** 單一道具在佔點模式的商店加價 %（先看設定覆寫，再看各道具獨立加價表，最後回退到強度預設值）。 */
+    public static int markupPercent(@Nullable SpecialType t) {
+        if (t == null) return 0;
+        int tr = tier(t);
+        if (tr <= 0) return 0;
+        try {
+            List<? extends String> list = PGConfig.SERVER.arena.domGearItemMarkups.get();
+            if (list != cachedMarkupList) {
+                Map<SpecialType, Integer> m = new EnumMap<>(SpecialType.class);
+                for (String s : list) {
+                    String[] kv = s.split("=");
+                    if (kv.length != 2) continue;
+                    SpecialType st = SpecialType.byId(kv[0].trim());
+                    try { if (st != null) m.put(st, Math.max(0, Math.min(200, Integer.parseInt(kv[1].trim())))); } catch (NumberFormatException ignored) {}
+                }
+                cachedMarkupOverrides = m;
+                cachedMarkupList = list;
+            }
+            Integer o = cachedMarkupOverrides.get(t);
+            if (o != null) return o;
+        } catch (IllegalStateException ignored) {}
+        Integer b = BUILTIN_MARKUP.get(t);
+        return b != null ? b : markupPercent(tr);
+    }
+
+    /** 各強度的備用預設加價 %（當道具沒有單獨設定加價時使用）。 */
     public static int markupPercent(int tier) {
         if (tier <= 0) return 0;
-        int[] def = { 10, 25, 50 };
+        int[] def = { 5, 12, 22 };
         int i = Math.min(2, tier - 1);
         try {
             List<? extends Integer> l = PGConfig.SERVER.arena.domGearMarkup.get();
@@ -104,7 +177,12 @@ public final class DomGear {
         return def[i];
     }
 
-    /** 加價後的價格（伺服器扣錢與客戶端顯示用同一個算法）。 */
+    /** 加價後的價格（依該道具的獨立加價 %；伺服器扣錢與客戶端顯示用同一個算法）。 */
+    public static int applyMarkup(int price, @Nullable SpecialType type) {
+        int pct = markupPercent(type);
+        return pct <= 0 ? price : (int) Math.round(price * (100 + pct) / 100.0);
+    }
+
     public static int applyMarkup(int price, int tier) {
         return (int) Math.round(price * (100 + markupPercent(tier)) / 100.0);
     }
@@ -127,11 +205,13 @@ public final class DomGear {
         return Math.max(0, s.getTag().getInt(COOLDOWN_TAG));
     }
 
-    /** 團隊模式能用的特殊物品（照強度、再照清單順序）。 */
+    /** 團隊模式能用的特殊物品（照強度、再照商店加價由低到高、再照清單順序）。 */
     public static List<SpecialType> allowed() {
         List<SpecialType> out = new ArrayList<>();
         for (SpecialType t : SpecialType.values()) if (tier(t) > 0) out.add(t);
-        out.sort(Comparator.<SpecialType>comparingInt(t -> tier(t)).thenComparingInt(Enum::ordinal));
+        out.sort(Comparator.<SpecialType>comparingInt(DomGear::tier)
+            .thenComparingInt(DomGear::markupPercent)
+            .thenComparingInt(Enum::ordinal));
         return out;
     }
 
@@ -213,10 +293,17 @@ public final class DomGear {
         return dom() != null && STATES.containsKey(p.getUUID());
     }
 
-    /** 這位玩家在佔點選的特殊物品強度（給商店加價；沒有 = 0）。 */
-    public static int activeTier(ServerPlayer p) {
+    /** 這位玩家在佔點選的特殊道具（沒有 = null）。 */
+    @Nullable
+    public static SpecialType activeGear(ServerPlayer p) {
         State st = dom() == null ? null : STATES.get(p.getUUID());
-        return st == null ? 0 : tier(st.type);
+        return st == null ? null : st.type;
+    }
+
+    /** 這位玩家在佔點選的特殊物品強度（沒有 = 0）。 */
+    public static int activeTier(ServerPlayer p) {
+        SpecialType g = activeGear(p);
+        return g == null ? 0 : tier(g);
     }
 
     /** 開局（DomMode.onStart 呼叫）：特殊物品模式開著才發。 */
@@ -233,7 +320,7 @@ public final class DomGear {
             int cd = cooldownRounds(tier);
             String freq = cd <= 1 ? "每回合可用" : "使用後冷卻 " + cd + " 回合";
             p.sendSystemMessage(Component.literal("[佔點] 你的特殊道具：" + st.type.zh + "（" + tierName(tier) + "，" + freq + "，按 Q 使用；"
-                + "商店價格 +" + markupPercent(tier) + "%）。").withStyle(ChatFormatting.AQUA));
+                + "商店價格 +" + markupPercent(st.type) + "%）。").withStyle(ChatFormatting.AQUA));
         }
     }
 

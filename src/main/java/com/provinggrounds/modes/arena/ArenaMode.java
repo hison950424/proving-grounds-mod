@@ -820,9 +820,9 @@ public abstract class ArenaMode {
         }
     }
 
-    /** 商店價格：職業折扣，再加上佔點特殊物品的加價（選越強越貴；計畫書 8）。 */
+    /** 商店價格：職業折扣，再加上佔點特殊道具的獨立加價。 */
     protected int shopPrice(ServerPlayer p, ArenaPlayer ap, ArenaData.ShopItem item) {
-        return com.provinggrounds.special.DomGear.applyMarkup(item.priceFor(priceClass(ap)), com.provinggrounds.special.DomGear.activeTier(p));
+        return com.provinggrounds.special.DomGear.applyMarkup(item.priceFor(priceClass(ap)), com.provinggrounds.special.DomGear.activeGear(p));
     }
 
     /** 算價格用的職業（沒有職業的模式 = null，不打折）。 */

@@ -377,11 +377,14 @@ public final class ShopScreen extends Screen {
         }
         g.disableScissor();
         if (hovered != null) {
-            int price = com.provinggrounds.client.ClientDomGear.price(free ? hovered.free() : hovered.price());
+            int base = free ? hovered.free() : hovered.price();
+            int price = com.provinggrounds.client.ClientDomGear.price(base);
+            var activeGear = com.provinggrounds.client.ClientDomGear.activeGear();
+            int pct = com.provinggrounds.special.DomGear.markupPercent(activeGear);
             List<Component> tip = new ArrayList<>();
             tip.add(Component.literal(hovered.name()));
             tip.add(Component.literal("價格 $" + price + (free ? "（自由人八折）" : "")
-                + (price != (free ? hovered.free() : hovered.price()) ? "（特殊道具加價）" : "")));
+                + (price != base && pct > 0 ? "（特殊道具 +" + pct + "%）" : "")));
             tip.add(Component.literal(s.canShop() ? "點一下購買" : "回基地才能購買"));
             g.renderComponentTooltip(font, tip, mouseX, mouseY);
         }

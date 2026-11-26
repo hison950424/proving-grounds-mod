@@ -41,6 +41,7 @@ public final class ArenaConfig {
     // 佔點特殊物品裝備（計畫書 8）
     public final ForgeConfigSpec.ConfigValue<List<? extends Integer>> domGearMarkup;
     public final ForgeConfigSpec.ConfigValue<List<? extends String>> domGearTiers;
+    public final ForgeConfigSpec.ConfigValue<List<? extends String>> domGearItemMarkups;
 
     // 槍王之王
     public final ForgeConfigSpec.IntValue gkMultiplier;
@@ -116,10 +117,12 @@ public final class ArenaConfig {
                 "A|192.5 24 -16.5|4|196 24 -13 188 24 -21",
                 "B|161.5 13 -47.5|5|166 13 -53 156 13 -43",
                 "C|122.5 13 -86.5|8|130 13 -79 115 13 -94"), ArenaConfig::isString);
-        b.comment("佔點的特殊物品（計畫書 8；大廳特殊物品模式開著時）：整場選一種、每回合用一次；選越強商店越貴").push("gear");
-        domGearMarkup = b.comment("選了這個強度時，自己商店價格加幾 %：弱、中、強").defineList("markup_v1", List.of(10, 25, 50), ArenaConfig::isInt);
-        domGearTiers = b.comment("強度覆寫：「物品ID=等級」（1 弱、2 中、3 強、0 團隊模式不能用）。沒寫的用模組內建的評估（見 docs/PLAN8_DOM_SPECIALS.md）")
+        b.comment("佔點的特殊道具（大廳特殊道具模式開著時）：整場選一種、依強度冷卻（弱 1／中 2／強 3 回合），每種道具各有獨立商店加價").push("gear");
+        domGearMarkup = b.comment("各強度的備用預設加價 %（弱、中、強；僅在該道具沒有單獨設定加價時使用）").defineList("markup_v2", List.of(5, 12, 22), ArenaConfig::isInt);
+        domGearTiers = b.comment("強度覆寫：「物品ID=等級」（1 弱、2 中、3 強、0 團隊模式不能用）。沒寫的用模組內建的評估")
             .defineListAllowEmpty(List.of("tier_overrides_v1"), List::of, ArenaConfig::isString);
+        domGearItemMarkups = b.comment("單獨道具商店加價覆寫：「物品ID=加價百分比」（例：totem=25、smoke_burst=5）。沒寫的用模組內建各道具獨立加價")
+            .defineListAllowEmpty(List.of("item_markup_overrides_v1"), List::of, ArenaConfig::isString);
         b.pop();
         b.pop();
 

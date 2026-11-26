@@ -35,9 +35,12 @@ public final class ClientDomGear {
     /** 大廳選的那一種。 */
     public static SpecialType choice() { return type(state.choice()); }
 
-    /** 商店價格（佔點選了強的特殊物品要加價）。 */
+    /** 目前佔點對局中的特殊道具（沒在對局中 = null）。 */
+    public static SpecialType activeGear() { return inMatch() ? type(state.gear()) : null; }
+
+    /** 商店價格（佔點依所選特殊道具的獨立加價 % 計算）。 */
     public static int price(int base) {
-        SpecialType g = inMatch() ? type(state.gear()) : null;
-        return g == null ? base : DomGear.applyMarkup(base, DomGear.tier(g));
+        SpecialType g = activeGear();
+        return g == null ? base : DomGear.applyMarkup(base, g);
     }
 }
