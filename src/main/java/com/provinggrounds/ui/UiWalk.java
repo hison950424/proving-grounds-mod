@@ -31,8 +31,8 @@ import java.util.List;
 public final class UiWalk {
 
     private static boolean active; // 這一 tick 是否接管
-    /** 這一 tick 實際按著的前、後、左、右。 */
-    private static boolean up, down, left, right;
+    /** 這一 tick 實際按著的前、後、左、右與跳躍。 */
+    private static boolean up, down, left, right, jump;
 
     private UiWalk() {}
 
@@ -54,10 +54,11 @@ public final class UiWalk {
         down = isPhysicallyDown(window, mc.options.keyDown.getKey());
         left = isPhysicallyDown(window, mc.options.keyLeft.getKey());
         right = isPhysicallyDown(window, mc.options.keyRight.getKey());
+        jump = isPhysicallyDown(window, mc.options.keyJump.getKey());
         active = true;
     }
 
-    /** 原版算完移動輸入之後（開著畫面時是全部放開），把實際按著的方向鍵寫回去。 */
+    /** 原版算完移動輸入之後（開著畫面時是全部放開），把實際按著的方向鍵與跳躍鍵寫回去。 */
     @SubscribeEvent
     public static void onMovementInput(net.minecraftforge.client.event.MovementInputUpdateEvent event) {
         Minecraft mc = Minecraft.getInstance();
@@ -67,6 +68,7 @@ public final class UiWalk {
         in.down = down;
         in.left = left;
         in.right = right;
+        in.jumping = jump;
         float slow = mc.player.isMovingSlowly() ? 0.3f : 1f; // 蹲下、趴下時跟原版一樣變慢
         in.forwardImpulse = (up == down ? 0f : up ? 1f : -1f) * slow;
         in.leftImpulse = (left == right ? 0f : left ? 1f : -1f) * slow;

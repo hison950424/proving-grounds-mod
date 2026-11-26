@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-26（v0.33.2 已發佈，網路版本維持 28，等待使用者於正式客戶端實測 `B1～B8` 回饋）。
+> 最後更新：2026-11-26（v0.33.3 已發佈，網路版本維持 28，等待使用者於正式客戶端實測 `C1～C9` 回饋）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -48,6 +48,16 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
+- **v0.33.3 已發佈（分身藏 ID、UI 跳躍、站姿同步轉身、斷線無敵修復、佔點不噴裝、移除 C4、職業限撿與槍王丟槍，Gemini 實作，待正式客戶端實測）**：
+  1. `special/client/DecoyRenderer.java` + `special/entity/DecoyEntity.java`：分身隱藏頭頂 ID（`shouldShowName = false`）。
+  2. `ui/UiWalk.java`：開 UI 介面時一併接管跳躍鍵（`in.jumping = jump`）。
+  3. `ui/ClientForgeEvents.java` + `core/Hitbox.java`：站立／蹲下／趴下全面同步 `yBodyRot` 與視角朝向（消除 45° 轉向延遲）。
+  4. `core/DisconnectBodies.java` + `venue/VenueManager.java` + `events/PlayerEvents.java` + `modes/BattleRoyaleMode.java` + `modes/arena/ArenaMode.java`：修復斷線重連後無敵（迷你死鬥斷線不再清空場地紀錄且登入自動偵測場地；重連強制清 `invulnerable`／`abilities.invulnerable`／`spawnInvulnerableTime`／`ETHEREAL`／`protectUntil`；BR 回歸補齊 `GameManager.addPlayer` 與隊伍同步）。
+  5. `modes/arena/DomMode.java` + `modes/arena/ArenaManager.java`：佔點死亡直接清空玩家背包並取消全部掉落物（不噴裝、不產墓碑）。
+  6. `data/provinggrounds/arena/shop.json` + `assets/lrtactical/lang/zh_tw.json`：移除全部 C4。
+  7. `modes/arena/ArenaClass.java` + `modes/arena/ArenaMode.java` + `modes/arena/ArenaManager.java`：團隊死鬥／佔點禁止拾取非本職業限定槍械。
+  8. `assets/provinggrounds/lang/zh_tw.json` + `en_us.json`：「槍戰對決」改名為「槍王之王」。
+  9. `modes/arena/GkMode.java` + `modes/arena/ArenaMode.java` + `modes/arena/ArenaManager.java`：槍王之王允許丟棄槍械並以 `pg_gk_owner` 鎖定僅限本人拾取，沒有武器滿 5 秒自動補發本階段武器並清除場上丟棄的槍。
 - **v0.33.2 已發佈（蹲下 Hitbox、趴下手感、室內團隊精簡、護甲修復包／殘影／彈簧鞋、佔點冷卻與獨立定價，Gemini 實作，待正式客戶端實測）**：
   1. `core/Hitbox.java`：蹲下時補上 `-0.125f` Y 位移（對齊原版 `PlayerRenderer.getRenderOffset`），修復蹲下 Hitbox 整體偏高。
   2. `ui/ClientMovement.java` + `core/Footsteps.java` + `network/QuietWalkPacket.java` + `core/ProneManager.java`：趴下／倒地爬行時雙端禁止蹲下（`shiftKeyDown = false`）與靜走。

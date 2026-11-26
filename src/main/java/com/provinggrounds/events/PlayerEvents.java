@@ -18,6 +18,8 @@ public class PlayerEvents {
         GameManager.get().setServer(player.getServer());
         // 載入玩家跨局資料
         PlayerDataManager.get().loadPlayer(player);
+        // 避免斷線前殘留的 invulnerable 標記導致重連後不受任何傷害
+        com.provinggrounds.core.DisconnectBodies.clearInvulnerability(player, false);
         ProvingGroundsMod.LOGGER.info("Player {} logged in.", player.getName().getString());
     }
 

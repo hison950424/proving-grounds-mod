@@ -178,8 +178,20 @@ public final class VenueManager {
         if (v != null && v.has("respawn")) enter(p, v, false);
     }
 
+    /** 登入時：不在對局中若沒有紀錄場地，依目前位置自動還原所屬場地（避免在迷你死鬥等 PvP 場地斷線重連後變成無敵安全區）。 */
     @SubscribeEvent
-    public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
-        CURRENT.remove(event.getEntity().getUUID());
+    public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer p)) return;
+        if (BattleRoyaleMode.get().isParticipant(p.getUUID()) || com.provinggrounds.modes.arena.ArenaManager.isParticipant(p.getUUID())) return;
+        if (CURRENT.containsKey(p.getUUID())) return;
+        Venue best = null;
+        double bestDist = 80.0 * 80.0;
+        for (Venue v : venues()) {
+            for (Vec3 sp : v.points()) {
+                double d = p.position().distanceToSqr(sp);
+                if (d < bestDist) { bestDist = d; best = v; }
+            }
+        }
+        if (best != null) CURRENT.put(p.getUUID(), best.id());
     }
 }

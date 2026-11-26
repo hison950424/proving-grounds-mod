@@ -80,7 +80,7 @@ public final class ClientForgeEvents {
             PGNetwork.sendToServer(new com.provinggrounds.network.ProneTogglePacket());
         }
         updateCrawlPoses(mc);
-        syncProneBodyYaw(mc);
+        syncBodyYaw(mc);
     }
 
     private static long lastProneRequest = 0;
@@ -137,7 +137,7 @@ public final class ClientForgeEvents {
     public static void onRenderTick(TickEvent.RenderTickEvent event) {
         if (event.phase != TickEvent.Phase.START) return;
         Minecraft mc = Minecraft.getInstance();
-        syncProneBodyYaw(mc);
+        syncBodyYaw(mc);
         net.minecraft.client.player.LocalPlayer p = mc.player;
         if (p == null || p.hurtTime <= 0) return;
         net.minecraft.world.damagesource.DamageSource src = p.getLastDamageSource();
@@ -179,21 +179,13 @@ public final class ClientForgeEvents {
     }
 
     /**
-     * 趴下即時轉向：原版 LivingEntity.tickHeadTurn 允許頭部轉超過 ~45° 才帶動身體轉向。
-     * 這裡在每個 tick 與每個渲染幀直接把趴下中玩家的身體朝向（yBodyRot）鎖定跟隨視角，
-     * 讓轉動滑鼠時身體立刻跟著轉，零延遲、零死區。
+     * 站立／蹲下／趴下即時同步轉身：原版 LivingEntity.tickHeadTurn 允許頭轉超過 ~45° 才帶動身體轉向。
+     * 這裡在每個 tick 與每個渲染幀直接讓身體朝向（yBodyRot）跟隨視角同步轉動，零延遲、零死區。
      */
-    private static void syncProneBodyYaw(Minecraft mc) {
+    private static void syncBodyYaw(Minecraft mc) {
         if (mc.level == null) return;
-        java.util.List<UUID> crawling = ClientBRState.get().crawling();
         for (Player p : mc.level.players()) {
-            if (p.isInWater() || p.isFallFlying() || p.isSleeping()) continue;
-            UUID id = p.getUUID();
-            boolean prone = com.provinggrounds.client.ClientProneData.isProne(id)
-                || crawling.contains(id)
-                || p.getPose() == Pose.SWIMMING
-                || p.getSwimAmount(1.0f) > 0.01f;
-            if (!prone) continue;
+            if (p.isPassenger() || p.isFallFlying() || p.isSleeping()) continue;
             if (p == mc.player) {
                 p.yHeadRot = p.getYRot();
                 p.yHeadRotO = p.yRotO;

@@ -219,6 +219,39 @@ public final class DisconnectBodies {
         return s;
     }
 
+    @Nullable
+    private static final java.lang.reflect.Field SPAWN_INVULN = findSpawnInvuln();
+
+    @Nullable
+    private static java.lang.reflect.Field findSpawnInvuln() {
+        try {
+            return net.minecraftforge.fml.util.ObfuscationReflectionHelper.findField(ServerPlayer.class, "f_8921_");
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 確保斷線重連的玩家不會殘留無敵狀態：
+     *   - 清除實體 invulnerable、非創造／旁觀時的 abilities.invulnerable、invulnerableTime、
+     *     原版登入 60 tick 無敵（spawnInvulnerableTime）、以及殘留的無實體化效果。
+     */
+    public static void clearInvulnerability(ServerPlayer p, boolean clearSpawnGrace) {
+        p.setInvulnerable(false);
+        p.setCamera(p);
+        if (!p.isCreative() && !p.isSpectator()) {
+            if (p.getAbilities().invulnerable) {
+                p.getAbilities().invulnerable = false;
+                p.onUpdateAbilities();
+            }
+            p.invulnerableTime = 0;
+            p.removeEffect(com.provinggrounds.special.SpecialRegistry.ETHEREAL.get());
+            if (clearSpawnGrace && SPAWN_INVULN != null) {
+                try { SPAWN_INVULN.setInt(p, 0); } catch (IllegalAccessException ignored) {}
+            }
+        }
+    }
+
     /**
      * 玩家回來：分身還活著 → 回到分身的位置與血量（分身消失）；回傳狀態（null = 沒有分身）。
      * 分身已被殺（dead）→ 清掉背包（物品已經進了墓碑或照模式規則處理），回傳狀態讓模式處理。
@@ -238,6 +271,7 @@ public final class DisconnectBodies {
         p.setHealth(Math.max(1, Math.min(p.getMaxHealth(), hp)));
         p.setAbsorptionAmount(abs);
         p.fallDistance = 0;
+        clearInvulnerability(p, true);
         return s;
     }
 

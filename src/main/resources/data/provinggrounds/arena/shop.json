@@ -1740,15 +1740,6 @@
    "cat": "投擲物"
   },
   {
-   "id": "c4",
-   "name": "C4",
-   "price": 96,
-   "free": 96,
-   "item": "lrtactical:throwable{ThrowableId:\"lrtactical:c4\"}",
-   "count": 1,
-   "cat": "投擲物"
-  },
-  {
    "id": "m24_cluster",
    "name": "集束手榴彈",
    "price": 160,

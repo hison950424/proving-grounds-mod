@@ -68,6 +68,7 @@ public class DecoyEntity extends PathfinderMob {
         d.entityData.set(OWNER, owner.getStringUUID());
         d.entityData.set(TEAM, owner.getTeam() != null ? owner.getTeam().getName() : "");
         d.setCustomName(owner.getName());
+        d.setCustomNameVisible(false);
         for (EquipmentSlot slot : EquipmentSlot.values()) {
             d.setItemSlot(slot, owner.getItemBySlot(slot).copy());
             d.setDropChance(slot, 0);
@@ -87,6 +88,7 @@ public class DecoyEntity extends PathfinderMob {
         d.entityData.set(OWNER, owner.getStringUUID());
         d.entityData.set(TEAM, owner.getTeam() != null ? owner.getTeam().getName() : "");
         d.setCustomName(owner.getName());
+        d.setCustomNameVisible(false);
         for (EquipmentSlot slot : EquipmentSlot.values()) {
             d.setItemSlot(slot, owner.getItemBySlot(slot).copy());
             d.setDropChance(slot, 0);

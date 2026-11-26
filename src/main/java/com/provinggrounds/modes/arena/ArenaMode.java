@@ -672,17 +672,21 @@ public abstract class ArenaMode {
             // 計畫書 7 D：分身還活著 → 回到分身的位置與血量繼續（倒地狀態不保留，回來是站著的）
             com.provinggrounds.core.DisconnectBodies.restore(p);
             ap.deathPos = null;
+            ap.protectUntil = 0;
             p.setGameMode(GameType.ADVENTURE);
+            com.provinggrounds.core.DisconnectBodies.clearInvulnerability(p, true);
             com.provinggrounds.core.DisconnectBodies.notifyTeam(server, p.getUUID(), ap.name + " 回來了");
             return;
         }
         if (body != null) {
-            // 分身已被殺：照死亡後的規則（死亡位置旁觀 → 重生倒數）
+            // 分身已被殺：照死亡後的規則（死亡位置旁觀 → 重生倒數；佔點順便清空背包）
             com.provinggrounds.core.DisconnectBodies.remove(server, p.getUUID());
+            if (kind() == GameManager.GameMode.DOM) p.getInventory().clearContent();
             com.provinggrounds.core.DisconnectBodies.notifyTeam(server, p.getUUID(), ap.name + " 回來了");
         } else {
             ap.deathPos = null;
         }
+        com.provinggrounds.core.DisconnectBodies.clearInvulnerability(p, true);
         respawn(p, ap);
     }
 
@@ -691,6 +695,27 @@ public abstract class ArenaMode {
         if (!players.containsKey(p.getUUID())) return false;
         if (com.provinggrounds.special.Plan9Specials.isForcedDrop(p)) return false;
         return !allowToss(stack);
+    }
+
+    /** 允許丟出後呼叫（槍王之王用來標記丟出的槍只能自己撿）。 */
+    public void onTossed(ServerPlayer p, net.minecraft.world.entity.item.ItemEntity dropped) {}
+
+    private final Map<UUID, Integer> pickupWarnAt = new HashMap<>();
+
+    /** 撿取過濾：回傳 true = 取消撿取。團隊死鬥／佔點禁止拾取非本職業限定槍械。 */
+    public boolean handlePickup(ServerPlayer p, net.minecraft.world.entity.item.ItemEntity item) {
+        ArenaPlayer ap = players.get(p.getUUID());
+        if (ap == null || !usesClasses()) return false;
+        ItemStack stack = item.getItem();
+        if (GunCompat.gunId(stack) == null) return false;
+        String gunType = GunCompat.gunType(stack);
+        if (ap.cls.canUseGunType(gunType)) return false;
+        int last = pickupWarnAt.getOrDefault(p.getUUID(), -100);
+        if (ticks - last >= 40) {
+            pickupWarnAt.put(p.getUUID(), ticks);
+            p.displayClientMessage(Component.literal("[" + ap.cls.displayName + "] 無法拾取不屬於本職業的槍械").withStyle(ChatFormatting.RED), true);
+        }
+        return true;
     }
 
     public boolean isParticipant(UUID id) { return players.containsKey(id); }

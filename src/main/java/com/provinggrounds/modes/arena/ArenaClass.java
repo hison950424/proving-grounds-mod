@@ -92,6 +92,22 @@ public enum ArenaClass {
         return allowedGunCats.contains(cat);
     }
 
+    /** 這個職業能不能使用／拾取這把槍（依 TACZ 槍械類型轉換成職業分類）。 */
+    public boolean canUseGunType(@javax.annotation.Nullable String gunType) {
+        if (this == FREELANCER || gunType == null || gunType.isEmpty()) return true;
+        String cat = switch (gunType.toLowerCase(java.util.Locale.ROOT)) {
+            case "pistol" -> "手槍";
+            case "smg" -> "衝鋒槍";
+            case "shotgun" -> "散彈槍";
+            case "rifle" -> "步槍";
+            case "mg" -> "機槍";
+            case "sniper" -> "狙擊槍";
+            case "rpg" -> "重武器";
+            default -> "其他槍械";
+        };
+        return canBuyCategory(cat);
+    }
+
     /** 簡短顯示限定槍械文字（選角畫面用）。 */
     public String gunSummary() {
         if (this == FREELANCER) return "全部槍械（商店八折）";

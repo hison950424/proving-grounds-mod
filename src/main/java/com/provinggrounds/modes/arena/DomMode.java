@@ -228,6 +228,11 @@ public final class DomMode extends ArenaMode {
     protected void onDeath(ServerPlayer victim, ArenaPlayer v) {
         if (phase != Phase.ROUND) return;
         v.alive = false;
+        // 佔點模式死亡後不噴裝、不產墓碑，單純清除身上物品（特殊道具欄的整場道具保留）
+        if (victim != null) {
+            victim.getInventory().clearContent();
+            victim.inventoryMenu.broadcastChanges();
+        }
     }
 
     @Override

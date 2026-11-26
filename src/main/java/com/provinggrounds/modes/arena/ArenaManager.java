@@ -188,21 +188,36 @@ public final class ArenaManager {
 
     }
 
-    /** 不能丟的東西（裝備）立刻放回背包。 */
+    /** 不能丟的東西（裝備）立刻放回背包；允許丟出的通知模式（槍王之王會標記專屬拾取者）。 */
     @SubscribeEvent
     public static void onToss(ItemTossEvent event) {
         if (current == null || !(event.getPlayer() instanceof ServerPlayer p)) return;
         ItemStack stack = event.getEntity().getItem();
-        if (!current.handleToss(p, stack)) return;
+        if (!current.handleToss(p, stack)) {
+            current.onTossed(p, event.getEntity());
+            return;
+        }
         event.setCanceled(true);
         if (!p.getInventory().add(stack.copy())) p.drop(stack.copy(), false);
         p.inventoryMenu.broadcastChanges();
     }
 
-    /** 掉落物：無限彈藥箱不掉（佔點會掉其他東西）。 */
+    /** 撿取物品過濾：團隊死鬥／佔點禁止撿非本職業限定槍械；槍王之王丟出的槍除了自己以外不能撿。 */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void onPickup(net.minecraftforge.event.entity.player.EntityItemPickupEvent event) {
+        if (current == null || !(event.getEntity() instanceof ServerPlayer p)) return;
+        if (current.handlePickup(p, event.getItem())) event.setCanceled(true);
+    }
+
+    /** 掉落物：佔點死亡不噴裝也不產墓碑（全部取消）；其他模式不掉無限彈藥箱。 */
     @SubscribeEvent
     public static void onDrops(LivingDropsEvent event) {
         if (current == null || !(event.getEntity() instanceof ServerPlayer p) || !current.isParticipant(p.getUUID())) return;
+        if (current.kind() == GameManager.GameMode.DOM) {
+            event.getDrops().clear();
+            event.setCanceled(true);
+            return;
+        }
         ItemStack box = com.provinggrounds.modes.br.RespawnKit.parse(com.provinggrounds.config.PGConfig.SERVER.arena.ammoBox.get());
         event.getDrops().removeIf((ItemEntity e) -> !box.isEmpty() && ArenaMode.matches(e.getItem(), box));
     }

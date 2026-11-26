@@ -1348,7 +1348,11 @@ public class BattleRoyaleMode {
             return true;
         }
         com.provinggrounds.core.DisconnectBodies.restore(p);
+        GameManager.get().addPlayer(p);
         p.setGameMode(GameType.ADVENTURE);
+        com.provinggrounds.core.DisconnectBodies.clearInvulnerability(p, true);
+        if (part.state == PlayerState.GROUND) part.jumpGraceUntil = 0;
+        if (level != null) TeamManager.get().syncVanillaTeams(level.getServer(), participantPlayers());
         BRMovement.apply(p);
         if (part.downed) {
             com.provinggrounds.core.DownedCore.applyDowned(p, p.getHealth());

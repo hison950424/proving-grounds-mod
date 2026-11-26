@@ -43,6 +43,6 @@ public class DecoyRenderer extends LivingEntityRenderer<DecoyEntity, PlayerModel
 
     @Override
     protected boolean shouldShowName(DecoyEntity e) {
-        return e.hasCustomName() && !e.isInvisible() && e.distanceToSqr(this.entityRenderDispatcher.camera.getPosition()) < 64 * 64;
+        return false; // 分身一律不顯示頭頂 ID
     }
 }

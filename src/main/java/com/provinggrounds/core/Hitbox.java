@@ -137,7 +137,7 @@ public final class Hitbox {
         static Snap capture(Player p) {
             float bodyYaw = p.yBodyRot;
             float headYaw = p.yHeadRot;
-            if (!p.isInWater() && (p.getPose() == Pose.SWIMMING || ProneManager.isProne(p.getUUID()))) {
+            if (!p.isPassenger() && !p.isFallFlying() && !p.isSleeping()) {
                 bodyYaw = p.getYRot();
                 headYaw = p.getYRot();
             }
@@ -154,9 +154,9 @@ public final class Hitbox {
     private static final Map<UUID, Deque<Snap>> HISTORY = new ConcurrentHashMap<>();
     private static final int HISTORY_TICKS = 12;
 
-    /** 每 tick 記錄一次（WorldEvents / SpecialEvents 呼叫），順便同步陸地趴下者的身體轉向。 */
+    /** 每 tick 記錄一次（WorldEvents / SpecialEvents 呼叫），順便同步站立／蹲下／趴下的身體轉向。 */
     public static void record(Player p) {
-        if (!p.isInWater() && !p.isFallFlying() && (p.getPose() == Pose.SWIMMING || ProneManager.isProne(p.getUUID()))) {
+        if (!p.isPassenger() && !p.isFallFlying() && !p.isSleeping()) {
             p.yBodyRot = p.getYRot();
             p.yBodyRotO = p.yRotO;
         }

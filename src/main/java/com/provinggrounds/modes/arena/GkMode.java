@@ -38,12 +38,18 @@ public final class GkMode extends ArenaMode {
     }
 
     private static final String[] ATTACH_TYPES = { "mag", "scope", "muzzle", "stock", "grip", "laser" };
+    /** 槍王之王丟棄槍械的專屬拾取者 NBT 標記（除了丟棄者本人以外無法撿起）。 */
+    private static final String GK_OWNER_TAG = "pg_gk_owner";
 
     private final int multiplier;
     private final List<ArenaData.GkCategory> order = new ArrayList<>();
     private final List<ArenaData.GkEntry> weapons = new ArrayList<>();      // 每階段的武器
     private final List<List<String>> stageAttachments = new ArrayList<>();  // 每階段的配件
     private final Map<String, Progress> progress = new LinkedHashMap<>();
+    /** 每位玩家丟在地上尚未清除的武器實體 UUID。 */
+    private final Map<UUID, List<UUID>> tossedDrops = new HashMap<>();
+    /** 每位玩家目前連續「身上沒有武器」的秒數（滿 5 秒自動補發並清除剛剛丟棄的武器）。 */
+    private final Map<UUID, Integer> unarmedSeconds = new HashMap<>();
     private int armorTier;
 
     public GkMode(MinecraftServer server, int multiplier) {
@@ -55,6 +61,49 @@ public final class GkMode extends ArenaMode {
     @Override public String title() { return "槍王之王"; }
     @Override public boolean usesShop() { return false; }
     @Override public boolean usesClasses() { return false; }
+    /** 槍王之王允許丟棄槍械（丟出後鎖定僅限本人撿取，無武器 5 秒自動補發並清除丟棄的槍）。 */
+    @Override protected boolean allowToss(ItemStack stack) { return GunCompat.gunId(stack) != null; }
+
+    @Override
+    public void onTossed(ServerPlayer p, net.minecraft.world.entity.item.ItemEntity dropped) {
+        if (GunCompat.gunId(dropped.getItem()) == null) return;
+        dropped.getPersistentData().putUUID(GK_OWNER_TAG, p.getUUID());
+        tossedDrops.computeIfAbsent(p.getUUID(), k -> new ArrayList<>()).add(dropped.getUUID());
+    }
+
+    @Override
+    public boolean handlePickup(ServerPlayer p, net.minecraft.world.entity.item.ItemEntity item) {
+        if (!item.getPersistentData().hasUUID(GK_OWNER_TAG)) return false;
+        UUID owner = item.getPersistentData().getUUID(GK_OWNER_TAG);
+        if (!owner.equals(p.getUUID())) return true; // 除了丟棄者本人以外的人無法撿起
+        List<UUID> list = tossedDrops.get(owner);
+        if (list != null) list.remove(item.getUUID());
+        unarmedSeconds.remove(owner);
+        return false;
+    }
+
+    /** 清除某位玩家先前丟在地上（被標記為自己專屬）的武器實體。 */
+    private void discardTossedDrops(UUID owner) {
+        List<UUID> list = tossedDrops.remove(owner);
+        if (list != null) {
+            for (UUID eid : list) {
+                var e = level.getEntity(eid);
+                if (e != null && !e.isRemoved()) e.discard();
+            }
+        }
+        // 保險掃描：確保場上所有標記為該玩家丟出的武器都清乾淨
+        for (var e : level.getEntities(net.minecraft.world.entity.EntityType.ITEM,
+                it -> it.getPersistentData().hasUUID(GK_OWNER_TAG) && owner.equals(it.getPersistentData().getUUID(GK_OWNER_TAG)))) {
+            e.discard();
+        }
+    }
+
+    @Override
+    protected void onFinish() {
+        for (UUID id : new ArrayList<>(tossedDrops.keySet())) discardTossedDrops(id);
+        tossedDrops.clear();
+        unarmedSeconds.clear();
+    }
 
     private int stages() { return order.size(); }
 
@@ -230,15 +279,36 @@ public final class GkMode extends ArenaMode {
     protected void tickRules() {
         for (Progress pr : new ArrayList<>(progress.values())) if (checkAdvance(pr)) return;
         if (ticks % 20 != 0) return;
-        // 投擲物階段：用完補 1 個
+        // 每秒檢查：投擲物階段補彈、醫療包補滿、以及沒有武器 5 秒自動補發本階段武器並清除丟棄武器
         for (ServerPlayer p : online()) {
             ArenaPlayer ap = players.get(p.getUUID());
             Progress pr = progress.get(ap.teamKey);
-            if (pr == null || stages() == 0 || p.isSpectator() || !p.isAlive()) continue;
+            if (pr == null || stages() == 0 || p.isSpectator() || !p.isAlive()) {
+                unarmedSeconds.remove(p.getUUID());
+                continue;
+            }
             ArenaData.GkEntry e = weapons.get(Math.min(stages() - 1, pr.stage - 1));
             if (e.gun() == null && e.item() != null && e.item().startsWith("lrtactical:throwable")) {
                 ItemStack t = RespawnKit.parse(e.item());
                 if (!t.isEmpty() && count(p, t) == 0) give(p, t);
+                unarmedSeconds.remove(p.getUUID());
+            } else {
+                boolean armed = e.gun() != null
+                    ? hasGun(p)
+                    : (e.item() != null && count(p, RespawnKit.parse(e.item())) > 0);
+                if (armed) {
+                    unarmedSeconds.remove(p.getUUID());
+                } else {
+                    int sec = unarmedSeconds.merge(p.getUUID(), 1, Integer::sum);
+                    if (sec >= 5) {
+                        unarmedSeconds.remove(p.getUUID());
+                        discardTossedDrops(p.getUUID());
+                        giveStage(p, ap);
+                        p.displayClientMessage(Component.literal("已自動補發本階段武器並清除丟棄的武器").withStyle(ChatFormatting.GOLD), true);
+                    } else {
+                        p.displayClientMessage(Component.literal("沒有武器：" + (5 - sec) + " 秒後自動補發本階段武器").withStyle(ChatFormatting.YELLOW), true);
+                    }
+                }
             }
             ensureOne(p, cfg.gkMedkit.get());
         }
@@ -265,6 +335,8 @@ public final class GkMode extends ArenaMode {
         for (ServerPlayer p : online()) {
             ArenaPlayer ap = players.get(p.getUUID());
             if (!ap.teamKey.equals(pr.key)) continue;
+            unarmedSeconds.remove(p.getUUID());
+            discardTossedDrops(p.getUUID());
             giveStage(p, ap);
             p.playNotifySound(SoundEvents.PLAYER_LEVELUP, net.minecraft.sounds.SoundSource.MASTER, 1f, 1.2f);
             p.displayClientMessage(Component.literal("晉級！第 " + pr.stage + " 階段：" + cat).withStyle(ChatFormatting.GOLD), true);
@@ -277,8 +349,11 @@ public final class GkMode extends ArenaMode {
     @Override
     protected void doRespawn(ServerPlayer p, ArenaPlayer ap) {
         super.doRespawn(p, ap);
-
-        if (!hasGun(p) && count(p, RespawnKit.parse("lrtactical:melee")) == 0) giveStage(p, ap);
+        unarmedSeconds.remove(p.getUUID());
+        if (!hasGun(p) && count(p, RespawnKit.parse("lrtactical:melee")) == 0) {
+            discardTossedDrops(p.getUUID());
+            giveStage(p, ap);
+        }
     }
 
     @Override
