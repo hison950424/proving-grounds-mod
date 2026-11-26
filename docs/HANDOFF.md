@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-26（v0.34.0 大逃殺建築生成工具與 4 風格共 40 棟建築已編譯、開服驗證並發佈，網路版本升為 29）。
+> 最後更新：2026-11-26（v0.35.0 建築連接修復、樓梯齊平、4 風格各 3 棟大型建築各 28～36 個物資點，以及物資工具準星指向與 3D 預覽框已編譯、開服驗證並發佈，網路版本升為 30）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -48,7 +48,12 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
-- **v0.34.0（大逃殺建築生成工具與 40 棟建築，Gemini 實作）**：
+- **v0.35.0 已發佈（建築生成修復、12 棟高物資大型無木箱建築、物資工具準星指向＋3D 預覽框，Gemini 實作）**：
+  1. `admin/build/BuildingCanvas.java`：`finalizeShapes()` 改為兩輪 `Block.updateFromNeighbourShapes`（第二輪依 Y 由高到低排序）修復玻璃片／石牆／鐵欄／柵欄／樓梯轉角連接；新增 `staircaseZ`／`staircaseX` 讓最後一階精準與上層地板齊平；補地基深度擴為 16 格；新增無木箱室內掩體與照明輔助函式。
+  2. `ModernBuildings.java`、`IndustrialBuildings.java`、`JapaneseBuildings.java`、`ScifiBuildings.java`：刪除舊 40 棟建築，重製 4 風格各 3 棟（共 12 棟，尺寸 `29×25×19`～`39×31×18`，每棟 **28～36 個物資點**）大型／超大型建築與豐富掩體內裝（零木箱／木桶）。
+  3. `admin/AdminTools.java`、`admin/SpawnPointView.java`、`ui/SpawnPointRenderer.java`、`item/AdminToolItem.java`：`SPAWN_PLACER`／`SPAWN_REMOVER` 改為準星 16 格射線指向判定（防隔牆誤刪），手持自動顯示黃框，放置顯示綠／橘預覽框，刪除顯示紅鎖定放大框＋交叉線。
+  4. `BuildingCatalog.java`、`BuildingStyle.java`、`ui/BuildingPickerScreen.java`、`PGNetwork.java`（VERSION `29` → `30`）：更新 12 棟註解／上限 `MAX_UNDO = 10`／舊 NBT 失效自動彈窗重選。
+- **v0.34.0 已發佈（大逃殺建築生成工具與 4 風格共 40 棟建築，Gemini 實作）**：
   1. `admin/build/BuildingStyle.java` + `BuildingBlueprint.java` + `BuildingCanvas.java` + `BuildingCatalog.java`：支援 4 向旋轉、飛行對地（24 格）、斜坡往下補地基（12 格）、自動登記物資點到目前所在的 BR 地圖、最多 15 筆一鍵復原（還原方塊＋移除新增物資點）。
   2. `ModernBuildings.java`（10 棟）、`IndustrialBuildings.java`（10 棟）、`JapaneseBuildings.java`（10 棟）、`ScifiBuildings.java`（10 棟）：4 種風格共 40 棟命名建築。
   3. `item/AdminToolItem.java` + `command/PGCommand.java` + `network/BuildingPacket.java` + `PGNetwork.java`（VERSION 升為 `29`，下次發佈為 `big` → `v0.34.0`）：新增 `building_placer` 與 `building_undo` 工具物品與 `/pg build undo`。

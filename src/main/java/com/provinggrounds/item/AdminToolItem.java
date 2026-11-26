@@ -34,13 +34,13 @@ public class AdminToolItem extends Item {
     public enum Tool {
         FLOAT_TEXT("float_text", "右鍵：輸入文字，在你的位置建立浮空文字（支援 & 色碼，最多 100 字）"),
         TEXT_ERASER("text_eraser", "右鍵：刪除離你最近的一個浮空文字"),
-        SPAWN_PLACER("spawn_placer", "右鍵：在你的位置新增箱子生成點"),
+        SPAWN_PLACER("spawn_placer", "右鍵：在準星指向的方塊新增箱子生成點（最遠 16 格，綠色預覽框）"),
         SPAWN_VIEWER("spawn_viewer", "右鍵：顯示／隱藏所有箱子生成點（只有你看得到）"),
         TEXT_UNDO("text_undo", "右鍵：復原最近一次刪除的浮空文字（再按一次復原前一筆）"),
-        SPAWN_REMOVER("spawn_remover", "右鍵：刪除離你最近的一個箱子生成點（16 格內），被刪的位置會閃紅框"),
+        SPAWN_REMOVER("spawn_remover", "右鍵：刪除準星指向的箱子生成點（最遠 16 格，紅色鎖定預覽框）"),
         CRATE_CONVERTER("crate_converter", "右鍵：選擇地圖，把舊資料包的箱子標記轉換成箱子生成點"),
         MAP_PAINTER("map_painter", "右鍵：選擇地圖，重新繪製大地圖／小地圖的圖片"),
-        BUILDING_PLACER("building_placer", "右鍵：在前方生成建築並自動登記物資點｜蹲下＋右鍵：選擇建築風格與款式（共 40 棟）"),
+        BUILDING_PLACER("building_placer", "右鍵：在前方生成建築並自動登記物資點｜蹲下＋右鍵：選擇風格與大型建築"),
         BUILDING_UNDO("building_undo", "右鍵：復原最近一次放置的建築（含移除該次新增的物資點）");
 
         public final String id;
@@ -70,15 +70,15 @@ public class AdminToolItem extends Item {
         switch (tool) {
             case FLOAT_TEXT -> PGNetwork.sendTo(p, FloatTextPacket.openScreen());
             case TEXT_ERASER -> p.sendSystemMessage(FloatText.deleteNearest(p));
-            case SPAWN_PLACER -> p.sendSystemMessage(AdminTools.addLootPoint(p.server, BlockPos.containing(p.position()), null));
+            case SPAWN_PLACER -> p.sendSystemMessage(AdminTools.addLootPointAtCrosshair(p));
             case SPAWN_VIEWER -> p.sendSystemMessage(SpawnPointView.toggle(p));
             case TEXT_UNDO -> p.sendSystemMessage(FloatText.undo(p.server));
-            case SPAWN_REMOVER -> p.sendSystemMessage(AdminTools.removeNearestLootPoint(p));
+            case SPAWN_REMOVER -> p.sendSystemMessage(AdminTools.removeLootPointAtCrosshair(p));
             case CRATE_CONVERTER, MAP_PAINTER -> AdminTools.openMapPicker(p, tool);
             case BUILDING_PLACER -> {
                 String tagId = stack.getTag() != null ? stack.getTag().getString(BuildingCatalog.TOOL_NBT) : "";
                 String id = tagId.isEmpty() ? BuildingCatalog.selectedId(p.getUUID()) : tagId;
-                if (p.isShiftKeyDown() || tagId.isEmpty()) {
+                if (p.isShiftKeyDown() || tagId.isEmpty() || BuildingCatalog.byId(tagId) == null) {
                     PGNetwork.sendTo(p, BuildingPacket.openUi(id, BuildingCatalog.undoCount()));
                 } else {
                     p.sendSystemMessage(BuildingCatalog.place(p, id));

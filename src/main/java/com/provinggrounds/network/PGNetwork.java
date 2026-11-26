@@ -17,7 +17,7 @@ import java.util.Optional;
 public final class PGNetwork {
 
     /** 封包格式改變時要加 1，舊版客戶端連線時會直接顯示版本不符（7 = 跳傘改版）。 */
-    private static final String VERSION = "29"; // 29 = 建築生成工具封包, 28 = 計畫書 10, 27 = 計畫書 9
+    private static final String VERSION = "30"; // 30 = 大型建築藍圖翻新, 29 = 建築生成工具封包, 28 = 計畫書 10
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ProvingGroundsMod.MOD_ID, "main"),

@@ -7,7 +7,18 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 檔案: AdminTools.java
@@ -52,6 +63,88 @@ public final class AdminTools {
     }
 
     public static final double REMOVE_RANGE = 16;
+    public static final double TOOL_RAY_RANGE = 16.0;
+
+    /** 準星射線判定放置位置：對準方塊表面（可替換方塊則直接放在該格，否則放在相鄰空氣格），最遠 16 格。 */
+    @Nullable
+    public static BlockPos raycastPlacePos(Player p) {
+        Vec3 eye = p.getEyePosition();
+        Vec3 end = eye.add(p.getLookAngle().scale(TOOL_RAY_RANGE));
+        BlockHitResult hit = p.level().clip(new ClipContext(eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, p));
+        if (hit.getType() != HitResult.Type.BLOCK) return null;
+        BlockPos hp = hit.getBlockPos();
+        return p.level().getBlockState(hp).canBeReplaced() ? hp : hp.relative(hit.getDirection());
+    }
+
+    /** 準星射線判定要刪除的箱子生成點：考慮實心牆阻擋（不隔牆誤刪）與 0.18 格寬容命中盒，最遠 16 格。 */
+    @Nullable
+    public static BlockPos raycastLootPoint(Player p, Iterable<BlockPos> points) {
+        Vec3 eye = p.getEyePosition();
+        Vec3 look = p.getLookAngle();
+        Vec3 wallEnd = eye.add(look.scale(TOOL_RAY_RANGE));
+        BlockHitResult wallHit = p.level().clip(new ClipContext(eye, wallEnd, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, p));
+        double maxDist = (wallHit.getType() == HitResult.Type.BLOCK)
+            ? Math.min(TOOL_RAY_RANGE, wallHit.getLocation().distanceTo(eye) + 0.65)
+            : TOOL_RAY_RANGE;
+        Vec3 rayEnd = eye.add(look.scale(maxDist));
+
+        BlockPos best = null;
+        double bestDistSq = Double.MAX_VALUE;
+        double limitSq = (TOOL_RAY_RANGE + 2.0) * (TOOL_RAY_RANGE + 2.0);
+        for (BlockPos pt : points) {
+            if (pt.distToCenterSqr(eye) > limitSq) continue;
+            AABB box = new AABB(pt).inflate(0.18);
+            if (box.contains(eye)) continue;
+            Optional<Vec3> hit = box.clip(eye, rayEnd);
+            if (hit.isPresent()) {
+                double dSq = hit.get().distanceToSqr(eye);
+                if (dSq < bestDistSq) {
+                    bestDistSq = dSq;
+                    best = pt;
+                }
+            }
+        }
+        return best;
+    }
+
+    /** 使用「箱子生成點放置工具」於準星指向處新增生成點。 */
+    public static Component addLootPointAtCrosshair(ServerPlayer p) {
+        if (BattleRoyaleMode.get().isRunning()) return err("大逃殺進行中，不能新增箱子生成點。");
+        BlockPos target = raycastPlacePos(p);
+        if (target == null) return err("準星 16 格內沒有指向方塊，請瞄準要放置的位置。");
+        Component res = addLootPoint(p.server, target, null);
+        if (res.getString().contains("已新增")) {
+            p.serverLevel().sendParticles(p, net.minecraft.core.particles.ParticleTypes.END_ROD, true,
+                target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5, 10, 0.2, 0.2, 0.2, 0.01);
+        }
+        return res;
+    }
+
+    /** 使用「箱子生成點刪除工具」刪除準星對準的生成點。 */
+    public static Component removeLootPointAtCrosshair(ServerPlayer p) {
+        if (BattleRoyaleMode.get().isRunning()) return err("大逃殺進行中，不能刪除箱子生成點。");
+        MapRegistry reg = MapRegistry.get(p.server);
+        List<BlockPos> allPts = new ArrayList<>();
+        for (MapRegistry.BRMap m : reg.all()) allPts.addAll(m.lootPoints);
+        BlockPos target = raycastLootPoint(p, allPts);
+        if (target == null) return err("準星 16 格內沒有指到任何箱子生成點，請對準黃色方框。");
+
+        MapRegistry.BRMap bestMap = null;
+        for (MapRegistry.BRMap m : reg.all()) {
+            if (m.lootPoints.contains(target)) {
+                bestMap = m;
+                break;
+            }
+        }
+        if (bestMap == null) return err("找不到該生成點所屬的地圖資料。");
+        reg.removeNearestPoint(bestMap, target, 0.5);
+        com.provinggrounds.network.PGNetwork.sendTo(p, new com.provinggrounds.network.SpawnPointFlashPacket(target));
+        p.serverLevel().sendParticles(p, net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE, true,
+            target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5, 20, 0.3, 0.3, 0.3, 0.02);
+        double dist = Math.sqrt(target.distToCenterSqr(p.getEyePosition()));
+        return ok(String.format("已刪除箱子生成點（地圖 #%d，%d, %d, %d，距離 %.1f 格），地圖 #%d 剩 %d 個。",
+            bestMap.id, target.getX(), target.getY(), target.getZ(), dist, bestMap.id, bestMap.lootPoints.size()));
+    }
 
     /**
      * 刪除離玩家最近的一個箱子生成點（所有地圖中找，16 格內）。被刪的位置閃紅框 3 秒並冒煙，讓管理員看得出是哪一個。
