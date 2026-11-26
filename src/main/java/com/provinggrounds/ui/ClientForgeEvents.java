@@ -186,6 +186,16 @@ public final class ClientForgeEvents {
         if (mc.level == null) return;
         for (Player p : mc.level.players()) {
             if (p.isPassenger() || p.isFallFlying() || p.isSleeping()) continue;
+            float climbYaw = com.provinggrounds.core.WallClimb.climbBodyYaw(p);
+            if (!Float.isNaN(climbYaw)) {
+                p.yBodyRot = climbYaw;
+                p.yBodyRotO = climbYaw;
+                if (p == mc.player) {
+                    p.yHeadRot = p.getYRot();
+                    p.yHeadRotO = p.yRotO;
+                }
+                continue;
+            }
             if (p == mc.player) {
                 p.yHeadRot = p.getYRot();
                 p.yHeadRotO = p.yRotO;
@@ -209,6 +219,7 @@ public final class ClientForgeEvents {
         com.provinggrounds.client.ClientProneData.clear();
         ClientStatsBoard.clear();
         SpawnPointRenderer.clear();
+        com.provinggrounds.core.WallClimb.clearClient();
         com.provinggrounds.special.client.ClientSpecial.clear();
         FORCED_CRAWL.clear();
     }

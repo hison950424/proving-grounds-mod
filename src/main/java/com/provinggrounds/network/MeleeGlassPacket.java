@@ -14,20 +14,25 @@ import java.util.function.Supplier;
 
 /**
  * 檔案: MeleeGlassPacket.java
- * 目的: 客戶端 → 伺服器：拿近戰武器左鍵打到玻璃（計畫書 6 A6）。
- *   冒險模式的客戶端本來就不會送「開始挖方塊」，所以由客戶端（ClientMeleeGlass）另外送這個封包，
- *   伺服器檢查：手上真的是近戰武器、距離 5 格內、那一格是玻璃、這裡允許破壞（跟子彈打破玻璃同一套規則 BlockProtection），
- *   通過就打破（不掉落，比賽外打破的玻璃由 BlockLedger 記錄、之後修回）。
+ * 目的: 客戶端 → 伺服器：拿近戰武器左鍵輕擊或右鍵重擊打到玻璃／玻璃片／鐵欄杆時打破（計畫書 6 A6 擴充）。
+ *   冒險模式的客戶端不會送「開始挖方塊」，因此由 ClientMeleeGlass 在按下左／右鍵時傳送此封包。
+ *   伺服器端驗證：手持近戰武器、距離 5.5 格內、目標為玻璃／鐵欄杆、該位置允許破壞（BlockProtection），
+ *   通過且武器冷卻就緒後打破（不掉落，並由 BlockLedger 記錄於賽後／開局還原）。
  */
-public record MeleeGlassPacket(BlockPos pos) {
+public record MeleeGlassPacket(BlockPos pos, boolean heavy) {
 
-    /** 每個人上次用刀打破方塊的 tick（使用者回饋：要等武器冷卻，跟 lrtactical 左鍵冷卻一樣 10 tick）。 */
     private static final java.util.Map<java.util.UUID, Long> LAST = new java.util.HashMap<>();
-    private static final int COOLDOWN_TICKS = 10;
+    private static final int COOLDOWN_LIGHT = 10;
+    private static final int COOLDOWN_HEAVY = 14;
 
-    public void encode(FriendlyByteBuf buf) { buf.writeBlockPos(pos); }
+    public void encode(FriendlyByteBuf buf) {
+        buf.writeBlockPos(pos);
+        buf.writeBoolean(heavy);
+    }
 
-    public static MeleeGlassPacket decode(FriendlyByteBuf buf) { return new MeleeGlassPacket(buf.readBlockPos()); }
+    public static MeleeGlassPacket decode(FriendlyByteBuf buf) {
+        return new MeleeGlassPacket(buf.readBlockPos(), buf.readBoolean());
+    }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
@@ -40,11 +45,12 @@ public record MeleeGlassPacket(BlockPos pos) {
             if (!BlockProtection.allowsDamage(level, pos)) return;
             long now = level.getGameTime();
             Long last = LAST.get(p.getUUID());
-            if (last != null && now - last < COOLDOWN_TICKS) return; // 冷卻中
-            if (p.getAttackStrengthScale(0.5f) < 0.9f) return; // 原版攻擊冷卻也還沒好
+            int cd = heavy ? COOLDOWN_HEAVY : COOLDOWN_LIGHT;
+            if (last != null && now - last < cd) return;
+            if (!heavy && p.getAttackStrengthScale(0.5f) < 0.9f) return;
             LAST.put(p.getUUID(), now);
             BlockLedger.get(level.getServer()).recordGlass(level, pos, state);
-            level.destroyBlock(pos, false, p); // 有破碎音效與粒子，不掉落
+            level.destroyBlock(pos, false, p);
         });
         ctx.get().setPacketHandled(true);
     }

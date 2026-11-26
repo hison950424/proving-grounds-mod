@@ -39,14 +39,16 @@ public final class ActionLock {
 
     /** 不能使用一般物品、攻擊、開槍、放置破壞方塊、開箱子。 */
     public static boolean blocksActions(Entity e) {
+        if (com.provinggrounds.core.WallClimb.isClimbing(e)) return true;
         if (cloaked(e) || SpecialHooks.isEthereal(e)) return true;
         // 強心劑（計畫書 7 C10）：倒地後前 5 秒可以使用任何物品（效果 stim_free 會同步給自己，兩端都能判斷）
         if (e instanceof LivingEntity l && l.hasEffect(SpecialRegistry.STIM_FREE.get()) && BRDowned.isDowned(e)) return false;
         return BRDowned.cannotAct(e);
     }
 
-    /** 不能使用特殊物品（倒地可以用；斗篷、飛機上不行）。伺服器端呼叫。 */
+    /** 不能使用特殊物品（倒地可以用；斗篷、飛機上、攀爬中不行）。伺服器端呼叫。 */
     public static boolean blocksSpecial(Player p) {
+        if (com.provinggrounds.core.WallClimb.isClimbing(p)) return true;
         if (cloaked(p)) return true;
         if (p.level().isClientSide) return false;
         return BattleRoyaleMode.get().isProtected(p.getUUID()) || BattleRoyaleMode.get().isAirborne(p.getUUID()); // 跳傘中也不能用（計畫書 6 D4）

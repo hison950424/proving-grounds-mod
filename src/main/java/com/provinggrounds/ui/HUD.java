@@ -49,7 +49,7 @@ public final class HUD {
         if (HudLayout.push(g, HudLayout.El.ALIVE, w, h)) { renderAlive(g, font, s, w); HudLayout.pop(g); }
         if (HudLayout.push(g, HudLayout.El.BR_FEED, w, h)) { renderKillFeed(g, font, w, 36); HudLayout.pop(g); }
         if (HudLayout.push(g, HudLayout.El.OUTSIDE, w, h)) { renderOutsideWarning(g, font, s, mc.player, w); HudLayout.pop(g); }
-        if (HudLayout.push(g, HudLayout.El.HINT, w, h)) { renderHint(g, font, s, w, h); HudLayout.pop(g); }
+        if (HudLayout.push(g, HudLayout.El.HINT, w, h)) { renderHint(g, font, s, mc.player, w, h); HudLayout.pop(g); }
     }
 
     // ── 右上：存活人數 ──────────────────────────────────────────────────────
@@ -184,7 +184,7 @@ public final class HUD {
         return left <= 0 ? 0 : (int) ((left + 999) / 1000);
     }
 
-    private static void renderHint(GuiGraphics g, Font font, BRStatePacket s, int w, int h) {
+    private static void renderHint(GuiGraphics g, Font font, BRStatePacket s, LocalPlayer player, int w, int h) {
         if (s.selfState() != lastSelfState) {
             if (s.selfState() == ClientBRState.SELF_PLANE) planeSinceMs = System.currentTimeMillis();
             lastSelfState = s.selfState();
@@ -207,7 +207,13 @@ public final class HUD {
             };
             default -> null;
         };
-        int y = h - 78;
+        if (player != null && ClientSkydive.isLocallyLanded(player)
+                && (s.selfState() == ClientBRState.SELF_GLIDE || s.selfState() == ClientBRState.SELF_FREEFALL
+                    || s.selfState() == ClientBRState.SELF_CHUTE)) {
+            hint = null; // 腳剛落地立即隱藏跳傘提示
+        }
+        // 高於原版 ActionBar（h - 68）與切換物品名稱（h - 59），避免上下提示文字重疊堆疊
+        int y = h - 92;
         if (hint != null) {
             boolean downed = s.selfState() == ClientBRState.SELF_DOWNED;
             int color = downed ? DANGER : s.selfState() == ClientBRState.SELF_DEAD ? TEXT_DIM : TEXT;

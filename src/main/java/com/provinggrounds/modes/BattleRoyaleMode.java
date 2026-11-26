@@ -112,6 +112,7 @@ public class BattleRoyaleMode {
         Vec3 selfRevivePos;              // 自救讀條時固定的位置（不能移動）
         boolean kitOnLanding = false;    // 祭壇復活：落地後才發基礎裝備
         int groundTicks = 0;
+        int fallImmuneUntil = -1;        // 落地後短暫免摔落傷害緩衝（立即結束跳傘狀態仍不吃落地傷）
         @Nullable Entity carrier;
         @Nullable Vec3 lastSafe;
 
@@ -268,6 +269,12 @@ public class BattleRoyaleMode {
     public boolean isDropping(UUID id) {
         Participant p = participants.get(id);
         return p != null && p.alive && isDroppingState(p.state);
+    }
+
+    /** 跳傘中或剛落地 12 tick 內（立即解除跳傘狀態的同時仍保底取消殘餘摔落速度傷害）。 */
+    public boolean isFallImmune(UUID id) {
+        Participant p = participants.get(id);
+        return p != null && p.alive && (isDroppingState(p.state) || tickCount <= p.fallImmuneUntil);
     }
 
     private boolean inPlay() {
@@ -515,6 +522,7 @@ public class BattleRoyaleMode {
         discardCarrier(part);
         if (p.getVehicle() != null) p.stopRiding();
         part.groundTicks = 0;
+        part.fallImmuneUntil = -1;
         part.lastSkydiveToggle = tickCount;
         p.fallDistance = 0;
         SkydiveWings.equip(p); // 穿上鞘翅，直接進入原版滑翔（速度、姿勢都是原版）
@@ -533,18 +541,26 @@ public class BattleRoyaleMode {
             // 登機後 board_lock_seconds 秒內按空白鍵沒反應（避免誤觸），HUD 會顯示倒數
             if (tickCount - part.boardTick < PGConfig.SERVER.boardLockSeconds.get() * 20) return;
             jump(p, part);
+            syncChutes();
+            if (level != null) syncClients(level.getServer());
             return;
         }
         if (tickCount - part.lastSkydiveToggle < 10) return;
+        boolean changed = false;
         switch (part.state) {
-            case GLIDE, FREEFALL -> openChute(p, part, false);
+            case GLIDE, FREEFALL -> { openChute(p, part, false); changed = true; }
             case CHUTE -> {
                 // 收傘 → 自由落體（原版掉落，不改任何數值）
                 part.state = PlayerState.FREEFALL;
                 part.lastSkydiveToggle = tickCount;
                 playChuteSound(p, false);
+                changed = true;
             }
             default -> {}
+        }
+        if (changed) {
+            syncChutes();
+            if (level != null) syncClients(level.getServer());
         }
     }
 
@@ -560,7 +576,6 @@ public class BattleRoyaleMode {
         SkydiveWings.removeAll(p);
         p.fallDistance = 0;
         playChuteSound(p, true);
-        if (auto) p.displayClientMessage(Component.literal("降落傘已自動打開").withStyle(ChatFormatting.AQUA), true);
     }
 
     /**
@@ -655,7 +670,7 @@ public class BattleRoyaleMode {
 
     private void tickDropping() {
         tickJumpGrace();
-        syncChutes();
+        boolean stateChanged = false;
         for (Participant part : participants.values()) {
             if (!part.alive || !isDroppingState(part.state)) continue;
             ServerPlayer p = player(part.id);
@@ -663,24 +678,34 @@ public class BattleRoyaleMode {
 
             p.fallDistance = 0;
             com.provinggrounds.item.ParachuteItem.removeAll(p); // 計畫書 6 D4：不再有降落傘物品（舊版留下的一律收掉）
-            if (part.state == PlayerState.GLIDE && !landed(p)) {
+            if (landed(p) || (p.isPassenger() && part.seat == null)) {
+                // 腳一落地立刻結束跳傘狀態（不再延遲 5 tick），同時保留 12 tick 摔落傷害免疫緩衝
+                part.groundTicks = 0;
+                part.fallImmuneUntil = tickCount + 12;
+                part.state = PlayerState.GROUND;
+                p.fallDistance = 0;
+                p.stopFallFlying();
+                SkydiveWings.removeAll(p); // 落地：移除鞘翅（沒開傘就落地時也會清掉）
+                com.provinggrounds.item.ParachuteItem.removeAll(p); // 落地：收回降落傘
+                if (part.kitOnLanding) { part.kitOnLanding = false; RespawnKit.give(p); } // 祭壇復活：落地才發裝備
+                stateChanged = true;
+                continue;
+            }
+            part.groundTicks = 0;
+            if (part.state == PlayerState.GLIDE) {
                 // 鞘翅滑翔中：離地夠近就自動開傘；萬一滑翔被中斷（例如撞到東西）就重新開始滑翔
                 double auto = PGConfig.SERVER.skydiveAutoChuteHeight.get();
-                if (heightAboveGround(p, auto + 1) <= auto) openChute(p, part, true);
-                else if (!p.isFallFlying()) p.startFallFlying();
-            }
-            if (landed(p) || (p.isPassenger() && part.seat == null)) {
-                if (++part.groundTicks >= 5) { // 落地後留 5 tick 緩衝，確保摔落傷害已被取消
-                    part.state = PlayerState.GROUND;
-                    p.fallDistance = 0;
-                    p.stopFallFlying();
-                    SkydiveWings.removeAll(p); // 落地：移除鞘翅（沒開傘就落地時也會清掉）
-                    com.provinggrounds.item.ParachuteItem.removeAll(p); // 落地：收回降落傘，快捷欄解鎖
-                    if (part.kitOnLanding) { part.kitOnLanding = false; RespawnKit.give(p); } // 祭壇復活：落地才發裝備
+                if (heightAboveGround(p, auto + 1) <= auto) {
+                    openChute(p, part, true);
+                    stateChanged = true;
+                } else if (!p.isFallFlying()) {
+                    p.startFallFlying();
                 }
-            } else {
-                part.groundTicks = 0;
             }
+        }
+        syncChutes();
+        if (stateChanged && level != null) {
+            syncClients(level.getServer());
         }
     }
 

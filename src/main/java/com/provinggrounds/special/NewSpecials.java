@@ -371,12 +371,20 @@ public final class NewSpecials {
 
     private static final class FreeDive {
         byte state; // 1 = GLIDE, 2 = CHUTE, 3 = FREEFALL
+        final long launchTick;
         long lastToggle;
-        int groundTicks;
-        FreeDive(byte state, long now) { this.state = state; this.lastToggle = now; }
+        FreeDive(byte state, long now) { this.state = state; this.launchTick = now; this.lastToggle = now; }
     }
     private static final Map<UUID, FreeDive> FREE_DIVES = new HashMap<>();
+    private static final Map<UUID, Long> FREE_DIVE_FALL_IMMUNE = new HashMap<>();
     private static final java.util.Set<Integer> FREE_CHUTE_SENT = new java.util.HashSet<>();
+
+    /** 重新跳傘中與剛落地 12 tick 內免除摔落傷害。 */
+    public static boolean isFreeDiveFallImmune(ServerPlayer p) {
+        if (FREE_DIVES.containsKey(p.getUUID())) return true;
+        Long until = FREE_DIVE_FALL_IMMUNE.get(p.getUUID());
+        return until != null && p.server.getTickCount() <= until;
+    }
 
     /** 給 Plan9SyncPacket 同步目前非大逃殺重新跳傘中的玩家狀態（1=滑翔、2=開傘、3=自由落體）。 */
     public static Map<UUID, Byte> freeSkydiveStates() {
@@ -491,17 +499,14 @@ public final class NewSpecials {
             p.fallDistance = 0;
             boolean landed = p.onGround() || p.isInWater() || p.getAbilities().flying
                 || !p.level().noCollision(p, p.getBoundingBox().move(0, -0.1, 0));
-            if (landed && now - d.lastToggle > 10) {
-                if (++d.groundTicks >= 2) {
-                    p.stopFallFlying();
-                    com.provinggrounds.modes.br.SkydiveWings.removeAll(p);
-                    p.fallDistance = 0;
-                    it.remove();
-                    Plan9Specials.markDirty();
-                    continue;
-                }
-            } else {
-                d.groundTicks = 0;
+            if (landed && now - d.launchTick >= 3) {
+                p.stopFallFlying();
+                com.provinggrounds.modes.br.SkydiveWings.removeAll(p);
+                p.fallDistance = 0;
+                FREE_DIVE_FALL_IMMUNE.put(p.getUUID(), now + 12);
+                it.remove();
+                Plan9Specials.markDirty();
+                continue;
             }
             if (d.state == 1) { // GLIDE：離地夠近自動開傘
                 if (!p.isFallFlying()) p.startFallFlying();
@@ -514,7 +519,6 @@ public final class NewSpecials {
                     p.stopFallFlying();
                     com.provinggrounds.modes.br.SkydiveWings.removeAll(p);
                     playFreeChuteSound(p, true);
-                    msg(p, "降落傘已自動打開", ChatFormatting.AQUA);
                     Plan9Specials.markDirty();
                 }
             }
@@ -550,6 +554,7 @@ public final class NewSpecials {
             }
         }
         FREE_DIVES.clear();
+        FREE_DIVE_FALL_IMMUNE.clear();
         if (!FREE_CHUTE_SENT.isEmpty()) {
             FREE_CHUTE_SENT.clear();
             com.provinggrounds.network.PGNetwork.sendToAll(new com.provinggrounds.network.ChuteSyncPacket(new int[0]));

@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-26（v0.36.0 大逃殺電梯平衡機制＋8 大風格共 28 棟超大型無木箱高物資建築已編譯、開服驗證並發佈，網路版本升為 31）。
+> 最後更新：2026-11-27（v0.37.0 已發佈：近戰右鍵破玻璃／鐵欄、柵欄／石牆攀爬收武器＋舉起演出＋動作鎖定＋視野朝向／±45°轉頭限制＋Hitbox同步、跳傘抬頭卡住／下方提示不堆疊／落地立即結束、上下樓梯降速 30%＋下樓梯踩實每階；已通過 Gradle 建置與 `runServer` 開服檢查，網路版本 32）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -48,6 +48,13 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
+- **v0.37.0 已發佈（近戰右鍵破玻璃／鐵欄、柵欄石牆攀爬完善、跳傘優化與樓梯一致化，Gemini 實作，待正式客戶端實測 `G1～G6`）**：
+  1. `ui/ClientMeleeGlass.java` + `network/MeleeGlassPacket.java`：支援近戰左／右鍵破壞玻璃、玻璃片與鐵欄杆（監聽 `InteractionKeyMappingTriggered` 與 `MouseButton.Pre` 防 `lrtactical` 攔截；右鍵冷卻 14 tick）。
+  2. `core/WallClimb.java` + `network/WallClimbPacket.java` + `network/WallClimbSyncPacket.java` + `ui/ClientWallClimb.java` + `mixin/ItemInHandLayerMixin.java`：需視野面向牆面（±55° 內）才觸發攀爬；持物／持槍時先 3 tick 收起物品騰雙手再翻爬（第一／三人稱隱藏手持物品），爬完重播切換舉起與 TACZ draw 動畫；透過 `ActionLock` + `DownedEvents` + `ClientGunAim`／`GunCompat` 禁止開槍、攻擊、使用與中斷持續吃藥／換彈。
+  3. `mixin/EntityTurnMixin.java` + `ui/ClientForgeEvents.java` + `ui/ClientSkydive.java`：在 `Entity.turn` 輸入層直接硬限攀爬左右 ±45° 與跳傘鞘翅抬頭角度，消除橡皮筋拉扯感。
+  4. `ui/HUD.java` + `ui/HudLayout.java` + `ui/ParachuteRenderer.java` + `modes/BattleRoyaleMode.java` + `events/BREvents.java` + `special/NewSpecials.java` + `special/SpecialEvents.java`：拉高提示高度並清除飛機／自動開傘重複提示，雙腳落地當下雙端立即結束跳傘狀態並保留 12 tick 摔落傷害免疫。
+  5. `core/Hitbox.java` + `mixin/ProneAnimMixin.java` + `mixin/HumanoidArmsMixin.java` + `PGNetwork.java`（VERSION `31` → `32`）：攀爬動畫與伺服器／`F3+B` Hitbox 完全同步。
+  6. `ui/StairMovement.java` + `mixin/StairMovementMixin.java`：上、下樓梯水平速度降 30% 且不中斷疾跑，下樓梯自動貼地降階踩過每一格台階、維持上下一致的速度感。
 - **v0.36.0 已發佈（大逃殺電梯戰術平衡＋8 大風格共 28 棟超大型無木箱高物資建築，Gemini 實作）**：
   1. `block/ElevatorEvents.java`：大逃殺進行中（非創造／旁觀）搭乘電梯需讀條 **1.8 秒**，兩層播放機械警示音與雲霧粒子，離開方塊或受 `LivingHurtEvent` 傷害立即中斷，到達後響鈴並冷卻 **6 秒**（大廳／創造／團隊模式維持即時傳送）。
   2. `BuildingStyle.java` + `BuildingPickerScreen.java` + `BuildingCatalog.java`：擴充為 **8 大風格**（2 列 × 4 欄分頁）、`MAX_UNDO = 8`、`PGNetwork.VERSION` 升為 `31`。

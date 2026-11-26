@@ -99,6 +99,11 @@ public final class GunCompat {
         return active == null ? 0f : active.aimProgress(e);
     }
 
+    /** 中斷開鏡／換彈等持槍動作（例如攀爬收起武器時）。 */
+    public static void cancelGunAction(net.minecraft.world.entity.LivingEntity e) {
+        if (active != null && e != null) active.cancelGunAction(e);
+    }
+
     public static void init() {
 
         if (ModList.get().isLoaded("tacz")) {

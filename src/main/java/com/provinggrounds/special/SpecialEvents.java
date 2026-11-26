@@ -136,7 +136,10 @@ public final class SpecialEvents {
 
     @SubscribeEvent
     public static void onFall(LivingFallEvent event) {
-        if (event.getEntity() instanceof ServerPlayer p && SpecialWorld.noFall(p)) event.setCanceled(true);
+        if (event.getEntity() instanceof ServerPlayer p
+                && (SpecialWorld.noFall(p) || NewSpecials.isFreeDiveFallImmune(p))) {
+            event.setCanceled(true);
+        }
     }
 
     @SubscribeEvent

@@ -26,6 +26,8 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID, value = Dist.CLIENT)
 public final class ClientSkydive {
 
+    private static boolean wasOnPlane;
+
     private ClientSkydive() {}
 
     /** 上飛機到落地：快捷欄鎖在第 9 格（降落傘）。 */
@@ -57,10 +59,15 @@ public final class ClientSkydive {
         Minecraft mc = Minecraft.getInstance();
 
         // 坐上飛機時原版會在快捷欄上方顯示「按下 蹲下 離開」，但飛機上要按空白鍵跳、不能蹲下離開：
-        // 搭機期間每 tick 清掉那一行（我們自己的「按 空白鍵 跳傘」提示是 HUD 另外畫的，不受影響）
-        if (mc.player != null && mc.player.isPassenger() && ClientBRState.get().selfState() == ClientBRState.SELF_PLANE) {
+        // 搭機期間及剛跳離飛機那 1 tick 清掉那一行，避免跳傘後下方殘留原版提示與 HUD 重疊
+        boolean onPlane = mc.player != null && ClientBRState.get().selfState() == ClientBRState.SELF_PLANE;
+        boolean ridingPlaneCarrier = mc.player != null && mc.player.isPassenger() && ClientBRState.active()
+            && mc.player.getVehicle() instanceof net.minecraft.world.entity.Display;
+        if (onPlane || ridingPlaneCarrier || wasOnPlane) {
             mc.gui.setOverlayMessage(net.minecraft.network.chat.Component.empty(), false);
         }
+        wasOnPlane = onPlane || ridingPlaneCarrier;
+
         boolean pressed = false;
         while (mc.options.keyJump.consumeClick()) pressed = true; // 一律消耗掉，避免累積到下次跳傘才觸發
         if (!pressed || mc.player == null || mc.screen != null) return;
@@ -82,9 +89,16 @@ public final class ClientSkydive {
         };
     }
 
-    /** 鞘翅滑翔中：視角從正下方最多往上抬 glide_pitch_up_max 度（鞘翅本身的速度、操作都不改）。 */
-    private static void limitGlide(LocalPlayer p) {
-        if (!p.isFallFlying() || effectiveState(p) != ClientBRState.SELF_GLIDE) return;
+    /** 本地端已接觸地面／水中／飛行：用來在伺服器封包回來前先即時結束開傘／滑翔提示與限制。 */
+    public static boolean isLocallyLanded(net.minecraft.world.entity.player.Player p) {
+        return p.onGround() || p.isInWater() || p.getAbilities().flying;
+    }
+
+    /** 鞘翅滑翔中允許的最小俯仰角（Float.NaN = 不限制；供 EntityTurnMixin 與每 tick 保護共用）。 */
+    public static float glideMinPitch(LocalPlayer p) {
+        if (p == null || isLocallyLanded(p) || !p.isFallFlying() || effectiveState(p) != ClientBRState.SELF_GLIDE) {
+            return Float.NaN;
+        }
         double pitchUp = 75;
         try {
             pitchUp = PGConfig.SERVER.glidePitchUpMax.get();
@@ -92,7 +106,13 @@ public final class ClientSkydive {
             // 設定還沒同步過來：用預設值
         }
         // 原版的俯仰角：90 = 正下方、0 = 水平、-90 = 正上方。設定是「從正下方往上抬幾度」，所以最高能看到的角度 = 90 − 設定值
-        float minPitch = (float) (90 - pitchUp);
+        return (float) (90.0 - pitchUp);
+    }
+
+    /** 鞘翅滑翔中：確保起始俯仰角不超過 glideMinPitch（滑鼠輸入夾限主要由 EntityTurnMixin 在當幀硬擋住）。 */
+    private static void limitGlide(LocalPlayer p) {
+        float minPitch = glideMinPitch(p);
+        if (Float.isNaN(minPitch)) return;
         if (p.getXRot() < minPitch) p.setXRot(minPitch);
         if (p.xRotO < minPitch) p.xRotO = minPitch;
     }
@@ -104,7 +124,7 @@ public final class ClientSkydive {
         limitGlide(p);
         if (event.phase != TickEvent.Phase.START) return;
         if (effectiveState(p) != ClientBRState.SELF_CHUTE) return;
-        if (p.onGround() || p.isInWater()) return;
+        if (isLocallyLanded(p)) return;
         double sink = 5, horiz = 12, drift = 4;
         try {
             sink = PGConfig.SERVER.chuteSink.get();

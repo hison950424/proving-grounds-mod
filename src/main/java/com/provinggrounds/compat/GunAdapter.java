@@ -121,5 +121,8 @@ public interface GunAdapter {
 
     /** 實體目前的開鏡進度（0 = 腰射、1 = 完全開鏡；兩端都可呼叫）。 */
     default float aimProgress(LivingEntity entity) { return 0f; }
+
+    /** 中斷開鏡／換彈等持槍動作（例如攀爬收起武器時）。 */
+    default void cancelGunAction(LivingEntity entity) {}
 }
 

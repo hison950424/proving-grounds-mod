@@ -82,6 +82,13 @@ public class DownedEvents {
         if (downed(event.getEntity())) event.setCanceled(true);
     }
 
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public void onUseItemTick(LivingEntityUseItemEvent.Tick event) {
+        if (!downed(event.getEntity())) return;
+        event.getEntity().stopUsingItem();
+        event.setCanceled(true);
+    }
+
     /** 丟棄：倒地、斗篷都可以丟（計畫書 4 的 C 章）。只有擊退盾不能丟（穿戴中的盾）；Forge 取消丟棄時物品已經拿出來了，要放回原位。 */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onToss(ItemTossEvent event) {

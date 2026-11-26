@@ -46,7 +46,8 @@ public final class ParachuteRenderer {
     @SubscribeEvent
     public static void onRenderPlayer(RenderPlayerEvent.Post event) {
         Player p = event.getEntity();
-        if (!com.provinggrounds.network.ChuteSyncPacket.isOpen(p.getId()) || p.isInvisible()) return;
+        if (!com.provinggrounds.network.ChuteSyncPacket.isOpen(p.getId()) || p.isInvisible()
+                || ClientSkydive.isLocallyLanded(p)) return;
         PoseStack ps = event.getPoseStack();
         ps.pushPose();
         float bodyYaw = Mth.rotLerp(event.getPartialTick(), p.yBodyRotO, p.yBodyRot);
@@ -60,7 +61,9 @@ public final class ParachuteRenderer {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
         Minecraft mc = Minecraft.getInstance();
         Player p = mc.player;
-        if (p == null || !mc.options.getCameraType().isFirstPerson() || !com.provinggrounds.network.ChuteSyncPacket.isOpen(p.getId())) return;
+        if (p == null || !mc.options.getCameraType().isFirstPerson()
+                || !com.provinggrounds.network.ChuteSyncPacket.isOpen(p.getId())
+                || ClientSkydive.isLocallyLanded(p)) return;
         float pt = event.getPartialTick();
         Vec3 cam = event.getCamera().getPosition();
         double x = Mth.lerp(pt, p.xo, p.getX()), y = Mth.lerp(pt, p.yo, p.getY()), z = Mth.lerp(pt, p.zo, p.getZ());

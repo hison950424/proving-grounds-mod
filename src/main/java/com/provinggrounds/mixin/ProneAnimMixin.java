@@ -3,6 +3,7 @@ package com.provinggrounds.mixin;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.provinggrounds.core.Hitbox;
+import com.provinggrounds.core.WallClimb;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.util.Mth;
@@ -32,7 +33,8 @@ public abstract class ProneAnimMixin {
                                                      CallbackInfo ci) {
         if (player.isInWater() || player.isFallFlying() || player.isAutoSpinAttack() || player.isSleeping()) return;
         float swim = player.getSwimAmount(partialTicks);
-        if (swim <= 0.0001f) return;
+        float climb = swim <= 0.0001f ? WallClimb.progress(player, partialTicks) : 0.0f;
+        if (swim <= 0.0001f && climb <= 0.0001f) return;
 
         // 1. 與原版 LivingEntityRenderer.setupRotations 一致的水平朝向與死亡傾倒
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0f - rotationYaw));
@@ -43,10 +45,16 @@ public abstract class ProneAnimMixin {
             poseStack.mulPose(Axis.ZP.rotationDegrees(f * 90.0f));
         }
 
-        // 2. 貼地平滑趴下／站起（與 Hitbox.computeParts 使用同一組常數與曲線）
-        float e = Hitbox.proneEase(swim);
-        poseStack.translate(0.0f, Hitbox.PRONE_Y * e, Hitbox.PRONE_Z * e);
-        poseStack.mulPose(Axis.XP.rotationDegrees(-90.0f * e));
+        // 2. 貼地平滑趴下／站起，或翻爬柵欄／石牆前傾（與 Hitbox.computeParts 完全同步）
+        if (swim > 0.0001f) {
+            float e = Hitbox.proneEase(swim);
+            poseStack.translate(0.0f, Hitbox.PRONE_Y * e, Hitbox.PRONE_Z * e);
+            poseStack.mulPose(Axis.XP.rotationDegrees(-90.0f * e));
+        } else {
+            float w = Mth.sin(climb * (float) Math.PI);
+            poseStack.translate(0.0f, Hitbox.CLIMB_Y * w, Hitbox.CLIMB_Z * w);
+            poseStack.mulPose(Axis.XP.rotationDegrees(-Hitbox.CLIMB_LEAN_DEG * w));
+        }
         ci.cancel();
     }
 }

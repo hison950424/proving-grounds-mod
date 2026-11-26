@@ -29,7 +29,7 @@ import java.lang.reflect.Method;
 public final class ClientGunAim {
 
     private static boolean ready, failed, wasDrawing;
-    private static Method fromLiving, getDrawCoolDown, fromLocal, isAim, aim, shoot;
+    private static Method fromLiving, getDrawCoolDown, cancelReload, fromLocal, isAim, aim, shoot, drawGun;
     private static KeyMapping aimKey;
 
     private ClientGunAim() {}
@@ -43,6 +43,51 @@ public final class ClientGunAim {
         } catch (ReflectiveOperationException | RuntimeException ignored) {}
     }
 
+    /** 開始翻爬時取消開鏡與換彈（避免攀爬期間還維持開鏡視角或換彈讀條）。 */
+    public static void cancelForClimb(LocalPlayer p) {
+        if (p == null || !init()) return;
+        try {
+            Object cop = fromLocal.invoke(null, p);
+            if (cop != null) aim.invoke(cop, false);
+            Object op = fromLiving.invoke(null, p);
+            if (op != null && cancelReload != null) cancelReload.invoke(op);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {}
+    }
+
+    /** 爬完牆重新拿出主手槍枝時播放 TACZ 切槍舉起動畫。 */
+    public static void triggerDraw(LocalPlayer p) {
+        if (p == null || !init() || drawGun == null) return;
+        try {
+            Object cop = fromLocal.invoke(null, p);
+            if (cop != null) drawGun.invoke(cop, net.minecraft.world.item.ItemStack.EMPTY);
+            reInitGunRenderer(p);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {}
+    }
+
+    private static Class<?> animateRendererClass;
+    private static Method tryInitRenderer;
+    private static boolean rendererApiFailed;
+
+    private static void reInitGunRenderer(LocalPlayer p) {
+        if (rendererApiFailed) return;
+        net.minecraft.world.item.ItemStack stack = p.getMainHandItem();
+        if (stack.isEmpty()) return;
+        try {
+            if (animateRendererClass == null) {
+                animateRendererClass = Class.forName("com.tacz.guns.client.renderer.item.AnimateGeoItemRenderer");
+                tryInitRenderer = animateRendererClass.getMethod("tryInit",
+                    net.minecraft.world.item.ItemStack.class, net.minecraft.world.entity.player.Player.class, float.class);
+            }
+            var ext = net.minecraftforge.client.extensions.common.IClientItemExtensions.of(stack.getItem());
+            Object renderer = ext.getCustomRenderer();
+            if (animateRendererClass.isInstance(renderer)) {
+                tryInitRenderer.invoke(renderer, stack, p, Minecraft.getInstance().getFrameTime());
+            }
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+            rendererApiFailed = true;
+        }
+    }
+
     private static boolean init() {
         if (ready) return true;
         if (failed || !ModList.get().isLoaded("tacz")) { failed = true; return false; }
@@ -50,11 +95,13 @@ public final class ClientGunAim {
             Class<?> op = Class.forName("com.tacz.guns.api.entity.IGunOperator");
             fromLiving = op.getMethod("fromLivingEntity", LivingEntity.class);
             getDrawCoolDown = op.getMethod("getSynDrawCoolDown");
+            cancelReload = op.getMethod("cancelReload");
             Class<?> cop = Class.forName("com.tacz.guns.api.client.gameplay.IClientPlayerGunOperator");
             fromLocal = cop.getMethod("fromLocalPlayer", LocalPlayer.class);
             isAim = cop.getMethod("isAim");
             aim = cop.getMethod("aim", boolean.class);
             shoot = cop.getMethod("shoot");
+            drawGun = cop.getMethod("draw", net.minecraft.world.item.ItemStack.class);
             aimKey = (KeyMapping) Class.forName("com.tacz.guns.client.input.AimKey").getField("AIM_KEY").get(null);
             ready = true;
             return true;
@@ -75,7 +122,7 @@ public final class ClientGunAim {
         }
     }
 
-    /** 1. 滑鼠開鏡鍵：切槍中直接取消，TACZ 收不到。 */
+    /** 1. 滑鼠開鏡鍵：切槍中或攀爬中直接取消，TACZ 收不到。 */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onMouse(InputEvent.MouseButton.Pre event) {
         Minecraft mc = Minecraft.getInstance();
@@ -83,10 +130,10 @@ public final class ClientGunAim {
         if (p == null || mc.screen != null || event.getAction() != GLFW.GLFW_PRESS || !init()) return;
         InputConstants.Key key = aimKey.getKey();
         if (key.getType() != InputConstants.Type.MOUSE || key.getValue() != event.getButton()) return;
-        if (drawing(p)) event.setCanceled(true);
+        if (drawing(p) || com.provinggrounds.core.WallClimb.isClientClimbing(p.getId())) event.setCanceled(true);
     }
 
-    /** 2、3. 每個 tick：切槍中就關掉開鏡；切槍結束時還按著開鏡鍵就開鏡。 */
+    /** 2、3. 每個 tick：切槍中或攀爬中就關掉開鏡；切槍結束時還按著開鏡鍵就開鏡。 */
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -94,10 +141,11 @@ public final class ClientGunAim {
         LocalPlayer p = mc.player;
         if (p == null || !init()) return;
         boolean draw = drawing(p);
+        boolean climbing = com.provinggrounds.core.WallClimb.isClientClimbing(p.getId());
         try {
             Object cop = fromLocal.invoke(null, p);
-            if (draw && Boolean.TRUE.equals(isAim.invoke(cop))) aim.invoke(cop, false);
-            if (wasDrawing && !draw && mc.screen == null && physicallyDown(mc, aimKey.getKey())) {
+            if ((draw || climbing) && Boolean.TRUE.equals(isAim.invoke(cop))) aim.invoke(cop, false);
+            if (!climbing && wasDrawing && !draw && mc.screen == null && physicallyDown(mc, aimKey.getKey())) {
                 aimKey.setDown(true); // 一直按著右鍵：動畫跑完就開鏡（按住模式）
                 aim.invoke(cop, true);
             }

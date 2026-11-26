@@ -71,7 +71,7 @@ public final class HudLayout {
         BR_FEED("淘汰訊息", 0, Pivot.TOP_RIGHT, (w, h) -> new Box(w - 168, 36, 160, 46)),
         COMPASS("指北針", 0, Pivot.TOP_CENTER, (w, h) -> new Box(w / 2 - 88, 0, 176, 33)),
         OUTSIDE("圈外警告", 0, Pivot.TOP_CENTER, (w, h) -> new Box(w / 2 - 80, 36, 160, 20)),
-        HINT("跳傘／倒地提示", 0, Pivot.BOTTOM_CENTER, (w, h) -> new Box(w / 2 - 90, h - 104, 180, 46)),
+        HINT("跳傘／倒地提示", 0, Pivot.BOTTOM_CENTER, (w, h) -> new Box(w / 2 - 90, h - 118, 180, 46)),
         ARENA_SCORE("比分", 1, Pivot.TOP_CENTER, (w, h) -> new Box(w / 2 - 130, 4, 260, 50)),
         KILL_FEED("擊殺紀錄", 1, Pivot.TOP_RIGHT, (w, h) -> new Box(w - 140, ClientArenaState.active() ? 4 : 40, 136, 72)),
         WALLET("金錢與戰績", 1, Pivot.BOTTOM_RIGHT, (w, h) -> new Box(w - 124, h - 64, 120, 39)),

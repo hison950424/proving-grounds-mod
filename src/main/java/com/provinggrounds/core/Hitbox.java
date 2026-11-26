@@ -40,6 +40,11 @@ public final class Hitbox {
     public static final float PRONE_Y = 0.24f;
     public static final float PRONE_Z = 1.05f;
 
+    /** 攀爬柵欄／石牆時的前傾角度與身位偏移（ProneAnimMixin 與 computeParts 共用）。 */
+    public static final float CLIMB_Y = 0.10f;
+    public static final float CLIMB_Z = 0.14f;
+    public static final float CLIMB_LEAN_DEG = 26.0f;
+
     /** 趴下／站起的平滑曲線（smoothstep），過渡柔和且頭尾速度平緩。 */
     public static float proneEase(float swimAmount) {
         float t = Mth.clamp(swimAmount, 0.0f, 1.0f);
@@ -85,14 +90,16 @@ public final class Hitbox {
         boolean offHasItem,
         UseAnim mainUseAnim,
         UseAnim offUseAnim,
-        boolean chuteOpen
+        boolean chuteOpen,
+        float climbProgress
     ) {
         public static PoseInput fromPlayer(Player p, float pt, float bodyYawDeg, float headYawDeg, float headPitchDeg) {
-            boolean holdsGun = GunCompat.holdsGun(p);
+            boolean stowed = WallClimb.isHandsStowed(p, pt);
+            boolean holdsGun = !stowed && GunCompat.holdsGun(p);
             float aim = holdsGun ? GunCompat.aimProgress(p) : 0.0f;
-            UseAnim mainUse = (p.isUsingItem() && p.getUsedItemHand() == InteractionHand.MAIN_HAND)
+            UseAnim mainUse = (!stowed && p.isUsingItem() && p.getUsedItemHand() == InteractionHand.MAIN_HAND)
                 ? p.getUseItem().getUseAnimation() : UseAnim.NONE;
-            UseAnim offUse = (p.isUsingItem() && p.getUsedItemHand() == InteractionHand.OFF_HAND)
+            UseAnim offUse = (!stowed && p.isUsingItem() && p.getUsedItemHand() == InteractionHand.OFF_HAND)
                 ? p.getUseItem().getUseAnimation() : UseAnim.NONE;
             return new PoseInput(
                 p.isCrouching(),
@@ -106,11 +113,12 @@ public final class Hitbox {
                 p.getMainArm() == HumanoidArm.RIGHT,
                 holdsGun,
                 aim,
-                !p.getMainHandItem().isEmpty(),
-                !p.getOffhandItem().isEmpty(),
+                !stowed && !p.getMainHandItem().isEmpty(),
+                !stowed && !p.getOffhandItem().isEmpty(),
                 mainUse,
                 offUse,
-                ChuteSyncPacket.isOpen(p.getId())
+                ChuteSyncPacket.isOpen(p.getId()) && !p.onGround() && !p.isInWater(),
+                WallClimb.progress(p, pt)
             );
         }
     }
@@ -316,6 +324,34 @@ public final class Hitbox {
             }
         }
 
+        // 9. 翻爬柵欄／石牆動畫（雙手上抓撐起＋雙腿交替提膝上踏，與 ProneAnimMixin／Hitbox 完全同步）
+        if (!in.chuteOpen() && in.swimAmount() <= 0.0001f && in.climbProgress() > 0.0001f) {
+            float t = Mth.clamp(in.climbProgress(), 0.0f, 1.0f);
+            float w = Mth.sin(t * (float) Math.PI);
+            float alt = Mth.sin(t * ((float) Math.PI * 2.0f)) * 0.25f;
+
+            float armBase = Mth.lerp(t, -2.55f, -0.45f);
+            p.rightArm.xRot = Mth.lerp(w, p.rightArm.xRot, armBase - alt);
+            p.leftArm.xRot  = Mth.lerp(w, p.leftArm.xRot,  armBase + alt);
+            p.rightArm.yRot = Mth.lerp(w, p.rightArm.yRot, -0.16f);
+            p.leftArm.yRot  = Mth.lerp(w, p.leftArm.yRot,   0.16f);
+            p.rightArm.zRot = Mth.lerp(w, p.rightArm.zRot,  0.14f);
+            p.leftArm.zRot  = Mth.lerp(w, p.leftArm.zRot,  -0.14f);
+
+            float liftR = Mth.sin(t * (float) Math.PI);
+            float liftL = Mth.sin(Mth.clamp((t - 0.18f) / 0.82f, 0.0f, 1.0f) * (float) Math.PI);
+            p.rightLeg.xRot = Mth.lerp(w, p.rightLeg.xRot, -1.10f * liftR);
+            p.leftLeg.xRot  = Mth.lerp(w, p.leftLeg.xRot,  -1.10f * liftL);
+            p.rightLeg.yRot = Mth.lerp(w, p.rightLeg.yRot, 0.0f);
+            p.leftLeg.yRot  = Mth.lerp(w, p.leftLeg.yRot,  0.0f);
+            p.rightLeg.y = Mth.lerp(w, p.rightLeg.y, 12.0f - 2.4f * liftR);
+            p.leftLeg.y  = Mth.lerp(w, p.leftLeg.y,  12.0f - 2.4f * liftL);
+            p.rightLeg.z = Mth.lerp(w, p.rightLeg.z, -2.2f * liftR);
+            p.leftLeg.z  = Mth.lerp(w, p.leftLeg.z,  -2.2f * liftL);
+
+            p.head.xRot = Mth.lerp(w, p.head.xRot, Mth.clamp(headPitchRad - 0.22f, -1.35f, 1.35f));
+        }
+
         return p;
     }
 
@@ -399,6 +435,10 @@ public final class Hitbox {
             float f4 = Mth.lerp(in.swimAmount(), 0.0f, f3);
             root.rotateX((float) Math.toRadians(f4));
             root.translate(0.0f, -1.0f, 0.3f);
+        } else if (in.climbProgress() > 0.0001f) {
+            float w = Mth.sin(Mth.clamp(in.climbProgress(), 0.0f, 1.0f) * (float) Math.PI);
+            root.translate(0.0f, CLIMB_Y * w, CLIMB_Z * w);
+            root.rotateX((float) Math.toRadians(-CLIMB_LEAN_DEG * w));
         }
         root.scale(0.9375f, 0.9375f, 0.9375f);
         root.scale(-1.0f, -1.0f, 1.0f);

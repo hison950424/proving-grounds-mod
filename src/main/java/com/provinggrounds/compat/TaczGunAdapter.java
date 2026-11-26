@@ -572,27 +572,48 @@ public class TaczGunAdapter implements GunAdapter {
         }
     }
 
-    private static Method fromLivingEntity, getSynAimingProgress;
+    private static Method fromLivingEntity, getSynAimingProgress, cancelReload, operatorAim;
     private static boolean aimApiReady, aimApiFailed;
+
+    private static synchronized boolean ensureOperatorApi() {
+        if (aimApiReady) return true;
+        if (aimApiFailed) return false;
+        try {
+            Class<?> op = Class.forName("com.tacz.guns.api.entity.IGunOperator");
+            fromLivingEntity = op.getMethod("fromLivingEntity", LivingEntity.class);
+            getSynAimingProgress = op.getMethod("getSynAimingProgress");
+            cancelReload = op.getMethod("cancelReload");
+            operatorAim = op.getMethod("aim", boolean.class);
+            aimApiReady = true;
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            aimApiFailed = true;
+            return false;
+        }
+    }
 
     @Override
     public float aimProgress(LivingEntity entity) {
-        if (entity == null || aimApiFailed) return 0f;
+        if (entity == null || !ensureOperatorApi()) return 0f;
         try {
-            if (!aimApiReady) {
-                Class<?> op = Class.forName("com.tacz.guns.api.entity.IGunOperator");
-                fromLivingEntity = op.getMethod("fromLivingEntity", LivingEntity.class);
-                getSynAimingProgress = op.getMethod("getSynAimingProgress");
-                aimApiReady = true;
-            }
             Object operator = fromLivingEntity.invoke(null, entity);
             if (operator == null) return 0f;
             Object val = getSynAimingProgress.invoke(operator);
             return val instanceof Number n ? n.floatValue() : 0f;
         } catch (ReflectiveOperationException | RuntimeException e) {
-            aimApiFailed = true;
             return 0f;
         }
+    }
+
+    @Override
+    public void cancelGunAction(LivingEntity entity) {
+        if (entity == null || !ensureOperatorApi()) return;
+        try {
+            Object operator = fromLivingEntity.invoke(null, entity);
+            if (operator == null) return;
+            cancelReload.invoke(operator);
+            operatorAim.invoke(operator, false);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {}
     }
 
     private static Method findShooterGetter(Class<?> type) {

@@ -35,11 +35,11 @@ public class BREvents {
         if (br.isRunning()) br.onDamaged(victim, event.getSource(), event.getAmount());
     }
 
-    /** 跳傘中落地不受摔落傷害（不論有沒有開傘）。 */
+    /** 跳傘中（含剛落地緩衝 12 tick 內）不受摔落傷害。 */
     @SubscribeEvent
     public void onFall(LivingFallEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer p)) return;
-        if (BattleRoyaleMode.get().isDropping(p.getUUID())) event.setCanceled(true);
+        if (BattleRoyaleMode.get().isFallImmune(p.getUUID())) event.setCanceled(true);
     }
 
     /** 飛機上與剛跳機的幾秒內：不會受傷，也不能攻擊別人。 */
@@ -59,11 +59,11 @@ public class BREvents {
         if (event.getEntity() instanceof ServerPlayer p && BattleRoyaleMode.get().isProtected(p.getUUID())) event.setCanceled(true);
     }
 
-    /** 鞘翅滑翔撞牆的傷害（原版 fly_into_wall）：跳傘中不受傷。 */
+    /** 鞘翅滑翔撞牆的傷害（原版 fly_into_wall）：跳傘中（含剛落地緩衝）不受傷。 */
     @SubscribeEvent
     public void onElytraCrash(net.minecraftforge.event.entity.living.LivingAttackEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer p)) return;
-        if (event.getSource().is(net.minecraft.world.damagesource.DamageTypes.FLY_INTO_WALL) && BattleRoyaleMode.get().isDropping(p.getUUID())) {
+        if (event.getSource().is(net.minecraft.world.damagesource.DamageTypes.FLY_INTO_WALL) && BattleRoyaleMode.get().isFallImmune(p.getUUID())) {
             event.setCanceled(true);
         }
     }
