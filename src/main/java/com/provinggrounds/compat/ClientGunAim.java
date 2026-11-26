@@ -54,13 +54,14 @@ public final class ClientGunAim {
         } catch (ReflectiveOperationException | RuntimeException ignored) {}
     }
 
-    /** 爬完牆重新拿出主手槍枝時播放 TACZ 切槍舉起動畫。 */
-    public static void triggerDraw(LocalPlayer p) {
-        if (p == null || !init() || drawGun == null) return;
+    /** 爬完牆重新拿出主手槍械／近戰刀械／戰術消耗品時，重播切出舉起動畫（lrtactical 與 TACZ 共用 AnimateGeoItemRenderer）。 */
+    public static void triggerItemDraw(LocalPlayer p) {
+        if (p == null) return;
+        reInitGeoItemRenderer(p);
+        if (!GunCompat.holdsGun(p) || !init() || drawGun == null) return;
         try {
             Object cop = fromLocal.invoke(null, p);
             if (cop != null) drawGun.invoke(cop, net.minecraft.world.item.ItemStack.EMPTY);
-            reInitGunRenderer(p);
         } catch (ReflectiveOperationException | RuntimeException ignored) {}
     }
 
@@ -68,7 +69,7 @@ public final class ClientGunAim {
     private static Method tryInitRenderer;
     private static boolean rendererApiFailed;
 
-    private static void reInitGunRenderer(LocalPlayer p) {
+    private static void reInitGeoItemRenderer(LocalPlayer p) {
         if (rendererApiFailed) return;
         net.minecraft.world.item.ItemStack stack = p.getMainHandItem();
         if (stack.isEmpty()) return;

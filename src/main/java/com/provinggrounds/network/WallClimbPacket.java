@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 
 /**
  * 檔案: WallClimbPacket.java
- * 目的: 客戶端 → 伺服器：玩家貼著柵欄／石牆按下空白鍵請求翻爬上去。
+ * 目的: 客戶端 → 伺服器：玩家在跳躍浮空時對前方不高於頭部的方塊再按一次空白鍵，請求觸發翻爬。
  */
 public record WallClimbPacket(BlockPos wallPos, float yaw) {
 
@@ -25,8 +25,8 @@ public record WallClimbPacket(BlockPos wallPos, float yaw) {
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            ServerPlayer p = ctx.get().getSender();
-            if (p != null) WallClimb.startServer(p, wallPos, yaw);
+            ServerPlayer sender = ctx.get().getSender();
+            if (sender != null) WallClimb.startServer(sender, wallPos, yaw);
         });
         ctx.get().setPacketHandled(true);
     }

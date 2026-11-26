@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-27（v0.37.0 已發佈：近戰右鍵破玻璃／鐵欄、柵欄／石牆攀爬收武器＋舉起演出＋動作鎖定＋視野朝向／±45°轉頭限制＋Hitbox同步、跳傘抬頭卡住／下方提示不堆疊／落地立即結束、上下樓梯降速 30%＋下樓梯踩實每階；已通過 Gradle 建置與 `runServer` 開服檢查，網路版本 32）。
+> 最後更新：2026-11-27（v0.38.0 已實作：樓梯 45° 斜坡碰撞箱＋柵欄石牆 1 格高＋跳躍二段空白鍵翻爬一般方塊／零抖動／±45°／第一人稱雙手撐起＋拿刀重新切刀與拿槍切槍，網路版本 33，待驗證建置與發佈）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -48,6 +48,11 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
+- **v0.38.0 待發佈（樓梯 45° 斜坡、柵欄石牆 1 格高、跳躍二段空白鍵翻爬零抖動與切刀演出，Gemini 實作）**：
+  1. `core/StairRampShapes.java` + `mixin/BlockCollisionMixin.java`：雙端將所有正放樓梯（`Half.BOTTOM` 含直階與內／外轉角）改為 16 階（每階 0.0625 格）45° 平滑斜坡碰撞箱；並將 `#minecraft:fences`、`#minecraft:walls` 與關閉中 `#minecraft:fence_gates` 碰撞高度改為 1 格高可直接跳過。
+  2. `core/WallClimb.java` + `ui/ClientWallClimb.java` + `mixin/StairMovementMixin.java` + `network/WallClimbPacket.java` + `network/WallClimbSyncPacket.java`：改為「跳躍浮空後再按空白鍵」即可攀爬前方 ±45° 內、頂面不高於自身頭頂的任意碰撞方塊；於 `LivingEntity.travel` HEAD 接管本地移動並取消伺服器每 tick `setPos` 回扯，徹底消除第一人稱視角抖動。
+  3. 第一人稱與重新切刀／切槍：`ui/ClientWallClimb.java` 于 `RenderHandEvent` 先 2 tick 下收手持物品後改畫雙手前抓向下撐起手臂（`renderPlayerArm` `m_109346_`）；翻完透過 `ClientGunAim.triggerItemDraw`（`AnimateGeoItemRenderer.tryInit` + TACZ `draw`）重播 `lrtactical` 切刀與 `TACZ` 切槍動畫，並以 `MeleeDrawSpeed.restartDraw` 重置伺服器拔刀計時。
+  4. 同步包含 `ActionLock` 動作鎖定、`EntityTurnMixin` 攀爬左右 ±45° 轉頭限制、`ItemInHandLayerMixin` 第三人稱空手、`Hitbox`＋`ProneAnimMixin`＋`HumanoidArmsMixin` 同步判定框，以及 `PGNetwork.VERSION = "33"`。
 - **v0.37.0 已發佈（近戰右鍵破玻璃／鐵欄、柵欄石牆攀爬完善、跳傘優化與樓梯一致化，Gemini 實作，待正式客戶端實測 `G1～G6`）**：
   1. `ui/ClientMeleeGlass.java` + `network/MeleeGlassPacket.java`：支援近戰左／右鍵破壞玻璃、玻璃片與鐵欄杆（監聽 `InteractionKeyMappingTriggered` 與 `MouseButton.Pre` 防 `lrtactical` 攔截；右鍵冷卻 14 tick）。
   2. `core/WallClimb.java` + `network/WallClimbPacket.java` + `network/WallClimbSyncPacket.java` + `ui/ClientWallClimb.java` + `mixin/ItemInHandLayerMixin.java`：需視野面向牆面（±55° 內）才觸發攀爬；持物／持槍時先 3 tick 收起物品騰雙手再翻爬（第一／三人稱隱藏手持物品），爬完重播切換舉起與 TACZ draw 動畫；透過 `ActionLock` + `DownedEvents` + `ClientGunAim`／`GunCompat` 禁止開槍、攻擊、使用與中斷持續吃藥／換彈。

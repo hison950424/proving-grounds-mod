@@ -17,7 +17,7 @@ import java.util.Optional;
 public final class PGNetwork {
 
     /** 封包格式改變時要加 1，舊版客戶端連線時會直接顯示版本不符（7 = 跳傘改版）。 */
-    private static final String VERSION = "32"; // 32 = 近戰右鍵破壞方塊+柵欄石牆攀爬, 31 = 8風格28棟超大型建築與大逃殺電梯平衡, 30 = 大型建築藍圖翻新
+    private static final String VERSION = "33"; // 33 = 跳躍後空白鍵翻爬一般方塊+樓梯45度斜坡+柵欄石牆1格高, 31 = 8風格28棟超大型建築與大逃殺電梯平衡
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ProvingGroundsMod.MOD_ID, "main"),
@@ -112,9 +112,9 @@ public final class PGNetwork {
         CHANNEL.registerMessage(id++, BuildingPacket.class, BuildingPacket::encode, BuildingPacket::decode,
             BuildingPacket::handle, Optional.empty()); // 管理員大逃殺建築生成工具（雙向：開選單／選定建築／復原）
         CHANNEL.registerMessage(id++, WallClimbPacket.class, WallClimbPacket::encode, WallClimbPacket::decode,
-            WallClimbPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER)); // 柵欄／石牆攀爬請求
+            WallClimbPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER)); // 跳躍後空白鍵翻爬方塊請求
         CHANNEL.registerMessage(id++, WallClimbSyncPacket.class, WallClimbSyncPacket::encode, WallClimbSyncPacket::decode,
-            WallClimbSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)); // 柵欄／石牆攀爬動畫同步
+            WallClimbSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)); // 翻爬動畫與 Hitbox 同步
 
     }
 

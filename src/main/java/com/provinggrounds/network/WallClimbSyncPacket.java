@@ -12,7 +12,7 @@ import java.util.function.Supplier;
 
 /**
  * 檔案: WallClimbSyncPacket.java
- * 目的: 伺服器 → 全體客戶端：同步某位玩家正在翻爬柵欄／石牆的動畫與起迄狀態（供第三人稱與 F3+B 顯示）。
+ * 目的: 伺服器 → 全體客戶端：同步玩家正在翻爬前方台階／牆面的動畫進度與狀態（供第三人稱與 F3+B 顯示）。
  */
 public record WallClimbSyncPacket(int entityId, Vec3 start, Vec3 target, float yaw, int stowTicks, int duration) {
 

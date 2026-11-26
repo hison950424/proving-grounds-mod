@@ -14,9 +14,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * 檔案: EntityTurnMixin.java
  * 目的: 在滑鼠轉動套用到鏡頭的當下直接夾限（只在客戶端）：
- *   1. 攀爬柵欄／石牆期間限制左右轉頭角度（±45°）。
+ *   1. 翻爬期間限制左右轉頭角度（±45°）。
  *   2. 跳傘鞘翅滑翔期間限制最大抬頭角度（glide_pitch_up_max）。
- *   因為是在 Entity.turn 輸入層直接擋住超出的角度變化量，玩家感受到的是乾脆的「頂到牆／卡住」，不會有每 tick 被拉回來的橡皮筋感。
+ *   因為是在 Entity.turn 輸入層直接擋住超出的角度變化量，玩家感受到的是乾脆的卡住感，不會有橡皮筋拉回感。
  */
 @Mixin(Entity.class)
 public abstract class EntityTurnMixin {

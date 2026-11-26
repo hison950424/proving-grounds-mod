@@ -16,8 +16,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * 檔案: ItemInHandLayerMixin.java
- * 目的: 第三人稱攀爬期間隱藏雙手所持物品（含槍械、近戰武器與補品），
- *   與第一人稱「先收起物品騰出雙手再爬牆」的演出一致（只在客戶端）。
+ * 目的: 第三人稱攀爬期間隱藏雙手所持物品（含槍械、近戰刀械與補品），
+ *   與第一人稱「先收起物品騰出雙手再爬上」的演出一致（只在客戶端）。
  */
 @Mixin(ItemInHandLayer.class)
 public abstract class ItemInHandLayerMixin {

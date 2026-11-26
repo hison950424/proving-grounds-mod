@@ -45,7 +45,7 @@ public abstract class ProneAnimMixin {
             poseStack.mulPose(Axis.ZP.rotationDegrees(f * 90.0f));
         }
 
-        // 2. 貼地平滑趴下／站起，或翻爬柵欄／石牆前傾（與 Hitbox.computeParts 完全同步）
+        // 2. 貼地平滑趴下／站起，或翻爬前方台階／牆面前傾（與 Hitbox.computeParts 完全同步）
         if (swim > 0.0001f) {
             float e = Hitbox.proneEase(swim);
             poseStack.translate(0.0f, Hitbox.PRONE_Y * e, Hitbox.PRONE_Z * e);

@@ -42,6 +42,11 @@ public final class MeleeDrawSpeed {
 
     private MeleeDrawSpeed() {}
 
+    /** 重新開始拔刀計時（例如攀爬收起武器結束後，重新拔出近戰武器）。 */
+    public static void restartDraw(ServerPlayer p) {
+        if (p != null) HELD.remove(p.getUUID());
+    }
+
     /** 手上拿著近戰武器，而且拔刀動畫已經播完。 */
     public static boolean drawn(ServerPlayer p) {
         ItemStack stack = p.getMainHandItem();

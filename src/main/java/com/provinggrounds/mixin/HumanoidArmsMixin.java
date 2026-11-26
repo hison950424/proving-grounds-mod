@@ -37,10 +37,9 @@ public abstract class HumanoidArmsMixin {
         HumanoidModel<?> m = (HumanoidModel<?>) (Object) this;
         boolean chuteOpen = ChuteSyncPacket.isOpen(p.getId()) && !p.onGround() && !p.isInWater();
 
-        // 陸地趴下／站起過渡、爬行，或翻爬柵欄／石牆：直接使用與 Hitbox 相同的算式，徹底消除與 Hitbox 偏差
+        // 陸地趴下／站起過渡與爬行，或翻爬前方台階／牆面：直接使用與 Hitbox 相同的算式，徹底消除與 Hitbox 偏差
         float pt = net.minecraft.client.Minecraft.getInstance().getFrameTime();
-        float climb = (!p.isInWater() && !p.isFallFlying() && !p.isSleeping())
-            ? WallClimb.progress(p, pt) : 0.0f;
+        float climb = (!p.isInWater() && !p.isFallFlying() && !p.isSleeping()) ? WallClimb.progress(p, pt) : 0.0f;
         if (!p.isInWater() && !p.isFallFlying() && !p.isSleeping() && (m.swimAmount > 0.0001f || climb > 0.0001f)) {
             boolean stowed = WallClimb.isHandsStowed(p, pt);
             boolean holdsGun = !stowed && GunCompat.holdsGun(p);

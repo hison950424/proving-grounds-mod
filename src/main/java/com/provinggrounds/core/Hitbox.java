@@ -40,7 +40,7 @@ public final class Hitbox {
     public static final float PRONE_Y = 0.24f;
     public static final float PRONE_Z = 1.05f;
 
-    /** 攀爬柵欄／石牆時的前傾角度與身位偏移（ProneAnimMixin 與 computeParts 共用）。 */
+    /** 翻爬前方台階／牆面時的前傾角度與身位偏移（ProneAnimMixin 與 computeParts 共用）。 */
     public static final float CLIMB_Y = 0.10f;
     public static final float CLIMB_Z = 0.14f;
     public static final float CLIMB_LEAN_DEG = 26.0f;
@@ -324,7 +324,7 @@ public final class Hitbox {
             }
         }
 
-        // 9. 翻爬柵欄／石牆動畫（雙手上抓撐起＋雙腿交替提膝上踏，與 ProneAnimMixin／Hitbox 完全同步）
+        // 9. 翻爬台階／牆面動畫（雙手上抓撐起＋雙腿交替提膝上踏，與 ProneAnimMixin／Hitbox 完全同步）
         if (!in.chuteOpen() && in.swimAmount() <= 0.0001f && in.climbProgress() > 0.0001f) {
             float t = Mth.clamp(in.climbProgress(), 0.0f, 1.0f);
             float w = Mth.sin(t * (float) Math.PI);
