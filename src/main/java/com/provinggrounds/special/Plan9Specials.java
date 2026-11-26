@@ -79,6 +79,16 @@ public final class Plan9Specials {
     }
     private static final List<Domain> DOMAINS = new ArrayList<>();
 
+    /** 給伺服器端 Entity.collide 碰撞檢查用的領域清單。 */
+    public static List<SpecialHooks.DomainBarrier> barriersIn(net.minecraft.world.level.Level level) {
+        if (DOMAINS.isEmpty()) return List.of();
+        List<SpecialHooks.DomainBarrier> out = new ArrayList<>(DOMAINS.size());
+        for (Domain d : DOMAINS) {
+            if (d.level == level) out.add(new SpecialHooks.DomainBarrier(d.center.x, d.center.y, d.center.z, d.radius, d.inside));
+        }
+        return out;
+    }
+
     // ── 123木頭人 ──
     private static final class RedLightGame {
         ServerLevel level;
@@ -576,21 +586,21 @@ public final class Plan9Specials {
                 syncDirty = true;
                 continue;
             }
-            // 邊界限制：裡面出不去、外面進不來
+            // 備用防穿牆保底（正常移動已由 Entity.collide 像撞到方塊般直接擋停，這裡只在傳送／延遲穿過邊界超過 1 格時修正）
             for (ServerPlayer p : d.level.players()) {
                 if (!p.isAlive() || p.isSpectator()) continue;
                 Vec3 diff = p.position().subtract(d.center);
                 double dist = diff.length();
                 boolean in = d.inside.contains(p.getUUID());
-                if (in && dist > d.radius - 0.7) {
+                if (in && dist > d.radius + 0.6) {
                     Vec3 dir = dist < 1e-4 ? new Vec3(1, 0, 0) : diff.scale(1.0 / dist);
-                    Vec3 clamp = d.center.add(dir.scale(d.radius - 0.85));
+                    Vec3 clamp = d.center.add(dir.scale(d.radius - 0.5));
                     p.teleportTo(clamp.x, clamp.y, clamp.z);
                     p.setDeltaMovement(Vec3.ZERO);
                     p.hurtMarked = true;
-                } else if (!in && dist < d.radius + 0.7) {
+                } else if (!in && dist < d.radius - 0.6) {
                     Vec3 dir = dist < 1e-4 ? new Vec3(1, 0, 0) : diff.scale(1.0 / dist);
-                    Vec3 push = d.center.add(dir.scale(d.radius + 0.9));
+                    Vec3 push = d.center.add(dir.scale(d.radius + 0.5));
                     p.teleportTo(push.x, push.y, push.z);
                     p.setDeltaMovement(Vec3.ZERO);
                     p.hurtMarked = true;
@@ -730,7 +740,7 @@ public final class Plan9Specials {
             if (m != null) mimics.put(p.getUUID(), m.getAmplifier());
         }
         List<Plan9SyncPacket.DomainInfo> doms = new ArrayList<>();
-        for (Domain d : DOMAINS) doms.add(new Plan9SyncPacket.DomainInfo(d.center.x, d.center.y, d.center.z, d.radius, d.leftTicks));
+        for (Domain d : DOMAINS) doms.add(new Plan9SyncPacket.DomainInfo(d.center.x, d.center.y, d.center.z, d.radius, d.leftTicks, new ArrayList<>(d.inside)));
         Map<UUID, Byte> freeDive = NewSpecials.freeSkydiveStates();
         int hash = Objects.hash(disguised, ethereal, mimics, doms.size(), freeDive);
         if (syncDirty || hash != lastSyncHash || (!doms.isEmpty() && server.getTickCount() % 20 == 0)) {

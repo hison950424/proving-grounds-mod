@@ -62,4 +62,12 @@ public abstract class EntitySpecialMixin {
     private void provinggrounds$silentSplash(CallbackInfo ci) {
         if (SpecialHooks.silent((Entity) (Object) this)) ci.cancel();
     }
+
+    /** 領域展開實體邊界碰撞（collide = m_20272_）：撞到領域球面時像撞到方塊一樣停下，不產生拉回感。 */
+    @Inject(method = { "collide", "m_20272_" }, at = @At("RETURN"), cancellable = true, remap = false)
+    private void provinggrounds$domainCollide(net.minecraft.world.phys.Vec3 motion, CallbackInfoReturnable<net.minecraft.world.phys.Vec3> cir) {
+        net.minecraft.world.phys.Vec3 cur = cir.getReturnValue();
+        net.minecraft.world.phys.Vec3 clamped = SpecialHooks.clampDomainCollision((Entity) (Object) this, cur);
+        if (clamped != cur) cir.setReturnValue(clamped);
+    }
 }

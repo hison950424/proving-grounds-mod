@@ -24,7 +24,7 @@ public record Plan9SyncPacket(
     List<DomainInfo> domains,
     Map<UUID, Byte> freeSkydive
 ) {
-    public record DomainInfo(double x, double y, double z, double radius, int leftTicks) {}
+    public record DomainInfo(double x, double y, double z, double radius, int leftTicks, List<UUID> inside) {}
 
     public void encode(FriendlyByteBuf buf) {
         buf.writeVarInt(disguised.size());
@@ -43,6 +43,8 @@ public record Plan9SyncPacket(
             buf.writeDouble(d.z());
             buf.writeDouble(d.radius());
             buf.writeVarInt(d.leftTicks());
+            buf.writeVarInt(d.inside().size());
+            for (UUID uid : d.inside()) buf.writeUUID(uid);
         }
         buf.writeVarInt(freeSkydive.size());
         for (Map.Entry<UUID, Byte> e : freeSkydive.entrySet()) {
@@ -64,7 +66,12 @@ public record Plan9SyncPacket(
         int ndom = Math.min(buf.readVarInt(), 32);
         List<DomainInfo> domains = new ArrayList<>(ndom);
         for (int i = 0; i < ndom; i++) {
-            domains.add(new DomainInfo(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readVarInt()));
+            double x = buf.readDouble(), y = buf.readDouble(), z = buf.readDouble(), r = buf.readDouble();
+            int left = buf.readVarInt();
+            int ni = Math.min(buf.readVarInt(), 256);
+            List<UUID> inside = new ArrayList<>(ni);
+            for (int j = 0; j < ni; j++) inside.add(buf.readUUID());
+            domains.add(new DomainInfo(x, y, z, r, left, inside));
         }
         int nf = Math.min(buf.readVarInt(), 256);
         Map<UUID, Byte> freeSkydive = new HashMap<>(nf);
@@ -80,6 +87,7 @@ public record Plan9SyncPacket(
             SpecialHooks.CLIENT_ETHEREAL.addAll(ethereal);
             SpecialHooks.CLIENT_MIMIC.clear();
             SpecialHooks.CLIENT_MIMIC.putAll(mimics);
+            SpecialHooks.setClientDomains(domains);
             com.provinggrounds.special.client.ClientPlan9Specials.setDomains(domains);
             com.provinggrounds.special.client.ClientPlan9Specials.setFreeSkydive(freeSkydive);
         }));
