@@ -250,12 +250,50 @@ public final class Plan9Specials {
             SpecialSlot.clear(p);
         }
         d.confiscated.put(p.getUUID(), sg);
+        p.getPersistentData().put(SAVED_TAG, toNbt(sg)); // 也存進玩家資料：伺服器當掉、玩家不在線時，下次登入照樣歸還
         p.inventoryMenu.broadcastChanges();
     }
 
+    /** 玩家資料裡的沒收紀錄（存檔用）。 */
+    private static final String SAVED_TAG = "pg_domain_saved";
+
+    private static net.minecraft.nbt.CompoundTag toNbt(SavedGear sg) {
+        net.minecraft.nbt.CompoundTag t = new net.minecraft.nbt.CompoundTag();
+        net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+        for (Map.Entry<Integer, ItemStack> e : sg.main.entrySet()) {
+            net.minecraft.nbt.CompoundTag it = e.getValue().save(new net.minecraft.nbt.CompoundTag());
+            it.putInt("PgSlot", e.getKey());
+            list.add(it);
+        }
+        t.put("main", list);
+        if (!sg.offhand.isEmpty()) t.put("off", sg.offhand.save(new net.minecraft.nbt.CompoundTag()));
+        if (!sg.special.isEmpty()) t.put("sp", sg.special.save(new net.minecraft.nbt.CompoundTag()));
+        return t;
+    }
+
+    private static SavedGear fromNbt(net.minecraft.nbt.CompoundTag t) {
+        SavedGear sg = new SavedGear();
+        net.minecraft.nbt.ListTag list = t.getList("main", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        for (int i = 0; i < list.size(); i++) {
+            net.minecraft.nbt.CompoundTag it = list.getCompound(i);
+            ItemStack s = ItemStack.of(it);
+            if (!s.isEmpty()) sg.main.put(it.getInt("PgSlot"), s);
+        }
+        if (t.contains("off")) sg.offhand = ItemStack.of(t.getCompound("off"));
+        if (t.contains("sp")) sg.special = ItemStack.of(t.getCompound("sp"));
+        return sg;
+    }
+
     private static void restoreGear(Domain d, UUID id, @Nullable ServerPlayer p) {
+        if (p == null) { d.confiscated.remove(id); return; } // 不在線：玩家資料裡還有紀錄，下次登入時歸還
         SavedGear sg = d.confiscated.remove(id);
-        if (sg == null || p == null) return;
+        if (sg == null) return;
+        giveBack(p, sg);
+    }
+
+    /** 把沒收的東西還給玩家，並刪掉玩家資料裡的紀錄。 */
+    private static void giveBack(ServerPlayer p, SavedGear sg) {
+        p.getPersistentData().remove(SAVED_TAG);
         Inventory inv = p.getInventory();
         for (Map.Entry<Integer, ItemStack> e : sg.main.entrySet()) {
             int slot = e.getKey();
@@ -728,6 +766,11 @@ public final class Plan9Specials {
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         syncDirty = true;
+        // 上次領域沒收的東西還沒還（伺服器當掉、領域結束時不在線）：登入就歸還
+        if (event.getEntity() instanceof ServerPlayer p && p.getPersistentData().contains(SAVED_TAG)) {
+            for (Domain d : DOMAINS) if (d.confiscated.containsKey(p.getUUID())) return; // 領域還在進行：等它結束再還
+            giveBack(p, fromNbt(p.getPersistentData().getCompound(SAVED_TAG)));
+        }
     }
 
     public static void cleanup(MinecraftServer server) {

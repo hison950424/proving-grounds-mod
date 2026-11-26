@@ -156,6 +156,7 @@ public abstract class ArenaMode {
         rules.getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(true, server);
         GameManager.get().startGame(kind());
         TeamManager.get().syncVanillaTeams(server, participants);
+        com.provinggrounds.special.SpecialWorld.cleanup(server); // 上一場留下的特殊道具效果（地雷、煙霧、領域…）先清掉
         beginBlockLedger();
         for (ServerPlayer p : participants) {
             ArenaPlayer ap = players.get(p.getUUID());
@@ -894,6 +895,8 @@ public abstract class ArenaMode {
         rules.getRule(GameRules.RULE_DO_IMMEDIATE_RESPAWN).set(savedImmediateRespawn, server);
         downed.clearAll();
         onFinish();
+        // 特殊道具效果全部結束（領域沒收的東西先還回去、地雷煙霧雪牆清掉），之後才清背包回大廳（大逃殺本來就有，團隊模式漏了）
+        com.provinggrounds.special.SpecialWorld.cleanup(server);
         com.provinggrounds.data.BlockLedger.endMatch(server); // 場地方塊還原
 
         for (ServerPlayer p : online()) restorePlayer(p);
