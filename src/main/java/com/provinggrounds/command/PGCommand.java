@@ -113,6 +113,13 @@ public class PGCommand {
                                 return b.buildFuture();
                             })
                             .executes(ctx -> giveTool(ctx.getSource(), StringArgumentType.getString(ctx, "name"))))))
+                // 建築復原指令（與建築復原工具共用）
+                .then(Commands.literal("build").requires(OP)
+                    .then(Commands.literal("undo").executes(ctx -> {
+                        var p = ctx.getSource().getPlayerOrException();
+                        ctx.getSource().sendSuccess(() -> com.provinggrounds.admin.build.BuildingCatalog.undo(p), false);
+                        return 1;
+                    })))
                 // 復原最近一次刪除的浮空文字（與 B10 物品共用同一段程式）
                 .then(Commands.literal("text").requires(OP)
                     .then(Commands.literal("undo").executes(ctx -> {
@@ -133,7 +140,7 @@ public class PGCommand {
             given++;
         }
         if (given == 0) {
-            fail(src, "沒有這個工具：" + name + "（可用：float_text、text_eraser、spawn_placer、spawn_viewer、text_undo、spawn_remover、crate_converter、map_painter、all）");
+            fail(src, "沒有這個工具：" + name + "（可用：float_text、text_eraser、spawn_placer、spawn_viewer、text_undo、spawn_remover、crate_converter、map_painter、building_placer、building_undo、all）");
             return 0;
         }
         ok(src, "已給予 " + given + " 個管理工具。", false);

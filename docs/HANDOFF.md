@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-26（v0.33.3 已發佈，網路版本維持 28，等待使用者於正式客戶端實測 `C1～C9` 回饋）。
+> 最後更新：2026-11-26（v0.34.0 大逃殺建築生成工具與 4 風格共 40 棟建築已編譯、開服驗證並發佈，網路版本升為 29）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -48,6 +48,11 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
+- **v0.34.0（大逃殺建築生成工具與 40 棟建築，Gemini 實作）**：
+  1. `admin/build/BuildingStyle.java` + `BuildingBlueprint.java` + `BuildingCanvas.java` + `BuildingCatalog.java`：支援 4 向旋轉、飛行對地（24 格）、斜坡往下補地基（12 格）、自動登記物資點到目前所在的 BR 地圖、最多 15 筆一鍵復原（還原方塊＋移除新增物資點）。
+  2. `ModernBuildings.java`（10 棟）、`IndustrialBuildings.java`（10 棟）、`JapaneseBuildings.java`（10 棟）、`ScifiBuildings.java`（10 棟）：4 種風格共 40 棟命名建築。
+  3. `item/AdminToolItem.java` + `command/PGCommand.java` + `network/BuildingPacket.java` + `PGNetwork.java`（VERSION 升為 `29`，下次發佈為 `big` → `v0.34.0`）：新增 `building_placer` 與 `building_undo` 工具物品與 `/pg build undo`。
+  4. `ui/BuildingPickerScreen.java` + `ui/BuildingPreviewRenderer.java`＋圖示／模型／語系檔：4 風格分類選擇 UI 與手持 3D 青色佔地／金色正門預覽框。
 - **v0.33.3 已發佈（分身藏 ID、UI 跳躍、站姿同步轉身、斷線無敵修復、佔點不噴裝、移除 C4、職業限撿與槍王丟槍，Gemini 實作，待正式客戶端實測）**：
   1. `special/client/DecoyRenderer.java` + `special/entity/DecoyEntity.java`：分身隱藏頭頂 ID（`shouldShowName = false`）。
   2. `ui/UiWalk.java`：開 UI 介面時一併接管跳躍鍵（`in.jumping = jump`）。

@@ -17,7 +17,7 @@ import java.util.Optional;
 public final class PGNetwork {
 
     /** 封包格式改變時要加 1，舊版客戶端連線時會直接顯示版本不符（7 = 跳傘改版）。 */
-    private static final String VERSION = "28"; // 28 = 計畫書 10（強制大廳選角／選道具、助攻旗幟音效、溜冰撞牆、非 BR 跳傘、Hitbox 動畫、TDM 移速規則）、27 = 計畫書 9
+    private static final String VERSION = "29"; // 29 = 建築生成工具封包, 28 = 計畫書 10, 27 = 計畫書 9
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ProvingGroundsMod.MOD_ID, "main"),
@@ -109,6 +109,8 @@ public final class PGNetwork {
             Plan9SyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)); // 計畫書 9 特殊道具狀態同步
         CHANNEL.registerMessage(id++, IceSkateCrashPacket.class, IceSkateCrashPacket::encode, IceSkateCrashPacket::decode,
             IceSkateCrashPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER)); // 計畫書 10：溜冰鞋撞牆速度傷害
+        CHANNEL.registerMessage(id++, BuildingPacket.class, BuildingPacket::encode, BuildingPacket::decode,
+            BuildingPacket::handle, Optional.empty()); // 管理員大逃殺建築生成工具（雙向：開選單／選定建築／復原）
 
     }
 

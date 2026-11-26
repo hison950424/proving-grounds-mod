@@ -3,6 +3,9 @@ package com.provinggrounds.item;
 import com.provinggrounds.admin.AdminTools;
 import com.provinggrounds.admin.FloatText;
 import com.provinggrounds.admin.SpawnPointView;
+import com.provinggrounds.admin.build.BuildingBlueprint;
+import com.provinggrounds.admin.build.BuildingCatalog;
+import com.provinggrounds.network.BuildingPacket;
 import com.provinggrounds.network.FloatTextPacket;
 import com.provinggrounds.network.PGNetwork;
 import net.minecraft.ChatFormatting;
@@ -36,7 +39,9 @@ public class AdminToolItem extends Item {
         TEXT_UNDO("text_undo", "右鍵：復原最近一次刪除的浮空文字（再按一次復原前一筆）"),
         SPAWN_REMOVER("spawn_remover", "右鍵：刪除離你最近的一個箱子生成點（16 格內），被刪的位置會閃紅框"),
         CRATE_CONVERTER("crate_converter", "右鍵：選擇地圖，把舊資料包的箱子標記轉換成箱子生成點"),
-        MAP_PAINTER("map_painter", "右鍵：選擇地圖，重新繪製大地圖／小地圖的圖片");
+        MAP_PAINTER("map_painter", "右鍵：選擇地圖，重新繪製大地圖／小地圖的圖片"),
+        BUILDING_PLACER("building_placer", "右鍵：在前方生成建築並自動登記物資點｜蹲下＋右鍵：選擇建築風格與款式（共 40 棟）"),
+        BUILDING_UNDO("building_undo", "右鍵：復原最近一次放置的建築（含移除該次新增的物資點）");
 
         public final String id;
         final String hint;
@@ -70,6 +75,16 @@ public class AdminToolItem extends Item {
             case TEXT_UNDO -> p.sendSystemMessage(FloatText.undo(p.server));
             case SPAWN_REMOVER -> p.sendSystemMessage(AdminTools.removeNearestLootPoint(p));
             case CRATE_CONVERTER, MAP_PAINTER -> AdminTools.openMapPicker(p, tool);
+            case BUILDING_PLACER -> {
+                String tagId = stack.getTag() != null ? stack.getTag().getString(BuildingCatalog.TOOL_NBT) : "";
+                String id = tagId.isEmpty() ? BuildingCatalog.selectedId(p.getUUID()) : tagId;
+                if (p.isShiftKeyDown() || tagId.isEmpty()) {
+                    PGNetwork.sendTo(p, BuildingPacket.openUi(id, BuildingCatalog.undoCount()));
+                } else {
+                    p.sendSystemMessage(BuildingCatalog.place(p, id));
+                }
+            }
+            case BUILDING_UNDO -> p.sendSystemMessage(BuildingCatalog.undo(p));
         }
         p.getCooldowns().addCooldown(this, 5); // 避免連點
         return InteractionResultHolder.success(stack);
@@ -77,6 +92,16 @@ public class AdminToolItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+        if (tool == Tool.BUILDING_PLACER) {
+            String tagId = stack.getTag() != null ? stack.getTag().getString(BuildingCatalog.TOOL_NBT) : "";
+            BuildingBlueprint bp = BuildingCatalog.byId(tagId);
+            if (bp != null) {
+                tooltip.add(Component.literal("目前選擇：【" + bp.style().displayName + "】" + bp.name()
+                    + "（" + bp.sizeText() + "，物資點 " + bp.lootCount() + " 個）").withStyle(ChatFormatting.GOLD));
+            } else {
+                tooltip.add(Component.literal("尚未選定建築款式，右鍵先開啟選擇畫面").withStyle(ChatFormatting.YELLOW));
+            }
+        }
         tooltip.add(Component.literal(tool.hint).withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("只有 OP 或創造模式能使用").withStyle(ChatFormatting.DARK_GRAY));
     }

@@ -16,6 +16,8 @@
   "item.provinggrounds.spawn_remover": "箱子生成點刪除工具",
   "item.provinggrounds.crate_converter": "箱子轉換工具",
   "item.provinggrounds.map_painter": "地圖繪畫工具",
+  "item.provinggrounds.building_placer": "Building Generator Tool",
+  "item.provinggrounds.building_undo": "Building Undo Tool",
   "item.provinggrounds.backpack_1": "一級背包",
   "item.provinggrounds.backpack_2": "二級背包",
   "item.provinggrounds.backpack_3": "三級背包",
