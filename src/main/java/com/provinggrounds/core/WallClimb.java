@@ -282,6 +282,8 @@ public final class WallClimb {
         int stow = hasHeldItem(p) ? STOW_TICKS : 0;
         p.stopUsingItem();
         GunCompat.cancelGunAction(p);
+        // 爬完客戶端會重新拿槍：那次不要把「收槍時間」算進等待（使用者回饋：舉槍動畫播完還不能開鏡／開槍）
+        com.provinggrounds.compat.TaczRedraw.expect(p, 3000L);
 
         Vec3 start = p.position();
         SERVER_ACTIVE.put(p.getUUID(), new ClimbState(start, target.targetPos(), yaw, stow, DURATION_TICKS, false));

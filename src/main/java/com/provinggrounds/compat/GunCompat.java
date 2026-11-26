@@ -123,6 +123,7 @@ public final class GunCompat {
             });
             adapter.registerBlockHitListener(com.provinggrounds.events.GlassEvents::onBulletHit); // 記錄被子彈打破的玻璃
             adapter.registerShootListener(shooter -> { for (var l : SHOOT_LISTENERS) l.accept(shooter); }); // 開槍通知（中斷讀條等）
+            TaczRedraw.register(); // 翻爬後重新拿槍不算收槍時間
 
         } else {
             ProvingGroundsMod.LOGGER.info("No supported gun mod loaded; gun adapter disabled.");
