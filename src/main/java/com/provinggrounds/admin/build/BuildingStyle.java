@@ -2,7 +2,7 @@ package com.provinggrounds.admin.build;
 
 /**
  * 檔案: BuildingStyle.java
- * 目的: 大逃殺建築生成工具的 8 種建築風格分類（共 28 棟大型／超大型無木箱建築）。
+ * 目的: 大逃殺建築生成工具的 8 種建築風格分類（共 52 棟大型／超大型無木箱建築）。
  */
 public enum BuildingStyle {
     MODERN("modern", "現代軍事", "適合：經典、通用城市地圖", 0xFF60B8FF),

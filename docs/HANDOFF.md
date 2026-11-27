@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-27（v0.38.2 已實作並準備發佈：近戰破玻璃改掛勾 `lrtactical` 每把刀真實揮刀命中幀 `MeleeGlassMixin`、樓梯移動改為依真實坡度維持 3D 等速於平地 `ui/StairMovement`、攀爬動作減慢 100% 並支援按後退／左／右向該方向取消 `WallClimb`、決賽圈半徑增 5 格至 `7.5` 格 `Circle.FINAL_RADIUS`；前版 v0.38.1 已發佈：翻爬後重新舉槍不算收槍時間 `compat/TaczRedraw`、翻爬只有大逃殺能用。都還沒在真正客戶端實測，測試在 docs/TESTING.md 最上面 I1～I7 與 G1～G2）。
+> 最後更新：2026-11-27（v0.39.0 已實作並準備發佈：建築系統室內物資點全面貼近掩體／牆角＋新增 24 棟無木箱建築至共 52 棟＋半磚比照樓梯平滑斜坡移動與平地等速 `SlabRampShapes`/`StairMovement`，網路版本 `PGNetwork.VERSION="34"`；前版 v0.38.2 已發佈於 `c0e5b97`）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -48,7 +48,11 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
-- **v0.38.2（近戰破玻璃依各刀真實揮刀命中幀＋樓梯與平地 3D 等速＋攀爬放慢 100% 與方向取消＋決賽圈半徑 7.5 格，Gemini 實作）**：
+- **v0.39.0（室內物資點緊貼掩體＋8 大風格各新增 3 棟建築共 52 棟＋半磚平滑與平地等速）**：
+  - `SlabRampShapes`＋`BlockCollisionMixin` 對生物將下半磚與相鄰上半磚／實心方塊高差接縫轉為 16 階／8 階平滑斜坡，`StairMovement` 擴充支援半磚斜坡 3D 等速補償與下階貼地。
+  - `BuildingCanvas.finalizeLootNearCover()` 在定型時自動把開闊處物資點吸附到鄰近掩體旁並避開門洞；同時 8 個建築檔共調整既有走廊物資點並新增 24 棟建築（皆無木箱、無新增電梯、寬樓梯與多入口掩體）。
+  - 已更新 `PGNetwork.VERSION` 為 `"34"`（`v0.39.0` `big`），並新增 `SlabRampShapesTest` 與 `BuildingCatalogTest`；尚未於真實客戶端／伺服器實測（見 `docs/TESTING.md` 的 `J1～J4`、`K1～K3`）。
+- **v0.38.2（近戰破玻璃依各刀真實揮刀命中幀＋樓梯與平地 3D 等速＋攀爬放慢 100% 與方向取消＋決賽圈半徑 7.5 格，已於 `c0e5b97` 發佈）**：
   1. `mixin/MeleeGlassMixin.java` + `provinggrounds.mixins.json` + `compat/GunCompat.java`：新增 `@Pseudo` Mixin 掛勾 `CombatProperties.postAttack` 呼叫 `IMeleeWeapon.attack` 的瞬間，讓伺服器在每把 `lrtactical` 近戰武器各自真正的揮刀命中幀呼叫 `MeleeGlassPacket.tryBreakGlassAtAim`，自動完全遵循每把刀的拔刀時間、左／右鍵與連段揮刀延遲與冷卻。
   2. `network/MeleeGlassPacket.java` + `ui/ClientMeleeGlass.java`：`lrtactical` 近戰武器不再於滑鼠按下瞬間送包，也不再受 `COOLDOWN_LIGHT = 10` / `COOLDOWN_HEAVY = 14` 固定冷卻限制；封包格式與 `PGNetwork.VERSION = "33"` 維持不變（屬 `small` 更新），僅為非 `lrtactical` 近戰武器保留原本按鍵破玻璃後備路徑。
   3. `ui/StairMovement.java` + `mixin/StairMovementMixin.java`：移除寫死 `0.70` 減速，改為依玩家實際移動方向對 45° 斜坡量測腳底幾何坡度 `m = |dy| / 0.25`（0.5 格高腳底框避免矮天花板誤擋），套用 `1 / sqrt(1 + m^2)` 使 3D 實際移動速度在直上、直下、斜走、橫走與平地平台皆維持與平地 100% 相同，並補足 3D 距離至 `walkDist` 與下樓 `moveDist` 維持相同視野晃動與腳步聲節奏。

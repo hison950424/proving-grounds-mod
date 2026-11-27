@@ -10,7 +10,7 @@ import static com.provinggrounds.admin.build.BuildingStyle.INDUSTRIAL;
 
 /**
  * 檔案: IndustrialBuildings.java
- * 目的: 重工業與物流園區風格 4 棟大型／超大型建築（全數無木箱、樓梯最後一階完整齊平、鐵欄／石牆／玻璃片自動連接）。
+ * 目的: 重工業與物流園區風格 7 棟大型／超大型建築（全數無木箱、無電梯、樓梯最後一階完整齊平、鐵欄／石牆／玻璃片自動連接、物資點緊貼掩體）。
  */
 final class IndustrialBuildings {
 
@@ -32,6 +32,18 @@ final class IndustrialBuildings {
         out.accept(new BuildingBlueprint("ind_oil_refinery", INDUSTRIAL, "重裝石油精煉廠園區",
             "45×35 煉油巨構：4 座巨型儲油槽（前 2 座內部可進入＋樓梯直上槽頂）、縱橫全場的 2 層氧化銅管線貓道、裝甲中控大樓與雙油罐車掩體（48 個物資點）",
             45, 35, 24, 48, IndustrialBuildings::oilRefinery));
+
+        out.accept(new BuildingBlueprint("ind_train_depot", INDUSTRIAL, "鐵路雙軌維修車庫",
+            "41×31 雙軌列車機庫：雙平行檢修軌道停放 2 列可登車穿梭交火的貨運車廂、兩側 2 樓檢修鋼橋與跨車天橋、後方機械工作間與雙寬樓梯（42 個物資點）",
+            41, 31, 17, 42, IndustrialBuildings::trainDepot));
+
+        out.accept(new BuildingBlueprint("ind_water_treatment", INDUSTRIAL, "大型淨水處理廠",
+            "39×31 現代水務園區：雙座大型深水處理池與鐵欄交錯步橋、氧化銅輸水管路陣、中央 2 層濾水監控站與 3 樓加壓泵浦屋頂平台（40 個物資點）",
+            39, 31, 18, 40, IndustrialBuildings::waterTreatment));
+
+        out.accept(new BuildingBlueprint("ind_auto_factory", INDUSTRIAL, "汽車自動化裝配線工廠",
+            "43×31 工業產線大廠：雙條自動化輸送帶裝配線含 4 台實體車輛與機械臂掩體、2 樓玻璃品管觀測環廊與烤漆隔間、雙寬樓梯通屋頂機組（44 個物資點）",
+            43, 31, 18, 44, IndustrialBuildings::autoFactory));
     }
 
     private static void logisticsMega(BuildingCanvas c) {
@@ -116,17 +128,17 @@ final class IndustrialBuildings {
         c.bunkerCoverL(-6, 1, 24, 2, -2, Blocks.DEEPSLATE_BRICKS, Blocks.SMOOTH_STONE_SLAB);
         c.bunkerCoverL(6, 1, 24, -2, -2, Blocks.DEEPSLATE_BRICKS, Blocks.SMOOTH_STONE_SLAB);
 
-        // 40 個物資箱點位
+        // 40 個物資箱點位（貼近貨櫃壁／料架／掩體／欄杆）
         c.loot(-13, 1, 9);  c.loot(-10, 1, 9);  c.loot(10, 1, 9);   c.loot(13, 1, 9);
         c.loot(-13, 1, 21); c.loot(-10, 1, 21); c.loot(10, 1, 21);  c.loot(13, 1, 21);
-        c.loot(-6, 1, 10);  c.loot(6, 1, 10);   c.loot(-6, 1, 20);  c.loot(6, 1, 20);
-        c.loot(0, 1, 8);    c.loot(0, 1, 16);   c.loot(0, 1, 25);   c.loot(-16, 1, 15);
+        c.loot(-7, 1, 10);  c.loot(7, 1, 10);   c.loot(-7, 1, 20);  c.loot(7, 1, 20);
+        c.loot(0, 1, 8);    c.loot(-3, 1, 15);  c.loot(-3, 1, 23);  c.loot(-16, 1, 15);
         c.loot(-12, 1, 4);  c.loot(12, 1, 4);   c.loot(14, 1, 26);  c.loot(11, 1, 26);
         c.loot(-16, 1, 6);  c.loot(16, 1, 6);   c.loot(-6, 1, 24);  c.loot(6, 1, 24);
-        c.loot(-16, 7, 15); c.loot(-16, 7, 21); c.loot(-16, 7, 25);
-        c.loot(16, 7, 15);  c.loot(16, 7, 21);  c.loot(16, 7, 25);
+        c.loot(-15, 7, 15); c.loot(-15, 7, 21); c.loot(-15, 7, 25);
+        c.loot(15, 7, 15);  c.loot(15, 7, 21);  c.loot(15, 7, 25);
         c.loot(-9, 7, 15);  c.loot(-6, 7, 15);  c.loot(0, 7, 15);   c.loot(6, 7, 15);  c.loot(9, 7, 15);
-        c.loot(-8, 7, 26);  c.loot(0, 7, 26);   c.loot(8, 7, 26);   c.loot(-16, 7, 10); c.loot(16, 7, 10);
+        c.loot(-8, 7, 26);  c.loot(0, 7, 25);   c.loot(8, 7, 26);   c.loot(-15, 7, 10); c.loot(15, 7, 10);
     }
 
     private static void walkableContainer(BuildingCanvas c, int x0, int z0, int x1, int z1, Block color) {
@@ -225,17 +237,17 @@ final class IndustrialBuildings {
         c.ceilingLights(-13, 13, 11, 5, 25, 6, 6, Blocks.SHROOMLIGHT);
         c.ceilingLights(-13, 13, 15, 5, 25, 6, 6, Blocks.SEA_LANTERN);
 
-        // 38 個物資箱點位
+        // 38 個物資箱點位（貼近高爐／鐵柵／掩體／機櫃）
         c.loot(-13, 1, 13); c.loot(-5, 1, 13); c.loot(5, 1, 13);  c.loot(13, 1, 13);
-        c.loot(0, 1, 10);   c.loot(0, 1, 22);  c.loot(-10, 1, 6); c.loot(10, 1, 6);
-        c.loot(-10, 1, 22); c.loot(10, 1, 22); c.loot(-13, 1, 19); c.loot(13, 1, 19);
-        c.loot(-14, 7, 9);  c.loot(14, 7, 9);  c.loot(-14, 7, 14); c.loot(14, 7, 14);
-        c.loot(-10, 7, 5);  c.loot(0, 7, 5);   c.loot(10, 7, 5);
-        c.loot(-6, 7, 23);  c.loot(6, 7, 23);  c.loot(0, 7, 24);  c.loot(-14, 7, 24); c.loot(14, 7, 24);
-        c.loot(-10, 13, 8); c.loot(10, 13, 8); c.loot(-10, 13, 19); c.loot(10, 13, 19);
-        c.loot(0, 13, 6);   c.loot(0, 13, 22); c.loot(0, 13, 25);
-        c.loot(0, 17, 9);   c.loot(0, 17, 19); c.loot(-9, 17, 9);  c.loot(9, 17, 9);
-        c.loot(-9, 17, 19); c.loot(9, 17, 19); c.loot(-4, 17, 13);
+        c.loot(0, 1, 9);    c.loot(0, 1, 20);  c.loot(-10, 1, 5); c.loot(10, 1, 5);
+        c.loot(-10, 1, 22); c.loot(10, 1, 22); c.loot(-12, 1, 18); c.loot(12, 1, 18);
+        c.loot(-13, 7, 9);  c.loot(13, 7, 9);  c.loot(-13, 7, 14); c.loot(13, 7, 14);
+        c.loot(-10, 7, 6);  c.loot(0, 7, 6);   c.loot(10, 7, 6);
+        c.loot(-6, 7, 23);  c.loot(6, 7, 23);  c.loot(0, 7, 23);  c.loot(-14, 7, 24); c.loot(14, 7, 24);
+        c.loot(-10, 13, 9); c.loot(10, 13, 9); c.loot(-10, 13, 19); c.loot(10, 13, 19);
+        c.loot(0, 13, 8);   c.loot(0, 13, 19); c.loot(0, 13, 26);
+        c.loot(0, 17, 8);   c.loot(0, 17, 20); c.loot(-9, 17, 10); c.loot(9, 17, 10);
+        c.loot(-9, 17, 18); c.loot(9, 17, 18); c.loot(-6, 17, 13);
     }
 
     private static void furnaceTower(BuildingCanvas c, int cx, int cz) {
@@ -327,17 +339,17 @@ final class IndustrialBuildings {
         c.ceilingLights(-12, 12, 11, 7, 24, 6, 6, Blocks.SEA_LANTERN);
         c.ceilingLights(-12, 12, 15, 7, 24, 6, 6, Blocks.SEA_LANTERN);
 
-        // 36 個物資箱點位
-        c.loot(-9, 1, 3);   c.loot(9, 1, 3);    c.loot(-5, 1, 2);   c.loot(5, 1, 2);
-        c.loot(0, 1, 11);   c.loot(0, 1, 19);   c.loot(0, 1, 15);   c.loot(-11, 1, 10); c.loot(-11, 1, 15);
-        c.loot(11, 1, 10);  c.loot(11, 1, 15);  c.loot(-4, 1, 24);  c.loot(4, 1, 24);
+        // 36 個物資箱點位（貼近渦輪／變壓器／總控台／鐵欄）
+        c.loot(-9, 1, 3);   c.loot(9, 1, 3);    c.loot(-6, 1, 2);   c.loot(6, 1, 2);
+        c.loot(-3, 1, 11);  c.loot(3, 1, 19);   c.loot(-3, 1, 15);  c.loot(-11, 1, 11); c.loot(-11, 1, 16);
+        c.loot(11, 1, 11);  c.loot(11, 1, 16);  c.loot(-4, 1, 24);  c.loot(4, 1, 24);
         c.loot(-11, 1, 22); c.loot(11, 1, 22);
-        c.loot(-6, 7, 8);   c.loot(6, 7, 8);    c.loot(0, 7, 9);    c.loot(-12, 7, 11);
-        c.loot(12, 7, 11);  c.loot(-12, 7, 16); c.loot(12, 7, 16);  c.loot(0, 7, 22);
+        c.loot(-6, 7, 8);   c.loot(6, 7, 8);    c.loot(0, 7, 8);    c.loot(-11, 7, 11);
+        c.loot(11, 7, 11);  c.loot(-11, 7, 16); c.loot(11, 7, 16);  c.loot(0, 7, 22);
         c.loot(-12, 7, 23); c.loot(12, 7, 23);
-        c.loot(-6, 13, 10); c.loot(6, 13, 10);  c.loot(-6, 13, 21); c.loot(6, 13, 21);
-        c.loot(-4, 17, 15); c.loot(4, 17, 15);  c.loot(-8, 17, 10); c.loot(8, 17, 10);
-        c.loot(-8, 17, 21); c.loot(8, 17, 21);  c.loot(0, 17, 10);
+        c.loot(-6, 13, 13); c.loot(6, 13, 13);  c.loot(-6, 13, 21); c.loot(6, 13, 21);
+        c.loot(-5, 17, 15); c.loot(5, 17, 15);  c.loot(-8, 17, 11); c.loot(8, 17, 11);
+        c.loot(-8, 17, 19); c.loot(8, 17, 19);  c.loot(0, 17, 11);
     }
 
     private static void oilRefinery(BuildingCanvas c) {
@@ -417,19 +429,239 @@ final class IndustrialBuildings {
         c.ceilingLights(-5, 5, 5, 14, 23, 5, 5, Blocks.SEA_LANTERN);
         c.ceilingLights(-5, 5, 11, 14, 23, 5, 5, Blocks.SEA_LANTERN);
 
-        // 48 個物資箱點位
+        // 48 個物資箱點位（貼近油罐槽壁／控制台／車體／欄杆）
         c.loot(-16, 1, 3);  c.loot(-8, 1, 3);   c.loot(8, 1, 3);    c.loot(16, 1, 3);
-        c.loot(-14, 1, 11); c.loot(-14, 1, 13); c.loot(14, 1, 11);  c.loot(14, 1, 13);
+        c.loot(-14, 1, 10); c.loot(-14, 1, 14); c.loot(14, 1, 10);  c.loot(14, 1, 14);
         c.loot(-9, 1, 12);  c.loot(9, 1, 12);   c.loot(-9, 1, 27);  c.loot(9, 1, 27);
-        c.loot(-3, 1, 15);  c.loot(3, 1, 15);   c.loot(0, 1, 20);   c.loot(-4, 1, 26);  c.loot(4, 1, 26);  c.loot(0, 1, 8);
-        c.loot(-18, 1, 20); c.loot(18, 1, 20);
+        c.loot(-3, 1, 15);  c.loot(3, 1, 15);   c.loot(0, 1, 22);   c.loot(-4, 1, 25);  c.loot(4, 1, 25);  c.loot(-3, 1, 8);
+        c.loot(-19, 1, 20); c.loot(19, 1, 20);
         c.loot(-14, 7, 19); c.loot(14, 7, 19);  c.loot(-8, 7, 18);  c.loot(8, 7, 18);
-        c.loot(-3, 7, 15);  c.loot(3, 7, 15);   c.loot(0, 7, 20);   c.loot(-2, 7, 22);
+        c.loot(-3, 7, 15);  c.loot(3, 7, 15);   c.loot(-1, 7, 21);  c.loot(-2, 7, 22);
         c.loot(-18, 7, 16); c.loot(18, 7, 16);
-        c.loot(-3, 13, 15); c.loot(3, 13, 15);  c.loot(0, 13, 21);  c.loot(-10, 13, 18); c.loot(10, 13, 18);
-        c.loot(-14, 16, 10); c.loot(-14, 16, 14); c.loot(14, 16, 10); c.loot(14, 16, 14);
-        c.loot(-14, 16, 25); c.loot(-14, 16, 29); c.loot(14, 16, 25); c.loot(14, 16, 29);
-        c.loot(-14, 15, 19); c.loot(14, 15, 19);  c.loot(0, 13, 18);  c.loot(-4, 1, 31);  c.loot(4, 1, 31);
+        c.loot(-3, 13, 15); c.loot(3, 13, 15);  c.loot(0, 13, 22);  c.loot(-10, 13, 18); c.loot(10, 13, 18);
+        c.loot(-13, 16, 10); c.loot(-13, 16, 14); c.loot(13, 16, 10); c.loot(13, 16, 14);
+        c.loot(-13, 16, 25); c.loot(-13, 16, 29); c.loot(13, 16, 25); c.loot(13, 16, 29);
+        c.loot(-14, 15, 19); c.loot(14, 15, 19);  c.loot(-5, 13, 18); c.loot(-4, 1, 30);  c.loot(4, 1, 30);
+    }
+
+    private static void trainDepot(BuildingCanvas c) {
+        c.foundation(Blocks.DEEPSLATE_BRICKS);
+        c.clear(-20, 0, 0, 20, 17, 30);
+
+        c.floor(-20, 0, 0, 20, 30, Blocks.POLISHED_ANDESITE);
+        c.box(-19, 0, 2, 19, 0, 30, Blocks.DEEPSLATE_TILES);
+        c.walls(-19, 1, 2, 19, 11, 30, Blocks.BRICKS);
+        c.walls(-19, 1, 2, 19, 2, 30, Blocks.DEEPSLATE_BRICKS);
+        c.clear(-18, 1, 3, 18, 11, 29);
+        c.cornerPillars(-19, 1, 2, 19, 12, 30, Blocks.DEEPSLATE_BRICKS);
+
+        // 雙軌列車寬門與側後門
+        for (int y = 1; y <= 6; y++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                c.air(-7 + dx, y, 2);  c.air(7 + dx, y, 2);
+                c.air(-7 + dx, y, 30); c.air(7 + dx, y, 30);
+            }
+        }
+        c.doorwaySide(-19, 1, 15, 4);
+        c.doorwaySide(19, 1, 15, 4);
+        c.windowX(-17, 8, 2, -11, 9, Blocks.IRON_BARS);
+        c.windowX(11, 8, 2, 17, 9, Blocks.IRON_BARS);
+        c.windowZ(-19, 8, 6, 12, 9, Blocks.IRON_BARS);
+        c.windowZ(19, 8, 6, 12, 9, Blocks.IRON_BARS);
+
+        // 雙列可進入車廂交火的貨運火車 (x=-9..-5 & x=5..9, z=6..25)
+        for (int tx : new int[] { -7, 7 }) {
+            c.box(tx - 1, 0, 4, tx + 1, 0, 28, Blocks.POLISHED_BLACKSTONE_BRICKS);
+            Block body = tx < 0 ? Blocks.RED_CONCRETE : Blocks.BLUE_CONCRETE;
+            c.box(tx - 2, 1, 6, tx + 2, 5, 25, body);
+            c.clear(tx - 1, 2, 7, tx + 1, 4, 24);
+            c.doorway(tx, 2, 6, 2);
+            c.doorway(tx, 2, 25, 2);
+            c.doorwaySide(tx - 2, 2, 14, 3);
+            c.doorwaySide(tx + 2, 2, 14, 3);
+            c.stair(tx - 3, 1, 15, Blocks.STONE_BRICK_STAIRS, Direction.EAST);
+            c.stair(tx + 3, 1, 15, Blocks.STONE_BRICK_STAIRS, Direction.WEST);
+            c.tallCover(tx - 1, 10, tx, 10, 2, Blocks.IRON_BLOCK, Blocks.SMOOTH_STONE_SLAB);
+            c.tallCover(tx, 20, tx + 1, 20, 2, Blocks.IRON_BLOCK, Blocks.SMOOTH_STONE_SLAB);
+        }
+
+        // 中央月台防爆掩體＋兩側工作檯
+        c.bunkerCoverL(0, 1, 10, 2, 2, Blocks.DEEPSLATE_BRICKS, Blocks.SMOOTH_STONE_SLAB);
+        c.bunkerCoverL(0, 1, 20, -2, -2, Blocks.DEEPSLATE_BRICKS, Blocks.SMOOTH_STONE_SLAB);
+        c.counter(-17, 8, -16, 12, 1, Blocks.ANVIL);
+        c.counter(16, 8, 17, 12, 1, Blocks.SMITHING_TABLE);
+        c.serverRack(-17, 1, 26, 3, Blocks.BLAST_FURNACE, Blocks.SEA_LANTERN);
+        c.serverRack(17, 1, 26, 3, Blocks.BLAST_FURNACE, Blocks.SEA_LANTERN);
+
+        // 2 樓環形天橋 (y=6) 跨過火車頂
+        c.box(-18, 6, 3, -13, 6, 29, Blocks.DEEPSLATE_TILES);
+        c.box(13, 6, 3, 18, 6, 29, Blocks.DEEPSLATE_TILES);
+        c.box(-13, 6, 14, 13, 6, 17, Blocks.DEEPSLATE_TILES);
+        c.box(-13, 6, 27, 13, 6, 29, Blocks.DEEPSLATE_TILES);
+        c.windowZ(-13, 7, 3, 29, 7, Blocks.IRON_BARS);
+        c.windowZ(13, 7, 3, 29, 7, Blocks.IRON_BARS);
+        c.windowX(-13, 7, 14, 13, 7, Blocks.IRON_BARS);
+        c.windowX(-13, 7, 17, 13, 7, Blocks.IRON_BARS);
+        c.tallCover(-3, 15, 3, 15, 7, Blocks.GRAY_CONCRETE, Blocks.STONE_BRICK_SLAB);
+
+        c.staircaseZ(-18, -17, 0, 6, 17, 1, Blocks.DEEPSLATE_BRICK_STAIRS, Blocks.DEEPSLATE_TILES, Blocks.DEEPSLATE_BRICKS);
+        c.staircaseZ(17, 18, 0, 6, 17, 1, Blocks.DEEPSLATE_BRICK_STAIRS, Blocks.DEEPSLATE_TILES, Blocks.DEEPSLATE_BRICKS);
+
+        // 工業人字斜頂 (y=12..17)
+        c.box(-19, 12, 2, 19, 12, 30, Blocks.DEEPSLATE_BRICKS);
+        c.clear(-17, 12, 4, 17, 12, 28);
+        c.gableRoofZ(-19, 12, 2, 19, 30, Blocks.DEEPSLATE_BRICK_STAIRS, Blocks.GRAY_CONCRETE);
+        c.ceilingLights(-15, 15, 11, 5, 27, 6, 6, Blocks.SEA_LANTERN);
+
+        // 42 個物資箱點位（全部貼近火車牆壁／掩體／工作檯／鋼橋欄杆）
+        c.loot(-6, 2, 9);   c.loot(-8, 2, 12);  c.loot(-6, 2, 18);  c.loot(-8, 2, 23);
+        c.loot(6, 2, 9);    c.loot(8, 2, 12);   c.loot(6, 2, 18);   c.loot(8, 2, 23);
+        c.loot(-4, 1, 7);   c.loot(4, 1, 7);    c.loot(-4, 1, 22);  c.loot(4, 1, 22);
+        c.loot(-1, 1, 11);  c.loot(1, 1, 19);   c.loot(-15, 1, 9);  c.loot(15, 1, 9);
+        c.loot(-15, 1, 13); c.loot(15, 1, 13);  c.loot(-16, 1, 25); c.loot(16, 1, 25);
+        c.loot(-12, 1, 27); c.loot(12, 1, 27);  c.loot(-3, 1, 28);  c.loot(3, 1, 28);
+        c.loot(-16, 7, 7);  c.loot(16, 7, 7);   c.loot(-16, 7, 14); c.loot(16, 7, 14);
+        c.loot(-16, 7, 25); c.loot(16, 7, 25);  c.loot(-9, 7, 15);  c.loot(9, 7, 15);
+        c.loot(0, 7, 16);   c.loot(-5, 7, 28);  c.loot(5, 7, 28);   c.loot(0, 7, 28);
+        c.loot(-12, 1, 5);  c.loot(12, 1, 5);   c.loot(-12, 7, 18); c.loot(12, 7, 18);
+        c.loot(-14, 7, 28); c.loot(14, 7, 28);
+    }
+
+    private static void waterTreatment(BuildingCanvas c) {
+        c.foundation(Blocks.STONE_BRICKS);
+        c.clear(-19, 0, 0, 19, 18, 30);
+
+        c.floor(-19, 0, 0, 19, 30, Blocks.SMOOTH_STONE);
+        c.parapet(-19, 1, 0, 19, 30, Blocks.STONE_BRICK_WALL, true);
+        c.doorway(-2, 1, 0, 5);
+        c.doorway(-2, 1, 30, 5);
+        c.doorwaySide(-19, 1, 14, 3);
+        c.doorwaySide(19, 1, 14, 3);
+
+        // 東西兩座大型淨水蓄水池＋交錯步橋
+        for (int sx : new int[] { -11, 11 }) {
+            c.box(sx - 5, 1, 4, sx + 5, 1, 14, Blocks.DEEPSLATE_BRICKS);
+            c.box(sx - 4, 0, 5, sx + 4, 1, 13, Blocks.WATER);
+            c.box(sx - 5, 1, 9, sx + 5, 1, 9, Blocks.IRON_BARS);
+            c.box(sx, 1, 4, sx, 1, 14, Blocks.SMOOTH_STONE);
+        }
+        // 中央氧化銅淨水管線陣掩體 (z=7..13)
+        c.box(-3, 1, 6, 3, 2, 7, Blocks.OXIDIZED_COPPER);
+        c.box(-3, 1, 11, 3, 2, 12, Blocks.OXIDIZED_COPPER);
+
+        // 後側 2 層中央濾水控制大樓 (x=-15..15, z=16..28, y=0, 6, 12)
+        c.box(-15, 0, 16, 15, 0, 28, Blocks.DEEPSLATE_TILES);
+        c.walls(-15, 1, 16, 15, 11, 28, Blocks.GRAY_CONCRETE);
+        c.clear(-14, 1, 17, 14, 11, 27);
+        c.box(-15, 6, 16, 15, 6, 28, Blocks.SMOOTH_STONE);
+        c.box(-15, 12, 16, 15, 12, 28, Blocks.DEEPSLATE_BRICKS);
+        c.parapet(-15, 13, 16, 15, 28, Blocks.STONE_BRICK_WALL, true);
+        c.doorway(-2, 1, 16, 5);
+        c.doorway(-2, 1, 28, 5);
+        c.doorwaySide(-15, 1, 21, 3);
+        c.doorwaySide(15, 1, 21, 3);
+        c.windowX(-13, 2, 16, -5, 4, Blocks.CYAN_STAINED_GLASS_PANE);
+        c.windowX(5, 2, 16, 13, 4, Blocks.CYAN_STAINED_GLASS_PANE);
+        c.windowX(-13, 8, 16, 13, 10, Blocks.CYAN_STAINED_GLASS_PANE);
+
+        // 室內濾水罐與機櫃＋屋頂加壓泵浦
+        c.serverRack(-10, 1, 20, 3, Blocks.OXIDIZED_COPPER, Blocks.SEA_LANTERN);
+        c.serverRack(10, 1, 20, 3, Blocks.OXIDIZED_COPPER, Blocks.SEA_LANTERN);
+        c.counter(-5, 23, 5, 23, 1, Blocks.POLISHED_DEEPSLATE);
+        c.deskUnit(-6, 7, 20, Blocks.SMOOTH_STONE, Blocks.POLISHED_ANDESITE_STAIRS, Direction.NORTH);
+        c.deskUnit(6, 7, 20, Blocks.SMOOTH_STONE, Blocks.POLISHED_ANDESITE_STAIRS, Direction.NORTH);
+        c.tallCover(-4, 24, 4, 24, 7, Blocks.GRAY_CONCRETE, Blocks.STONE_BRICK_SLAB);
+        c.box(-4, 13, 20, 4, 15, 23, Blocks.OXIDIZED_COPPER);
+        c.tallCover(-11, 20, -7, 20, 13, Blocks.STONE_BRICKS, Blocks.STONE_BRICK_SLAB);
+        c.tallCover(7, 20, 11, 20, 13, Blocks.STONE_BRICKS, Blocks.STONE_BRICK_SLAB);
+
+        c.staircaseZ(-14, -13, 0, 6, 21, 1, Blocks.STONE_BRICK_STAIRS, Blocks.SMOOTH_STONE, Blocks.STONE_BRICKS);
+        c.staircaseZ(13, 14, 6, 12, 25, -1, Blocks.STONE_BRICK_STAIRS, Blocks.DEEPSLATE_BRICKS, Blocks.STONE_BRICKS);
+        c.ceilingLights(-12, 12, 5, 18, 26, 6, 5, Blocks.SEA_LANTERN);
+        c.ceilingLights(-12, 12, 11, 18, 26, 6, 5, Blocks.SEA_LANTERN);
+
+        // 40 個物資箱點位（全部貼近池壁／銅管／機櫃／控制檯／女兒牆）
+        c.loot(-17, 1, 4);  c.loot(17, 1, 4);   c.loot(-17, 1, 14); c.loot(17, 1, 14);
+        c.loot(-5, 1, 5);   c.loot(5, 1, 5);    c.loot(-3, 1, 8);   c.loot(3, 1, 8);
+        c.loot(-3, 1, 10);  c.loot(3, 1, 10);   c.loot(-5, 1, 14);  c.loot(5, 1, 14);
+        c.loot(-12, 1, 17); c.loot(12, 1, 17);  c.loot(-9, 1, 20);  c.loot(9, 1, 20);
+        c.loot(-5, 1, 22);  c.loot(5, 1, 22);   c.loot(-10, 1, 27); c.loot(10, 1, 27);
+        c.loot(-13, 7, 18); c.loot(13, 7, 18);  c.loot(-6, 7, 21);  c.loot(6, 7, 21);
+        c.loot(0, 7, 18);   c.loot(-4, 7, 23);  c.loot(4, 7, 23);   c.loot(-12, 7, 27);
+        c.loot(12, 7, 27);  c.loot(0, 7, 27);
+        c.loot(-12, 13, 18); c.loot(12, 13, 18); c.loot(-9, 13, 21); c.loot(9, 13, 21);
+        c.loot(-5, 13, 21); c.loot(5, 13, 21);  c.loot(-12, 13, 27); c.loot(12, 13, 27);
+        c.loot(0, 13, 18);  c.loot(0, 13, 26);
+    }
+
+    private static void autoFactory(BuildingCanvas c) {
+        c.foundation(Blocks.DEEPSLATE_BRICKS);
+        c.clear(-21, 0, 0, 21, 18, 30);
+
+        c.floor(-21, 0, 0, 21, 30, Blocks.POLISHED_ANDESITE);
+        c.box(-20, 0, 2, 20, 0, 30, Blocks.SMOOTH_STONE);
+        c.walls(-20, 1, 2, 20, 12, 30, Blocks.GRAY_CONCRETE);
+        c.walls(-20, 1, 2, 20, 2, 30, Blocks.DEEPSLATE_BRICKS);
+        c.clear(-19, 1, 3, 19, 12, 29);
+        c.cornerPillars(-20, 1, 2, 20, 13, 30, Blocks.DEEPSLATE_BRICKS);
+
+        c.doorway(-2, 1, 2, 5);
+        c.doorway(-2, 1, 30, 5);
+        c.doorwaySide(-20, 1, 15, 4);
+        c.doorwaySide(20, 1, 15, 4);
+        c.windowX(-18, 8, 2, -6, 10, Blocks.LIGHT_GRAY_STAINED_GLASS_PANE);
+        c.windowX(6, 8, 2, 18, 10, Blocks.LIGHT_GRAY_STAINED_GLASS_PANE);
+
+        // 雙裝配輸送帶＋4 台實體製造中車輛＋機械臂柱
+        for (int lx : new int[] { -10, 10 }) {
+            c.box(lx - 1, 0, 6, lx + 1, 0, 25, Blocks.BLACK_CONCRETE);
+            c.parkedCar(lx, 1, 10, lx < 0 ? Blocks.YELLOW_CONCRETE : Blocks.RED_CONCRETE, true);
+            c.parkedCar(lx, 1, 21, lx < 0 ? Blocks.CYAN_CONCRETE : Blocks.WHITE_CONCRETE, true);
+            c.serverRack(lx - 3, 1, 15, 4, Blocks.ORANGE_CONCRETE, Blocks.SEA_LANTERN);
+            c.serverRack(lx + 3, 1, 15, 4, Blocks.ORANGE_CONCRETE, Blocks.SEA_LANTERN);
+        }
+        c.tallCover(-3, 14, 3, 14, 1, Blocks.DEEPSLATE_BRICKS, Blocks.SMOOTH_STONE_SLAB);
+        c.bunkerCoverL(-4, 1, 24, 2, -2, Blocks.STONE_BRICKS, Blocks.STONE_BRICK_SLAB);
+        c.bunkerCoverL(4, 1, 24, -2, -2, Blocks.STONE_BRICKS, Blocks.STONE_BRICK_SLAB);
+
+        // 2 樓環形品管走廊 (y=6) 與橫向視察天橋
+        c.box(-19, 6, 3, -15, 6, 29, Blocks.DEEPSLATE_TILES);
+        c.box(15, 6, 3, 19, 6, 29, Blocks.DEEPSLATE_TILES);
+        c.box(-15, 6, 14, 15, 6, 17, Blocks.DEEPSLATE_TILES);
+        c.box(-15, 6, 26, 15, 6, 29, Blocks.DEEPSLATE_TILES);
+        c.windowZ(-15, 7, 3, 29, 7, Blocks.IRON_BARS);
+        c.windowZ(15, 7, 3, 29, 7, Blocks.IRON_BARS);
+        c.windowX(-15, 7, 14, 15, 7, Blocks.LIGHT_GRAY_STAINED_GLASS_PANE);
+        c.windowX(-15, 7, 17, 15, 7, Blocks.LIGHT_GRAY_STAINED_GLASS_PANE);
+        c.counter(-4, 15, 4, 16, 7, Blocks.POLISHED_DEEPSLATE);
+
+        // 屋頂平台與通風機組 (y=13..18)
+        c.box(-20, 13, 2, 20, 13, 30, Blocks.DEEPSLATE_BRICKS);
+        c.parapet(-20, 14, 2, 20, 30, Blocks.STONE_BRICK_WALL, true);
+        c.box(-6, 14, 13, 6, 16, 18, Blocks.GRAY_CONCRETE);
+        c.tallCover(-14, 9, -9, 9, 14, Blocks.STONE_BRICKS, Blocks.STONE_BRICK_SLAB);
+        c.tallCover(9, 9, 14, 9, 14, Blocks.STONE_BRICKS, Blocks.STONE_BRICK_SLAB);
+
+        c.staircaseZ(-19, -18, 0, 6, 19, 1, Blocks.DEEPSLATE_BRICK_STAIRS, Blocks.DEEPSLATE_TILES, Blocks.DEEPSLATE_BRICKS);
+        c.staircaseZ(18, 19, 0, 6, 19, 1, Blocks.DEEPSLATE_BRICK_STAIRS, Blocks.DEEPSLATE_TILES, Blocks.DEEPSLATE_BRICKS);
+        c.staircaseZ(-19, -18, 6, 13, 24, -1, Blocks.DEEPSLATE_BRICK_STAIRS, Blocks.DEEPSLATE_BRICKS, Blocks.DEEPSLATE_BRICKS);
+
+        c.ceilingLights(-16, 16, 12, 5, 27, 8, 7, Blocks.SEA_LANTERN);
+        c.ceilingLights(-16, 16, 5, 5, 27, 8, 7, Blocks.SHROOMLIGHT);
+
+        // 44 個物資箱點位（全部貼近車輛／機械臂／牆面／護欄／屋頂機組）
+        c.loot(-12, 1, 10); c.loot(-8, 1, 10); c.loot(8, 1, 10);  c.loot(12, 1, 10);
+        c.loot(-12, 1, 21); c.loot(-8, 1, 21); c.loot(8, 1, 21);  c.loot(12, 1, 21);
+        c.loot(-12, 1, 15); c.loot(12, 1, 15); c.loot(0, 1, 13);   c.loot(-3, 1, 23);
+        c.loot(3, 1, 23);   c.loot(-16, 1, 7); c.loot(16, 1, 7);   c.loot(-16, 1, 27);
+        c.loot(16, 1, 27);  c.loot(-6, 1, 4);  c.loot(6, 1, 4);
+        c.loot(-16, 7, 8);  c.loot(16, 7, 8);  c.loot(-16, 7, 15); c.loot(16, 7, 15);
+        c.loot(-16, 7, 25); c.loot(16, 7, 25); c.loot(-6, 7, 15);  c.loot(6, 7, 15);
+        c.loot(0, 7, 14);   c.loot(-8, 7, 28); c.loot(8, 7, 28);   c.loot(0, 7, 28);
+        c.loot(-17, 14, 6); c.loot(17, 14, 6); c.loot(-11, 14, 10); c.loot(11, 14, 10);
+        c.loot(-7, 14, 15); c.loot(7, 14, 15); c.loot(0, 14, 12);  c.loot(0, 14, 19);
+        c.loot(-14, 14, 26); c.loot(14, 14, 26); c.loot(-18, 14, 15); c.loot(18, 14, 15);
+        c.loot(0, 14, 28);
     }
 
     private static void oilTank(BuildingCanvas c, int cx, int cz, boolean hollowBase) {

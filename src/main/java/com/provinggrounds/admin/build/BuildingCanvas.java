@@ -32,6 +32,7 @@ public final class BuildingCanvas {
     private final Direction right;
     private final Rotation rotation;
     private final Map<BlockPos, BlockState> previous = new LinkedHashMap<>();
+    private final List<BlockPos> rawLootPoints = new ArrayList<>();
     private final LinkedHashSet<BlockPos> lootPoints = new LinkedHashSet<>();
     private BlockState foundationBlock = Blocks.STONE_BRICKS.defaultBlockState();
 
@@ -570,14 +571,113 @@ public final class BuildingCanvas {
         set(lx, ly, lz, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, hanging));
     }
 
-    /** 登記一個物資箱生成點（自動確保該格與上方一格為空氣，避免卡方塊）。 */
+    /** 登記一個物資箱生成點（finalizeShapes 時自動確認旁邊有掩體／方塊且不擋門道）。 */
     public void loot(int lx, int ly, int lz) {
-        air(lx, ly, lz);
-        air(lx, ly + 1, lz);
-        lootPoints.add(toWorld(lx, ly, lz));
+        BlockPos pos = toWorld(lx, ly, lz);
+        if (level.isInWorldBounds(pos) && !rawLootPoints.contains(pos)) {
+            rawLootPoints.add(pos);
+        }
     }
 
-    /** 更新周邊形狀連接（兩輪 updateFromNeighbourShapes 確保玻璃片、石牆、鐵欄杆、柵欄、樓梯轉角正確相連）。 */
+    private void finalizeLootNearCover() {
+        lootPoints.clear();
+        for (BlockPos req : rawLootPoints) {
+            if (isValidOpenSlot(req) && countAdjacentCover(req) >= 1 && !isDoorwayPassage(req)) {
+                lootPoints.add(req);
+                continue;
+            }
+            BlockPos best = null;
+            int bestScore = Integer.MIN_VALUE;
+            for (int r = 1; r <= 6; r++) {
+                for (int dx = -r; dx <= r; dx++) {
+                    for (int dz = -r; dz <= r; dz++) {
+                        if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                        BlockPos cand = req.offset(dx, 0, dz);
+                        if (!isValidOpenSlot(cand)) continue;
+                        int adj = countAdjacentCover(cand);
+                        if (adj < 1) continue;
+                        int score = 0;
+                        if (!isDoorwayPassage(cand)) score += 100;
+                        score += (adj == 2) ? 12 : (adj == 1 ? 6 : -4);
+                        boolean tooClose = false;
+                        for (BlockPos existing : lootPoints) {
+                            if (existing.getY() == cand.getY() && existing.distSqr(cand) < 4.0) {
+                                tooClose = true;
+                                break;
+                            }
+                        }
+                        score += tooClose ? -35 : 20;
+                        score -= (dx * dx + dz * dz) * 2;
+                        if (score > bestScore) {
+                            bestScore = score;
+                            best = cand;
+                        }
+                    }
+                }
+                if (bestScore >= 110) break;
+            }
+            if (best != null) {
+                lootPoints.add(best);
+            } else {
+                clearWorldAir(req);
+                clearWorldAir(req.above());
+                lootPoints.add(req);
+            }
+        }
+    }
+
+    private void clearWorldAir(BlockPos pos) {
+        if (!level.isInWorldBounds(pos)) return;
+        BlockState cur = level.getBlockState(pos);
+        if (!cur.isAir()) {
+            previous.putIfAbsent(pos, cur);
+            level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+        }
+    }
+
+    private boolean isValidOpenSlot(BlockPos p) {
+        return level.isInWorldBounds(p)
+            && level.getBlockState(p).isAir()
+            && level.getBlockState(p.above()).isAir()
+            && isSolidFloor(p.below())
+            && !lootPoints.contains(p);
+    }
+
+    private boolean isSolidFloor(BlockPos p) {
+        BlockState st = level.getBlockState(p);
+        if (st.isAir() || !st.blocksMotion()) return false;
+        Block b = st.getBlock();
+        if (b instanceof StairBlock || b instanceof DoorBlock || b instanceof TrapDoorBlock || st.is(PGBlocks.ELEVATOR.get())) {
+            return false;
+        }
+        return !(b instanceof SlabBlock && st.getValue(SlabBlock.TYPE) == SlabType.BOTTOM);
+    }
+
+    private boolean isCoverBlock(BlockState st) {
+        if (st.isAir() || !st.blocksMotion()) return false;
+        Block b = st.getBlock();
+        return !(b instanceof DoorBlock || b instanceof StairBlock || b instanceof TrapDoorBlock
+            || b instanceof LadderBlock || st.is(PGBlocks.ELEVATOR.get()));
+    }
+
+    private int countAdjacentCover(BlockPos p) {
+        int c = 0;
+        if (isCoverBlock(level.getBlockState(p.north()))) c++;
+        if (isCoverBlock(level.getBlockState(p.south()))) c++;
+        if (isCoverBlock(level.getBlockState(p.east()))) c++;
+        if (isCoverBlock(level.getBlockState(p.west()))) c++;
+        return c;
+    }
+
+    private boolean isDoorwayPassage(BlockPos p) {
+        boolean ewWall = isCoverBlock(level.getBlockState(p.east())) && isCoverBlock(level.getBlockState(p.west()));
+        boolean nsOpen = level.getBlockState(p.north()).isAir() && level.getBlockState(p.south()).isAir();
+        boolean nsWall = isCoverBlock(level.getBlockState(p.north())) && isCoverBlock(level.getBlockState(p.south()));
+        boolean ewOpen = level.getBlockState(p.east()).isAir() && level.getBlockState(p.west()).isAir();
+        return (ewWall && nsOpen) || (nsWall && ewOpen);
+    }
+
+    /** 更新周邊形狀連接（兩輪 updateFromNeighbourShapes 確保玻璃片、石牆、鐵欄杆、柵欄、樓梯轉角正確相連），並校正物資點緊貼掩體。 */
     public void finalizeShapes() {
         for (BlockPos pos : previous.keySet()) {
             BlockState cur = level.getBlockState(pos);
@@ -599,6 +699,7 @@ public final class BuildingCanvas {
                 }
             }
         }
+        finalizeLootNearCover();
         for (BlockPos pos : previous.keySet()) {
             BlockState st = level.getBlockState(pos);
             level.sendBlockUpdated(pos, st, st, Block.UPDATE_ALL);

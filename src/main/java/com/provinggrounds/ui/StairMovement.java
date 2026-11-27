@@ -1,5 +1,6 @@
 package com.provinggrounds.ui;
 
+import com.provinggrounds.core.SlabRampShapes;
 import com.provinggrounds.core.WallClimb;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
@@ -15,31 +16,32 @@ import java.util.List;
 
 /**
  * 檔案: StairMovement.java
- * 目的: 樓梯移動手感調整（只在客戶端執行）：
- *   1. 依實際移動方向量測腳底前方 45° 斜坡幾何坡度 m = |dy| / PROBE_DIST，
+ * 目的: 樓梯與半磚移動手感調整（只在客戶端執行）：
+ *   1. 依實際移動方向量測腳底前方斜坡（樓梯 45° 或半磚 26.6°／45°）幾何坡度 m = |dy| / PROBE_DIST，
  *      並以 1 / sqrt(1 + m^2) 縮放水平輸入向量：
- *      - 直上或直下 45° 樓梯（m = 1）：水平分量 × 0.7071，合成 3D 實際移動速度 = 平地 100%（不變快也不變慢）。
- *      - 斜向／橫向走樓梯或在轉角平台：依實際坡度精準補償，橫走與平地皆維持 1.0× 原速。
- *   2. 下樓梯時自動貼地降階（step-down），確保高速奔跑也不會飛越台階，每一階都穩穩踩實。
- *   3. 同步補足 3D 移動距離到 walkDist（與下樓時的 moveDist），讓鏡頭晃動與腳步聲節奏與平地一致。
+ *      - 直上或直下樓梯（m = 1）：水平分量 × 0.7071，半磚斜坡（m = 0.5）：水平分量 × 0.8944，
+ *        讓合成 3D 實際移動速度 = 平地 100%（不變快也不變慢）。
+ *      - 平坦半磚面、斜向／橫向走或轉角平台：依實際坡度精準補償，皆維持與平地相同速度。
+ *   2. 下樓梯／下半磚時自動貼地降階（step-down），確保高速奔跑也不會飛越台階，每一階都穩穩踩實。
+ *   3. 同步補足 3D 移動距離到 walkDist（與下階時的 moveDist），讓鏡頭晃動與腳步聲節奏與平地一致。
  */
 public final class StairMovement {
 
-    /** 坡度探測前進距離（0.25 格剛好對齊 StairRampShapes 的 4 階 1/16 微台階，無量化抖動）。 */
+    /** 坡度探測前進距離（0.25 格對齊 StairRampShapes 與 SlabRampShapes 的微階步進，無量化抖動）。 */
     private static final double PROBE_DIST = 0.25;
     private static final double PROBE_UP = 0.35;
     private static final double PROBE_DOWN = 0.70;
     private static final double FEET_PROBE_HEIGHT = 0.50;
     private static final double MAX_RAMP_DY = PROBE_DIST + 0.0625;
 
-    /** 下樓梯貼地檢查的最大垂直深度（涵蓋 0.5 格台階落差，不會吸住高處斷崖）。 */
+    /** 下樓梯／下半磚貼地檢查的最大垂直深度（涵蓋 0.5 格台階落差，不會吸住高處斷崖）。 */
     private static final double MAX_STEP_DOWN = 0.62;
 
-    /** 腳底碰撞寬度的水平探針偏移（涵蓋邊緣踏步但窄於玩家寬度 0.30）。 */
-    private static final double PROBE_HALF = 0.24;
+    /** 腳底碰撞寬度的水平探針偏移（涵蓋邊緣踏步但窄於玩家半寬 0.30）。 */
+    private static final double PROBE_HALF = 0.29;
 
     private static boolean wasOnGround;
-    private static boolean wasOnStair;
+    private static boolean wasOnRamp;
     private static boolean wasJumping;
     private static double preX, preY, preZ;
 
@@ -57,8 +59,13 @@ public final class StairMovement {
             && st.getValue(StairBlock.HALF) == Half.BOTTOM;
     }
 
-    /** 檢查指定高度表面下方／所在處是否踩在正放樓梯方塊上。 */
-    private static boolean isStairSurfaceAt(LocalPlayer p, double surfaceY) {
+    private static boolean isRampBlock(Level level, BlockPos pos) {
+        BlockState st = level.getBlockState(pos);
+        return isUprightStair(st) || SlabRampShapes.isRampBlock(level, pos, st);
+    }
+
+    /** 檢查指定高度表面下方／所在處是否踩在樓梯或半磚斜坡方塊上。 */
+    private static boolean isRampSurfaceAt(LocalPlayer p, double surfaceY) {
         Level level = p.level();
         double px = p.getX();
         double pz = p.getZ();
@@ -68,24 +75,24 @@ public final class StairMovement {
         for (double oy : dy) {
             for (int i = 0; i < dx.length; i++) {
                 BlockPos pos = BlockPos.containing(px + dx[i], surfaceY + oy, pz + dz[i]);
-                if (isUprightStair(level.getBlockState(pos))) return true;
+                if (isRampBlock(level, pos)) return true;
             }
         }
         return false;
     }
 
-    private static boolean isNearUprightStair(LocalPlayer p, double dirX, double dirZ) {
-        if (isStairSurfaceAt(p, p.getY())) return true;
+    private static boolean isNearRamp(LocalPlayer p, double dirX, double dirZ) {
+        if (isRampSurfaceAt(p, p.getY())) return true;
         Level level = p.level();
         double ax = p.getX() + dirX * 0.30;
         double az = p.getZ() + dirZ * 0.30;
-        return isUprightStair(level.getBlockState(BlockPos.containing(ax, p.getY() + 0.05, az)))
-            || isUprightStair(level.getBlockState(BlockPos.containing(ax, p.getY() - 0.15, az)));
+        return isRampBlock(level, BlockPos.containing(ax, p.getY() + 0.05, az))
+            || isRampBlock(level, BlockPos.containing(ax, p.getY() - 0.15, az));
     }
 
     /** 量測玩家腳底在移動方向上的幾何坡度，回傳讓 3D 實際移動速度維持等於平地的水平縮放倍率。 */
     private static double computeSlopeSpeedScale(LocalPlayer p, double dirX, double dirZ) {
-        if (!p.onGround() || !isNearUprightStair(p, dirX, dirZ)) return 1.0;
+        if (!p.onGround() || !isNearRamp(p, dirX, dirZ)) return 1.0;
 
         AABB b = p.getBoundingBox();
         AABB feetBox = new AABB(b.minX, b.minY, b.minZ, b.maxX, b.minY + FEET_PROBE_HEIGHT, b.maxZ);
@@ -111,12 +118,12 @@ public final class StairMovement {
 
         if (!isEligible(p)) {
             wasOnGround = false;
-            wasOnStair = false;
+            wasOnRamp = false;
             wasJumping = false;
             return travelVector;
         }
         wasOnGround = p.onGround();
-        wasOnStair = isStairSurfaceAt(p, p.getY());
+        wasOnRamp = isRampSurfaceAt(p, p.getY());
         wasJumping = p.input.jumping;
 
         if (!wasOnGround) return travelVector;
@@ -156,7 +163,7 @@ public final class StairMovement {
                 Vec3 snap = Entity.collideBoundingBox(
                     p, new Vec3(0.0, -MAX_STEP_DOWN, 0.0), p.getBoundingBox(), p.level(), List.of());
                 if (snap.y < -1.0e-4 && snap.y > -(MAX_STEP_DOWN - 0.002)
-                        && (wasOnStair || isStairSurfaceAt(p, p.getY() + snap.y))) {
+                        && (wasOnRamp || isRampSurfaceAt(p, p.getY() + snap.y))) {
                     p.setPos(p.getX(), p.getY() + snap.y, p.getZ());
                     double vx = dm.x;
                     double vz = dm.z;
@@ -174,7 +181,7 @@ public final class StairMovement {
             }
         }
 
-        if ((wasOnStair || snappedDown) && p.onGround()) {
+        if ((wasOnRamp || snappedDown) && p.onGround()) {
             double dx = p.getX() - preX;
             double dy = p.getY() - preY;
             double dz = p.getZ() - preZ;

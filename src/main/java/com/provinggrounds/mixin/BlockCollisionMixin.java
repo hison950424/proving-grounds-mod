@@ -1,10 +1,12 @@
 package com.provinggrounds.mixin;
 
+import com.provinggrounds.core.SlabRampShapes;
 import com.provinggrounds.core.StairRampShapes;
 import com.provinggrounds.special.SpecialHooks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FenceGateBlock;
@@ -26,7 +28,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * 目的: 雙端方塊碰撞箱調整：
  *   1. 無實體化（計畫書 9）：5 秒內可以直接穿過厚度 1 格的任何水平牆壁方塊（不穿地板、不穿基岩／屏障）。
  *   2. 正放樓梯（Half.BOTTOM）改為 45° 平滑斜坡碰撞箱（StairRampShapes），走樓梯時不抖動。
- *   3. 柵欄、石牆與關閉中的柵欄門碰撞高度改為與一般方塊相同的 1 格（沿用外觀 VoxelShape），可直接跳上／跳過。
+ *   3. 半磚（SlabBlock）與緊鄰下半磚的實心方塊對生物改為平滑斜坡過渡（SlabRampShapes），不影響子彈與掉落物判定。
+ *   4. 柵欄、石牆與關閉中的柵欄門碰撞高度改為與一般方塊相同的 1 格（沿用外觀 VoxelShape），可直接跳上／跳過。
  *   方法名稱同時寫開發環境名稱與 SRG 名稱（getCollisionShape = m_60742_），不需要 refmap。
  */
 @Mixin(BlockBehaviour.BlockStateBase.class)
@@ -69,6 +72,15 @@ public abstract class BlockCollisionMixin {
         if (state.getBlock() instanceof StairBlock && state.hasProperty(StairBlock.HALF) && state.getValue(StairBlock.HALF) == Half.BOTTOM) {
             cir.setReturnValue(StairRampShapes.forState(state));
             return;
+        }
+
+        // 半磚與相鄰高差方塊只針對生物提供平滑斜坡過渡（保留子彈與空查詢的方正碰撞邊界）
+        if (ctx instanceof EntityCollisionContext ecc && ecc.getEntity() instanceof LivingEntity) {
+            VoxelShape slabRamp = SlabRampShapes.getRampShape(level, pos, state);
+            if (slabRamp != null) {
+                cir.setReturnValue(slabRamp);
+                return;
+            }
         }
 
         // 柵欄、石牆與關閉的柵欄門碰撞高度改為與 1 格方塊相同（沿用最高 1 格的外觀碰撞範圍）
