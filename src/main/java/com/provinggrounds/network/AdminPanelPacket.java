@@ -2,12 +2,14 @@ package com.provinggrounds.network;
 
 import com.provinggrounds.admin.AdminTools;
 import com.provinggrounds.data.BRMapGenerator;
+import com.provinggrounds.data.BRMapPresets;
 import com.provinggrounds.data.MapRegistry;
 import com.provinggrounds.data.MapRelightJob;
 import com.provinggrounds.data.MapRenderJob;
 import com.provinggrounds.data.MarkerScanJob;
 import com.provinggrounds.modes.arena.ArenaMapGenerator;
 import com.provinggrounds.modes.arena.ArenaMapRegistry;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -23,7 +25,7 @@ import java.util.function.Supplier;
  * 檔案: AdminPanelPacket.java
  * 目的: 管理員控制台工具（AdminToolItem.Tool.ADMIN_PANEL）雙向封包：
  *   - 伺服器 → 客戶端（open = true）：傳送目前大逃殺地圖清單、團隊場地清單與背景作業狀態並開啟 UI；
- *   - 客戶端 → 伺服器（open = false）：傳送操作代碼與參數，由伺服器端重新驗證權限並安全轉執行對應管理指令。
+ *   - 客戶端 → 伺服器（open = false）：傳送操作代碼與參數，由伺服器端重新驗證權限並安全執行對應管理功能。
  */
 public record AdminPanelPacket(
     boolean open,
@@ -106,14 +108,129 @@ public record AdminPanelPacket(
                 p.sendSystemMessage(AdminTools.err("沒有權限（只有 OP 或創造模式能使用）。"));
                 return;
             }
+            CommandSourceStack src = p.createCommandSourceStack().withPermission(2);
+            if ("br_regen_layers".equals(action)) {
+                handleRegenLayers(p, src, arg);
+                return;
+            }
+            if ("br_tp".equals(action)) {
+                handleBrTp(p, arg);
+                return;
+            }
+            if (handleToolAction(p, action, arg)) {
+                return;
+            }
             String cmd = resolveCommand(action, arg);
             if (cmd == null) {
                 p.sendSystemMessage(AdminTools.err("未知管理動作：" + action));
                 return;
             }
-            p.server.getCommands().performPrefixedCommand(p.createCommandSourceStack().withPermission(2), cmd);
+            p.server.getCommands().performPrefixedCommand(src, cmd);
         });
         c.setPacketHandled(true);
+    }
+
+    /** 整合既有 10 種管理工具：不需準星指方塊的直接觸發，需預覽框／準星對準的可單獨領取到背包。 */
+    private static boolean handleToolAction(ServerPlayer p, String action, String arg) {
+        switch (action) {
+            case "tool_float_text" -> PGNetwork.sendTo(p, FloatTextPacket.openScreen());
+            case "tool_text_eraser" -> p.sendSystemMessage(com.provinggrounds.admin.FloatText.deleteNearest(p));
+            case "tool_text_undo" -> p.sendSystemMessage(com.provinggrounds.admin.FloatText.undo(p.server));
+            case "tool_spawn_viewer" -> p.sendSystemMessage(com.provinggrounds.admin.SpawnPointView.toggle(p));
+            case "tool_crate_converter" -> AdminTools.openMapPicker(p, com.provinggrounds.item.AdminToolItem.Tool.CRATE_CONVERTER);
+            case "tool_map_painter" -> AdminTools.openMapPicker(p, com.provinggrounds.item.AdminToolItem.Tool.MAP_PAINTER);
+            case "tool_building_pick" -> {
+                String id = com.provinggrounds.admin.build.BuildingCatalog.selectedId(p.getUUID());
+                PGNetwork.sendTo(p, BuildingPacket.openUi(id, com.provinggrounds.admin.build.BuildingCatalog.undoCount()));
+            }
+            case "tool_building_undo" -> p.sendSystemMessage(com.provinggrounds.admin.build.BuildingCatalog.undo(p));
+            case "tool_give_one" -> {
+                String clean = arg.replaceAll("[^a-zA-Z0-9_]", "");
+                for (com.provinggrounds.item.AdminToolItem.Tool t : com.provinggrounds.item.AdminToolItem.Tool.values()) {
+                    if (t.id.equals(clean)) {
+                        net.minecraft.world.item.ItemStack st = new net.minecraft.world.item.ItemStack(
+                            com.provinggrounds.registry.PGBlocks.ADMIN_TOOLS.get(t).get());
+                        if (!p.getInventory().add(st)) p.drop(st, false);
+                        p.sendSystemMessage(AdminTools.ok("已領取工具：" + st.getHoverName().getString() + "。"));
+                        return true;
+                    }
+                }
+                p.sendSystemMessage(AdminTools.err("找不到工具：" + clean));
+            }
+            default -> { return false; }
+        }
+        return true;
+    }
+
+    /** 傳送管理員至指定大逃殺地圖中央（創造／旁觀停在安全高空俯瞰，其餘安全落於地表上方並附短暫緩降）。 */
+    private static void handleBrTp(ServerPlayer p, String arg) {
+        int mapId;
+        try {
+            mapId = Integer.parseInt(arg.trim());
+        } catch (NumberFormatException e) {
+            p.sendSystemMessage(AdminTools.err("無效的地圖編號：" + arg));
+            return;
+        }
+        MapRegistry.BRMap map = MapRegistry.get(p.server).getMap(mapId);
+        if (map == null) {
+            p.sendSystemMessage(AdminTools.err("找不到地圖 #" + mapId + "。"));
+            return;
+        }
+        var overworld = p.server.overworld();
+        int bx = (int) Math.floor(map.centerX);
+        int bz = (int) Math.floor(map.centerZ);
+        double ty;
+        if (p.isCreative() || p.isSpectator()) {
+            ty = 120.0;
+        } else {
+            overworld.getChunk(bx >> 4, bz >> 4);
+            int sy = overworld.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz);
+            ty = Math.max(66, sy + 1);
+        }
+        p.teleportTo(overworld, map.centerX, ty, map.centerZ, p.getYRot(), p.getXRot());
+        p.sendSystemMessage(AdminTools.ok("已傳送至地圖 #" + map.id + "「" + map.name + "」中央 (" + bx + ", " + (int) ty + ", " + bz + ")。"));
+    }
+
+    /** arg 格式："<mapId|all>:<layerMask>"，例如 "2:6" 表示只重製地圖 #2 的小區域＋野區。 */
+    private static void handleRegenLayers(ServerPlayer p, CommandSourceStack src, String arg) {
+        String[] parts = arg.split(":");
+        String target = parts.length > 0 ? parts[0].trim() : "";
+        int mask = BRMapGenerator.LAYER_ALL;
+        if (parts.length > 1) {
+            try {
+                mask = Integer.parseInt(parts[1].trim()) & BRMapGenerator.LAYER_ALL;
+            } catch (NumberFormatException ignored) {}
+        }
+        if (mask == 0) {
+            p.sendSystemMessage(AdminTools.err("請至少勾選一個要重製的區域（大區域／小區域／野區／小掩體）。"));
+            return;
+        }
+        String err;
+        if ("all".equalsIgnoreCase(target)) {
+            err = BRMapGenerator.startRegenAllLayers(p.server, mask, src);
+        } else {
+            int mapId;
+            try {
+                mapId = Integer.parseInt(target);
+            } catch (NumberFormatException e) {
+                p.sendSystemMessage(AdminTools.err("無效的地圖編號：" + target));
+                return;
+            }
+            MapRegistry.BRMap map = MapRegistry.get(p.server).getMap(mapId);
+            if (map == null) {
+                p.sendSystemMessage(AdminTools.err("找不到地圖 #" + mapId + "。"));
+                return;
+            }
+            BRMapPresets.Preset preset = BRMapGenerator.matchPreset(map);
+            if (preset == null) {
+                p.sendSystemMessage(AdminTools.err("地圖 #" + mapId + "「" + map.name + "」無法對應到內建主題預設，請用指令指定預設：/pg map generate regen " + mapId + " <預設>。"));
+                return;
+            }
+            err = BRMapGenerator.startRegenLayers(p.server, mapId, preset, mask, src);
+        }
+        if (err != null) {
+            p.sendSystemMessage(AdminTools.err(err));
+        }
     }
 
     private static String resolveCommand(String action, String arg) {
@@ -123,7 +240,9 @@ public record AdminPanelPacket(
             case "br_gen_regen" -> "pg map generate regen";
             case "br_gen_one" -> cleanWord.isEmpty() ? null : "pg map generate " + cleanWord;
             case "br_relight" -> "pg map relight";
+            case "br_relight_one" -> cleanWord.matches("\\d+") ? "pg map relight " + cleanWord : "pg map relight";
             case "br_render" -> cleanWord.matches("\\d+") ? "pg map render " + cleanWord : null;
+            case "br_delete" -> cleanWord.matches("\\d+") ? "pg map remove " + cleanWord : null;
             case "br_cancel" -> {
                 if (BRMapGenerator.isRunning()) yield "pg map generate cancel";
                 if (MapRelightJob.isRunning()) yield "pg map relight cancel";

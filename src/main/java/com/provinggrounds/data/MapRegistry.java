@@ -120,6 +120,16 @@ public class MapRegistry extends SavedData {
         return n;
     }
 
+    /** 刪除符合條件的物資點（供局部區域重製先清除舊區域點位用）。 */
+    public int removePointsIn(BRMap map, java.util.function.Predicate<BlockPos> filter) {
+        int before = map.lootPoints.size();
+        if (map.lootPoints.removeIf(filter)) {
+            setDirty();
+            com.provinggrounds.admin.SpawnPointView.changed();
+        }
+        return before - map.lootPoints.size();
+    }
+
     public void setLabels(BRMap map, List<RegionLabel> labels) {
         map.labels.clear();
         map.labels.addAll(labels);

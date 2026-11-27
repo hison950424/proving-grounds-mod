@@ -61,9 +61,18 @@ public final class BRMapGenerator {
     private static final int MICRO_PER_TICK = 4;
     private static final int COVER_BUDGET_MS = 14;
 
-    private enum Phase { TERRAIN, MAJOR_BUILDINGS, SMALL_BUILDINGS, ALTARS_AND_WILD, RELIGHT, WAIT_RENDER }
+    /** 局部區域重製旗標（可自由組合）：大區域／小區域／野區微據點／小掩體。 */
+    public static final int LAYER_MAJOR = 1;
+    public static final int LAYER_SMALL = 2;
+    public static final int LAYER_WILD  = 4;
+    public static final int LAYER_COVER = 8;
+    public static final int LAYER_ALL   = LAYER_MAJOR | LAYER_SMALL | LAYER_WILD | LAYER_COVER;
 
-    private record QueueItem(Preset preset, @Nullable Integer replaceMapId, @Nullable int[] forcedCenter) {}
+    private enum Phase { TERRAIN, CLEAR_REGIONS, MAJOR_BUILDINGS, SMALL_BUILDINGS, ALTARS_AND_WILD, RELIGHT, WAIT_RENDER }
+
+    private record ClearBox(int minX, int maxX, int minZ, int maxZ, int layerBit) {}
+
+    private record QueueItem(Preset preset, @Nullable Integer replaceMapId, @Nullable int[] forcedCenter, int layerMask) {}
 
     private static final class Job {
         final ServerLevel level;
@@ -72,9 +81,15 @@ public final class BRMapGenerator {
         final int mapId;
         final Plan plan;
         final boolean isRegen;
+        final int layerMask;
         final Deque<ChunkPos> terrainChunks = new ArrayDeque<>();
         final int totalChunks;
         int doneChunks;
+        final List<ClearBox> clearBoxes = new ArrayList<>();
+        int clearBoxIdx;
+        int clearColIdx;
+        int clearedCols;
+        int totalClearCols;
         int majorIdx;
         int smallIdx;
         boolean yardWallsDone;
@@ -87,13 +102,23 @@ public final class BRMapGenerator {
         Phase phase = Phase.TERRAIN;
         final long startMs = System.currentTimeMillis();
 
-        Job(ServerLevel level, Preset preset, CommandSourceStack src, int mapId, Plan plan, boolean isRegen) {
+        Job(ServerLevel level, Preset preset, CommandSourceStack src, int mapId, Plan plan, boolean isRegen, int layerMask) {
             this.level = level;
             this.preset = preset;
             this.src = src;
             this.mapId = mapId;
             this.plan = plan;
             this.isRegen = isRegen;
+            this.layerMask = (layerMask & LAYER_ALL) == 0 ? LAYER_ALL : (layerMask & LAYER_ALL);
+
+            boolean partial = isRegen && this.layerMask != LAYER_ALL;
+            if (partial) {
+                buildClearBoxes();
+                this.totalChunks = 0;
+                this.phase = Phase.CLEAR_REGIONS;
+                this.altarsPlaced = true; // 局部區域重製不更動既有復活祭壇
+                return;
+            }
 
             int reach = preset.radius() + 16;
             int minCX = (plan.centerX - reach) >> 4;
@@ -110,6 +135,44 @@ public final class BRMapGenerator {
                 }
             }
             this.totalChunks = terrainChunks.size();
+        }
+
+        boolean hasLayer(int bit) {
+            return (layerMask & bit) != 0;
+        }
+
+        private void buildClearBoxes() {
+            if (hasLayer(LAYER_MAJOR)) {
+                for (BRMapLayout.DistrictBox d : plan.districts) {
+                    addBox(d.minX() - 8, d.maxX() + 8, d.minZ() - 8, d.maxZ() + 8, LAYER_MAJOR);
+                }
+                for (PlacedBuilding b : plan.buildings) {
+                    addBox(b.minX() - 2, b.maxX() + 2, b.minZ() - 2, b.maxZ() + 2, LAYER_MAJOR);
+                }
+            }
+            if (hasLayer(LAYER_SMALL)) {
+                for (CompoundBox c : plan.compounds) {
+                    addBox(c.minX() - 5, c.maxX() + 5, c.minZ() - 5, c.maxZ() + 5, LAYER_SMALL);
+                }
+                for (SmallBuilding sb : plan.smallBuildings) {
+                    addBox(sb.minX() - 2, sb.maxX() + 2, sb.minZ() - 2, sb.maxZ() + 2, LAYER_SMALL);
+                }
+            }
+            if (hasLayer(LAYER_WILD)) {
+                for (MicroPoi m : plan.microPois) {
+                    addBox(m.x() - 10, m.x() + 10, m.z() - 10, m.z() + 10, LAYER_WILD);
+                }
+            }
+            if (hasLayer(LAYER_COVER)) {
+                for (BRMapLayout.CoverSpot c : plan.covers) {
+                    addBox(c.x() - 6, c.x() + 6, c.z() - 6, c.z() + 6, LAYER_COVER);
+                }
+            }
+        }
+
+        private void addBox(int minX, int maxX, int minZ, int maxZ, int bit) {
+            clearBoxes.add(new ClearBox(minX, maxX, minZ, maxZ, bit));
+            totalClearCols += (maxX - minX + 1) * (maxZ - minZ + 1);
         }
     }
 
@@ -134,12 +197,35 @@ public final class BRMapGenerator {
     }
 
     @Nullable
+    public static Preset matchPreset(MapRegistry.BRMap map) {
+        if (map == null) return null;
+        for (Preset p : BRMapPresets.all()) {
+            if (map.name != null && map.name.equals(p.displayName())) return p;
+        }
+        for (Preset p : BRMapPresets.all()) {
+            if (Math.abs(map.radius - p.radius()) < 1.0) return p;
+        }
+        return null;
+    }
+
+    public static String layerMaskLabel(int mask) {
+        int m = mask & LAYER_ALL;
+        if (m == 0 || m == LAYER_ALL) return "全部區域";
+        List<String> parts = new ArrayList<>();
+        if ((m & LAYER_MAJOR) != 0) parts.add("大區域");
+        if ((m & LAYER_SMALL) != 0) parts.add("小區域");
+        if ((m & LAYER_WILD)  != 0) parts.add("野區");
+        if ((m & LAYER_COVER) != 0) parts.add("小掩體");
+        return String.join("＋", parts);
+    }
+
+    @Nullable
     public static String startSingle(MinecraftServer server, Preset preset, CommandSourceStack src) {
         String guard = checkReady(src);
         if (guard != null) return guard;
         QUEUE.clear();
         queueSource = src;
-        launchNext(server, new QueueItem(preset, null, null), src);
+        launchNext(server, new QueueItem(preset, null, null, LAYER_ALL), src);
         return null;
     }
 
@@ -148,7 +234,7 @@ public final class BRMapGenerator {
         String guard = checkReady(src);
         if (guard != null) return guard;
         QUEUE.clear();
-        for (Preset p : BRMapPresets.all()) QUEUE.add(new QueueItem(p, null, null));
+        for (Preset p : BRMapPresets.all()) QUEUE.add(new QueueItem(p, null, null, LAYER_ALL));
         queueSource = src;
         QueueItem first = QUEUE.poll();
         if (first != null) {
@@ -162,17 +248,22 @@ public final class BRMapGenerator {
     /** 自動找出目前已存在的 5 張主題地圖並在原地重建成高密度版本（保留編號與位置）。 */
     @Nullable
     public static String startRegenAll(MinecraftServer server, CommandSourceStack src) {
+        return startRegenAllLayers(server, LAYER_ALL, src);
+    }
+
+    /** 依指定的區域遮罩，依序在原地重建全部已存在的主題地圖（先刪舊區域再重做）。 */
+    @Nullable
+    public static String startRegenAllLayers(MinecraftServer server, int layerMask, CommandSourceStack src) {
         String guard = checkReady(src);
         if (guard != null) return guard;
+        int mask = (layerMask & LAYER_ALL) == 0 ? LAYER_ALL : (layerMask & LAYER_ALL);
         MapRegistry reg = MapRegistry.get(server);
         List<QueueItem> matched = new ArrayList<>();
         for (MapRegistry.BRMap m : reg.all()) {
-            for (Preset p : BRMapPresets.all()) {
-                if (m.name.equals(p.displayName())) {
-                    int[] center = { ((int) Math.round(m.centerX) >> 4) << 4, ((int) Math.round(m.centerZ) >> 4) << 4 };
-                    matched.add(new QueueItem(p, m.id, center));
-                    break;
-                }
+            Preset p = matchPreset(m);
+            if (p != null) {
+                int[] center = { ((int) Math.round(m.centerX) >> 4) << 4, ((int) Math.round(m.centerZ) >> 4) << 4 };
+                matched.add(new QueueItem(p, m.id, center, mask));
             }
         }
         if (matched.isEmpty()) {
@@ -183,7 +274,8 @@ public final class BRMapGenerator {
         queueSource = src;
         QueueItem first = QUEUE.poll();
         if (first != null) {
-            say(src, String.format("[重建地圖] 找到 %d 張現有主題地圖，開始依序原地升級為三層高密度版本…", matched.size()), ChatFormatting.AQUA);
+            say(src, String.format("[重建地圖] 找到 %d 張現有主題地圖，開始依序原地重製（%s）…",
+                matched.size(), layerMaskLabel(mask)), ChatFormatting.AQUA);
             launchNext(server, first, src);
         }
         return null;
@@ -192,14 +284,21 @@ public final class BRMapGenerator {
     /** 指定現有地圖編號在原地重蓋成指定預設（保留編號與現有中心）。 */
     @Nullable
     public static String startRegenOne(MinecraftServer server, int mapId, Preset preset, CommandSourceStack src) {
+        return startRegenLayers(server, mapId, preset, LAYER_ALL, src);
+    }
+
+    /** 指定單張地圖與區域遮罩進行原地重製（會先刪除選定區域的舊建築與物資點，再重新生成）。 */
+    @Nullable
+    public static String startRegenLayers(MinecraftServer server, int mapId, Preset preset, int layerMask, CommandSourceStack src) {
         String guard = checkReady(src);
         if (guard != null) return guard;
         MapRegistry.BRMap m = MapRegistry.get(server).getMap(mapId);
         if (m == null) return "找不到地圖 #" + mapId + "。";
+        int mask = (layerMask & LAYER_ALL) == 0 ? LAYER_ALL : (layerMask & LAYER_ALL);
         int[] center = { ((int) Math.round(m.centerX) >> 4) << 4, ((int) Math.round(m.centerZ) >> 4) << 4 };
         QUEUE.clear();
         queueSource = src;
-        launchNext(server, new QueueItem(preset, mapId, center), src);
+        launchNext(server, new QueueItem(preset, mapId, center, mask), src);
         return null;
     }
 
@@ -256,13 +355,15 @@ public final class BRMapGenerator {
         Preset preset = item.preset();
         MapRegistry reg = MapRegistry.get(server);
         boolean isRegen = item.replaceMapId() != null;
+        int mask = (item.layerMask() & LAYER_ALL) == 0 ? LAYER_ALL : (item.layerMask() & LAYER_ALL);
+        boolean partial = isRegen && mask != LAYER_ALL;
         int id;
         int[] slot;
         if (isRegen) {
             id = item.replaceMapId();
             slot = item.forcedCenter() != null ? item.forcedCenter() : freeSlot(reg, preset.radius());
             MapRegistry.BRMap oldMap = reg.getMap(id);
-            if (oldMap != null) {
+            if (oldMap != null && !partial) {
                 reg.clearPoints(oldMap);
                 AltarLedger ledger = AltarLedger.get(server);
                 for (BlockPos ap : new ArrayList<>(ledger.entries())) {
@@ -271,7 +372,9 @@ public final class BRMapGenerator {
                     }
                 }
             }
-            reg.setMap(id, preset.displayName(), slot[0], slot[1], preset.radius());
+            if (!partial) {
+                reg.setMap(id, preset.displayName(), slot[0], slot[1], preset.radius());
+            }
         } else {
             id = 1;
             for (MapRegistry.BRMap m : reg.all()) id = Math.max(id, m.id + 1);
@@ -280,12 +383,21 @@ public final class BRMapGenerator {
         }
 
         Plan plan = BRMapLayout.buildPlan(preset, slot[0], slot[1]);
-        Job job = new Job(server.overworld(), preset, src, id, plan, isRegen);
+        Job job = new Job(server.overworld(), preset, src, id, plan, isRegen, mask);
+        if (partial) {
+            MapRegistry.BRMap oldMap = reg.getMap(id);
+            if (oldMap != null) {
+                int removed = reg.removePointsIn(oldMap, lp -> isInClearBoxes(job, lp.getX(), lp.getZ()));
+                say(src, String.format("[局部重製] #%d「%s」選定【%s】：已清除該區域舊物資點 %d 個，開始刪除舊區域方塊後重新生成…",
+                    id, preset.displayName(), layerMaskLabel(mask), removed), ChatFormatting.YELLOW);
+            }
+        } else {
+            say(src, String.format("[生成地圖] %s #%d「%s」：中心 (%d, %d)、半徑 %d｜%d 大城區(%d 棟)＋%d 小房區(%d 棟)＋%d 微據點＋%d 野外掩體＋%d 祭壇…",
+                isRegen ? "開始原地重製（先清空重鋪）" : "開始建立", id, preset.displayName(), slot[0], slot[1], preset.radius(),
+                plan.districts.size(), plan.buildings.size(), plan.compounds.size(), plan.smallBuildings.size(),
+                plan.microPois.size(), plan.covers.size(), plan.altars.size()), ChatFormatting.YELLOW);
+        }
         current = job;
-        say(src, String.format("[生成地圖] %s #%d「%s」：中心 (%d, %d)、半徑 %d｜%d 大城區(%d 棟)＋%d 小房區(%d 棟)＋%d 微據點＋%d 野外掩體＋%d 祭壇…",
-            isRegen ? "開始原地升級重建" : "開始建立", id, preset.displayName(), slot[0], slot[1], preset.radius(),
-            plan.districts.size(), plan.buildings.size(), plan.compounds.size(), plan.smallBuildings.size(),
-            plan.microPois.size(), plan.covers.size(), plan.altars.size()), ChatFormatting.YELLOW);
     }
 
     /** 找一個 16 格對齊且與現有所有地圖不相鄰的空曠格點。 */
@@ -316,12 +428,172 @@ public final class BRMapGenerator {
     private static boolean tickJob(Job job) {
         return switch (job.phase) {
             case TERRAIN -> tickTerrain(job);
+            case CLEAR_REGIONS -> tickClearRegions(job);
             case MAJOR_BUILDINGS -> tickMajorBuildings(job);
             case SMALL_BUILDINGS -> tickSmallBuildings(job);
             case ALTARS_AND_WILD -> tickAltarsAndWild(job);
             case RELIGHT -> tickRelight(job);
             case WAIT_RENDER -> tickWaitRender(job);
         };
+    }
+
+    /** 局部區域重製專用：先精準清除選定區域的舊建築／殘骸並還原地表（不影響未勾選的區域）。 */
+    private static boolean tickClearRegions(Job job) {
+        progress(job, String.format("清除舊區域方塊 %d%%（%s）",
+            (int) Math.round(100.0 * ratio(job.clearedCols, job.totalClearCols)), layerMaskLabel(job.layerMask)),
+            0.35f * ratio(job.clearedCols, job.totalClearCols));
+        long deadline = System.nanoTime() + CHUNK_BUDGET_MS * 1_000_000L;
+        BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
+        while (job.clearBoxIdx < job.clearBoxes.size() && System.nanoTime() < deadline) {
+            ClearBox box = job.clearBoxes.get(job.clearBoxIdx);
+            int w = box.maxX() - box.minX() + 1;
+            int d = box.maxZ() - box.minZ() + 1;
+            int total = w * d;
+            if (job.clearColIdx == 0) {
+                AABB aabb = new AABB(box.minX(), job.level.getMinBuildHeight(), box.minZ(),
+                    box.maxX() + 1, 138, box.maxZ() + 1);
+                for (Entity e : job.level.getEntities((Entity) null, aabb, e -> !(e instanceof Player))) {
+                    if (!isProtectedByUnselected(job, e.getBlockX(), e.getBlockZ())) e.discard();
+                }
+            }
+            while (job.clearColIdx < total && System.nanoTime() < deadline) {
+                int wx = box.minX() + (job.clearColIdx % w);
+                int wz = box.minZ() + (job.clearColIdx / w);
+                job.clearColIdx++;
+                job.clearedCols++;
+                if (isProtectedByUnselected(job, wx, wz)) continue;
+                restoreColumnTerrain(job, wx, wz, mp);
+            }
+            if (job.clearColIdx >= total) {
+                job.clearBoxIdx++;
+                job.clearColIdx = 0;
+            }
+        }
+        if (job.clearBoxIdx >= job.clearBoxes.size()) {
+            job.phase = Phase.MAJOR_BUILDINGS;
+            say(job.src, String.format("[#%d %s] 舊區域清除完畢，開始重新生成【%s】…",
+                job.mapId, job.preset.displayName(), layerMaskLabel(job.layerMask)), ChatFormatting.GRAY);
+        }
+        return false;
+    }
+
+    private static boolean isInClearBoxes(Job job, int wx, int wz) {
+        if (isProtectedByUnselected(job, wx, wz)) return false;
+        for (ClearBox b : job.clearBoxes) {
+            if (wx >= b.minX() && wx <= b.maxX() && wz >= b.minZ() && wz <= b.maxZ()) return true;
+        }
+        return false;
+    }
+
+    /** 保護未被勾選重製的區域（避免重製野區／掩體時誤刪大城區、小房區或祭壇）。 */
+    private static boolean isProtectedByUnselected(Job job, int wx, int wz) {
+        if (!job.hasLayer(LAYER_MAJOR)) {
+            for (BRMapLayout.DistrictBox d : job.plan.districts) {
+                if (wx >= d.minX() - 2 && wx <= d.maxX() + 2 && wz >= d.minZ() - 2 && wz <= d.maxZ() + 2) return true;
+            }
+            for (PlacedBuilding b : job.plan.buildings) {
+                if (wx >= b.minX() - 1 && wx <= b.maxX() + 1 && wz >= b.minZ() - 1 && wz <= b.maxZ() + 1) return true;
+            }
+        }
+        if (!job.hasLayer(LAYER_SMALL)) {
+            for (CompoundBox c : job.plan.compounds) {
+                if (wx >= c.minX() - 2 && wx <= c.maxX() + 2 && wz >= c.minZ() - 2 && wz <= c.maxZ() + 2) return true;
+            }
+            for (SmallBuilding sb : job.plan.smallBuildings) {
+                if (wx >= sb.minX() - 1 && wx <= sb.maxX() + 1 && wz >= sb.minZ() - 1 && wz <= sb.maxZ() + 1) return true;
+            }
+        }
+        if (!job.hasLayer(LAYER_WILD)) {
+            for (MicroPoi m : job.plan.microPois) {
+                if (Math.abs(wx - m.x()) <= 7 && Math.abs(wz - m.z()) <= 7) return true;
+            }
+        }
+        // 局部重製時一律保護復活祭壇本體與廣場
+        if (job.layerMask != LAYER_ALL) {
+            for (BlockPos a : job.plan.altars) {
+                if (Math.abs(wx - a.getX()) <= 4 && Math.abs(wz - a.getZ()) <= 4) return true;
+            }
+        }
+        return false;
+    }
+
+    /** 將單一 (wx, wz) 柱還原為該座標的自然／廣場／道路地表，並清空地表以上所有舊方塊。 */
+    private static void restoreColumnTerrain(Job job, int wx, int wz, BlockPos.MutableBlockPos mp) {
+        ServerLevel level = job.level;
+        Plan plan = job.plan;
+        int waterLevel = job.preset.waterLevel();
+        RegionBiome biome = plan.biomeAtWorld(wx, wz);
+        int sy = plan.surfaceY(wx, wz);
+        int flags = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
+
+        BlockState air = Blocks.AIR.defaultBlockState();
+        BlockState water = Blocks.WATER.defaultBlockState();
+
+        RoadSeg nearRoad = plan.nearestRoad(wx, wz);
+        double roadDist = nearRoad == null ? Double.MAX_VALUE : pointToSegmentDist(
+            wx + 0.5, wz + 0.5, nearRoad.x0() + 0.5, nearRoad.z0() + 0.5, nearRoad.x1() + 0.5, nearRoad.z1() + 0.5) - nearRoad.halfWidth();
+        double dDist = districtEdgeDist(plan, wx, wz);
+        double cDist = compoundEdgeDist(plan, wx, wz);
+        boolean road = roadDist <= 0.0 && dDist > 1.0 && cDist > 0.5;
+        boolean countryPath = road && nearRoad.countryPath();
+        boolean roadEdge = road && !countryPath && roadDist > -0.9;
+
+        BlockState top;
+        BlockState sub;
+        if (sy <= waterLevel) {
+            top = Blocks.SAND.defaultBlockState();
+            sub = Blocks.SANDSTONE.defaultBlockState();
+        } else if (countryPath) {
+            double soft = BRMapPresets.hash01(wx, wz, job.preset.seed() ^ 0xA11L);
+            top = (roadDist > -0.6 && soft < 0.35)
+                ? naturalTopBlock(biome, sy, wx, wz, job.preset.seed())
+                : ((biome == RegionBiome.DESERT_SAND || biome == RegionBiome.RED_CANYON)
+                    ? Blocks.SMOOTH_SANDSTONE.defaultBlockState()
+                    : (soft < 0.72 ? Blocks.GRAVEL.defaultBlockState() : Blocks.COARSE_DIRT.defaultBlockState()));
+            sub = Blocks.COBBLESTONE.defaultBlockState();
+        } else if (road) {
+            boolean centerLine = roadDist <= -2.1 && Math.abs((wx + wz) % 6) < 3;
+            top = centerLine ? Blocks.WHITE_CONCRETE.defaultBlockState()
+                : (roadEdge ? Blocks.SMOOTH_STONE.defaultBlockState() : Blocks.GRAY_CONCRETE.defaultBlockState());
+            sub = Blocks.COBBLESTONE.defaultBlockState();
+        } else if (dDist <= 0.0) {
+            top = districtGroundBlock(biome);
+            sub = Blocks.STONE.defaultBlockState();
+        } else if (dDist <= 7.0) {
+            double fade = 1.0 - dDist / 7.0;
+            double v = fade + (BRMapPresets.hash01(wx, wz, job.preset.seed() ^ 0x919L) - 0.5) * 0.42
+                + (BRMapPresets.noise2D(wx * 0.16, wz * 0.16, job.preset.seed() ^ 0x91AL) - 0.5) * 0.32;
+            top = v >= 0.72 ? districtGroundBlock(biome)
+                : v >= 0.34 ? districtTransitionBlock(biome, wx, wz, job.preset.seed())
+                : naturalTopBlock(biome, sy, wx, wz, job.preset.seed());
+            sub = naturalSubBlock(biome);
+        } else if (cDist <= 0.0) {
+            top = compoundYardBlock(biome, wx, wz, job.preset.seed());
+            sub = naturalSubBlock(biome);
+        } else if (cDist <= 4.0) {
+            double fade = 1.0 - cDist / 4.0;
+            double v = fade + (BRMapPresets.hash01(wx, wz, job.preset.seed() ^ 0x920L) - 0.5) * 0.55;
+            top = v >= 0.45 ? compoundYardBlock(biome, wx, wz, job.preset.seed()) : naturalTopBlock(biome, sy, wx, wz, job.preset.seed());
+            sub = naturalSubBlock(biome);
+        } else {
+            top = naturalTopBlock(biome, sy, wx, wz, job.preset.seed());
+            sub = naturalSubBlock(biome);
+        }
+
+        // 先清掉地表以上的舊建築與地下 2 格殘留（例如舊玻璃／箱子／燈具）
+        int clearTop = Math.min(136, sy + 44);
+        for (int y = sy - 2; y <= clearTop; y++) {
+            mp.set(wx, y, wz);
+            BlockState want;
+            if (y < sy) want = sub;
+            else if (y == sy) want = top;
+            else if (sy <= waterLevel && y <= waterLevel) want = water;
+            else want = air;
+            if (level.getBlockState(mp) != want) {
+                level.removeBlockEntity(mp);
+                level.setBlock(mp, want, flags);
+            }
+        }
     }
 
     private static void progress(Job job, String stage, float frac) {
@@ -355,6 +627,10 @@ public final class BRMapGenerator {
     }
 
     private static boolean tickMajorBuildings(Job job) {
+        if (!job.hasLayer(LAYER_MAJOR)) {
+            job.phase = Phase.SMALL_BUILDINGS;
+            return false;
+        }
         progress(job, String.format("建造大城區建築 %d / %d", job.majorIdx, job.plan.buildings.size()),
             0.35f + 0.20f * ratio(job.majorIdx, job.plan.buildings.size()));
         if (job.majorIdx >= job.plan.buildings.size()) {
@@ -377,6 +653,10 @@ public final class BRMapGenerator {
     }
 
     private static boolean tickSmallBuildings(Job job) {
+        if (!job.hasLayer(LAYER_SMALL)) {
+            job.phase = Phase.ALTARS_AND_WILD;
+            return false;
+        }
         progress(job, String.format("建造小房區建築 %d / %d", job.smallIdx, job.plan.smallBuildings.size()),
             0.55f + 0.17f * ratio(job.smallIdx, job.plan.smallBuildings.size()));
         for (int k = 0; k < SMALL_PER_TICK && job.smallIdx < job.plan.smallBuildings.size(); k++) {
@@ -413,22 +693,29 @@ public final class BRMapGenerator {
                 job.mapId, job.preset.displayName(), job.plan.altars.size(), job.plan.microPois.size(), job.plan.covers.size()), ChatFormatting.GRAY);
             return false;
         }
-        for (int k = 0; k < MICRO_PER_TICK && job.microIdx < job.plan.microPois.size(); k++) {
-            MicroPoi m = job.plan.microPois.get(job.microIdx++);
-            BuildingCanvas canvas = new BuildingCanvas(job.level, new BlockPos(m.x(), m.y(), m.z()), m.facing());
-            WildStructures.buildMicroPoi(m.kind(), canvas, m.biome());
-            canvas.finalizeShapes();
-            registerLoot(job, canvas);
+        if (job.hasLayer(LAYER_WILD)) {
+            for (int k = 0; k < MICRO_PER_TICK && job.microIdx < job.plan.microPois.size(); k++) {
+                MicroPoi m = job.plan.microPois.get(job.microIdx++);
+                BuildingCanvas canvas = new BuildingCanvas(job.level, new BlockPos(m.x(), m.y(), m.z()), m.facing());
+                WildStructures.buildMicroPoi(m.kind(), canvas, m.biome());
+                canvas.finalizeShapes();
+                registerLoot(job, canvas);
+            }
+            if (job.microIdx < job.plan.microPois.size()) return false;
+        } else {
+            job.microIdx = job.plan.microPois.size();
         }
-        if (job.microIdx < job.plan.microPois.size()) return false;
 
-        long deadline = System.nanoTime() + COVER_BUDGET_MS * 1_000_000L;
-        while (job.coverIdx < job.plan.covers.size() && System.nanoTime() < deadline) {
-            buildOutdoorCover(job.level, job.plan, job.plan.covers.get(job.coverIdx++), job.preset.seed());
+        if (job.hasLayer(LAYER_COVER)) {
+            long deadline = System.nanoTime() + COVER_BUDGET_MS * 1_000_000L;
+            while (job.coverIdx < job.plan.covers.size() && System.nanoTime() < deadline) {
+                buildOutdoorCover(job.level, job.plan, job.plan.covers.get(job.coverIdx++), job.preset.seed());
+            }
+            if (job.coverIdx < job.plan.covers.size()) return false;
+        } else {
+            job.coverIdx = job.plan.covers.size();
         }
-        if (job.coverIdx >= job.plan.covers.size()) {
-            job.phase = Phase.RELIGHT;
-        }
+        job.phase = Phase.RELIGHT;
         return false;
     }
 

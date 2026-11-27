@@ -487,8 +487,17 @@ public class PGCommand {
             fail(src, "這張地圖正在進行 BR，不能刪除。");
             return 0;
         }
-        if (MapRegistry.get(src.getServer()).removeMap(id)) {
-            ok(src, "已刪除地圖 #" + id + "（連同它的戰利品點位）。", true);
+        MapRegistry reg = MapRegistry.get(src.getServer());
+        MapRegistry.BRMap target = reg.getMap(id);
+        if (target != null && reg.removeMap(id)) {
+            com.provinggrounds.data.AltarLedger ledger = com.provinggrounds.data.AltarLedger.get(src.getServer());
+            for (BlockPos ap : new java.util.ArrayList<>(ledger.entries())) {
+                if (target.contains(ap.getX() + 0.5, ap.getZ() + 0.5)) ledger.remove(ap);
+            }
+            com.provinggrounds.network.MenuRequestPacket.sendToAll(src.getServer());
+            com.provinggrounds.core.LobbyManager.get().broadcast();
+            com.provinggrounds.core.LobbyManager.get().broadcastLobbyMapImage(src.getServer());
+            ok(src, "已刪除地圖 #" + id + "「" + target.name + "」（連同戰利品點位與祭壇紀錄）。", true);
             return 1;
         }
         fail(src, "找不到地圖 #" + id + "。");
