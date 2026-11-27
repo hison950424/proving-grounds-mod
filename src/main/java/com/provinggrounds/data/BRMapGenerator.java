@@ -580,9 +580,9 @@ public final class BRMapGenerator {
             sub = naturalSubBlock(biome);
         }
 
-        // 先清掉地表以上的舊建築與地下 2 格殘留（例如舊玻璃／箱子／燈具）
-        int clearTop = Math.min(136, sy + 44);
-        for (int y = sy - 2; y <= clearTop; y++) {
+        // 先清掉地表以上的舊建築與地下 6 格殘留（徹底清除舊版曾插到地底的玻璃片／鐵柵欄）
+        int clearTop = Math.min(level.getMaxBuildHeight() - 1, Math.max(160, sy + 64));
+        for (int y = sy - 6; y <= clearTop; y++) {
             mp.set(wx, y, wz);
             BlockState want;
             if (y < sy) want = sub;
@@ -961,6 +961,13 @@ public final class BRMapGenerator {
         Heightmap.primeHeightmaps(chunk, EnumSet.allOf(Heightmap.Types.class));
         chunk.initializeLightSources();
         chunk.setUnsaved(true);
+        // 直接改寫 section 不會觸發原版逐格同步；若已有玩家載入此區塊，立即重送完整區塊避免幽靈方塊與推回
+        List<net.minecraft.server.level.ServerPlayer> watchers = level.getChunkSource().chunkMap.getPlayers(cp, false);
+        if (!watchers.isEmpty()) {
+            var pkt = new net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket(
+                chunk, level.getChunkSource().getLightEngine(), null, null);
+            for (var p : watchers) p.connection.send(pkt);
+        }
     }
 
     private static double pointToSegmentDist(double px, double pz, double x0, double z0, double x1, double z1) {

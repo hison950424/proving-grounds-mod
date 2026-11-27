@@ -50,9 +50,16 @@ public class BigMapScreen extends Screen {
     private int ctxMapId = -1;
     @Nullable private String ctxNearestLabel;
     private List<String> ctxLabels = List.of();
+    /** 管理員控制台指定預覽的地圖編號（-1 = 依大廳選定地圖）。 */
+    private final int forcedPreviewMapId;
 
     public BigMapScreen() {
+        this(-1);
+    }
+
+    public BigMapScreen(int forcedPreviewMapId) {
         super(Tr.c("map.screen"));
+        this.forcedPreviewMapId = forcedPreviewMapId;
     }
 
     @Override
@@ -88,11 +95,18 @@ public class BigMapScreen extends Screen {
 
     @Nullable
     private MenuDataPacket.MapEntry currentLobbyMap() {
-        LobbyStatePacket lobby = ClientLobbyData.get();
         MenuDataPacket menu = ClientMenuData.get();
-        if (lobby == null || menu == null || menu.maps().isEmpty()) return null;
-        for (MenuDataPacket.MapEntry m : menu.maps()) {
-            if (m.id() == lobby.mapId()) return m;
+        if (menu == null || menu.maps().isEmpty()) return null;
+        if (forcedPreviewMapId >= 0) {
+            for (MenuDataPacket.MapEntry m : menu.maps()) {
+                if (m.id() == forcedPreviewMapId) return m;
+            }
+        }
+        LobbyStatePacket lobby = ClientLobbyData.get();
+        if (lobby != null) {
+            for (MenuDataPacket.MapEntry m : menu.maps()) {
+                if (m.id() == lobby.mapId()) return m;
+            }
         }
         return menu.maps().get(0);
     }

@@ -136,13 +136,19 @@ public class AdminPanelScreen extends Screen {
 
         y += 22;
         boolean hasSingleMap = selectedMapIdx >= 0 && !info.brMaps().isEmpty();
-        addBtn(x, y, hw, 18, "傳送至此地圖", false, hasSingleMap,
+        int tw = (w - 8) / 3;
+        addBtn(x, y, tw, 18, "查看大地圖", false, hasSingleMap, () -> {
+            int id = currentMapId();
+            PGNetwork.sendToServer(AdminPanelPacket.run("br_preview", String.valueOf(id)));
+            Minecraft.getInstance().setScreen(new BigMapScreen(id));
+        });
+        addBtn(x + tw + 4, y, tw, 18, "傳送至此圖", false, hasSingleMap,
             () -> exec("br_tp", String.valueOf(currentMapId())));
         boolean confirming = hasSingleMap && System.currentTimeMillis() < deleteConfirmUntil;
-        String delLabel = !hasSingleMap ? "刪除選定地圖"
-            : confirming ? "⚠ 確認刪除 #" + currentMapId()
-            : "刪除地圖 #" + currentMapId();
-        addBtn(x + hw + 6, y, hw, 18, delLabel, confirming, hasSingleMap, () -> {
+        String delLabel = !hasSingleMap ? "刪除地圖"
+            : confirming ? "⚠ 確認刪除"
+            : "刪除 #" + currentMapId();
+        addBtn(x + (tw + 4) * 2, y, w - (tw + 4) * 2, 18, delLabel, confirming, hasSingleMap, () -> {
             if (System.currentTimeMillis() < deleteConfirmUntil) {
                 deleteConfirmUntil = 0L;
                 exec("br_delete", String.valueOf(currentMapId()));

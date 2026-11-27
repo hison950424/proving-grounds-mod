@@ -523,21 +523,22 @@ public class GuideBookScreen extends Screen {
         g.fill(x, y, x + innerW, y + 1, BORDER);
         y += 8;
 
-        y = drawDetailSection(g, x, y, innerW, "取得方式", item.source(), 0xFF60C0FF);
-        y = drawDetailSection(g, x, y, innerW, "效果與功能", item.desc(), ACCENT);
+        y = drawDetailSection(g, x, y, innerW, "取得方式", Component.literal(item.source()), 0xFF60C0FF, TEXT);
+        y = drawDetailSection(g, x, y, innerW, "效果與功能（綠＝正面｜黃＝異常｜紅＝負面）",
+            com.provinggrounds.special.SpecialItem.coloredDesc(item.desc()), ACCENT, TEXT);
         if (!item.tip().isEmpty()) {
-            drawDetailSection(g, x, y, innerW, "戰術提示", item.tip(), 0xFF58E098);
+            drawDetailSection(g, x, y, innerW, "戰術提示", Component.literal(item.tip()), 0xFF58E098, TEXT);
         }
 
         g.disableScissor();
         drawScrollbar(g, rightColX + rightColW - 4, bodyTop + 3, bodyBottom - bodyTop - 6, detailScroll, maxDetailScroll);
     }
 
-    private int drawDetailSection(GuiGraphics g, int x, int y, int w, String header, String body, int headerColor) {
+    private int drawDetailSection(GuiGraphics g, int x, int y, int w, String header, Component body, int headerColor, int fallbackColor) {
         g.drawString(font, "▸ " + header, x, y, headerColor, false);
         y += 13;
-        for (FormattedCharSequence seq : font.split(Component.literal(body), w)) {
-            g.drawString(font, seq, x + 4, y, TEXT, false);
+        for (FormattedCharSequence seq : font.split(body, w)) {
+            g.drawString(font, seq, x + 4, y, fallbackColor, false);
             y += 11;
         }
         return y + 8;

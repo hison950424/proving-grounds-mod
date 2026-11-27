@@ -117,6 +117,10 @@ public record AdminPanelPacket(
                 handleBrTp(p, arg);
                 return;
             }
+            if ("br_preview".equals(action)) {
+                handleBrPreview(p, arg);
+                return;
+            }
             if (handleToolAction(p, action, arg)) {
                 return;
             }
@@ -128,6 +132,26 @@ public record AdminPanelPacket(
             p.server.getCommands().performPrefixedCommand(src, cmd);
         });
         c.setPacketHandled(true);
+    }
+
+    /** 同步指定大逃殺地圖的俯視圖、祭壇位置、大區域名稱與地圖座標給管理員，供控制台直接預覽大地圖。 */
+    private static void handleBrPreview(ServerPlayer p, String arg) {
+        int mapId;
+        try {
+            mapId = Integer.parseInt(arg.trim());
+        } catch (NumberFormatException e) {
+            return;
+        }
+        MapRegistry.BRMap map = MapRegistry.get(p.server).getMap(mapId);
+        if (map == null) {
+            p.sendSystemMessage(AdminTools.err("找不到地圖 #" + mapId + "。"));
+            return;
+        }
+        PGNetwork.sendTo(p, MenuRequestPacket.build(p));
+        com.provinggrounds.data.MapImageStore.MapImage img = com.provinggrounds.data.MapImageStore.get(p.server, map.id);
+        if (img != null) MapImagePacket.sendTo(p, img);
+        else PGNetwork.sendTo(p, new MapImagePacket(map.id, 0, 0, 0, 0, 1, 0, 1, new byte[0]));
+        MapLabelsPacket.sendTo(p, map);
     }
 
     /** 整合既有 10 種管理工具：不需準星指方塊的直接觸發，需預覽框／準星對準的可單獨領取到背包。 */

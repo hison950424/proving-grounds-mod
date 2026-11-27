@@ -196,7 +196,7 @@ public final class LoadoutScreen extends Screen {
             if (sel) g.fill(listX + 1, ry + 1, listX + 3, ry + CLASS_ROW_H - 1, ACCENT);
             g.drawString(font, (sel ? "▸ " : "") + c.displayName, listX + 6, ry + 5, sel ? ACCENT : TEXT, false);
             String hp = c.maxHealth + " HP";
-            int hpColor = c.maxHealth >= 110 ? 0xFF60E080 : c.maxHealth <= 80 ? 0xFFFF8070 : DIM;
+            int hpColor = c.maxHealth > 100 ? 0xFF60E080 : c.maxHealth < 100 ? 0xFFFF6860 : DIM;
             g.drawString(font, hp, listX + listW - 6 - font.width(hp), ry + 5, hpColor, false);
         }
         g.disableScissor();
@@ -209,7 +209,8 @@ public final class LoadoutScreen extends Screen {
         int x = infoX + 8, y = infoY + 8, maxW = infoW - 16;
         g.drawString(font, c.displayName, x, y, ACCENT, false);
         String hp = "最大血量：" + c.maxHealth + " HP";
-        g.drawString(font, hp, infoX + infoW - 8 - font.width(hp), y, GOOD, false);
+        int detailHpColor = c.maxHealth > 100 ? GOOD : c.maxHealth < 100 ? 0xFFFF6860 : TEXT;
+        g.drawString(font, hp, infoX + infoW - 8 - font.width(hp), y, detailHpColor, false);
         y += 14;
         g.fill(x, y, infoX + infoW - 8, y + 1, BORDER);
         y += 6;
@@ -269,7 +270,10 @@ public final class LoadoutScreen extends Screen {
         y += 6;
         g.drawString(font, "道具效果：", x, y, DIM, false);
         y += 11;
-        y = drawWrapped(g, t.desc, x, y, maxW, TEXT);
+        for (var line : font.split(com.provinggrounds.special.SpecialItem.coloredDesc(t.desc), maxW)) {
+            g.drawString(font, line, x, y, TEXT, false);
+            y += 10;
+        }
         y += 8;
         y = drawWrapped(g, "佔點規則：整場固定使用這一種（按 Q 使用），使用後依強度冷卻（弱 1／中 2／強 3 回合）。", x, y, maxW, DIM);
         if (isForced()) {

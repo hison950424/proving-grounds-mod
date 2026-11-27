@@ -90,6 +90,8 @@ public final class BuildingCanvas {
 
     /** 放置單一方塊（自動依面向旋轉方向屬性，並保存原始方塊供復原）。 */
     public void set(int lx, int ly, int lz, BlockState state) {
+        // 防呆：玻璃片與鐵柵欄（皆繼承 IronBarsBlock）不可放置於地底（ly <= 0）
+        if (ly <= 0 && state.getBlock() instanceof net.minecraft.world.level.block.IronBarsBlock) return;
         BlockPos pos = toWorld(lx, ly, lz);
         if (!level.isInWorldBounds(pos)) return;
         previous.putIfAbsent(pos, level.getBlockState(pos));

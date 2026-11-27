@@ -250,7 +250,9 @@ public final class MapRelightJob {
                     chunk.setUnsaved(true);
                     List<ServerPlayer> watchers = j.level.getChunkSource().chunkMap.getPlayers(cp, false);
                     if (!watchers.isEmpty()) {
-                        ClientboundLightUpdatePacket pkt = new ClientboundLightUpdatePacket(cp, j.light, null, null);
+                        // 連同完整區塊方塊與光照一併重送，徹底消除客戶端幽靈方塊（看不見卻被推回＋地板陰影）
+                        net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket pkt =
+                            new net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket(chunk, j.light, null, null);
                         for (ServerPlayer p : watchers) p.connection.send(pkt);
                     }
                 }
