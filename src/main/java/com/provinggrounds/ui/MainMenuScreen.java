@@ -11,6 +11,7 @@ import com.provinggrounds.modes.br.CirclePreset;
 import com.provinggrounds.network.LobbyActionPacket;
 import com.provinggrounds.network.LobbyStatePacket;
 import com.provinggrounds.network.MenuDataPacket;
+import com.provinggrounds.network.MenuRequestPacket;
 import com.provinggrounds.network.PGNetwork;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -105,6 +106,16 @@ public class MainMenuScreen extends Screen {
             () -> switchTo(View.VENUES)));
         addRenderableWidget(new PGButton(x, top + CONTENT_Y + 70, w, 18, Component.literal("HUD 介面設定"), false, false,
             () -> minecraft.setScreen(new HudEditScreen(this))));
+        LobbyStatePacket lobby = ClientLobbyData.get();
+        if (lobby != null && lobby.inLobby() && lobby.gameModeOrdinal() == GameManager.GameMode.BATTLE_ROYALE.ordinal()) {
+            MenuDataPacket menu = ClientMenuData.get();
+            MenuDataPacket.MapEntry map = menu != null ? findMap(menu.maps(), lobby.mapId()) : null;
+            String label = map != null ? "預覽大逃殺地圖（" + map.name() + "）" : "預覽大逃殺地圖";
+            addRenderableWidget(new PGButton(x, top + CONTENT_Y + 96, w, 18, Component.literal(label), false, false, () -> {
+                PGNetwork.sendToServer(new MenuRequestPacket());
+                if (minecraft != null) minecraft.setScreen(new BigMapScreen());
+            }));
+        }
     }
 
     /** 開始遊戲 → 選模式。管理員在大廳時點了就換成這個模式；其他人點了看目前的大廳。 */
@@ -192,6 +203,11 @@ public class MainMenuScreen extends Screen {
         } else {
         y = choice(sx, y, sw, "地圖", map == null ? "（無）" : map.name(), maps.stream().map(MenuDataPacket.MapEntry::name).toList(),
             maps.indexOf(map), canEdit && maps.size() > 1, i -> send(LobbyManager.Action.SET_MAP, maps.get(i).id()));
+        setting(sx, y, sw, "預覽大逃殺地圖", map != null, () -> {
+            PGNetwork.sendToServer(new MenuRequestPacket());
+            if (minecraft != null) minecraft.setScreen(new BigMapScreen());
+        });
+        y += PITCH;
         y = choice(sx, y, sw, "縮圈", preset.displayName + "・約 " + estimateText(preset, lobby),
             java.util.Arrays.stream(CirclePreset.values()).map(p -> p.displayName).toList(), preset.ordinal(), canEdit,
             i -> send(LobbyManager.Action.SET_PRESET, i));

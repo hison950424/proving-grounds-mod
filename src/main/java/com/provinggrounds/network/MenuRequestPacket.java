@@ -31,6 +31,7 @@ public record MenuRequestPacket() {
             if (player == null) return;
             PGNetwork.sendTo(player, build(player));
             PGNetwork.sendTo(player, com.provinggrounds.core.LobbyManager.get().buildPacket(player.server));
+            com.provinggrounds.core.LobbyManager.get().sendLobbyMapImage(player);
         });
         ctx.get().setPacketHandled(true);
     }
@@ -40,7 +41,7 @@ public record MenuRequestPacket() {
         int level = s.getLevel();
         List<MenuDataPacket.MapEntry> maps = new ArrayList<>();
         for (MapRegistry.BRMap m : MapRegistry.get(player.server).all()) {
-            maps.add(new MenuDataPacket.MapEntry(m.id, m.name, m.lootPoints.size()));
+            maps.add(new MenuDataPacket.MapEntry(m.id, m.name, m.lootPoints.size(), m.centerX, m.centerZ, m.radius));
         }
         String status;
         BattleRoyaleMode br = BattleRoyaleMode.get();

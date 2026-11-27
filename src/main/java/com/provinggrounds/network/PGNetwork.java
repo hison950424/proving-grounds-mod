@@ -17,7 +17,7 @@ import java.util.Optional;
 public final class PGNetwork {
 
     /** 封包格式改變時要加 1，舊版客戶端連線時會直接顯示版本不符（7 = 跳傘改版）。 */
-    private static final String VERSION = "34"; // 34 = 8風格52棟無木箱建築＋物資點貼近掩體優化, 33 = 跳躍後空白鍵翻爬一般方塊+樓梯45度斜坡+柵欄石牆1格高
+    private static final String VERSION = "35"; // 35 = 大廳預覽大逃殺地圖＋管理員右鍵地圖傳送, 34 = 8風格52棟無木箱建築＋物資點貼近掩體優化＋半磚平滑斜坡移動
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ProvingGroundsMod.MOD_ID, "main"),
@@ -115,6 +115,8 @@ public final class PGNetwork {
             WallClimbPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER)); // 跳躍後空白鍵翻爬方塊請求
         CHANNEL.registerMessage(id++, WallClimbSyncPacket.class, WallClimbSyncPacket::encode, WallClimbSyncPacket::decode,
             WallClimbSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)); // 翻爬動畫與 Hitbox 同步
+        CHANNEL.registerMessage(id++, MapTeleportPacket.class, MapTeleportPacket::encode, MapTeleportPacket::decode,
+            MapTeleportPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER)); // 管理員右鍵地圖傳送
 
     }
 

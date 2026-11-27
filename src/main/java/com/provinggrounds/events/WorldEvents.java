@@ -37,6 +37,7 @@ public class WorldEvents {
         GameManager.get().reset();
         MarkerScanJob.reset();
         com.provinggrounds.data.MapRenderJob.reset();
+        com.provinggrounds.data.BRMapGenerator.reset();
         com.provinggrounds.data.MapImageStore.clearCache();
     }
 
@@ -55,6 +56,7 @@ public class WorldEvents {
         if (event.phase != TickEvent.Phase.END) return;
         MarkerScanJob.tickCurrent(); // 舊箱子 marker 匯入／刪除（只在大廳啟動）
         com.provinggrounds.data.MapRenderJob.tickCurrent(); // 產生地圖俯視圖（只在大廳啟動）
+        com.provinggrounds.data.BRMapGenerator.tickCurrent(); // 程序化大逃殺地圖生成（只在大廳啟動）
         com.provinggrounds.core.LobbyManager.get().tick(event.getServer()); // 大廳：同步選單、強制開始倒數
         com.provinggrounds.core.ProneManager.tick(event.getServer()); // 趴下：自動解除、同步名單
         if (event.getServer().getTickCount() % 20 == 0) keepLobbyFed(event.getServer());

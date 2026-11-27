@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-27（v0.39.0 已實作並準備發佈：建築系統室內物資點全面貼近掩體／牆角＋新增 24 棟無木箱建築至共 52 棟＋半磚比照樓梯平滑斜坡移動與平地等速 `SlabRampShapes`/`StairMovement`，網路版本 `PGNetwork.VERSION="34"`；前版 v0.38.2 已發佈於 `c0e5b97`）。
+> 最後更新：2026-11-27（v0.40.0 已實作並準備發佈：新增 5 張半徑 300/400/500/600/700 格區域密集大逃殺地圖一鍵生成器 `BRMapPresets`/`BRMapLayout`/`BRMapGenerator` 含復活祭壇與自動渲染＋大廳大逃殺地圖預覽＋管理員右鍵地圖 TP 傳送，網路版本 `PGNetwork.VERSION="35"`；前版 v0.39.0 已發佈於 `4c43820`）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -48,7 +48,12 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
-- **v0.39.0（室內物資點緊貼掩體＋8 大風格各新增 3 棟建築共 52 棟＋半磚平滑與平地等速）**：
+- **v0.40.0（5 張主題大逃殺地圖生成＋大廳地圖預覽＋管理員右鍵傳送，已實作並準備發佈，待實測）**：
+  - 新增 `BRMapPresets`、`BRMapLayout`、`BRMapGenerator` 與 `/pg map generate <list|all|status|cancel|preset>`：提供 `300 / 400 / 500 / 600 / 700` 五張主題分區密集建築群地圖（共 17/22/30/38/55 棟無木箱建築）、放射與環狀道路及跨河橋、野外戰術掩體、多座復活祭壇（5/7/9/11/13 座並寫入 `AltarLedger`）與自動 `MapRenderJob` 俯視圖；新增 `BRMapLayoutTest` 驗證零重疊與邊界/祭壇配置。
+  - `MenuDataPacket.MapEntry` 擴充地圖中心／半徑，`MenuRequestPacket` 與 `LobbyManager` 在玩家進入大廳、開啟選單、切換大逃殺地圖或切回大逃殺模式時同步大逃殺地圖俯視圖（`MapImagePacket`）。
+  - `MainMenuScreen` 於大廳大逃殺模式為所有玩家提供「預覽大逃殺地圖」入口；`BigMapScreen` 支援大廳預覽與管理員右鍵點擊任意位置開啟選單並透過 `MapTeleportPacket`（伺服器強制載入區塊＋高程安全檢查）傳送過去。
+  - `PGNetwork.VERSION` 已升為 `"35"`（下次發佈需走 `big`）。
+- **v0.39.0（室內物資點緊貼掩體＋8 大風格各新增 3 棟建築共 52 棟＋半磚平滑與平地等速，已於 `4c43820` 發佈）**：
   - `SlabRampShapes`＋`BlockCollisionMixin` 對生物將下半磚與相鄰上半磚／實心方塊高差接縫轉為 16 階／8 階平滑斜坡，`StairMovement` 擴充支援半磚斜坡 3D 等速補償與下階貼地。
   - `BuildingCanvas.finalizeLootNearCover()` 在定型時自動把開闊處物資點吸附到鄰近掩體旁並避開門洞；同時 8 個建築檔共調整既有走廊物資點並新增 24 棟建築（皆無木箱、無新增電梯、寬樓梯與多入口掩體）。
   - 已更新 `PGNetwork.VERSION` 為 `"34"`（`v0.39.0` `big`），並新增 `SlabRampShapesTest` 與 `BuildingCatalogTest`；尚未於真實客戶端／伺服器實測（見 `docs/TESTING.md` 的 `J1～J4`、`K1～K3`）。

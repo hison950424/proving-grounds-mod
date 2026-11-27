@@ -299,6 +299,7 @@ public final class LobbyManager {
         if (GameManager.get().isInLobby()) {
             if (isJoinPending(p)) leaveSpectate(p);
             else if (isSpectator(p)) p.setGameMode(GameType.SPECTATOR);
+            sendLobbyMapImage(p);
         }
         dirty = true;
     }
@@ -321,6 +322,7 @@ public final class LobbyManager {
             if (isJoinPending(p)) leaveSpectate(p);
             else if (isSpectator(p)) p.setGameMode(GameType.SPECTATOR);
         }
+        broadcastLobbyMapImage(server);
     }
 
     // ── 操作 ────────────────────────────────────────────────────────────────
@@ -404,6 +406,7 @@ public final class LobbyManager {
             case SET_MAP -> {
                 if (MapRegistry.get(server).getMap(arg) == null) return false;
                 mapId = arg;
+                broadcastLobbyMapImage(server);
             }
             case SET_PRESET -> {
                 CirclePreset[] all = CirclePreset.values();
@@ -441,6 +444,9 @@ public final class LobbyManager {
                     for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                         TeamManager.get().getTeam(p).ifPresent(t -> { if (t.id == 0 || t.id > 2) TeamManager.get().unassign(p); });
                     }
+                }
+                if (gameMode == GameManager.GameMode.BATTLE_ROYALE) {
+                    broadcastLobbyMapImage(server);
                 }
             }
             case SET_TDM_KILLS -> tdmKills = Math.max(10, Math.min(10_000, arg));
@@ -623,7 +629,34 @@ public final class LobbyManager {
         ProvingGroundsMod.LOGGER.warn(msg);
     }
 
-    // ── 同步封包 ────────────────────────────────────────────────────────────
+    // ── 大廳預覽地圖與同步封包 ──────────────────────────────────────────────
+
+    private int resolveMapId(MinecraftServer server) {
+        int map = mapId;
+        if (MapRegistry.get(server).getMap(map) == null) {
+            Iterator<MapRegistry.BRMap> it = MapRegistry.get(server).all().iterator();
+            map = it.hasNext() ? it.next().id : -1;
+        }
+        return map;
+    }
+
+    /** 大廳目前為大逃殺模式時，將選定地圖的俯視圖送給指定玩家預覽（沒有圖則清空客戶端舊圖）。 */
+    public void sendLobbyMapImage(ServerPlayer p) {
+        if (!GameManager.get().isInLobby() || gameMode != GameManager.GameMode.BATTLE_ROYALE) return;
+        int id = resolveMapId(p.server);
+        if (id < 0) return;
+        com.provinggrounds.data.MapImageStore.MapImage img = com.provinggrounds.data.MapImageStore.get(p.server, id);
+        if (img != null) com.provinggrounds.network.MapImagePacket.sendTo(p, img);
+        else PGNetwork.sendTo(p, new com.provinggrounds.network.MapImagePacket(id, 0, 0, 0, 0, 1, 0, 1, new byte[0]));
+    }
+
+    /** 大廳切換地圖或切回大逃殺模式時，同步推播目前大逃殺俯視圖給全部玩家。 */
+    public void broadcastLobbyMapImage(MinecraftServer server) {
+        if (!GameManager.get().isInLobby() || gameMode != GameManager.GameMode.BATTLE_ROYALE) return;
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            sendLobbyMapImage(p);
+        }
+    }
 
     public LobbyStatePacket buildPacket(MinecraftServer server) {
         List<LobbyStatePacket.Entry> players = new ArrayList<>();
@@ -633,11 +666,7 @@ public final class LobbyManager {
                 t == null ? -1 : t.id, ready.contains(p.getUUID()), isSpectator(p), isJoinPending(p), p.hasPermissions(2),
                 chosenClass(p.getUUID()).ordinal(), draftDone.contains(p.getUUID())));
         }
-        int map = mapId;
-        if (MapRegistry.get(server).getMap(map) == null) {
-            Iterator<MapRegistry.BRMap> it = MapRegistry.get(server).all().iterator();
-            map = it.hasNext() ? it.next().id : -1;
-        }
+        int map = resolveMapId(server);
         return new LobbyStatePacket(GameManager.get().isInLobby(), map, preset.ordinal(), variant.ordinal(),
             teamMode.ordinal(), teamCount, countdownTicks < 0 ? -1 : (countdownTicks + 19) / 20, draftPhase,
             com.provinggrounds.special.SpecialConfig.enabledSafe(), friendlyFire(), com.provinggrounds.core.BlockProtection.explosionMode(), weaponMode.ordinal(),

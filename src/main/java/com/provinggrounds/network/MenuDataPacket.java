@@ -20,7 +20,7 @@ public record MenuDataPacket(
     List<String> venues // 場地選擇（名稱，順序同 VenueManager.visible）
 ) {
 
-    public record MapEntry(int id, String name, int lootPoints) {}
+    public record MapEntry(int id, String name, int lootPoints, double cx, double cz, double radius) {}
 
     public void encode(FriendlyByteBuf buf) {
         buf.writeVarInt(kills);
@@ -38,6 +38,9 @@ public record MenuDataPacket(
             buf.writeVarInt(m.id());
             buf.writeUtf(m.name(), 64);
             buf.writeVarInt(m.lootPoints());
+            buf.writeDouble(m.cx());
+            buf.writeDouble(m.cz());
+            buf.writeDouble(m.radius());
         }
         buf.writeVarInt(venues.size());
         for (String v : venues) buf.writeUtf(v, 64);
@@ -52,7 +55,10 @@ public record MenuDataPacket(
         String status = buf.readUtf(128);
         int n = Math.min(buf.readVarInt(), 256);
         List<MapEntry> maps = new ArrayList<>(n);
-        for (int i = 0; i < n; i++) maps.add(new MapEntry(buf.readVarInt(), buf.readUtf(64), buf.readVarInt()));
+        for (int i = 0; i < n; i++) {
+            maps.add(new MapEntry(buf.readVarInt(), buf.readUtf(64), buf.readVarInt(),
+                buf.readDouble(), buf.readDouble(), buf.readDouble()));
+        }
         int vn = Math.min(buf.readVarInt(), 64);
         List<String> venues = new ArrayList<>(vn);
         for (int i = 0; i < vn; i++) venues.add(buf.readUtf(64));

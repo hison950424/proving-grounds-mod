@@ -268,12 +268,58 @@ public class PGCommand {
                     return 0;
                 }))
                 .then(Commands.argument("id", IntegerArgumentType.integer(1))
-                    .executes(ctx -> mapRender(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id")))));
+                    .executes(ctx -> mapRender(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id")))))
+            // 程序化生成 5 張區域密集主題地圖（300 / 400 / 500 / 600 / 700 格）
+            .then(Commands.literal("generate").requires(OP)
+                .then(Commands.literal("list").executes(ctx -> mapGenerateList(ctx.getSource())))
+                .then(Commands.literal("all").executes(ctx -> mapGenerateAll(ctx.getSource())))
+                .then(Commands.literal("status").executes(ctx -> {
+                    ok(ctx.getSource(), com.provinggrounds.data.BRMapGenerator.statusText(), false);
+                    return 1;
+                }))
+                .then(Commands.literal("cancel").executes(ctx -> {
+                    if (com.provinggrounds.data.BRMapGenerator.cancel(ctx.getSource())) return 1;
+                    fail(ctx.getSource(), "目前沒有地圖在生成。");
+                    return 0;
+                }))
+                .then(Commands.argument("preset", StringArgumentType.word())
+                    .executes(ctx -> mapGenerateOne(ctx.getSource(), StringArgumentType.getString(ctx, "preset")))));
+    }
+
+    private static int mapGenerateList(CommandSourceStack src) {
+        ok(src, "可一鍵生成的大逃殺地圖預設（/pg map generate all 或 /pg map generate <名稱|大小>）：", false);
+        for (var p : com.provinggrounds.data.BRMapPresets.all()) {
+            int bldCount = p.districts().stream().mapToInt(d -> d.buildingIds().size()).sum();
+            ok(src, String.format("  %s (%d 格)「%s」：區數 %d｜建築 %d 棟｜復活祭壇 %d 座",
+                p.key(), p.radius(), p.displayName(), p.districts().size(), bldCount, p.altars().size()), false);
+        }
+        return com.provinggrounds.data.BRMapPresets.all().size();
+    }
+
+    private static int mapGenerateAll(CommandSourceStack src) {
+        String err = com.provinggrounds.data.BRMapGenerator.startAll(src.getServer(), src);
+        if (err != null) { fail(src, err); return 0; }
+        return 1;
+    }
+
+    private static int mapGenerateOne(CommandSourceStack src, String token) {
+        var preset = com.provinggrounds.data.BRMapPresets.byKeyOrSize(token);
+        if (preset == null) {
+            fail(src, "找不到地圖預設「" + token + "」。可用：harbor(300)、desert(400)、arctic(500)、imperial(600)、continent(700)");
+            return 0;
+        }
+        String err = com.provinggrounds.data.BRMapGenerator.startSingle(src.getServer(), preset, src);
+        if (err != null) { fail(src, err); return 0; }
+        return 1;
     }
 
     private static int mapRender(CommandSourceStack src, int mapId) {
         if (!GameManager.get().isInLobby() || BattleRoyaleMode.get().isRunning()) {
             fail(src, "遊戲進行中不能產生地圖，請在大廳時執行。");
+            return 0;
+        }
+        if (com.provinggrounds.data.BRMapGenerator.isRunning()) {
+            fail(src, "地圖生成作業尚未結束，完成後會自動繪製俯視圖。");
             return 0;
         }
         MapRegistry.BRMap m = resolveMap(src, mapId);
