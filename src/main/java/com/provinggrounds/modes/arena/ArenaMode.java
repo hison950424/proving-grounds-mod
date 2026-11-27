@@ -81,8 +81,7 @@ public abstract class ArenaMode {
         public int streak;                  // 連殺數
         // 計畫書 9：九大職業計時與團隊死鬥特殊道具累計
         public int reconSec, supportSec;    // 偵察兵 20 秒掃描、支援兵 30 秒補投擲物
-        public int tdmSpecialKills;         // 團隊死鬥累計擊殺（每 3 殺獲得 1 個特殊道具）
-        public int tdmDryDeaths;            // 團隊死鬥連續死亡未獲特殊道具次數（滿 3 次保底 1 個）
+        public int tdmSpecialHalfCharges;   // 團隊死鬥特殊道具充能（半格為單位：擊殺 +2、助攻 +1，滿 4 = 2 格給予 1 個並歸零）
 
         ArenaPlayer(UUID id, String name) { this.id = id; this.name = name; }
     }
@@ -130,6 +129,8 @@ public abstract class ArenaMode {
     protected abstract void onKill(ServerPlayer killer, ArenaPlayer k, ServerPlayer victim, ArenaPlayer v);
     /** 有人死了（先於 onKill）。 */
     protected void onDeath(ServerPlayer victim, ArenaPlayer v) {}
+    /** 有人擊倒敵人（開啟倒地時，給予擊殺獎金的 25%）。 */
+    protected void onKnock(ServerPlayer attacker, ArenaPlayer ap, String victimName) {}
     /** 重生後（已傳送）：預設發職業消耗品。 */
     protected void onRespawned(ServerPlayer p, ArenaPlayer ap) {}
     /** 重生點。 */
@@ -187,7 +188,8 @@ public abstract class ArenaMode {
         for (ServerPlayer p : participants) {
             ArenaPlayer ap = players.get(p.getUUID());
             prepare(p, ap, true);
-            if (kind() == GameManager.GameMode.TDM) com.provinggrounds.modes.br.BRMovement.apply(p); // 計畫書 10：團隊死鬥套用大逃殺移動規則
+            // 取消團隊模式套用大逃殺移動速度（跳躍規則仍於 BRMovement.onJump 保留）
+            com.provinggrounds.modes.br.BRMovement.remove(p);
             teleport(p, spawnOf(ap));
             giveStartSpecial(p);
         }
@@ -279,11 +281,21 @@ public abstract class ArenaMode {
             if (asst == null || !players.containsKey(aid)) continue;
             PlayerDataManager.get().addAssist(asst);
             com.provinggrounds.core.KillEvents.assist(asst, victimName);
+            ArenaPlayer aap = players.get(aid);
+            if (aap != null) {
+                onAssist(asst, aap, victimName);
+                if (kind() == GameManager.GameMode.TDM && com.provinggrounds.special.SpecialConfig.enabledSafe()) {
+                    addTdmSpecialCharge(asst, aap, 1); // 助攻充能 +0.5 格
+                }
+            }
             if (usesClasses() && asst.isAlive() && !asst.isSpectator()) {
                 refillTeamHeals(asst, false);
             }
         }
     }
+
+    /** 助攻時各模式可覆寫發放減半收入。 */
+    protected void onAssist(ServerPlayer assister, ArenaPlayer ap, String victimName) {}
 
     protected static void applyHealth(ServerPlayer p, double max) {
         AttributeInstance attr = p.getAttribute(Attributes.MAX_HEALTH);
@@ -332,7 +344,6 @@ public abstract class ArenaMode {
                 onRespawned(p, ap);
             }
             if (ticks % 10 == 0 && usesAntiCamp() && cfg.antiCamp.get() && p.gameMode.getGameModeForPlayer() == GameType.ADVENTURE && p.isAlive()) antiCamp(p, ap);
-            if (kind() == GameManager.GameMode.TDM && p.isAlive() && !p.isSpectator()) com.provinggrounds.modes.br.BRMovement.refresh(p);
             if (usesClasses() && p.isAlive() && !p.isSpectator()) refreshClassSpeed(p, ap);
             if (ticks % 20 == 0 && p.isAlive() && !p.isSpectator()) {
                 ensureOne(p, cfg.ammoBox.get());
@@ -444,13 +455,21 @@ public abstract class ArenaMode {
         p.hurt(p.damageSources().magic(), dmg);
     }
 
-    /** 在敵方任一個重生點的防蹲點範圍內（水平距離；高度差 8 格內）。 */
+    /** 在敵方任一個重生點的防蹲點範圍內（依場地設定為圓形或紅藍各自獨立四邊方形；高度差 16 格內以涵蓋二樓／高台）。 */
     public boolean inEnemySpawn(ServerPlayer p, ArenaPlayer ap) {
         if (ap.team != RED && ap.team != BLUE) return false;
+        int enemy = ap.team == RED ? BLUE : RED;
         double r = activeArena.antiCampRadius();
-        for (Vec3 s : teamSpawns(ap.team == RED ? BLUE : RED)) {
+        boolean square = activeArena.antiCampSquare();
+        ArenaMapRegistry.CampBounds bounds = enemy == RED ? activeArena.redCampBounds() : activeArena.blueCampBounds();
+        for (Vec3 s : teamSpawns(enemy)) {
+            if (Math.abs(p.getY() - s.y) > 16) continue;
             double dx = p.getX() - s.x, dz = p.getZ() - s.z;
-            if (dx * dx + dz * dz <= r * r && Math.abs(p.getY() - s.y) <= 8) return true;
+            if (square) {
+                if (bounds.contains(dx, dz)) return true;
+            } else {
+                if (dx * dx + dz * dz <= r * r) return true;
+            }
         }
         return false;
     }
@@ -475,6 +494,28 @@ public abstract class ArenaMode {
     public void endProtection(UUID id) {
         ArenaPlayer ap = players.get(id);
         if (ap != null) ap.protectUntil = 0;
+    }
+
+    // ── 玻璃破壞與復原（團隊死鬥 10 秒復原、佔點每回合復原） ──
+
+    /** 本模式是否允許破壞玻璃。 */
+    public boolean allowsGlassDamage(BlockPos pos) { return false; }
+
+    /** 玻璃被破壞時記錄原方塊狀態以供復原。 */
+    public void onGlassBroken(BlockPos pos, BlockState originalState) {}
+
+    /** 復原單格玻璃並更新鄰近連接（玻璃板／窗格會正確相連）。 */
+    protected void restoreGlassBlock(BlockPos pos, BlockState state) {
+        if (level == null || pos == null || state == null) return;
+        int flags = net.minecraft.world.level.block.Block.UPDATE_CLIENTS
+            | net.minecraft.world.level.block.Block.UPDATE_KNOWN_SHAPE
+            | net.minecraft.world.level.block.Block.UPDATE_SUPPRESS_DROPS;
+        level.setBlock(pos, state, flags);
+        BlockState updated = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(state, level, pos);
+        if (updated != state) {
+            level.setBlock(pos, updated, flags);
+        }
+        updated.updateNeighbourShapes(level, pos, net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
     }
 
     // ── 掉線（計畫書 5 的 C4）：超過 disconnect_timeout 才移出比賽與隊伍，之前都算隊伍人數 ──
@@ -527,13 +568,12 @@ public abstract class ArenaMode {
         onKill(killer, k, null, v);
         onClassKill(killer, k);
         if (com.provinggrounds.special.SpecialConfig.enabledSafe()) {
-            if (kind() == GameManager.GameMode.TDM) grantTdmKillSpecial(killer, k);
+            if (kind() == GameManager.GameMode.TDM) addTdmSpecialCharge(killer, k, 2);
             else if (kind() == GameManager.GameMode.GK) {
                 ItemStack sp = com.provinggrounds.special.SpecialLoot.roll(level);
                 if (!sp.isEmpty()) level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level, s.pos.x, s.pos.y + 0.5, s.pos.z, sp));
             }
         }
-        if (kind() == GameManager.GameMode.TDM) v.tdmDryDeaths++;
     }
 
     private void removeTimedOut() {
@@ -590,10 +630,9 @@ public abstract class ArenaMode {
         awardAssists(victim.getUUID(), v.name, killer);
         onKill(killer, k, victim, v);
         onClassKill(killer, k);
-        if (kind() == GameManager.GameMode.TDM) v.tdmDryDeaths++;
         if (com.provinggrounds.special.SpecialConfig.enabledSafe()) { // 特殊道具模式（大廳開關）
-            // 計畫書 9：團隊死鬥每累計 3 殺獲得 1 個特殊道具（連死 3 次未獲得則於重生保底 1 個）；佔點整場一種；槍王之王照舊掉在地上
-            if (kind() == GameManager.GameMode.TDM) grantTdmKillSpecial(killer, k);
+            // 團隊死鬥：擊殺充能 1 格（+2 半格）、助攻充能 0.5 格（+1 半格），滿 2 格給予 1 個並歸零；重生亦給予 1 個並歸零
+            if (kind() == GameManager.GameMode.TDM) addTdmSpecialCharge(killer, k, 2);
             else if (kind() == GameManager.GameMode.GK) {
                 ItemStack sp = com.provinggrounds.special.SpecialLoot.roll(level);
                 if (!sp.isEmpty()) victim.spawnAtLocation(sp);
@@ -614,13 +653,17 @@ public abstract class ArenaMode {
         }
     }
 
-    /** 團隊死鬥：每累計擊殺 3 人獲得 1 個隨機特殊道具。 */
-    private void grantTdmKillSpecial(ServerPlayer killer, ArenaPlayer k) {
-        k.tdmSpecialKills++;
-        if (k.tdmSpecialKills >= 3) {
-            k.tdmSpecialKills = 0;
-            k.tdmDryDeaths = 0;
-            com.provinggrounds.special.DomGear.giveRandom(killer, "累計擊殺 3 人");
+    /** 團隊死鬥特殊道具充能（半格單位：擊殺 +2 = 1 格、助攻 +1 = 0.5 格；滿 4 半格 = 2 格給予 1 個並從 0 重新計算）。 */
+    private void addTdmSpecialCharge(ServerPlayer p, ArenaPlayer ap, int halfUnits) {
+        if (p == null || ap == null || halfUnits <= 0) return;
+        ap.tdmSpecialHalfCharges += halfUnits;
+        if (ap.tdmSpecialHalfCharges >= 4) {
+            ap.tdmSpecialHalfCharges = 0;
+            com.provinggrounds.special.DomGear.giveRandom(p, "充能滿 2 格");
+        } else {
+            double cur = ap.tdmSpecialHalfCharges * 0.5;
+            String curTxt = (ap.tdmSpecialHalfCharges % 2 == 0) ? String.valueOf((int) cur) : String.format("%.1f", cur);
+            p.displayClientMessage(Component.literal("[特殊道具充能] " + curTxt + " / 2 格").withStyle(ChatFormatting.AQUA), true);
         }
     }
 
@@ -672,12 +715,11 @@ public abstract class ArenaMode {
         p.setGameMode(GameType.ADVENTURE);
         teleport(p, spawnOf(ap));
         prepare(p, ap, false);
-        if (kind() == GameManager.GameMode.TDM) com.provinggrounds.modes.br.BRMovement.apply(p);
         ap.respawnKitTicks = 10;
-        // 團隊死鬥保底：連續死亡 3 次都沒有拿到特殊道具 → 獲得 1 個
-        if (kind() == GameManager.GameMode.TDM && com.provinggrounds.special.SpecialConfig.enabledSafe() && ap.tdmDryDeaths >= 3) {
-            ap.tdmDryDeaths = 0;
-            com.provinggrounds.special.DomGear.giveRandom(p, "連死 3 次保底");
+        // 團隊死鬥：死亡後重生固定給予 1 個特殊道具，給予後充能一律從 0 開始計算
+        if (kind() == GameManager.GameMode.TDM && com.provinggrounds.special.SpecialConfig.enabledSafe()) {
+            ap.tdmSpecialHalfCharges = 0;
+            com.provinggrounds.special.DomGear.giveRandom(p, "死亡重生補給");
         }
         int protect = cfg.spawnProtect.get();
         if (protect > 0) ap.protectUntil = ticks + protect * 20;
@@ -1034,8 +1076,11 @@ public abstract class ArenaMode {
         List<ArenaStatePacket.Marker> out = new ArrayList<>();
         if (!usesAntiCamp() || !cfg.antiCamp.get() || (viewer.team != RED && viewer.team != BLUE)) return out;
         int enemy = viewer.team == RED ? BLUE : RED;
+        byte kind = activeArena.antiCampSquare() ? (byte) 2 : (byte) 1;
+        ArenaMapRegistry.CampBounds bounds = enemy == RED ? activeArena.redCampBounds() : activeArena.blueCampBounds();
+        String label = activeArena.antiCampSquare() ? bounds.encodeCsv() : "";
         for (Vec3 s : teamSpawns(enemy)) {
-            out.add(new ArenaStatePacket.Marker((byte) 1, "", s.x, s.y, s.z, activeArena.antiCampRadius(), 0xFF3030, false));
+            out.add(new ArenaStatePacket.Marker(kind, label, s.x, s.y, s.z, activeArena.antiCampRadius(), 0xFF3030, false));
         }
         return out;
     }

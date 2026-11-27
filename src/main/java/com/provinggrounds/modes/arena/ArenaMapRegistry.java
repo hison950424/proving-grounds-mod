@@ -27,6 +27,49 @@ public class ArenaMapRegistry extends SavedData {
     /** 佔點據點定義。floor 可為 null（代表不自動換鐵磚／金磚）。 */
     public record DomPointDef(String name, Vec3 center, int radius, @Nullable BlockPos[] floor) {}
 
+    /** 方形重生保護區的四邊距離（相對重生點中心的 北 -Z、南 +Z、西 -X、東 +X 格數）。 */
+    public record CampBounds(int north, int south, int west, int east) {
+        public static int clamp(int v) { return Math.max(1, Math.min(128, v)); }
+
+        public static CampBounds uniform(int r) {
+            int c = clamp(r);
+            return new CampBounds(c, c, c, c);
+        }
+
+        public CampBounds clamped() {
+            return new CampBounds(clamp(north), clamp(south), clamp(west), clamp(east));
+        }
+
+        public String encodeCsv() {
+            return north + "," + south + "," + west + "," + east;
+        }
+
+        public static CampBounds parseCsv(@Nullable String s, int fallback) {
+            if (s == null || s.isBlank()) return uniform(fallback);
+            String[] p = s.split(",");
+            if (p.length < 4) return uniform(fallback);
+            try {
+                return new CampBounds(
+                    clamp(Integer.parseInt(p[0].trim())),
+                    clamp(Integer.parseInt(p[1].trim())),
+                    clamp(Integer.parseInt(p[2].trim())),
+                    clamp(Integer.parseInt(p[3].trim()))
+                );
+            } catch (NumberFormatException e) {
+                return uniform(fallback);
+            }
+        }
+
+        public boolean contains(double dx, double dz) {
+            return dx >= -west && dx <= east && dz >= -north && dz <= south;
+        }
+
+        /** 帶正負號距離（< 0 在範圍內；>= 0 為距離最近邊界的格數）。 */
+        public double signedDistance(double dx, double dz) {
+            return Math.max(Math.max(-west - dx, dx - east), Math.max(-north - dz, dz - south));
+        }
+    }
+
     /** 自訂生成的一張團隊場地完整資料（所有座標為世界座標）。 */
     public record ArenaMapDef(
         String id,
@@ -37,6 +80,9 @@ public class ArenaMapRegistry extends SavedData {
         int sizeZ,
         int baseRadius,
         int antiCampRadius,
+        boolean antiCampSquare,
+        CampBounds redCampBounds,
+        CampBounds blueCampBounds,
         List<Vec3> redSpawns,
         List<Vec3> blueSpawns,
         List<BlockPos[]> barriers,
@@ -44,6 +90,17 @@ public class ArenaMapRegistry extends SavedData {
         List<DomPointDef> domPoints,
         List<Vec3> gkSpawns
     ) {
+        public ArenaMapDef(
+            String id, String name, BlockPos origin, int sizeX, int sizeY, int sizeZ,
+            int baseRadius, int antiCampRadius, boolean antiCampSquare,
+            List<Vec3> redSpawns, List<Vec3> blueSpawns, List<BlockPos[]> barriers,
+            List<Vec3> supplyChests, List<DomPointDef> domPoints, List<Vec3> gkSpawns
+        ) {
+            this(id, name, origin, sizeX, sizeY, sizeZ, baseRadius, antiCampRadius, antiCampSquare,
+                CampBounds.uniform(antiCampRadius), CampBounds.uniform(antiCampRadius),
+                redSpawns, blueSpawns, barriers, supplyChests, domPoints, gkSpawns);
+        }
+
         public Vec3 redSpawn() {
             return redSpawns.isEmpty() ? Vec3.atBottomCenterOf(origin) : redSpawns.get(0);
         }
@@ -53,7 +110,8 @@ public class ArenaMapRegistry extends SavedData {
         }
 
         public ActiveArena toActive() {
-            return new ActiveArena(id, name, baseRadius, antiCampRadius, redSpawns, blueSpawns,
+            return new ActiveArena(id, name, baseRadius, antiCampRadius, antiCampSquare,
+                redCampBounds, blueCampBounds, redSpawns, blueSpawns,
                 barriers, supplyChests, domPoints, gkSpawns);
         }
     }
@@ -64,6 +122,9 @@ public class ArenaMapRegistry extends SavedData {
         String name,
         int baseRadius,
         int antiCampRadius,
+        boolean antiCampSquare,
+        CampBounds redCampBounds,
+        CampBounds blueCampBounds,
         List<Vec3> redSpawns,
         List<Vec3> blueSpawns,
         List<BlockPos[]> barriers,
@@ -118,11 +179,15 @@ public class ArenaMapRegistry extends SavedData {
                 points.add(new DomPointDef(parts[0].trim(), c, r, floor));
             }
 
+            int campR = cfg.antiCampRadius.get();
             return new ActiveArena(
                 DEFAULT_ID,
                 "經典場地（設定檔）",
                 cfg.baseRadius.get(),
-                cfg.antiCampRadius.get(),
+                campR,
+                "square".equalsIgnoreCase(cfg.antiCampShape.get()),
+                CampBounds.parseCsv(cfg.antiCampRedBounds.get(), campR),
+                CampBounds.parseCsv(cfg.antiCampBlueBounds.get(), campR),
                 List.copyOf(red),
                 List.copyOf(blue),
                 ArenaConfig.boxes(cfg.barriers.get()),
@@ -164,6 +229,21 @@ public class ArenaMapRegistry extends SavedData {
     public void put(ArenaMapDef def) {
         maps.put(def.id().toLowerCase(Locale.ROOT), def);
         setDirty();
+    }
+
+    /** 管理員自訂指定團隊地圖的重生點保護形狀（圓形／方形）、半徑與紅藍四邊獨立長度。 */
+    public boolean updateAntiCamp(String id, boolean square, int radius, CampBounds redBounds, CampBounds blueBounds) {
+        String key = id.trim().toLowerCase(Locale.ROOT);
+        ArenaMapDef old = maps.get(key);
+        if (old == null) return false;
+        int r = Math.max(2, Math.min(128, radius));
+        CampBounds rb = redBounds != null ? redBounds.clamped() : CampBounds.uniform(r);
+        CampBounds bb = blueBounds != null ? blueBounds.clamped() : CampBounds.uniform(r);
+        maps.put(key, new ArenaMapDef(old.id(), old.name(), old.origin(), old.sizeX(), old.sizeY(), old.sizeZ(),
+            old.baseRadius(), r, square, rb, bb, old.redSpawns(), old.blueSpawns(), old.barriers(),
+            old.supplyChests(), old.domPoints(), old.gkSpawns()));
+        setDirty();
+        return true;
     }
 
     @Nullable
@@ -220,6 +300,9 @@ public class ArenaMapRegistry extends SavedData {
         t.putInt("sz", m.sizeZ());
         t.putInt("baseR", m.baseRadius());
         t.putInt("campR", m.antiCampRadius());
+        t.putBoolean("campSq", m.antiCampSquare());
+        t.putString("campRed", m.redCampBounds().encodeCsv());
+        t.putString("campBlue", m.blueCampBounds().encodeCsv());
         t.put("red", writeVecList(m.redSpawns()));
         t.put("blue", writeVecList(m.blueSpawns()));
         t.put("chests", writeVecList(m.supplyChests()));
@@ -248,6 +331,9 @@ public class ArenaMapRegistry extends SavedData {
         int sx = t.getInt("sx"), sy = t.getInt("sy"), sz = t.getInt("sz");
         int baseR = Math.max(2, t.getInt("baseR"));
         int campR = Math.max(4, t.getInt("campR"));
+        boolean campSq = t.contains("campSq") ? t.getBoolean("campSq") : ObsidianBunkerBlueprint.MAP_ID.equalsIgnoreCase(id);
+        CampBounds redCamp = CampBounds.parseCsv(t.getString("campRed"), campR);
+        CampBounds blueCamp = CampBounds.parseCsv(t.getString("campBlue"), campR);
         List<Vec3> red = readVecList(t.getList("red", Tag.TAG_COMPOUND));
         List<Vec3> blue = readVecList(t.getList("blue", Tag.TAG_COMPOUND));
         List<Vec3> chests = readVecList(t.getList("chests", Tag.TAG_COMPOUND));
@@ -262,7 +348,8 @@ public class ArenaMapRegistry extends SavedData {
             BlockPos[] floor = pt.contains("floor", Tag.TAG_COMPOUND) ? readBox(pt.getCompound("floor")) : null;
             pts.add(new DomPointDef(pt.getString("name"), c, pt.getInt("r"), floor));
         }
-        return new ArenaMapDef(id, name.isBlank() ? id : name, origin, sx, sy, sz, baseR, campR,
+        return new ArenaMapDef(id, name.isBlank() ? id : name, origin, sx, sy, sz, baseR, campR, campSq,
+            redCamp, blueCamp,
             List.copyOf(red), List.copyOf(blue), List.copyOf(barriers), List.copyOf(chests),
             List.copyOf(pts), List.copyOf(gk));
     }

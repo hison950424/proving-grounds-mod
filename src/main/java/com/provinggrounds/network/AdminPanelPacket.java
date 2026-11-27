@@ -54,7 +54,11 @@ public record AdminPanelPacket(
             : MarkerScanJob.isRunning() ? "正在掃描轉換舊箱子標記…"
             : ArenaMapGenerator.isRunning() ? ArenaMapGenerator.statusText()
             : "無背景作業（閒置）";
-        return new AdminPanelPacket(true, areg.activeId(), status, List.copyOf(br), List.copyOf(arenas), "", "");
+        var activeArena = areg.active(com.provinggrounds.config.PGConfig.SERVER.arena);
+        String campInfo = (activeArena.antiCampSquare() ? "s:" : "c:") + activeArena.antiCampRadius()
+            + ":" + activeArena.redCampBounds().encodeCsv()
+            + ":" + activeArena.blueCampBounds().encodeCsv();
+        return new AdminPanelPacket(true, areg.activeId(), status, List.copyOf(br), List.copyOf(arenas), "", campInfo);
     }
 
     public static AdminPanelPacket run(String action, String arg) {
@@ -125,6 +129,10 @@ public record AdminPanelPacket(
                 handleSyncChunks(p, arg);
                 return;
             }
+            if ("arena_camp".equals(action)) {
+                handleArenaCamp(p, arg);
+                return;
+            }
             if (handleToolAction(p, action, arg)) {
                 return;
             }
@@ -136,6 +144,53 @@ public record AdminPanelPacket(
             p.server.getCommands().performPrefixedCommand(src, cmd);
         });
         c.setPacketHandled(true);
+    }
+
+    /** 管理員自訂目前團隊地圖的重生點保護形態（circle/square）、圓半徑與紅藍四邊獨立長度。
+     *  格式：<mapId>:<c|s|circle|square>:<radius>[:<rN,rS,rW,rE>:<bN,bS,bW,bE>] */
+    private static void handleArenaCamp(ServerPlayer p, String arg) {
+        String[] parts = arg.split(":");
+        if (parts.length < 3) return;
+        String mapId = parts[0].trim();
+        String sh = parts[1].trim();
+        boolean square = "s".equalsIgnoreCase(sh) || "square".equalsIgnoreCase(sh);
+        int radius;
+        try {
+            radius = Math.max(2, Math.min(128, Integer.parseInt(parts[2].trim())));
+        } catch (NumberFormatException e) {
+            return;
+        }
+        var redBounds = parts.length >= 4
+            ? ArenaMapRegistry.CampBounds.parseCsv(parts[3], radius)
+            : ArenaMapRegistry.CampBounds.uniform(radius);
+        var blueBounds = parts.length >= 5
+            ? ArenaMapRegistry.CampBounds.parseCsv(parts[4], radius)
+            : ArenaMapRegistry.CampBounds.uniform(radius);
+
+        String desc = square
+            ? String.format("方形（紅 北%d/南%d/西%d/東%d，藍 北%d/南%d/西%d/東%d）",
+                redBounds.north(), redBounds.south(), redBounds.west(), redBounds.east(),
+                blueBounds.north(), blueBounds.south(), blueBounds.west(), blueBounds.east())
+            : "圓形、半徑 " + radius + " 格";
+
+        if (ArenaMapRegistry.DEFAULT_ID.equalsIgnoreCase(mapId)) {
+            var ac = com.provinggrounds.config.PGConfig.SERVER.arena;
+            ac.antiCampShape.set(square ? "square" : "circle");
+            ac.antiCampShape.save();
+            ac.antiCampRadius.set(radius);
+            ac.antiCampRadius.save();
+            ac.antiCampRedBounds.set(redBounds.encodeCsv());
+            ac.antiCampRedBounds.save();
+            ac.antiCampBlueBounds.set(blueBounds.encodeCsv());
+            ac.antiCampBlueBounds.save();
+            p.sendSystemMessage(AdminTools.ok("已更新「經典場地」重生點保護：" + desc));
+        } else if (ArenaMapRegistry.get(p.server).updateAntiCamp(mapId, square, radius, redBounds, blueBounds)) {
+            var def = ArenaMapRegistry.get(p.server).getMap(mapId);
+            String name = def != null ? def.name() : mapId;
+            p.sendSystemMessage(AdminTools.ok("已更新「" + name + "」重生點保護：" + desc));
+        } else {
+            p.sendSystemMessage(AdminTools.err("找不到團隊場地：" + mapId));
+        }
     }
 
     /**

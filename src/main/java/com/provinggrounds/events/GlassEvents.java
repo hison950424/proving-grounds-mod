@@ -19,7 +19,10 @@ public class GlassEvents {
 
     /** 子彈打到方塊（伺服器端，在 TACZ 打破玻璃之前）。 */
     public static void onBulletHit(Level level, BlockPos pos, BlockState state) {
-        if (level instanceof ServerLevel sl) BlockLedger.get(sl.getServer()).recordGlass(sl, pos, state);
+        if (level instanceof ServerLevel sl) {
+            BlockLedger.get(sl.getServer()).recordGlass(sl, pos, state);
+            if (BlockLedger.isGlass(state)) com.provinggrounds.modes.arena.ArenaManager.onGlassBroken(sl, pos, state);
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -28,7 +31,10 @@ public class GlassEvents {
         BlockLedger ledger = BlockLedger.get(level.getServer());
         for (BlockPos pos : event.getAffectedBlocks()) {
             BlockState state = level.getBlockState(pos);
-            if (BlockLedger.isGlass(state)) ledger.recordGlass(level, pos, state);
+            if (BlockLedger.isGlass(state)) {
+                ledger.recordGlass(level, pos, state);
+                com.provinggrounds.modes.arena.ArenaManager.onGlassBroken(level, pos, state);
+            }
         }
     }
 }

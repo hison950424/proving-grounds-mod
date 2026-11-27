@@ -64,6 +64,12 @@ public final class ArenaManager {
         return m != null && m.downedEnabled && !m.isEnding() && m.downed.startReviveByKey(helper, looked);
     }
 
+    /** 團隊模式倒地長按 F 3 秒放棄並直接死亡。 */
+    public static boolean giveUpDowned(ServerPlayer p) {
+        ArenaMode m = current;
+        return m != null && m.downedEnabled && !m.isEnding() && m.downed.giveUp(p);
+    }
+
     /** 致命傷：倒地開關開著、有站著的隊友 → 改成倒地（取消這次死亡）。比一般死亡處理先跑。 */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onLethal(LivingDeathEvent event) {
@@ -112,6 +118,21 @@ public final class ArenaManager {
     public static void tick() {
         for (int i = 0; i < speed && current != null; i++) current.tick();
         if (current == null) speed = 1; // 測試加速只在這一場有效
+    }
+
+    /** 團隊死鬥／佔點允許破壞玻璃類方塊（TDM 10 秒自動復原、DOM 每回合復原）。 */
+    public static boolean allowsGlassDamage(net.minecraft.core.BlockPos pos) {
+        ArenaMode m = current;
+        return m != null && !m.isEnding() && m.allowsGlassDamage(pos);
+    }
+
+    /** 通知目前進行中的團隊模式有一塊玻璃被打破，排程自動復原。 */
+    public static void onGlassBroken(net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos pos,
+                                     net.minecraft.world.level.block.state.BlockState state) {
+        ArenaMode m = current;
+        if (m != null && !m.isEnding() && level == m.level) {
+            m.onGlassBroken(pos, state);
+        }
     }
 
     /** 敵方重生區內不能開槍（anti_camp_no_fire）。給 GunCompat 的開槍攔截用。 */
@@ -165,7 +186,14 @@ public final class ArenaManager {
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onDeath(LivingDeathEvent event) {
         if (current == null || event.isCanceled() || !(event.getEntity() instanceof ServerPlayer victim)) return;
-        ServerPlayer killer = event.getSource().getEntity() instanceof ServerPlayer k ? k : null;
+        ServerPlayer killer = event.getSource().getEntity() instanceof ServerPlayer k && k != victim ? k : null;
+        if (killer == null) {
+            // 倒地後流血自然死亡、長按 F 放棄或環境致死：仍把擊殺歸屬給當初擊倒他的敵人
+            ServerPlayer downedBy = current.downed.consumeDownedBy(victim.getUUID());
+            if (downedBy != null && downedBy != victim) killer = downedBy;
+        } else {
+            current.downed.consumeDownedBy(victim.getUUID());
+        }
         com.provinggrounds.core.KillEvents.setSource(event.getSource());
         current.handleDeath(victim, killer);
         pinRespawnInArena(victim);

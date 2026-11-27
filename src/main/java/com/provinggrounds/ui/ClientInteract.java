@@ -57,6 +57,9 @@ public final class ClientInteract {
 
     public static final IGuiOverlay HINT_OVERLAY = (gui, g, partialTick, w, h) -> renderHint(g, w, h);
 
+    private static final int GIVE_UP_TICKS = 60; // 團隊模式倒地長按 F 3 秒放棄
+    private static int giveUpTicks;
+
     private ClientInteract() {}
 
     // ── 互動鍵 ──────────────────────────────────────────────────────────────
@@ -65,9 +68,32 @@ public final class ClientInteract {
     public static void onTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
+        LocalPlayer p = mc.player;
+        if (p != null && mc.screen == null && !p.isSpectator()
+                && com.provinggrounds.client.ClientArenaState.active()
+                && p.hasEffect(com.provinggrounds.special.SpecialRegistry.DOWNED_MARK.get())) {
+            while (INTERACT.consumeClick()) {} // 倒地中不觸發開箱／扶人
+            if (INTERACT.isDown()) {
+                giveUpTicks++;
+                if (giveUpTicks >= GIVE_UP_TICKS) {
+                    giveUpTicks = 0;
+                    PGNetwork.sendToServer(new InteractKeyPacket(true, false, -999));
+                } else if (giveUpTicks % 2 == 0) {
+                    int bars = giveUpTicks * 10 / GIVE_UP_TICKS;
+                    double secLeft = Math.max(0.1, (GIVE_UP_TICKS - giveUpTicks) / 20.0);
+                    String bar = "█".repeat(bars) + "░".repeat(10 - bars);
+                    p.displayClientMessage(net.minecraft.network.chat.Component.literal(String.format("長按 F 放棄中（%.1f 秒）%s", secLeft, bar))
+                        .withStyle(net.minecraft.ChatFormatting.GOLD), true);
+                }
+            } else {
+                giveUpTicks = 0;
+            }
+            return;
+        }
+        giveUpTicks = 0;
         while (INTERACT.consumeClick()) {
-            if (mc.player != null && mc.screen == null && mc.gameMode != null
-                && !com.provinggrounds.special.ActionLock.brainwashed(mc.player)) interact(mc, mc.player); // 洗腦中不能互動（計畫書 6 E1）
+            if (p != null && mc.screen == null && mc.gameMode != null
+                && !com.provinggrounds.special.ActionLock.brainwashed(p)) interact(mc, p); // 洗腦中不能互動（計畫書 6 E1）
         }
     }
 

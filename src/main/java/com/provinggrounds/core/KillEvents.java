@@ -84,6 +84,14 @@ public final class KillEvents {
         if (lostStreak >= STREAK_ANNOUNCE) announceEnded(server, v.name, lostStreak, kName);
     }
 
+    /** 大逃殺擊倒：給擊倒者「擊倒」旗幟與專屬破甲擊倒音效。 */
+    public static void brKnock(@Nullable ServerPlayer attacker, ServerPlayer victim, @Nullable DamageSource source) {
+        if (attacker == null || attacker == victim) return;
+        int flags = KillNoticePacket.KNOCK | KillNoticePacket.flags(headshot(victim, source));
+        PGNetwork.sendTo(attacker, new KillNoticePacket(false, true, attacker.getGameProfile().getName(), 0xFFFFFF,
+            victim.getGameProfile().getName(), 0xFFFFFF, attacker.getMainHandItem().copyWithCount(1), flags, 0));
+    }
+
     /** 大逃殺淘汰：只給擊殺者圖示與音效。 */
     public static void brKill(@Nullable ServerPlayer killer, ServerPlayer victim, @Nullable DamageSource source, int streak) {
         if (killer == null) return;

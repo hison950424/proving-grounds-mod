@@ -17,7 +17,7 @@ import java.util.UUID;
 /**
  * 檔案: TdmMode.java
  * 目的: 團隊死鬥（照舊版 gamemode/tdm）。紅藍兩隊，擊殺 +1 隊伍分數，先到目標或時間到分數高的贏。
- *   時間的 1/3、2/3 換階段（早→中→後），金錢倍率 ×1／×3／×9；落後隊伍有額外補貼。
+ *   時間的 20%／50% 換階段（前期 20% → 中期 30% → 後期 50%），預設金錢倍率 ×1／×2／×4；落後隊伍有額外補貼。
  */
 public final class TdmMode extends ArenaMode {
 
@@ -27,6 +27,9 @@ public final class TdmMode extends ArenaMode {
     /** 計畫書 9：開局 10 秒準備期間（封住基地出口、自動跳出選角介面）。 */
     private int prepSeconds;
     private int fightTicks;
+    /** 團隊死鬥被破壞的玻璃：每塊獨立於 10 秒（200 tick）後自動復原。 */
+    private record BrokenGlass(net.minecraft.world.level.block.state.BlockState state, int restoreAtTick) {}
+    private final java.util.Map<net.minecraft.core.BlockPos, BrokenGlass> brokenGlass = new java.util.LinkedHashMap<>();
 
     public TdmMode(MinecraftServer server, int targetKills, int minutes) {
         super(server);
@@ -37,6 +40,13 @@ public final class TdmMode extends ArenaMode {
     @Override public GameManager.GameMode kind() { return GameManager.GameMode.TDM; }
     @Override public String title() { return "團隊死鬥・" + stageName(); }
     @Override public boolean loadoutOpen() { return false; }
+    @Override public boolean allowsGlassDamage(net.minecraft.core.BlockPos pos) { return true; }
+
+    @Override
+    public void onGlassBroken(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState originalState) {
+        net.minecraft.core.BlockPos imm = pos.immutable();
+        brokenGlass.putIfAbsent(imm, new BrokenGlass(originalState, ticks + 200));
+    }
 
     private String stageName() { return stage == 0 ? "早期" : stage == 1 ? "中期" : "後期"; }
 
@@ -58,7 +68,7 @@ public final class TdmMode extends ArenaMode {
             }
             case "skipstage" -> {
                 int e = elapsed();
-                int next = stage == 0 ? totalSeconds / 3 : stage == 1 ? totalSeconds * 2 / 3 : totalSeconds;
+                int next = stage == 0 ? totalSeconds / 5 : stage == 1 ? totalSeconds / 2 : totalSeconds;
                 timeOffset += Math.max(0, next - e);
                 return "跳到下一階段";
             }
@@ -77,6 +87,12 @@ public final class TdmMode extends ArenaMode {
 
     @Override
     protected void onFinish() {
+        if (!brokenGlass.isEmpty()) {
+            for (var e : brokenGlass.entrySet()) {
+                restoreGlassBlock(e.getKey(), e.getValue().state());
+            }
+            brokenGlass.clear();
+        }
         fill(arenaBarriers(), Blocks.AIR.defaultBlockState(), true);
     }
 
@@ -93,9 +109,19 @@ public final class TdmMode extends ArenaMode {
             return;
         }
         fightTicks++;
+        if (!brokenGlass.isEmpty()) {
+            java.util.Iterator<java.util.Map.Entry<net.minecraft.core.BlockPos, BrokenGlass>> it = brokenGlass.entrySet().iterator();
+            while (it.hasNext()) {
+                var e = it.next();
+                if (ticks >= e.getValue().restoreAtTick()) {
+                    restoreGlassBlock(e.getKey(), e.getValue().state());
+                    it.remove();
+                }
+            }
+        }
         if (ticks % 20 != 0) return;
         int e = elapsed();
-        int newStage = e >= totalSeconds * 2 / 3 ? 2 : e >= totalSeconds / 3 ? 1 : 0;
+        int newStage = e >= totalSeconds / 2 ? 2 : e >= totalSeconds / 5 ? 1 : 0;
         if (newStage != stage) {
             stage = newStage;
             int loser = losingTeam();
@@ -135,6 +161,24 @@ public final class TdmMode extends ArenaMode {
         refillConsumables(killer, k, false); // 擊殺補投擲物
         if (redKills >= targetKills) win(RED, "達到目標擊殺數！");
         else if (blueKills >= targetKills) win(BLUE, "達到目標擊殺數！");
+    }
+
+    @Override
+    protected void onAssist(ServerPlayer assister, ArenaPlayer ap, String victimName) {
+        int m = mult();
+        boolean losing = losingTeam() == ap.team;
+        int killPay = cfg.tdmKillMoney.get() * m + (losing ? cfg.tdmLoserBonus.get() * m : 0);
+        int assistPay = Math.max(1, killPay / 2);
+        addMoney(assister, ap, assistPay, "助攻 " + victimName);
+    }
+
+    @Override
+    protected void onKnock(ServerPlayer attacker, ArenaPlayer ap, String victimName) {
+        int m = mult();
+        boolean losing = losingTeam() == ap.team;
+        int killPay = cfg.tdmKillMoney.get() * m + (losing ? cfg.tdmLoserBonus.get() * m : 0);
+        int knockPay = Math.max(1, killPay / 4);
+        addMoney(attacker, ap, knockPay, "擊倒 " + victimName);
     }
 
     private void win(int team, String why) {

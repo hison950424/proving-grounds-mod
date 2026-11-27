@@ -141,7 +141,7 @@ public final class ObsidianBunkerBlueprint {
             }
             return new ArenaMapRegistry.ArenaMapDef(
                 MAP_ID, MAP_NAME, origin, WIDTH, HEIGHT, DEPTH,
-                BASE_RADIUS, ANTI_CAMP_RADIUS,
+                BASE_RADIUS, ANTI_CAMP_RADIUS, true, // 黑曜地堡為矩形室內出生室，採用方形重生保護區
                 List.copyOf(red), List.copyOf(blue), List.copyOf(bar),
                 List.of(), List.copyOf(pts), List.copyOf(gk)
             );

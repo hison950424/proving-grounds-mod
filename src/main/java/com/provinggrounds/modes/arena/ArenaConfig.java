@@ -23,6 +23,7 @@ public final class ArenaConfig {
     public final ForgeConfigSpec.IntValue baseRadius, startMoney, transferCooldown, endSeconds;
     public final ForgeConfigSpec.ConfigValue<String> ammoBox;
     public final ForgeConfigSpec.BooleanValue antiCamp, antiCampNoFire;
+    public final ForgeConfigSpec.ConfigValue<String> antiCampShape, antiCampRedBounds, antiCampBlueBounds;
     // 計畫書 5
     public final ForgeConfigSpec.IntValue respawnDelay, disconnectTimeout, spawnProtect, antiCampRadius, antiCampWarn,
         antiCampStart, antiCampStep, antiCampMax;
@@ -65,7 +66,10 @@ public final class ArenaConfig {
         endSeconds = b.comment("比賽結束後幾秒回大廳").defineInRange("end_seconds", 10, 1, 120);
         ammoBox = b.comment("無限彈藥箱（格式同 /give）").define("ammo_box", "tacz:ammo_box{AllTypeCreative:1b}");
         antiCamp = b.comment("防蹲點：進入敵方重生點附近（水平距離 anti_camp_radius 格內）先警告，之後每秒受傷、緩速、發光").define("anti_camp", true);
-        antiCampRadius = b.comment("防蹲點範圍（格，水平距離）。只在團隊死鬥有效。原本的鍵 anti_camp_radius（18）已停用，改名後預設 25（計畫書 6 A13）").defineInRange("anti_camp_radius_v2", 25, 2, 128);
+        antiCampRadius = b.comment("防蹲點範圍（格，水平距離；圓形為半徑、方形為半邊長）。只在團隊死鬥有效。原本的鍵 anti_camp_radius（18）已停用，改名後預設 25（計畫書 6 A13）").defineInRange("anti_camp_radius_v2", 25, 2, 128);
+        antiCampShape = b.comment("經典場地（default）的重生點保護區形狀：circle（圓形）或 square（方形）；自訂場地如黑曜地堡有各自專屬形狀與大小").define("anti_camp_shape", "circle");
+        antiCampRedBounds = b.comment("經典場地紅隊方形保護區四邊距離（北,南,西,東；留空則套用 anti_camp_radius_v2）").define("anti_camp_red_bounds", "");
+        antiCampBlueBounds = b.comment("經典場地藍隊方形保護區四邊距離（北,南,西,東；留空則套用 anti_camp_radius_v2）").define("anti_camp_blue_bounds", "");
         antiCampWarn = b.comment("進入後先警告幾秒才開始受傷").defineInRange("anti_camp_warn", 2, 0, 60);
         antiCampStart = b.comment("第一秒的傷害").defineInRange("anti_camp_start", 2, 0, 1000);
         antiCampStep = b.comment("之後每秒多扣多少（線性遞增）").defineInRange("anti_camp_step", 5, 0, 1000);
@@ -81,13 +85,13 @@ public final class ArenaConfig {
         b.comment("團隊死鬥").push("tdm");
         tdmKills = b.comment("預設目標擊殺數（大廳可以調）").defineInRange("target_kills", 100, 1, 100_000);
         tdmMinutes = b.comment("預設時間上限（分鐘，大廳可以調）").defineInRange("minutes", 10, 1, 600);
-        tdmKillMoney = b.comment("擊殺獎金（早期，之後乘上階段倍率）").defineInRange("kill_money", 20, 0, 100_000);
-        tdmDeathMoney = b.comment("陣亡補貼（早期）").defineInRange("death_money", 15, 0, 100_000);
-        tdmLoserBonus = b.comment("落後隊伍的額外補貼（陣亡、擊殺各加一次；早期）").defineInRange("loser_bonus", 5, 0, 100_000);
-        tdmStageMultiplier = b.comment("早／中／後期的金錢倍率（時間的 1/3、2/3 換階段）")
-            .defineList("stage_multiplier", List.of(1, 3, 9), ArenaConfig::isInt);
-        tdmStageBonus = b.comment("進入中期、後期時落後隊伍每人的獎金")
-            .defineList("stage_bonus", List.of(750, 1500), ArenaConfig::isInt);
+        tdmKillMoney = b.comment("擊殺獎金（前期，之後乘上階段倍率）").defineInRange("kill_money_v3", 35, 0, 100_000);
+        tdmDeathMoney = b.comment("陣亡補貼（前期）").defineInRange("death_money_v3", 25, 0, 100_000);
+        tdmLoserBonus = b.comment("落後隊伍的額外補貼（陣亡、擊殺各加一次；前期）").defineInRange("loser_bonus_v3", 10, 0, 100_000);
+        tdmStageMultiplier = b.comment("前／中／後期的金錢倍率（20% 前期、30% 中期、50% 後期；倍率 ×1 / ×2 / ×4 對應擊殺 35 / 70 / 140）")
+            .defineList("stage_multiplier_v3", List.of(1, 2, 4), ArenaConfig::isInt);
+        tdmStageBonus = b.comment("進入中期（20%）、後期（50%）時落後隊伍每人的獎金")
+            .defineList("stage_bonus_v2", List.of(600, 1200), ArenaConfig::isInt);
         b.pop();
 
         b.comment("佔點").push("dom");
@@ -102,9 +106,9 @@ public final class ArenaConfig {
         domFirstPrepSeconds = b.comment("第一回合準備幾秒").defineInRange("first_prep_seconds", 10, 1, 600);
         domPrepSeconds = b.comment("之後每回合準備幾秒（可以買東西）").defineInRange("prep_seconds", 25, 1, 600);
         domMoneyCap = b.comment("金錢上限").defineInRange("money_cap", 2500, 0, 10_000_000);
-        domKillMoney = b.comment("擊殺獎金").defineInRange("kill_money", 12, 0, 100_000);
-        domFirstBloodMoney = b.comment("每回合首殺獎金").defineInRange("first_blood_money", 160, 0, 100_000);
-        domPointIncome = b.comment("站在開放據點上每秒得到的錢").defineInRange("point_income", 2, 0, 100_000);
+        domKillMoney = b.comment("擊殺獎金（助攻 50% = 30、擊倒 25% = 15）").defineInRange("kill_money_v2", 60, 0, 100_000);
+        domFirstBloodMoney = b.comment("每回合首殺額外獎金（搭配擊殺合計 180）").defineInRange("first_blood_money_v2", 120, 0, 100_000);
+        domPointIncome = b.comment("站在開放據點上每秒得到的錢（站滿 13 秒約 65）").defineInRange("point_income_v2", 5, 0, 100_000);
         domWinMoney = b.comment("回合勝利獎金（依連勝次數，最後一個之後都一樣）")
             .defineList("win_money", List.of(560, 480, 400, 320, 240), ArenaConfig::isInt);
         domLossMoney = b.comment("回合失敗獎金（依連敗次數）")

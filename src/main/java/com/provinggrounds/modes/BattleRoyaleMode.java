@@ -871,10 +871,11 @@ public class BattleRoyaleMode {
         // 倒地時身上的隊友復活牌掉回地上
         dropHeldCards(victim, part, safePos(victim, part));
 
-        // 擊倒訊息只顯示在右上角擊殺資訊，不發到聊天室
+        // 擊倒訊息只顯示在右上角擊殺資訊，並給擊倒者專屬「擊倒」旗幟與音效
         PGNetwork.sendToAll(new KillFeedPacket(
             attacker != null ? attacker.getGameProfile().getName() : "", attacker != null ? colorOf(attacker.getUUID()) : 0xFFFFFF,
             part.name, colorOf(victim.getUUID()), true, com.provinggrounds.core.KillEvents.flagsFor(attacker, victim, source)));
+        com.provinggrounds.core.KillEvents.brKnock(attacker, victim, source);
         title(victim, Component.literal("你倒地了").withStyle(ChatFormatting.RED),
             Component.literal("等待隊友扶起（" + bleedSecondsLeft(victim) + " 秒）").withStyle(ChatFormatting.GRAY));
         level.playSound(null, victim.blockPosition(), SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1f, 0.6f);

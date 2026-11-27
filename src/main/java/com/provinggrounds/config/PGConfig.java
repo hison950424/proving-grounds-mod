@@ -358,10 +358,10 @@ public class PGConfig {
         builder.push("downed");
         brDownedStyle = builder.comment("倒地姿勢：CRAWL = 趴下且緩速移動（預設）；SIT = 坐下且不能移動")
             .defineEnum("downed_style", DownedStyle.CRAWL);
-        brBleedPerSecond = builder.comment("倒地後每秒流失的血量，扣到 0 就死亡（有人正在扶時暫停）。倒地 100 血、每秒 1 血 = 100 秒")
-            .defineInRange("bleed_per_second", 1.0, 0.05, 100.0);
-        brDownedHealth = builder.comment("倒地時的血量（超過最大血量時以最大血量為準）。會隨時間流血，敵人也可以直接打掉")
-            .defineInRange("downed_health", 100.0, 1.0, 1024.0);
+        brBleedPerSecond = builder.comment("倒地後每秒流失的血量，扣到 0 就死亡（有人正在扶時暫停）。預設 50 血、每秒 0.5 血 = 100 秒")
+            .defineInRange("bleed_per_second_v2", 0.5, 0.05, 100.0);
+        brDownedHealth = builder.comment("倒地時的血量（所有模式共用，預設 50 HP）。會隨時間流血，敵人也可以直接打掉")
+            .defineInRange("downed_health_v2", 50.0, 1.0, 1024.0);
         brDownedSpeedPenalty = builder.comment("倒地時移動速度減少的比例（0.4 = 減少 40%，剩原本的 60%）。v3：原本 0.7（剩 30%），倒地移動速度改為原本的 2 倍")
             .defineInRange("speed_penalty_v3", 0.4, 0.0, 1.0);
         brReviveSeconds = builder.comment("隊友蹲下扶起需要的秒數")
@@ -425,13 +425,13 @@ public class PGConfig {
             .defineInRange("armor_durability_multiplier", 2.0, 0.1, 10.0);
         bulletproofHeadBodySplit = builder.comment("（已不使用：現在一律只算被打中部位的那一件防具）")
             .define("head_body_split", true);
-        bulletproofLeather = builder.comment("皮革全套減傷").defineInRange("leather_v4", 0.06, 0.0, 0.95); // 使用者回饋：改為原本的 50%
-        bulletproofChainmail = builder.comment("鎖鏈全套減傷（占位）").defineInRange("chainmail_v4", 0.09, 0.0, 0.95); // 使用者回饋：改為原本的 50%
-        bulletproofIron = builder.comment("鐵全套減傷").defineInRange("iron_v4", 0.125, 0.0, 0.95); // 使用者回饋：改為原本的 50%
-        bulletproofGold = builder.comment("金全套減傷（占位）").defineInRange("gold_v4", 0.09, 0.0, 0.95); // 使用者回饋：改為原本的 50%
-        bulletproofDiamond = builder.comment("鑽石全套減傷").defineInRange("diamond_v4", 0.20, 0.0, 0.95); // 使用者回饋：改為原本的 50%
-        bulletproofNetherite = builder.comment("獄髓全套減傷").defineInRange("netherite_v4", 0.25, 0.0, 0.95); // 使用者回饋：改為原本的 50%
-        bulletproofTurtle = builder.comment("海龜殼（只有頭盔）全套減傷（占位）").defineInRange("turtle_v4", 0.06, 0.0, 0.95); // 使用者回饋：改為原本的 50%
+        bulletproofLeather = builder.comment("皮革單件防彈減傷").defineInRange("leather_v5", 0.08, 0.0, 0.95);
+        bulletproofChainmail = builder.comment("鎖鏈單件防彈減傷（占位）").defineInRange("chainmail_v5", 0.12, 0.0, 0.95);
+        bulletproofIron = builder.comment("鐵甲單件防彈減傷").defineInRange("iron_v5", 0.18, 0.0, 0.95);
+        bulletproofGold = builder.comment("金甲單件防彈減傷（占位）").defineInRange("gold_v5", 0.12, 0.0, 0.95);
+        bulletproofDiamond = builder.comment("鑽石甲單件防彈減傷").defineInRange("diamond_v5", 0.28, 0.0, 0.95);
+        bulletproofNetherite = builder.comment("獄髓甲單件防彈減傷").defineInRange("netherite_v5", 0.36, 0.0, 0.95);
+        bulletproofTurtle = builder.comment("海龜殼單件防彈減傷（占位）").defineInRange("turtle_v5", 0.08, 0.0, 0.95);
         builder.pop();
 
         builder.comment("槍械平衡：不改槍械包，依每把槍的射速重新決定每發傷害，讓同類型的槍打死人的時間差不多。",

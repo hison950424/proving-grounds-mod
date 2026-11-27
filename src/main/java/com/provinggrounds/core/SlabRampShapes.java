@@ -183,18 +183,27 @@ public final class SlabRampShapes {
         if (!lowNeg && !lowPos) {
             return Shapes.box(0.0, yBase, 0.0, 1.0, yBase + 0.5, 1.0);
         }
+        // 低端前 0.5 格（單側）或兩端各 0.25 格（雙側）平滑爬升至 0.5 高度，其餘保留平坦頂部平台：
+        // 玩家碰撞箱半寬 0.3 格，提前站上頂部平台可避免前緣撞上相鄰 1 格方塊或連續第二階半磚時因高度差 > 0.6 而卡住。
         VoxelShape shape = Shapes.empty();
-        int half = slices / 2;
+        int rampSlices = (lowNeg && lowPos) ? Math.max(2, slices / 4) : Math.max(4, slices / 2);
         for (int i = 0; i < slices; i++) {
             double u0 = i / (double) slices;
             double u1 = (i + 1) / (double) slices;
             double dh;
             if (lowNeg && lowPos) {
-                dh = (i < half ? (i + 1) : (slices - i)) * (0.5 / half);
+                if (i < rampSlices) {
+                    dh = (i + 1) * (0.5 / rampSlices);
+                } else if (i >= slices - rampSlices) {
+                    dh = (slices - i) * (0.5 / rampSlices);
+                } else {
+                    dh = 0.5;
+                }
             } else if (lowNeg) {
-                dh = (i + 1) * (0.5 / slices);
+                dh = i < rampSlices ? (i + 1) * (0.5 / rampSlices) : 0.5;
             } else {
-                dh = (slices - i) * (0.5 / slices);
+                int fromEnd = slices - i;
+                dh = fromEnd <= rampSlices ? fromEnd * (0.5 / rampSlices) : 0.5;
             }
             VoxelShape slice = isX
                     ? Shapes.box(u0, yBase, 0.0, u1, yBase + dh, 1.0)

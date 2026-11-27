@@ -50,9 +50,13 @@ public final class InteractEvents {
         return t != null && p.level().getGameTime() - t <= 3;
     }
 
-    /** F 鍵按完：準星指著倒地隊友 → 扶；沒有和東西互動 → 找附近的倒地隊友，再找祭壇。 */
+    /** F 鍵按完：準星指著倒地隊友 → 扶；entityId == -999 表示團隊模式倒地長按 F 3 秒放棄死亡。 */
     public static void onKeyDone(ServerPlayer p, boolean interacted, int entityId) {
         if (p.isSpectator()) return;
+        if (entityId == -999) {
+            com.provinggrounds.modes.arena.ArenaManager.giveUpDowned(p);
+            return;
+        }
         Entity looked = entityId >= 0 ? p.level().getEntity(entityId) : null;
         BattleRoyaleMode br = BattleRoyaleMode.get();
         if (br.startReviveByKey(p, looked, !interacted)) return;

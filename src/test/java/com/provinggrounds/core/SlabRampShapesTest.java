@@ -60,7 +60,7 @@ class SlabRampShapesTest {
     }
 
     @Test
-    void singleSideWestRampRisesMonotonicallyWithExactHalfSlope() {
+    void singleSideWestRampRisesMonotonicallyWithTopLandingPlatform() {
         VoxelShape bot = SlabRampShapes.bottomShape(SlabRampShapes.BIT_W);
         VoxelShape top = SlabRampShapes.topShape(SlabRampShapes.BIT_W);
         VoxelShape full = SlabRampShapes.fullTopShape(SlabRampShapes.BIT_W);
@@ -72,22 +72,20 @@ class SlabRampShapesTest {
             double hb = sampleSurfaceY(bot, x, 0.5);
             double ht = sampleSurfaceY(top, x, 0.5);
             double hf = sampleSurfaceY(full, x, 0.5);
-            double expectedBot = (i + 1) * (0.5 / 16.0);
+            double expectedBot = i < 8 ? (i + 1) * (0.5 / 8.0) : 0.5;
             assertEquals(expectedBot, hb, 0.002, "bottom x=" + x);
             assertEquals(0.5 + expectedBot, ht, 0.002, "top x=" + x);
             assertEquals(ht, hf, 0.002, "fullTop x=" + x);
-            assertTrue(hb >= prevBot && (hb - prevBot) <= 0.03125 + 0.003);
-            assertTrue(ht >= prevTop && (ht - prevTop) <= 0.03125 + 0.003);
+            assertTrue(hb >= prevBot && (hb - prevBot) <= 0.0625 + 0.003);
+            assertTrue(ht >= prevTop && (ht - prevTop) <= 0.0625 + 0.003);
             prevBot = hb;
             prevTop = ht;
         }
 
-        // 每前進 0.25 格上升 0.125 格（坡度 0.5），1/sqrt(1+0.5^2) 補償後 3D 速度精確等於平地 1.0
-        double dyPerProbe = sampleSurfaceY(bot, 0.5 + 0.25, 0.5) - sampleSurfaceY(bot, 0.5, 0.5);
-        assertEquals(0.125, dyPerProbe, 0.002);
-        double slope = dyPerProbe / 0.25;
-        double scale = 1.0 / Math.sqrt(1.0 + slope * slope);
-        assertEquals(1.0, Math.hypot(scale, scale * slope), 1e-6);
+        // 玩家碰撞箱半寬 0.3 格：中心到 x=0.7（前緣剛好接觸下一格 x=1.0）時必須已站上完整 0.5 / 1.0 高度，避免上 1 格方塊或連續兩階半磚卡住
+        assertEquals(0.5, sampleSurfaceY(bot, 0.7, 0.5), 0.002);
+        assertEquals(1.0, sampleSurfaceY(top, 0.7, 0.5), 0.002);
+        assertEquals(1.0, sampleSurfaceY(full, 0.7, 0.5), 0.002);
     }
 
     @Test
@@ -100,8 +98,8 @@ class SlabRampShapesTest {
         assertEquals(0.5, sampleSurfaceY(bot, 0.5, 0.5), 0.002);
         assertEquals(1.0, sampleSurfaceY(top, 0.5, 0.5), 0.002);
         assertEquals(1.0, sampleSurfaceY(full, 0.5, 0.5), 0.002);
-        assertTrue(sampleSurfaceY(bot, 0.03, 0.5) <= 0.065);
-        assertTrue(sampleSurfaceY(bot, 0.97, 0.5) <= 0.065);
+        assertTrue(sampleSurfaceY(bot, 0.03, 0.5) <= 0.13);
+        assertTrue(sampleSurfaceY(bot, 0.97, 0.5) <= 0.13);
     }
 
     @Test

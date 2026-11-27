@@ -63,25 +63,40 @@ public final class ArenaWorldRenderer {
         RenderSystem.depthMask(false);
         BufferBuilder b = Tesselator.getInstance().getBuilder();
 
-        // 1. 防蹲點紅牆（有深度測試：被牆擋住就看不到，和縮圈牆一樣）
+        // 1. 防蹲點紅牆（有深度測試：被牆擋住就看不到；高度覆蓋 y-4 ~ y+20 讓二樓／高台也清楚可見；kind=1 圓形、kind=2 方形）
         if (cfg.antiCampWall.get()) {
             b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
             Vec3 me = mc.player.position();
             for (ArenaStatePacket.Marker k : s.markers()) {
-                if (k.kind() != 1) continue;
+                if (k.kind() != 1 && k.kind() != 2) continue;
+                double y0 = k.y() - 4, y1 = k.y() + 20;
                 double dx = me.x - k.x(), dz = me.z - k.z();
-                double dist = Math.sqrt(dx * dx + dz * dz) - k.radius();
-                if (dist > 10 || dist < -0.5) continue;
-                float alpha = (float) (0.35 * (1 - Math.max(0, dist) / 10.0)) + 0.05f;
-                double center = Math.atan2(dz, dx);
-                int seg = 24;
-                double span = Math.toRadians(40);
-                for (int i = 0; i < seg; i++) {
-                    double a0 = center - span + 2 * span * i / seg, a1 = center - span + 2 * span * (i + 1) / seg;
-                    float fade = 1f - Math.abs(i + 0.5f - seg / 2f) / (seg / 2f); // 兩端淡出
-                    quadV(b, m, k.x() + Math.cos(a0) * k.radius(), k.z() + Math.sin(a0) * k.radius(),
-                        k.x() + Math.cos(a1) * k.radius(), k.z() + Math.sin(a1) * k.radius(),
-                        k.y() - 2, k.y() + 6, k.color(), alpha * fade);
+                if (k.kind() == 1) {
+                    double dist = Math.sqrt(dx * dx + dz * dz) - k.radius();
+                    if (dist > 10 || dist < -0.5) continue;
+                    float alpha = (float) (0.35 * (1 - Math.max(0, dist) / 10.0)) + 0.08f;
+                    double center = Math.atan2(dz, dx);
+                    int seg = 24;
+                    double span = Math.toRadians(45);
+                    for (int i = 0; i < seg; i++) {
+                        double a0 = center - span + 2 * span * i / seg, a1 = center - span + 2 * span * (i + 1) / seg;
+                        float fade = 1f - Math.abs(i + 0.5f - seg / 2f) / (seg / 2f); // 兩端淡出
+                        quadV(b, m, k.x() + Math.cos(a0) * k.radius(), k.z() + Math.sin(a0) * k.radius(),
+                            k.x() + Math.cos(a1) * k.radius(), k.z() + Math.sin(a1) * k.radius(),
+                            y0, y1, k.color(), alpha * fade);
+                    }
+                } else {
+                    // 方形保護區（支援四邊獨立長度 北,-Z / 南,+Z / 西,-X / 東,+X，依邊界距離 10 格內漸顯）
+                    double[] bnd = parseBoxBounds(k.label(), k.radius());
+                    double bn = bnd[0], bs = bnd[1], bw = bnd[2], be = bnd[3];
+                    double dist = Math.max(Math.max(-bw - dx, dx - be), Math.max(-bn - dz, dz - bs));
+                    if (dist > 10 || dist < -0.5) continue;
+                    float alpha = (float) (0.32 * (1 - Math.max(0, dist) / 10.0)) + 0.08f;
+                    double x0 = k.x() - bw, x1 = k.x() + be, z0 = k.z() - bn, z1 = k.z() + bs;
+                    quadV(b, m, x0, z0, x1, z0, y0, y1, k.color(), alpha);
+                    quadV(b, m, x1, z0, x1, z1, y0, y1, k.color(), alpha);
+                    quadV(b, m, x1, z1, x0, z1, y0, y1, k.color(), alpha);
+                    quadV(b, m, x0, z1, x0, z0, y0, y1, k.color(), alpha);
                 }
             }
             BufferUploader.drawWithShader(b.end());
@@ -204,16 +219,22 @@ public final class ArenaWorldRenderer {
                 int x = right ? w - 14 : 6, y = h / 2 - 20;
                 String txt = (right ? "" : "◀ ") + k.label() + (right ? " ▶" : "");
                 g.drawString(mc.font, txt, right ? x - mc.font.width(txt) + 8 : x, y, 0xC0000000 | k.color(), true);
-            } else if (k.kind() == 1 && cfg.antiCampWall.get()) {
+            } else if ((k.kind() == 1 || k.kind() == 2) && cfg.antiCampWall.get()) {
                 double dx = me.x - k.x(), dz = me.z - k.z();
-                double dist = Math.sqrt(dx * dx + dz * dz) - k.radius();
-                if (dist < 0 && Math.abs(me.y - k.y()) <= 8) { // 已經在敵方重生區裡：畫面四周紅色細框淡閃（不遮中間）
+                double dist;
+                if (k.kind() == 2) {
+                    double[] bnd = parseBoxBounds(k.label(), k.radius());
+                    dist = Math.max(Math.max(-bnd[2] - dx, dx - bnd[3]), Math.max(-bnd[0] - dz, dz - bnd[1]));
+                } else {
+                    dist = Math.sqrt(dx * dx + dz * dz) - k.radius();
+                }
+                if (dist < 0 && Math.abs(me.y - k.y()) <= 16) { // 已經在敵方重生區裡（含二樓）：畫面四周紅色細框淡閃
                     float pulse = 0.25f + 0.2f * (float) Math.sin(System.currentTimeMillis() / 150.0);
                     int c = ((int) (pulse * 255) << 24) | 0xFF2020;
                     g.fill(0, 0, w, 3, c); g.fill(0, h - 3, w, h, c); g.fill(0, 3, 3, h - 3, c); g.fill(w - 3, 3, w, h - 3, c);
                     continue;
                 }
-                if (dist > 5) continue;
+                if (dist > 5 || Math.abs(me.y - k.y()) > 16) continue;
 
                 String txt = "前方是敵方重生區";
                 int tw = mc.font.width(txt);
@@ -221,5 +242,23 @@ public final class ArenaWorldRenderer {
                 g.drawString(mc.font, txt, w / 2 - tw / 2, 72, 0xFFFF6060, false);
             }
         }
+    }
+
+    /** 解析方形防蹲點標記的「北,南,西,東」四邊長度（未提供則全部退回 fallback）。 */
+    private static double[] parseBoxBounds(String label, double fallback) {
+        if (label != null && !label.isBlank()) {
+            String[] p = label.split(",");
+            if (p.length >= 4) {
+                try {
+                    return new double[] {
+                        Double.parseDouble(p[0].trim()),
+                        Double.parseDouble(p[1].trim()),
+                        Double.parseDouble(p[2].trim()),
+                        Double.parseDouble(p[3].trim())
+                    };
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return new double[] { fallback, fallback, fallback, fallback };
     }
 }

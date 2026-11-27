@@ -87,6 +87,7 @@ public final class DomMode extends ArenaMode {
 
     @Override
     protected void onFinish() {
+        restoreRoundGlass();
         fill(arenaBarriers(), Blocks.AIR.defaultBlockState(), true);
         for (Point pt : points) setFloor(pt, false);
         com.provinggrounds.special.DomGear.endMatch(server);
@@ -101,6 +102,7 @@ public final class DomMode extends ArenaMode {
 
     /** 撿裝／準備：清地上、預告據點、傳回基地、封出口、補消耗品。 */
     private void enterPrep() {
+        restoreRoundGlass();
         recentDamagers.clear();
         clearFloorItems();
         for (Point pt : points) { pt.open = false; pt.progress = 0; setFloor(pt, false); }
@@ -127,7 +129,25 @@ public final class DomMode extends ArenaMode {
             Component.literal("本回合據點：" + names).withStyle(ChatFormatting.YELLOW), 60);
     }
 
+    private final java.util.Map<net.minecraft.core.BlockPos, net.minecraft.world.level.block.state.BlockState> roundBrokenGlass = new java.util.LinkedHashMap<>();
+
+    @Override public boolean allowsGlassDamage(net.minecraft.core.BlockPos pos) { return true; }
+
+    @Override
+    public void onGlassBroken(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState originalState) {
+        roundBrokenGlass.putIfAbsent(pos.immutable(), originalState);
+    }
+
+    private void restoreRoundGlass() {
+        if (roundBrokenGlass.isEmpty()) return;
+        for (var e : roundBrokenGlass.entrySet()) {
+            restoreGlassBlock(e.getKey(), e.getValue());
+        }
+        roundBrokenGlass.clear();
+    }
+
     private void startRound() {
+        restoreRoundGlass();
         phase = Phase.ROUND;
         roundSeconds = 0;
         firstBlood = false;
@@ -238,6 +258,20 @@ public final class DomMode extends ArenaMode {
             addMoney(killer, k, cfg.domFirstBloodMoney.get(), "首殺！");
             broadcast(Component.literal("[系統] " + k.name + " 拿下本回合首殺！").withStyle(ChatFormatting.GOLD));
         }
+    }
+
+    @Override
+    protected void onAssist(ServerPlayer assister, ArenaPlayer ap, String victimName) {
+        if (phase != Phase.ROUND) return;
+        int assistPay = Math.max(1, cfg.domKillMoney.get() / 2);
+        addMoney(assister, ap, assistPay, "助攻 " + victimName);
+    }
+
+    @Override
+    protected void onKnock(ServerPlayer attacker, ArenaPlayer ap, String victimName) {
+        if (phase != Phase.ROUND) return;
+        int knockPay = Math.max(1, cfg.domKillMoney.get() / 4);
+        addMoney(attacker, ap, knockPay, "擊倒 " + victimName);
     }
 
     /** 死掉之後（下一 tick 重生時）檢查全滅。 */

@@ -55,8 +55,27 @@ public final class ArenaDowned {
     private final Map<UUID, UUID> intents = new HashMap<>();
     /** 正在處理最終死亡的人（不要再倒地一次）。 */
     private final Set<UUID> finishing = new HashSet<>();
+    /** 記錄倒地最終死亡前的擊倒者（即使流血自然死亡、長按 F 放棄或被其他傷害補刀也能 100% 歸屬擊殺）。 */
+    private final Map<UUID, UUID> lastDownedBy = new HashMap<>();
 
     ArenaDowned(ArenaMode mode) { this.mode = mode; }
+
+    @Nullable
+    public ServerPlayer consumeDownedBy(UUID victimId) {
+        UUID aid = lastDownedBy.remove(victimId);
+        if (aid == null) {
+            State s = downed.get(victimId);
+            aid = s != null ? s.downedBy : null;
+        }
+        return aid != null ? mode.server.getPlayerList().getPlayer(aid) : null;
+    }
+
+    /** 團隊模式倒地長按 F（3 秒）放棄並直接死亡（仍計擊殺給擊倒者）。 */
+    public boolean giveUp(ServerPlayer p) {
+        if (!downed.containsKey(p.getUUID())) return false;
+        finalKill(p);
+        return true;
+    }
 
     public boolean isDowned(UUID id) { return downed.containsKey(id); }
 
@@ -89,15 +108,19 @@ public final class ArenaDowned {
         DownedCore.applyDowned(victim, c().brDownedHealth.get().floatValue());
         mark(victim);
         ProneManager.markDirty();
-        // 擊殺紀錄：「擊倒」（最終死亡時才算擊殺）
+        // 擊殺紀錄：「擊倒」（擊倒者同步顯示擊倒旗幟與音效；擊倒另發 25% 擊殺獎金，最終死亡時才算擊殺）
         ArenaMode.ArenaPlayer k = attacker != null ? mode.player(attacker.getUUID()) : null;
+        if (attacker != null && k != null && !mode.sameSide(k, v)) {
+            mode.onKnock(attacker, k, v.name);
+        }
         String kName = attacker != null ? attacker.getGameProfile().getName() : "";
         ItemStack weapon = attacker != null ? attacker.getMainHandItem().copyWithCount(1) : ItemStack.EMPTY;
+        int flags = KillNoticePacket.KNOCK | com.provinggrounds.core.KillEvents.flagsFor(attacker, victim, source);
         for (ServerPlayer p : mode.online()) {
-            PGNetwork.sendTo(p, new KillNoticePacket(true, false, kName, k != null ? mode.colorOf(k) : 0xFFFFFF, v.name, mode.colorOf(v),
-                weapon, KillNoticePacket.KNOCK, 0));
+            PGNetwork.sendTo(p, new KillNoticePacket(true, p == attacker, kName, k != null ? mode.colorOf(k) : 0xFFFFFF, v.name, mode.colorOf(v),
+                weapon, flags, 0));
         }
-        victim.displayClientMessage(Component.literal("你倒地了！等待隊友按 F 扶起").withStyle(ChatFormatting.RED), true);
+        victim.displayClientMessage(Component.literal("你倒地了！等待隊友按 F 扶起｜長按 F 3 秒直接放棄").withStyle(ChatFormatting.RED), true);
         victim.level().playSound(null, victim.blockPosition(), SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1f, 0.6f);
         return true;
     }
@@ -122,14 +145,18 @@ public final class ArenaDowned {
     /** 真的死亡：用「擊倒的人」當擊殺者走一般死亡流程（擊殺、金錢、分數在這時候才算）。 */
     public void finalKill(ServerPlayer p) {
         State s = downed.get(p.getUUID());
+        if (s != null && s.downedBy != null) {
+            lastDownedBy.put(p.getUUID(), s.downedBy);
+        }
         clear(p, p.getUUID());
         ServerPlayer by = s != null && s.downedBy != null ? mode.server.getPlayerList().getPlayer(s.downedBy) : null;
         var holder = p.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(DamageTypes.GENERIC_KILL);
         DamageSource src = by != null ? new DamageSource(holder, by) : new DamageSource(holder);
         finishing.add(p.getUUID());
         try {
+            p.invulnerableTime = 0;
             p.hurt(src, Float.MAX_VALUE);
-            if (p.isAlive()) p.kill(); // 萬一被其他效果擋下
+            if (p.isAlive() && !p.isSpectator()) p.kill(); // 萬一被其他效果擋下（lastDownedBy 仍保留擊殺者歸屬）
         } finally {
             finishing.remove(p.getUUID());
         }
@@ -178,7 +205,7 @@ public final class ArenaDowned {
                 if (hp <= 0) { finalKill(dp); continue; }
                 dp.setHealth(hp);
                 int left = (int) Math.ceil(hp / cfg.brBleedPerSecond.get());
-                dp.displayClientMessage(Component.literal("倒地中：" + left + " 秒內要被隊友扶起").withStyle(ChatFormatting.RED), true);
+                dp.displayClientMessage(Component.literal("倒地中：" + left + " 秒｜長按 F 3 秒直接放棄").withStyle(ChatFormatting.RED), true);
             }
         }
         if (mode.kind() == GameManager.GameMode.DOM && mode.ticks % 10 == 0) checkWipes();

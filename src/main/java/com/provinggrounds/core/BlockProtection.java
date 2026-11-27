@@ -41,6 +41,13 @@ public final class BlockProtection {
         return BattleRoyaleMode.get().allowsBlockDamage(pos);
     }
 
+    /** 玻璃類方塊是否可被子彈或近戰破壞（大逃殺範圍內，或團隊死鬥／佔點模式中）。 */
+    public static boolean allowsGlassDamage(Level level, BlockPos pos) {
+        if (allowsDamage(level, pos)) return true;
+        return level.dimension() == Level.OVERWORLD
+            && com.provinggrounds.modes.arena.ArenaManager.allowsGlassDamage(pos);
+    }
+
     // ── 爆炸 ──
 
     public static final int BOOM_OFF = 0, BOOM_ALL = 1, BOOM_GUNS = 2, BOOM_THROWABLES = 3;
@@ -199,7 +206,10 @@ public final class BlockProtection {
     // ── 子彈（GunCompat 呼叫）──
 
     public static void beginBulletHit(Level level, BlockPos pos) {
-        guarded = allowsDamage(level, pos) ? null : pos.immutable();
+        BlockState state = level.getBlockState(pos);
+        boolean allowed = allowsDamage(level, pos)
+            || (com.provinggrounds.data.BlockLedger.isGlass(state) && allowsGlassDamage(level, pos));
+        guarded = allowed ? null : pos.immutable();
     }
 
     public static void endBulletHit() {

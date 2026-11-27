@@ -43,6 +43,13 @@ public class AdminPanelScreen extends Screen {
     private boolean layerWild  = true;
     private boolean layerCover = true;
 
+    private boolean campSquare;
+    private int campRadius = 25;
+    private boolean campEditBlue = false;
+    /** 方形保護四邊長度（順序：北 -Z、南 +Z、西 -X、東 +X）。 */
+    private final int[] campRed = { 25, 25, 25, 25 };
+    private final int[] campBlue = { 25, 25, 25, 25 };
+
     private int left, top, panelW, panelH;
     private int bodyTop, bodyBottom, listX, listW, rightX, rightW;
 
@@ -50,6 +57,30 @@ public class AdminPanelScreen extends Screen {
         super(Component.literal("PG 管理員控制台"));
         this.info = info;
         this.selectedMapIdx = info.brMaps().isEmpty() ? -1 : 0;
+        // 解析目前啟用團隊場地的重生保護設定（"<c|s>:<radius>:<rN,rS,rW,rE>:<bN,bS,bW,bE>"）
+        if (info.arg() != null && info.arg().contains(":")) {
+            String[] p = info.arg().split(":");
+            String sh = p[0].trim();
+            this.campSquare = "s".equalsIgnoreCase(sh) || "square".equalsIgnoreCase(sh);
+            try { this.campRadius = Math.max(2, Math.min(128, Integer.parseInt(p[1].trim()))); } catch (NumberFormatException ignored) {}
+            parseSideCsv(p.length >= 3 ? p[2] : "", this.campRed, this.campRadius);
+            parseSideCsv(p.length >= 4 ? p[3] : "", this.campBlue, this.campRadius);
+        }
+    }
+
+    private static void parseSideCsv(String csv, int[] dst, int fallback) {
+        int fb = Math.max(1, Math.min(128, fallback));
+        for (int i = 0; i < 4; i++) dst[i] = fb;
+        if (csv == null || csv.isBlank()) return;
+        String[] s = csv.split(",");
+        if (s.length < 4) return;
+        for (int i = 0; i < 4; i++) {
+            try { dst[i] = Math.max(1, Math.min(128, Integer.parseInt(s[i].trim()))); } catch (NumberFormatException ignored) {}
+        }
+    }
+
+    private static String encodeSideCsv(int[] a) {
+        return a[0] + "," + a[1] + "," + a[2] + "," + a[3];
     }
 
     public static void open(AdminPanelPacket info) {
@@ -197,12 +228,80 @@ public class AdminPanelScreen extends Screen {
 
         // 操作按鈕
         int rows = Math.max(1, (info.arenaMaps().size() + 1) / 2);
-        int ay = y + rows * 24 + 22;
-        addBtn(x, ay, hw, 20, "生成「黑曜地堡」室內地圖", true, true, () -> exec("arena_gen", ""));
-        addBtn(x + hw + 8, ay, hw, 20, "原地重建「黑曜地堡」", false, true, () -> exec("arena_regen", ""));
-        ay += 26;
-        addBtn(x, ay, hw, 20, "傳送至目前團隊場地", false, true, () -> exec("arena_tp", info.activeArenaId()));
-        addBtn(x + hw + 8, ay, hw, 20, "查看目前場地詳情", false, true, () -> exec("arena_info", ""));
+        int ay = y + rows * 24 + 18;
+        addBtn(x, ay, hw, 18, "生成「黑曜地堡」室內地圖", true, true, () -> exec("arena_gen", ""));
+        addBtn(x + hw + 8, ay, hw, 18, "原地重建「黑曜地堡」", false, true, () -> exec("arena_regen", ""));
+        ay += 22;
+        addBtn(x, ay, hw, 18, "傳送至目前團隊場地", false, true, () -> exec("arena_tp", info.activeArenaId()));
+        addBtn(x + hw + 8, ay, hw, 18, "查看目前場地詳情", false, true, () -> exec("arena_info", ""));
+
+        // 自訂目前場地重生點保護形狀與大小（圓形為半徑；方形支援紅／藍隊各自獨立調整北、南、西、東四邊）
+        int cy = ay + 34;
+        Runnable applyCamp = () -> exec("arena_camp",
+            info.activeArenaId() + ":" + (campSquare ? "s" : "c") + ":" + campRadius
+                + ":" + encodeSideCsv(campRed) + ":" + encodeSideCsv(campBlue));
+
+        if (!campSquare) {
+            int shapeW = 92;
+            int stepW = 30;
+            int applyW = 72;
+            addBtn(x, cy, shapeW, 18, "形狀：圓形", false, true, () -> { campSquare = true; init(); });
+            int sx = x + shapeW + 6;
+            addBtn(sx, cy, stepW, 18, "-5", false, campRadius > 2, () -> { campRadius = Math.max(2, campRadius - 5); init(); });
+            addBtn(sx + stepW + 3, cy, stepW, 18, "-1", false, campRadius > 2, () -> { campRadius = Math.max(2, campRadius - 1); init(); });
+            int valW = Math.max(46, w - (shapeW + 6 + (stepW + 3) * 4 + applyW + 6));
+            int vx = sx + (stepW + 3) * 2;
+            addBtn(vx, cy, valW, 18, campRadius + " 格", false, false, () -> {});
+            int px = vx + valW + 3;
+            addBtn(px, cy, stepW, 18, "+1", false, campRadius < 128, () -> { campRadius = Math.min(128, campRadius + 1); init(); });
+            addBtn(px + stepW + 3, cy, stepW, 18, "+5", false, campRadius < 128, () -> { campRadius = Math.min(128, campRadius + 5); init(); });
+            addBtn(x + w - applyW, cy, applyW, 18, "套用設定", true, true, applyCamp);
+        } else {
+            int shapeW = 68;
+            int teamW = 74;
+            int mirW = 98;
+            int applyW = Math.max(66, w - (shapeW + 4 + teamW + 4 + mirW + 4 + mirW + 4));
+            String otherName = campEditBlue ? "紅" : "藍";
+            int[] cur = campEditBlue ? campBlue : campRed;
+            int[] other = campEditBlue ? campRed : campBlue;
+
+            addBtn(x, cy, shapeW, 18, "形狀：方形", true, true, () -> { campSquare = false; init(); });
+            addBtn(x + shapeW + 4, cy, teamW, 18, campEditBlue ? "編輯：藍隊" : "編輯：紅隊", true, true, () -> {
+                campEditBlue = !campEditBlue;
+                init();
+            });
+            addBtn(x + shapeW + 4 + teamW + 4, cy, mirW, 18, "東西鏡像→" + otherName, false, true, () -> {
+                other[0] = cur[0]; other[1] = cur[1]; other[2] = cur[3]; other[3] = cur[2];
+                init();
+            });
+            addBtn(x + shapeW + 4 + teamW + 4 + mirW + 4, cy, mirW, 18, "南北鏡像→" + otherName, false, true, () -> {
+                other[0] = cur[1]; other[1] = cur[0]; other[2] = cur[2]; other[3] = cur[3];
+                init();
+            });
+            addBtn(x + w - applyW, cy, applyW, 18, "套用設定", true, true, applyCamp);
+
+            // 2×2 四邊微調（北 -Z、南 +Z、西 -X、東 +X）
+            String[] sideNames = { "北 -Z", "南 +Z", "西 -X", "東 +X" };
+            for (int i = 0; i < 4; i++) {
+                final int idx = i;
+                int cx = x + (i % 2) * (hw + 8);
+                int ry = cy + 22 + (i / 2) * 22;
+                int val = cur[idx];
+                int lblW = 46, b5 = 26, b1 = 24;
+                int vw = Math.max(38, hw - (lblW + 3 + b5 + 2 + b1 + 2 + b1 + 2 + b5 + 2));
+                addBtn(cx, ry, lblW, 18, sideNames[idx], false, false, () -> {});
+                int bx = cx + lblW + 3;
+                addBtn(bx, ry, b5, 18, "-5", false, val > 1, () -> { cur[idx] = Math.max(1, cur[idx] - 5); init(); });
+                bx += b5 + 2;
+                addBtn(bx, ry, b1, 18, "-1", false, val > 1, () -> { cur[idx] = Math.max(1, cur[idx] - 1); init(); });
+                bx += b1 + 2;
+                addBtn(bx, ry, vw, 18, val + "格", false, false, () -> {});
+                bx += vw + 2;
+                addBtn(bx, ry, b1, 18, "+1", false, val < 128, () -> { cur[idx] = Math.min(128, cur[idx] + 1); init(); });
+                bx += b1 + 2;
+                addBtn(bx, ry, b5, 18, "+5", false, val < 128, () -> { cur[idx] = Math.min(128, cur[idx] + 5); init(); });
+            }
+        }
     }
 
     // ── 分頁 3：建圖工具（整合全部既有管理工具）────────────────────────────
@@ -401,9 +500,22 @@ public class AdminPanelScreen extends Screen {
         g.drawString(font, "點選切換場地：", x + 8, bodyTop + 22, DIM, false);
 
         int rows = Math.max(1, (info.arenaMaps().size() + 1) / 2);
-        int sepY = bodyTop + 34 + rows * 24 + 8;
+        int sepY = bodyTop + 34 + rows * 24 + 4;
         g.fill(x + 8, sepY, x + w - 8, sepY + 1, BORDER);
-        g.drawString(font, "黑曜地堡與場地操作", x + 8, sepY + 6, DIM, false);
+        g.drawString(font, "黑曜地堡與場地操作", x + 8, sepY + 4, DIM, false);
+
+        int sepY2 = sepY + 58;
+        g.fill(x + 8, sepY2, x + w - 8, sepY2 + 1, BORDER);
+        g.drawString(font, "目前場地重生點保護自訂（每張地圖獨立儲存）", x + 8, sepY2 + 5, ACCENT, false);
+        if (campSquare) {
+            int sumY = sepY2 + 84;
+            if (sumY + 10 < bodyBottom) {
+                String summary = String.format("紅隊：北%d 南%d 西%d 東%d  ｜  藍隊：北%d 南%d 西%d 東%d",
+                    campRed[0], campRed[1], campRed[2], campRed[3],
+                    campBlue[0], campBlue[1], campBlue[2], campBlue[3]);
+                g.drawString(font, summary, x + 8, sumY, DIM, false);
+            }
+        }
     }
 
     private void renderToolsTab(GuiGraphics g) {

@@ -92,6 +92,12 @@ public final class ClientMovement {
             if (p.isSprinting()) p.setSprinting(false);
             return;
         }
+        // 奔跑時開鏡強制切換回走路模式
+        KeyMapping aim = taczAim();
+        if ((aim != null && aim.isDown()) || com.provinggrounds.compat.ClientGunAim.aiming()) {
+            if (p.isSprinting()) p.setSprinting(false);
+            return;
+        }
         if (!auto || in.forwardImpulse <= 1.0e-5f || in.shiftKeyDown || !canAutoSprint(mc, p)) return;
         if (!p.isSprinting()) p.setSprinting(true);
     }
@@ -99,6 +105,7 @@ public final class ClientMovement {
     private static boolean canAutoSprint(Minecraft mc, LocalPlayer p) {
         if (p.isUsingItem() || p.isPassenger() || p.isFallFlying() || p.getAbilities().flying) return false;
         if (mc.options.keyAttack.isDown() || mc.options.keyUse.isDown()) return false; // 開槍、使用物品時不跑
+        if (com.provinggrounds.compat.TaczInstantFire.recentlyShot()) return false; // 剛開槍 300ms 內維持擺正不切回歪槍奔跑
         KeyMapping aim = taczAim();
         if (aim != null && aim.isDown()) return false; // TACZ 瞄準時不跑
         if (ClientProneData.isProne(p.getUUID())) return false;

@@ -58,8 +58,9 @@ public record MeleeGlassPacket(BlockPos pos, boolean heavy) {
         if (!level.isLoaded(targetPos)) return false;
         BlockState state = level.getBlockState(targetPos);
         if (!BlockLedger.isGlass(state) || state.getDestroySpeed(level, targetPos) < 0) return false;
-        if (!BlockProtection.allowsDamage(level, targetPos)) return false;
+        if (!BlockProtection.allowsGlassDamage(level, targetPos)) return false;
         BlockLedger.get(level.getServer()).recordGlass(level, targetPos, state);
+        com.provinggrounds.modes.arena.ArenaManager.onGlassBroken(level, targetPos, state);
         return level.destroyBlock(targetPos, false, p);
     }
 

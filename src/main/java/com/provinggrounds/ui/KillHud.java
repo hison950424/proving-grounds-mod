@@ -43,7 +43,7 @@ public final class KillHud {
             while (FEED.size() > 5) FEED.removeLast();
         }
         if (p.mine()) {
-            // 助攻不覆蓋剛跳出的擊殺旗幟（0.6 秒內），但音效照常播放
+            // 助攻不覆蓋剛跳出的擊殺／擊倒旗幟（0.6 秒內），但音效照常播放
             if (!p.assist() || icon == null || icon.assist() || now - iconTime > 600) {
                 icon = p;
                 iconTime = now;
@@ -54,22 +54,47 @@ public final class KillHud {
 
     public static void clear() { FEED.clear(); icon = null; }
 
+    /**
+     * 參考 Apex Legends 與三角洲行動（Delta Force）的擊殺／擊倒／助攻爽感與高度區別性：
+     *   - 擊殺（KILL）：厚實低頻斬殺重擊＋雙層清脆高頻金屬叮噹（連殺音階上升，爆頭再加破甲銳音），音量飽滿清晰。
+     *   - 倒地（KNOCK）：明顯碎盾破防聲＋紮實中低頻頓點（一聽就知道敵人倒地而非淘汰）。
+     *   - 助攻（ASSIST）：輕快清亮高音雙響，不與擊殺／倒地混淆。
+     */
     private static void playSound(KillNoticePacket p) {
         var cfg = PGClientConfig.CLIENT;
         if (!cfg.killSoundEnabled.get()) return;
-        float vol = cfg.killSoundVolume.get().floatValue();
-        if (vol <= 0) return;
+        float baseVol = cfg.killSoundVolume.get().floatValue();
+        if (baseVol <= 0) return;
+        // 放大動態增益讓戰鬥槍聲中依然清晰爽快
+        float vol = Math.min(1.6f, baseVol * 1.45f);
+
         if (p.assist()) {
-            // 助攻音效（計畫書 10）：清脆高音雙叮聲
-            play(SoundEvents.NOTE_BLOCK_CHIME.value(), 1.35f, vol * 0.85f);
-            play(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.55f, vol * 0.65f);
+            play(SoundEvents.NOTE_BLOCK_CHIME.value(), 1.55f, vol * 0.95f);
+            play(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.85f, vol * 0.75f);
             return;
         }
-        float pitch = Math.min(2f, 1.0f + 0.08f * Math.max(0, p.streak() - 1)); // 連殺越多音越高
-        play(SoundEvents.NOTE_BLOCK_BELL.value(), pitch, vol);
-        play(SoundEvents.EXPERIENCE_ORB_PICKUP, Math.min(2f, pitch + 0.3f), vol * 0.7f);
-        play(SoundEvents.ANVIL_PLACE, 2f, vol * 0.12f);
-        if (p.headshot()) play(SoundEvents.NOTE_BLOCK_CHIME.value(), Math.min(2f, pitch + 0.5f), vol);
+        if (p.knock()) {
+            // 擊倒：破甲碎裂＋中頻頓點確認音
+            play(SoundEvents.SHIELD_BREAK, 1.15f, vol * 0.75f);
+            play(SoundEvents.GLASS_BREAK, 1.35f, vol * 0.65f);
+            play(SoundEvents.NOTE_BLOCK_PLING.value(), 0.95f, vol * 1.0f);
+            play(SoundEvents.ARROW_HIT_PLAYER, 1.20f, vol * 0.85f);
+            if (p.headshot()) {
+                play(SoundEvents.NOTE_BLOCK_CHIME.value(), 1.70f, vol * 0.95f);
+            }
+            return;
+        }
+        // 擊殺：低頻重擊打底＋三角洲／Apex 風格高亮清脆鐘鈴＋金屬回響
+        float pitch = Math.min(2.0f, 1.15f + 0.08f * Math.max(0, p.streak() - 1));
+        play(SoundEvents.ANVIL_LAND, 1.65f, vol * 0.35f);
+        play(SoundEvents.ARROW_HIT_PLAYER, Math.min(2.0f, pitch + 0.35f), vol * 1.0f);
+        play(SoundEvents.NOTE_BLOCK_BELL.value(), pitch, vol * 1.15f);
+        play(SoundEvents.AMETHYST_BLOCK_CHIME, Math.min(2.0f, pitch + 0.45f), vol * 1.1f);
+        play(SoundEvents.EXPERIENCE_ORB_PICKUP, Math.min(2.0f, pitch + 0.35f), vol * 0.85f);
+        if (p.headshot()) {
+            play(SoundEvents.GLASS_BREAK, 1.85f, vol * 0.60f);
+            play(SoundEvents.NOTE_BLOCK_CHIME.value(), Math.min(2.0f, pitch + 0.60f), vol * 1.15f);
+        }
     }
 
     private static void play(SoundEvent s, float pitch, float vol) {
@@ -93,25 +118,52 @@ public final class KillHud {
         float t = (now - iconTime) / (float) ICON_MS;
         int alpha = (int) (255 * (t < 0.7f ? 1f : (1f - t) / 0.3f));
         if (alpha < 8) return;
-        int color = icon.assist() ? 0x60D8FF : icon.headshot() ? 0xFFD040 : icon.streak() >= 3 ? 0xFF5050 : 0xFFFFFF;
-        String text = icon.assist() ? "助攻"
-            : (icon.headshot() ? "爆頭" : "擊殺") + (icon.streak() >= 2 ? "  " + icon.streak() + " 連殺" : "");
+
+        boolean isAssist = icon.assist();
+        boolean isKnock = icon.knock();
+        int color = isAssist ? 0x58E0FF
+            : isKnock ? (icon.headshot() ? 0xFFB830 : 0xFF8830)
+            : (icon.headshot() ? 0xFFD840 : icon.streak() >= 3 ? 0xFF3838 : 0xFF5555);
+        String text = isAssist ? "助攻"
+            : isKnock ? (icon.headshot() ? "爆頭擊倒" : "擊倒")
+            : (icon.headshot() ? "爆頭擊殺" : "擊殺") + (icon.streak() >= 2 ? "  " + icon.streak() + " 連殺" : "");
+
         g.pose().pushPose();
-        g.pose().translate(w / 2f, h / 2f + 24, 0);
-        float pop = t < 0.1f ? 1.3f - 3f * t : 1f; // 彈出一下
-        g.pose().scale(scale * 0.75f * pop, scale * 0.75f * pop, 1);
+        g.pose().translate(w / 2f, h / 2f + 26, 0);
+        float pop = t < 0.12f ? 1.45f - 3.75f * t : 1f; // 俐落彈入
+        g.pose().scale(scale * 0.80f * pop, scale * 0.80f * pop, 1);
+
         int c = (alpha << 24) | color;
-        if (icon.assist()) {
-            // 助攻旗幟：十字星記號（＋）
-            g.fill(-4, -11, 5, -9, c);
-            g.fill(-1, -14, 2, -6, c);
+        int bgA = (int) (alpha * 0.55f);
+        int bg = (bgA << 24) | 0x0C1018;
+        int tw = font.width(text);
+        int bw = Math.max(36, tw + 14);
+
+        // 戰術旗幟底帶＋頂部強調線（三種事件明顯區分形狀與配色）
+        g.fill(-bw / 2, -2, bw / 2, 11, bg);
+        g.fill(-bw / 2, -3, bw / 2, -2, c);
+
+        if (isAssist) {
+            // 助攻旗幟：青藍色十字星徽章（＋）
+            g.fill(-5, -12, 6, -10, c);
+            g.fill(-1, -16, 2, -6, c);
+        } else if (isKnock) {
+            // 擊倒旗幟：橘金色向下擊倒箭頭（▼）與雙側翼線
+            g.fill(-6, -15, 7, -13, c);
+            g.fill(-4, -13, 5, -11, c);
+            g.fill(-2, -11, 3, -9, c);
+            g.fill(-1, -9, 2, -7, c);
         } else {
-            for (int i = -3; i <= 3; i++) { // 小小的 ╳
-                g.fill(i - 1, i - 1 - 10, i + 1, i + 1 - 10, c);
-                g.fill(i - 1, -i - 1 - 10, i + 1, -i + 1 - 10, c);
+            // 擊殺旗幟：鮮紅／金色雙刃交叉（╳）＋頂端王冠亮點
+            for (int i = -4; i <= 4; i++) {
+                g.fill(i - 1, i - 1 - 11, i + 1, i + 1 - 11, c);
+                g.fill(i - 1, -i - 1 - 11, i + 1, -i + 1 - 11, c);
+            }
+            if (icon.headshot() || icon.streak() >= 2) {
+                g.fill(-2, -18, 3, -16, (alpha << 24) | 0xFFE860);
             }
         }
-        g.drawString(font, text, -font.width(text) / 2, 0, c, true);
+        g.drawString(font, text, -tw / 2, 1, c, true);
         g.pose().popPose();
     }
 
