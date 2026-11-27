@@ -151,38 +151,48 @@ class ObsidianBunkerBlueprintTest {
     }
 
     @Test
-    void narrowCorridorsAndHighCoverDensity() {
+    void distinctDistrictsVerticalityAndCoverDensity() {
         ObsidianBunkerBlueprint.Built b = ObsidianBunkerBlueprint.build();
         var g = b.grid;
         int coverCount = 0;
+        int labFloor = 0;
+        int cargoFloor = 0;
+        int containerBlocks = 0;
+        int glassFloor = 0;
+        int elevatorPairs = 0;
         for (int x = 0; x < ObsidianBunkerBlueprint.WIDTH; x++) {
-            for (int y = 0; y < ObsidianBunkerBlueprint.HEIGHT; y++) {
-                for (int z = 0; z < ObsidianBunkerBlueprint.DEPTH; z++) {
-                    if (g[x][y][z].isCover()) coverCount++;
+            for (int z = 0; z < ObsidianBunkerBlueprint.DEPTH; z++) {
+                int elevInCol = 0;
+                for (int y = 0; y < ObsidianBunkerBlueprint.HEIGHT; y++) {
+                    var c = g[x][y][z];
+                    if (c.isCover()) coverCount++;
+                    if (c == ObsidianBunkerBlueprint.Cell.FLOOR_LAB) labFloor++;
+                    if (c == ObsidianBunkerBlueprint.Cell.FLOOR_CARGO) cargoFloor++;
+                    if (c == ObsidianBunkerBlueprint.Cell.CONTAINER_ORANGE
+                        || c == ObsidianBunkerBlueprint.Cell.CONTAINER_TEAL
+                        || c == ObsidianBunkerBlueprint.Cell.CONTAINER_YELLOW) containerBlocks++;
+                    if (c == ObsidianBunkerBlueprint.Cell.GLASS_FLOOR) glassFloor++;
+                    if (c == ObsidianBunkerBlueprint.Cell.ELEVATOR) elevInCol++;
                 }
+                if (elevInCol >= 2) elevatorPairs++;
             }
         }
         assertTrue(coverCount >= 100, "掩體方塊數不足（預期至少 100）: " + coverCount);
+        assertTrue(labFloor >= 150, "北區潔淨實驗室地板不足: " + labFloor);
+        assertTrue(cargoFloor >= 200, "南區工業貨運碼頭地板不足: " + cargoFloor);
+        assertTrue(containerBlocks >= 150, "南區集裝箱方塊數不足: " + containerBlocks);
+        assertTrue(glassFloor >= 20, "中區懸空玻璃天橋地板不足: " + glassFloor);
+        assertTrue(elevatorPairs >= 2, "應至少包含 2 組上下對齊的戰術電梯井: " + elevatorPairs);
 
-        // 檢核代表性走廊淨空寬度（皆不得超過 4 格）
-        assertMaxOpenSpanZ(g, 24, 1, 3, 6, 4, "外北走廊");
-        assertMaxOpenSpanZ(g, 24, 1, 58, 61, 4, "外南走廊");
-        assertMaxOpenSpanZ(g, 24, 1, 17, 19, 3, "內北整備道");
-        assertMaxOpenSpanZ(g, 24, 1, 31, 33, 3, "中路突穿走廊");
-        assertMaxOpenSpanX(g, 18, 1, 5, 8, 4, "西側縱向幹道");
-        assertMaxOpenSpanX(g, 24, 7, 16, 18, 3, "2F 西天橋");
-    }
-
-    private static void assertMaxOpenSpanZ(ObsidianBunkerBlueprint.Cell[][][] g, int x, int y, int zMin, int zMax, int maxW, String name) {
-        assertFalse(g[x][y][zMin - 1].isPassable(), name + " 北側應為實牆");
-        assertFalse(g[x][y][zMax + 1].isPassable(), name + " 南側應為實牆");
-        assertTrue((zMax - zMin + 1) <= maxW, name + " 寬度超過上限 " + maxW);
-    }
-
-    private static void assertMaxOpenSpanX(ObsidianBunkerBlueprint.Cell[][][] g, int z, int y, int xMin, int xMax, int maxW, String name) {
-        assertFalse(g[xMin - 1][y][z].isPassable(), name + " 西側應為實牆");
-        assertFalse(g[xMax + 1][y][z].isPassable(), name + " 東側應為實牆");
-        assertTrue((xMax - xMin + 1) <= maxW, name + " 寬度超過上限 " + maxW);
+        // 確認玩家步行（不靠電梯）即可到達 y=1 (一樓)、y=4 (中層觀測台／貨櫃頂)、y=7 (懸空天橋／天車)
+        var r0 = b.redSpawns.get(0);
+        boolean[][][] open = bfs(b, (int) Math.floor(r0.x()), (int) Math.floor(r0.y()), (int) Math.floor(r0.z()), false);
+        assertTrue(open[42][4][19], "應可步行抵達北區實驗室 y=4 觀測夾層");
+        assertTrue(open[30][4][32], "應可步行抵達中區反應爐 y=4 西側平台");
+        assertTrue(open[33][4][51], "應可步行抵達南區橘色貨櫃 y=4 頂端");
+        assertTrue(open[51][4][55], "應可步行抵達南區青色貨櫃 y=4 頂端");
+        assertTrue(open[42][7][27], "應可步行抵達中區 y=7 懸空玻璃天橋");
+        assertTrue(open[42][7][49], "應可步行抵達南區 y=7 裝卸天車桁架");
     }
 
     private static boolean reachesPoint(boolean[][][] vis, ObsidianBunkerBlueprint.LocalPoint pt) {

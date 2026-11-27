@@ -1,6 +1,7 @@
 package com.provinggrounds.modes.arena;
 
 import com.provinggrounds.ProvingGroundsMod;
+import com.provinggrounds.registry.PGBlocks;
 import com.provinggrounds.core.GameManager;
 import com.provinggrounds.data.MapRegistry;
 import com.provinggrounds.modes.BattleRoyaleMode;
@@ -281,8 +282,10 @@ public final class ArenaMapGenerator {
 
     private static boolean needsShapeUpdate(ObsidianBunkerBlueprint.Cell c) {
         return c == ObsidianBunkerBlueprint.Cell.GLASS_PANE
+            || c == ObsidianBunkerBlueprint.Cell.GLASS_CYAN
             || c == ObsidianBunkerBlueprint.Cell.IRON_BARS
             || c == ObsidianBunkerBlueprint.Cell.COVER_HALF
+            || c == ObsidianBunkerBlueprint.Cell.COVER_LAB
             || c == ObsidianBunkerBlueprint.Cell.STAIR_E
             || c == ObsidianBunkerBlueprint.Cell.STAIR_W
             || c == ObsidianBunkerBlueprint.Cell.STAIR_N
@@ -299,6 +302,14 @@ public final class ArenaMapGenerator {
             }
             case WALL_RED -> Blocks.RED_CONCRETE.defaultBlockState();
             case WALL_BLUE -> Blocks.BLUE_CONCRETE.defaultBlockState();
+            case WALL_LAB -> {
+                if (ly == 1 || ly == 4) yield Blocks.CYAN_TERRACOTTA.defaultBlockState();
+                yield ((lx + lz) % 4 == 0) ? Blocks.QUARTZ_PILLAR.defaultBlockState() : Blocks.WHITE_CONCRETE.defaultBlockState();
+            }
+            case WALL_CARGO -> {
+                if (ly == 1) yield Blocks.DEEPSLATE_BRICKS.defaultBlockState();
+                yield ((lx + lz) % 5 == 0) ? Blocks.OXIDIZED_COPPER.defaultBlockState() : Blocks.BRICKS.defaultBlockState();
+            }
             case CEILING -> Blocks.DEEPSLATE_BRICKS.defaultBlockState();
             case FLOOR_MAIN -> Blocks.SMOOTH_STONE.defaultBlockState();
             case FLOOR_CORRIDOR -> ((lx + lz) % 2 == 0) ? Blocks.POLISHED_ANDESITE.defaultBlockState() : Blocks.GRAY_CONCRETE.defaultBlockState();
@@ -306,11 +317,20 @@ public final class ArenaMapGenerator {
             case FLOOR_RED -> Blocks.RED_TERRACOTTA.defaultBlockState();
             case FLOOR_BLUE -> Blocks.BLUE_TERRACOTTA.defaultBlockState();
             case FLOOR_UPPER -> ((lx + lz) % 2 == 0) ? Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState() : Blocks.STONE_BRICKS.defaultBlockState();
+            case FLOOR_LAB -> ((lx + lz) % 2 == 0) ? Blocks.SMOOTH_QUARTZ.defaultBlockState() : Blocks.POLISHED_DIORITE.defaultBlockState();
+            case FLOOR_CARGO -> ((lx + lz) % 3 == 0) ? Blocks.CRACKED_STONE_BRICKS.defaultBlockState() : Blocks.POLISHED_ANDESITE.defaultBlockState();
+            case HAZARD_STRIPE -> ((lx + lz) % 2 == 0) ? Blocks.YELLOW_CONCRETE.defaultBlockState() : Blocks.BLACK_CONCRETE.defaultBlockState();
+            case GLASS_FLOOR -> Blocks.LIGHT_BLUE_STAINED_GLASS.defaultBlockState();
             case POINT_FLOOR_A, POINT_FLOOR_B, POINT_FLOOR_C -> Blocks.IRON_BLOCK.defaultBlockState();
+            case CONTAINER_ORANGE -> ((lx + ly + lz) % 3 == 0) ? Blocks.COPPER_BLOCK.defaultBlockState() : Blocks.ORANGE_TERRACOTTA.defaultBlockState();
+            case CONTAINER_TEAL -> ((lx + ly + lz) % 3 == 0) ? Blocks.WAXED_OXIDIZED_COPPER.defaultBlockState() : Blocks.CYAN_CONCRETE.defaultBlockState();
+            case CONTAINER_YELLOW -> ((lx + ly + lz) % 3 == 0) ? Blocks.YELLOW_CONCRETE.defaultBlockState() : Blocks.YELLOW_TERRACOTTA.defaultBlockState();
+            case ELEVATOR -> PGBlocks.ELEVATOR.get().defaultBlockState();
             case LIGHT -> Blocks.SEA_LANTERN.defaultBlockState();
             case LIGHT_WARM -> Blocks.OCHRE_FROGLIGHT.defaultBlockState();
             case REACTOR_CORE -> Blocks.SEA_LANTERN.defaultBlockState();
             case GLASS_PANE -> Blocks.LIGHT_GRAY_STAINED_GLASS_PANE.defaultBlockState();
+            case GLASS_CYAN -> Blocks.CYAN_STAINED_GLASS_PANE.defaultBlockState();
             case TINTED_GLASS -> Blocks.TINTED_GLASS.defaultBlockState();
             case IRON_BARS -> Blocks.IRON_BARS.defaultBlockState();
             case COVER_FULL -> ((lx + lz) % 2 == 0) ? Blocks.CRACKED_DEEPSLATE_BRICKS.defaultBlockState() : Blocks.POLISHED_BASALT.defaultBlockState();
@@ -320,6 +340,7 @@ public final class ArenaMapGenerator {
             case COVER_SERVER -> (ly == 2) ? Blocks.OBSERVER.defaultBlockState() : Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState();
             case COVER_PILLAR -> Blocks.POLISHED_BASALT.defaultBlockState();
             case COVER_PIPE -> Blocks.OXIDIZED_COPPER.defaultBlockState();
+            case COVER_LAB -> Blocks.SMOOTH_QUARTZ_SLAB.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.BOTTOM);
             case STAIR_E -> Blocks.POLISHED_DEEPSLATE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.EAST).setValue(StairBlock.HALF, Half.BOTTOM);
             case STAIR_W -> Blocks.POLISHED_DEEPSLATE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.WEST).setValue(StairBlock.HALF, Half.BOTTOM);
             case STAIR_N -> Blocks.POLISHED_DEEPSLATE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.NORTH).setValue(StairBlock.HALF, Half.BOTTOM);

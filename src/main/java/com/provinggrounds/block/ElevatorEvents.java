@@ -26,10 +26,10 @@ import java.util.UUID;
 /**
  * 檔案: ElevatorEvents.java
  * 目的: 電梯方塊的上下傳送（伺服器端判斷，客戶端 ClientElevator 只負責偵測按鍵）：
- *   - 非大逃殺／創造模式：立即傳送，冷卻 elevator_cooldown_seconds（預設 1 秒）。
- *   - 大逃殺進行中（生存／冒險模式）：需於電梯方塊上讀條啟動 1.8 秒（36 tick），
+ *   - 大廳／非對戰／創造模式：立即傳送，冷卻 elevator_cooldown_seconds（預設 1 秒）。
+ *   - 大逃殺與團隊模式對戰中（生存／冒險模式）：需於電梯方塊上讀條啟動 1.8 秒（36 tick），
  *     期間出發與目標樓層都會發出機械提示音與雲霧粒子讓敵人察覺；
- *     離開方塊或受到傷害立即中斷搭乘，成功到達後大逃殺冷卻 6 秒（120 tick）。
+ *     在電梯上方跳躍不會取消搭乘，水平離開方塊或受到傷害才會中斷；對戰中不設額外冷卻時間。
  */
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID)
 public final class ElevatorEvents {
@@ -38,8 +38,8 @@ public final class ElevatorEvents {
     public static final int MAX_RANGE = 64;
     /** 大逃殺啟動讀條（1.8 秒 = 36 tick）。 */
     public static final int BR_DELAY_TICKS = 36;
-    /** 大逃殺搭完後的冷卻時間（6 秒 = 120 tick）。 */
-    public static final int BR_COOLDOWN_TICKS = 120;
+    /** 大逃殺搭完後的冷卻時間（0 = 取消冷卻，只保留啟動使用時間）。 */
+    public static final int BR_COOLDOWN_TICKS = 0;
 
     private record PendingRide(ServerLevel level, BlockPos from, BlockPos target, boolean up, long triggerTick) {}
 
@@ -65,8 +65,8 @@ public final class ElevatorEvents {
         if (ride == null) return;
 
         ServerLevel level = p.serverLevel();
-        if (p.isDeadOrDying() || !BattleRoyaleMode.get().isRunning()
-            || level != ride.level() || !ride.from().equals(standingOn(p))) {
+        if (p.isDeadOrDying() || !isMatchActive()
+            || level != ride.level() || !isWithinElevatorColumn(p, ride.from())) {
             PENDING.remove(p.getUUID());
             p.displayClientMessage(Component.literal("已離開電梯，取消搭乘").withStyle(ChatFormatting.GRAY), true);
             return;
@@ -115,8 +115,12 @@ public final class ElevatorEvents {
         catch (IllegalStateException e) { return 20; }
     }
 
-    private static boolean useBattleRoyaleRule(ServerPlayer p) {
-        return BattleRoyaleMode.get().isRunning() && !p.isCreative() && !p.isSpectator();
+    private static boolean isMatchActive() {
+        return BattleRoyaleMode.get().isRunning() || com.provinggrounds.modes.arena.ArenaManager.isRunning();
+    }
+
+    private static boolean useMatchRule(ServerPlayer p) {
+        return isMatchActive() && !p.isCreative() && !p.isSpectator();
     }
 
     /** 站在電梯方塊上時，往上（up = true）或往下找下一個電梯方塊並傳送。 */
@@ -151,7 +155,7 @@ public final class ElevatorEvents {
             return;
         }
 
-        if (useBattleRoyaleRule(p)) {
+        if (useMatchRule(p)) {
             NEED_RELEASE.add(p.getUUID());
             PENDING.put(p.getUUID(), new PendingRide(level, from, target, up, now + BR_DELAY_TICKS));
             level.playSound(null, from.getX() + 0.5, from.getY() + 0.5, from.getZ() + 0.5,
@@ -170,7 +174,8 @@ public final class ElevatorEvents {
     private static void completeTeleport(ServerPlayer p, ServerLevel level, BlockPos from, BlockPos target,
                                          int cdTicks, boolean loudWarning) {
         long now = level.getGameTime();
-        COOLDOWN_UNTIL.put(p.getUUID(), now + cdTicks);
+        if (cdTicks > 0) COOLDOWN_UNTIL.put(p.getUUID(), now + cdTicks);
+        else COOLDOWN_UNTIL.remove(p.getUUID());
         NEED_RELEASE.add(p.getUUID());
         double ox = p.getX() - from.getX(), oz = p.getZ() - from.getZ(); // 保留在方塊上的水平位置
         if (loudWarning) {
@@ -208,6 +213,15 @@ public final class ElevatorEvents {
             if (level.getBlockState(pos).is(PGBlocks.ELEVATOR.get()) && p.getY() - (pos.getY() + 1) < 0.6) return pos;
         }
         return null;
+    }
+
+    /** 讀條期間判定玩家是否仍在出發電梯上方（允許原地跳躍，不會因跳上樓起跳高度 > 0.6 格而誤取消）。 */
+    private static boolean isWithinElevatorColumn(ServerPlayer p, BlockPos from) {
+        double dx = Math.abs(p.getX() - (from.getX() + 0.5));
+        double dz = Math.abs(p.getZ() - (from.getZ() + 0.5));
+        if (dx > 0.72 || dz > 0.72) return false;
+        double relY = p.getY() - (from.getY() + 1.0);
+        return relY >= -0.15 && relY <= 1.65;
     }
 
     /** 電梯方塊上方 2 格沒有會擋住人的方塊。 */

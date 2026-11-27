@@ -86,6 +86,7 @@ public class GuideBookScreen extends Screen {
     private Category category = Category.ALL;
     private int chapterIdx = 0;
     private int selectedItemIdx = 0;
+    private int chapterScroll = 0;
     private int guideScroll = 0;
     private int listScroll = 0;
     private int detailScroll = 0;
@@ -217,7 +218,7 @@ public class GuideBookScreen extends Screen {
         int lx = left + 10;
         if (mx >= lx && mx < lx + leftColW && my >= bodyTop && my < bodyBottom) {
             if (tab == Tab.GUIDE) {
-                int idx = ((int) my - bodyTop - 4) / 30;
+                int idx = ((int) my - bodyTop - 4 + chapterScroll) / 28;
                 if (idx >= 0 && idx < chapters.size()) {
                     chapterIdx = idx;
                     guideScroll = 0;
@@ -241,6 +242,12 @@ public class GuideBookScreen extends Screen {
     public boolean mouseScrolled(double mx, double my, double delta) {
         int step = delta > 0 ? -24 : 24;
         if (tab == Tab.GUIDE) {
+            int lx = left + 10;
+            if (mx >= lx && mx < lx + leftColW && my >= bodyTop && my < bodyBottom) {
+                int maxChScroll = Math.max(0, chapters.size() * 28 - (bodyBottom - bodyTop - 8));
+                chapterScroll = Math.max(0, Math.min(maxChScroll, chapterScroll + step));
+                return true;
+            }
             if (mx >= rightColX && mx < rightColX + rightColW && my >= bodyTop && my < bodyBottom) {
                 guideScroll = Math.max(0, guideScroll + step);
                 return true;
@@ -308,24 +315,32 @@ public class GuideBookScreen extends Screen {
 
     private void renderGuide(GuiGraphics g, int mouseX, int mouseY) {
         int lx = left + 10;
-        // 左欄章節清單
+        // 左欄章節清單（支援捲動）
         g.fill(lx - 1, bodyTop - 1, lx + leftColW + 1, bodyBottom + 1, BORDER);
         g.fill(lx, bodyTop, lx + leftColW, bodyBottom, PANEL);
 
+        int chViewH = bodyBottom - bodyTop - 8;
+        int maxChScroll = Math.max(0, chapters.size() * 28 - chViewH);
+        if (chapterScroll > maxChScroll) chapterScroll = maxChScroll;
+
+        g.enableScissor(lx + 1, bodyTop + 1, lx + leftColW - 1, bodyBottom - 1);
         for (int i = 0; i < chapters.size(); i++) {
             GuideChapter ch = chapters.get(i);
-            int ry = bodyTop + 4 + i * 30;
+            int ry = bodyTop + 4 + i * 28 - chapterScroll;
+            if (ry + 25 < bodyTop || ry > bodyBottom) continue;
             boolean sel = i == chapterIdx;
-            boolean hov = mouseX >= lx && mouseX < lx + leftColW && mouseY >= ry && mouseY < ry + 26;
+            boolean hov = mouseX >= lx && mouseX < lx + leftColW && mouseY >= ry && mouseY < ry + 25;
             if (sel) {
-                g.fill(lx + 2, ry, lx + leftColW - 2, ry + 26, ROW_SEL);
-                g.fill(lx + 2, ry, lx + 4, ry + 26, ch.color());
+                g.fill(lx + 2, ry, lx + leftColW - 2, ry + 25, ROW_SEL);
+                g.fill(lx + 2, ry, lx + 4, ry + 25, ch.color());
             } else if (hov) {
-                g.fill(lx + 2, ry, lx + leftColW - 2, ry + 26, ROW_HOV);
+                g.fill(lx + 2, ry, lx + leftColW - 2, ry + 25, ROW_HOV);
             }
-            g.drawString(font, ch.title(), lx + 9, ry + 4, sel ? ACCENT : TEXT, false);
-            g.drawString(font, ch.tag(), lx + 9, ry + 15, TEXT_DIM, false);
+            g.drawString(font, ch.title(), lx + 8, ry + 3, sel ? ACCENT : TEXT, false);
+            g.drawString(font, ch.tag(), lx + 8, ry + 14, TEXT_DIM, false);
         }
+        g.disableScissor();
+        drawScrollbar(g, lx + leftColW - 4, bodyTop + 3, bodyBottom - bodyTop - 6, chapterScroll, maxChScroll);
 
         // 右欄圖文卡片區
         g.fill(rightColX - 1, bodyTop - 1, rightColX + rightColW + 1, bodyBottom + 1, BORDER);
@@ -555,82 +570,169 @@ public class GuideBookScreen extends Screen {
     // ── 資料建構：圖文教學 ──────────────────────────────────────────────────
 
     private List<GuideChapter> buildChapters() {
+        var opts = Minecraft.getInstance().options;
         String menuKey = ClientModEvents.OPEN_MENU.getTranslatedKeyMessage().getString();
         String proneKey = ClientModEvents.PRONE.getTranslatedKeyMessage().getString();
         String quietKey = ClientMovement.QUIET_WALK.getTranslatedKeyMessage().getString();
-        String sneakKey = Minecraft.getInstance().options.keyShift.getTranslatedKeyMessage().getString();
+        String sneakKey = opts.keyShift.getTranslatedKeyMessage().getString();
+        String jumpKey = opts.keyJump.getTranslatedKeyMessage().getString();
+        String invKey = opts.keyInventory.getTranslatedKeyMessage().getString();
+        String dropKey = opts.keyDrop.getTranslatedKeyMessage().getString();
+        String interactKey = ClientInteract.INTERACT.getTranslatedKeyMessage().getString();
+        String specialKey = com.provinggrounds.special.client.ClientSpecial.USE_KEY.getTranslatedKeyMessage().getString();
+        String pingKey = ClientPing.KEY.getTranslatedKeyMessage().getString();
+        String boardKey = ScoreboardPanel.KEY.getTranslatedKeyMessage().getString();
+        String playerListKey = opts.keyPlayerList.getTranslatedKeyMessage().getString();
 
         List<GuideChapter> list = new ArrayList<>();
 
-        list.add(new GuideChapter("大逃殺流程", "跳傘・搜刮・縮圈・吃雞", 0xFFE8D060, List.of(
-            new GuideCard("1. 準備與跳傘降落", "開局階段", List.of(
-                "在大廳按 " + menuKey + " 開啟主選單並點擊「準備」，全員準備後自動倒數開局。",
-                "登機後選擇落點跳傘，空中按方向鍵滑翔控制落點，接近地面按空白鍵展開降落傘安全落地。"
-            ), VisualKind.ITEM, new ItemStack(PGBlocks.PARACHUTE.get()), "", 0xFF60C0FF),
-            new GuideCard("2. 搜刮物資箱與背包管理", "裝備養成", List.of(
-                "建築物與野區據點藏有普通／中階／高階與空投物資箱，靠近按 F 即可搜刮。",
-                "取得一～三級背包會擴充可用欄位；在箱子或墓碑介面替換背包時，舊背包會自動放進對方介面中。"
-            ), VisualKind.ITEM, new ItemStack(PGBlocks.BACKPACK_3.get()), "", 0xFFE8D060),
-            new GuideCard("3. 安全區縮圈與大地圖", "戰術推進", List.of(
-                "白圈為目前安全區（平滑收縮），藍色虛線為下一階段安全區，圈外會持續扣血。",
-                "按大地圖鍵可檢視整張地圖、區域名稱、復活祭壇位置、空投與隊友標點。"
+        // 1. 按鍵總覽：移動・姿態・爬牆・跳傘
+        list.add(new GuideChapter("1. 移動與姿態按鍵", "移動・爬牆・跳傘・電梯", 0xFF58E098, List.of(
+            new GuideCard("基礎移動與自動奔跑", "不需再按疾跑鍵", List.of(
+                "• W / A / S / D：前後左右移動；按住 W 往前會自動奔跑，開鏡／開槍／靜走／蹲下／趴下時自動暫停奔跑。",
+                "• " + quietKey + "（靜走）：按住放慢腳步並大幅降低腳步聲，適合近距離摸點。",
+                "• " + sneakKey + "（蹲下）：壓低身形、縮小受彈面積並穩定瞄準。",
+                "• " + proneKey + "（趴下）：切換趴地姿勢（極低輪廓與命中框），再按一次或跳躍即可起身。"
+            ), VisualKind.KEY_BADGE, ItemStack.EMPTY, quietKey, 0xFF58E098),
+            new GuideCard("翻牆攀爬（大逃殺限定）", "精準 1.5 ～ 3.0 格", List.of(
+                "• 跳躍（" + jumpKey + "）離地後，面對前方 1.5 ～ 3.0 格高的牆面或平台再按一次 " + jumpKey + "，即可雙手撐起翻上頂部。",
+                "• 1 格高方塊不會誤觸發攀爬（直接跳上去即可）；柵欄與石牆（含兩層堆疊）碰撞高度皆為精確每格 1 格。",
+                "• 攀爬中途按 S / A / D 可隨時取消並向該方向退開，結束後會自動重新拔出原本主手武器。"
+            ), VisualKind.KEY_BADGE, ItemStack.EMPTY, jumpKey + "×2", 0xFF60C0FF),
+            new GuideCard("跳傘、電梯與平滑斜坡", "地形快速移動", List.of(
+                "• 跳傘（" + jumpKey + "）：登機鎖定結束後按 " + jumpKey + " 跳出飛機並進入鞘翅滑翔；空中再按 " + jumpKey + " 開傘／收傘，落地自動收起。",
+                "• 電梯方塊：站上電梯按 " + jumpKey + " 傳送至正上方電梯，按 " + sneakKey + " 傳送至正下方電梯。",
+                "• 樓梯與半磚：正放樓梯、半磚與相鄰 1 格實心方塊皆具備平滑斜坡碰撞箱，直接平順走上不抖動不卡牆。"
+            ), VisualKind.ITEM, new ItemStack(PGBlocks.PARACHUTE.get()), "", 0xFFE8D060)
+        )));
+
+        // 2. 按鍵總覽：戰鬥・槍械・快捷欄
+        list.add(new GuideChapter("2. 戰鬥與槍械按鍵", "射擊・改裝・專用格", 0xFFFF7058, List.of(
+            new GuideCard("射擊、開鏡與戰術動作", "奔跑即時開火", List.of(
+                "• 滑鼠左鍵（開火）：奔跑中按左鍵可零延遲立即開火，並瞬間將槍口由奔跑歪斜姿勢擺正朝前。",
+                "• 滑鼠右鍵（開鏡瞄準）：奔跑中開鏡會強制切換為走路模式以確保射擊穩定。",
+                "• R（換彈）｜B（切換射擊模式：單發／連發／全自動）｜V（切換倍鏡倍率）。",
+                "• Z（槍械改裝）：開啟配件介面裝卸瞄具／彈匣／槍口等配件；Y（槍托近戰）；" + dropKey + "（丟棄手上物品）。"
+            ), VisualKind.KEY_BADGE, ItemStack.EMPTY, "R / Z", 0xFFFF7058),
+            new GuideCard("快捷欄 1 ～ 9 專用格規則", "防誤放＋自動補位", List.of(
+                "• 數字鍵 1、2：主副槍械專用格（所有槍械含手槍皆放這兩格，最多攜帶 2 把槍）。",
+                "• 數字鍵 3：近戰武器專用格（匕首／戰術刀等，拔刀移動速度更快）。",
+                "• 數字鍵 4（補品）／ 5（投擲物）：專屬快捷格，用完自動從背包補位；長按 4 或 5 可開啟輪盤快速切換種類。",
+                "• 數字鍵 6 ～ 9：一般物資格（跳傘期間第 9 格固定為降落傘）；背包滿時按 Z 卸配件絕不會塞進第 1～5 專用格。"
+            ), VisualKind.KEY_BADGE, ItemStack.EMPTY, "1 - 9", 0xFFE8D060),
+            new GuideCard("互動鍵（" + interactKey + "）與特殊道具（" + specialKey + "）", "開箱・救援・技能", List.of(
+                "• " + interactKey + "（互動鍵）：準星指著物資箱開箱、對倒地隊友扶起、對復活祭壇復活隊友。",
+                "• 團隊模式倒地放棄：在團隊死鬥／佔點倒地時，長按 " + interactKey + " 3 秒可選擇直接放棄死亡並進入重生。",
+                "• " + specialKey + "（使用特殊道具）：即時施放「特殊物品欄」（物品欄上方獨立 1 格）內的戰術技能道具。"
+            ), VisualKind.KEY_BADGE, ItemStack.EMPTY, interactKey + " / " + specialKey, 0xFFD880FF)
+        )));
+
+        // 3. 按鍵總覽：介面・地圖・溝通・防誤觸
+        list.add(new GuideChapter("3. 介面與資訊按鍵", "選單・地圖・標點・HUD", 0xFF60C0FF, List.of(
+            new GuideCard("選單、背包與戰績畫面", "核心介面入口", List.of(
+                "• " + menuKey + "（主選單／商店）：大廳時開啟模式與分隊選單；團隊死鬥／佔點位於基地內時開啟武器防具商店。",
+                "• " + invKey + "（物品欄／背包）：檢視背包欄位、裝備護甲與上方「特殊物品欄」，支援 Shift 快速搬移。",
+                "• " + boardKey + "（戰績面板）：查看本場各隊存活／擊殺／助攻／經濟或陣亡統計。",
+                "• " + playerListKey + "（玩家列表）：原版線上玩家名單；輸入 /pg rank 可隨時查詢自己的四種競技排位段位。"
+            ), VisualKind.KEY_BADGE, ItemStack.EMPTY, menuKey, 0xFF60C0FF),
+            new GuideCard("大地圖與戰術標點", "團隊情報共享", List.of(
+                "• 大地圖（大逃殺內按大地圖鍵或主選單預覽）：檢視整張地圖、區域名稱、白圈／藍圈、紫色復活祭壇與空投落點。",
+                "• " + pingKey + " 或 滑鼠中鍵（戰術標點）：在準星指向位置建立標記，隊友畫面與大地圖會同步顯示方向與距離。"
             ), VisualKind.CIRCLE_DIAGRAM, ItemStack.EMPTY, "", 0xFF60C0FF),
-            new GuideCard("4. 倒地救援與祭壇復活", "團隊協作", List.of(
-                "隊友倒地時靠近按 F 即可扶起；若隊友遭淘汰會掉落「復活牌」。",
-                "撿起復活牌前往地圖上紫色十字標記的「復活祭壇」互動，就能讓隊友重新跳傘歸隊。"
-            ), VisualKind.ITEM, new ItemStack(PGBlocks.ALTAR_ITEM.get()), "", 0xFFB070FF)
-        )));
-
-        list.add(new GuideChapter("團隊模式玩法", "死鬥・佔點・槍王", 0xFFFF7058, List.of(
-            new GuideCard("團隊死鬥（TDM）", "率先達成擊殺目標", List.of(
-                "紅藍兩隊對抗，率先達到目標擊殺數或時間結束時擊殺較高的一方獲勝。",
-                "開局前可選職業：突擊兵擊殺回血、工兵擊殺刷新手榴彈；每累計 3 殺（或連死 3 次保底）獲得特殊道具。"
-            ), VisualKind.TEAM_BADGE, ItemStack.EMPTY, "", 0xFFFF7058),
-            new GuideCard("據點爭奪（DOM）", "搶佔 A / B / C 據點", List.of(
-                "佔領場上 A、B、C 據點持續累積分數，率先達成目標分數獲勝。",
-                "開啟特殊道具模式時，開局前每位玩家可挑選專屬特殊道具搭配職業打陣地戰。"
-            ), VisualKind.ITEM, new ItemStack(Items.BEACON), "", 0xFF60C0FF),
-            new GuideCard("槍王之王（GK）", "一路升級武器奪冠", List.of(
-                "每擊殺一定數量自動切換下一把武器，一路完成全武器階梯即可獲勝。",
-                "管理員可在大廳的「場地」選單自由切換經典場地或一鍵生成的「黑曜地堡」室內地圖。"
-            ), VisualKind.ITEM, new ItemStack(Items.GOLDEN_SWORD), "", 0xFFE8D060)
-        )));
-
-        list.add(new GuideChapter("操作與快捷鍵", "移動・介面・輸入法", 0xFF58E098, List.of(
-            new GuideCard("常用核心按鍵", "可於按鍵設定自訂", List.of(
-                "主選單：" + menuKey + "｜靜走（壓低腳步聲）：" + quietKey + "｜蹲下：" + sneakKey + "｜趴下：" + proneKey,
-                "開箱／扶隊友／祭壇互動：F｜使用特殊道具：Q｜標點：滑鼠中鍵或 X。"
-            ), VisualKind.KEY_BADGE, ItemStack.EMPTY, menuKey, 0xFF58E098),
-            new GuideCard("開啟介面時持續移動", "搜刮不怕變活靶", List.of(
-                "開啟箱子、背包、選單或大地圖時，仍可用方向鍵移動、跳躍，也能直接按 " + quietKey + " 靜走、" + sneakKey + " 蹲下或按 " + proneKey + " 趴下。",
-                "正在聊天或輸入框打字時會自動暫停接管，不影響輸入文字。"
-            ), VisualKind.KEY_BADGE, ItemStack.EMPTY, proneKey, 0xFF60C0FF),
-            new GuideCard("自動鎖定英文輸入法 & HUD 設定", "防誤觸保護", List.of(
-                "Windows 系統下，非打字時會自動鎖定英文輸入法，按 Shift／Ctrl 不再誤觸中文輸入法（可在 client 設定關閉）。",
-                "主選單「HUD 介面設定」可自由拖曳與縮放各 HUD 元件，左側設定面板也可隨時收起預覽。"
+            new GuideCard("介面中移動、輸入法鎖定與 HUD", "操作手感保護", List.of(
+                "• 開啟箱子、背包、選單或大地圖時，仍可用 WASD、" + jumpKey + "、" + quietKey + "、" + sneakKey + "、" + proneKey + " 持續移動閃避（打字時自動暫停）。",
+                "• Windows 非打字狀態自動鎖定英文輸入法，按 Shift／Ctrl 不再誤切中文輸入法（可於客戶端設定關閉）。",
+                "• 主選單「HUD 介面設定」可自由拖曳與縮放各 HUD 元件位置與大小。"
             ), VisualKind.KEY_BADGE, ItemStack.EMPTY, "EN", 0xFFE8D060)
         )));
 
-        list.add(new GuideChapter("特殊道具機制", "62 種戰術技能", 0xFFD880FF, List.of(
-            new GuideCard("專屬欄位與觸發方式", "預設按 Q 使用", List.of(
-                "特殊道具只能放入物品欄上方的「特殊物品欄」（1 格），按 Q 鍵即時施放，用完即消耗。",
-                "點擊本頁上方的「道具圖鑑」即可搜尋並檢視全部 62 種特殊道具的詳細效果！"
-            ), VisualKind.ITEM, new ItemStack(SpecialRegistry.item(SpecialType.FLARE_GUN)), "", 0xFFD880FF),
-            new GuideCard("進階特性標籤", "次數・反彈・領域", List.of(
-                "【可用 2 次】臨時雪牆、彈簧鞋、殘影分身、所有地雷皆可使用兩次。",
-                "【反彈牆壁】臨時雪牆、風暴彈、毒氣彈、定身球、磁人手榴彈撞牆可反彈 1 次，落地立即觸發。"
-            ), VisualKind.ITEM, new ItemStack(SpecialRegistry.item(SpecialType.SNOW_WALL)), "", 0xFF80E0FF)
+        // 4. 大逃殺玩法（一般／競技排位）
+        list.add(new GuideChapter("4. 大逃殺與競技排位", "一般・競技・段位積分", 0xFFE8D060, List.of(
+            new GuideCard("標準流程：跳傘 → 搜刮 → 縮圈 → 吃雞", "基本規則", List.of(
+                "• 大廳按 " + menuKey + " 點「準備」，全員準備後進入倒數登機；跳傘後搜刮普通／中階／高階／空投物資箱。",
+                "• 升級 1～3 級背包可解鎖更多物品欄；物資箱被破壞或炸毀時不會掉落箱內物品。玻璃可被子彈或近戰打破。",
+                "• 白圈為目前安全區，藍虛線為下一圈，圈外持續扣毒傷；最後存活的隊伍／玩家獲勝。"
+            ), VisualKind.ITEM, new ItemStack(PGBlocks.BACKPACK_3.get()), "", 0xFFE8D060),
+            new GuideCard("倒地救援與復活祭壇", "50 HP・0.5 HP/秒", List.of(
+                "• 隊伍尚有存活成員時受致命傷會進入倒地（50 HP、每秒流血 0.5 HP），隊友靠近按 " + interactKey + " 即可扶起。",
+                "• 淘汰後現場掉落「復活牌」（不佔背包格），隊友撿起後帶至大地圖紫色十字「復活祭壇」按 " + interactKey + " 即可空降歸隊。"
+            ), VisualKind.ITEM, new ItemStack(PGBlocks.ALTAR_ITEM.get()), "", 0xFFB070FF),
+            new GuideCard("競技模式規則鎖定與四種排位", "單／雙／三／四排獨立積分", List.of(
+                "• 競技模式固定：慢速縮圈、友軍誤傷開、全部爆炸破壞方塊、僅出純戰術型特殊道具（排除整人與過誇張道具）、每人限復活 1 次。",
+                "• 嚴格滿員開局：單排禁組隊；雙／三／四排每隊必須剛好滿 2／3／4 人；孤狼死亡或全隊淘汰後直接返大廳（防報點）。",
+                "• 7 大段位（青銅～戰神，含 1 場降段保護）：≥4 隊為 100% 正常積分，3 隊 75%、2 隊 50%；輸入 /pg rank 查看四排位戰績。"
+            ), VisualKind.TEAM_BADGE, ItemStack.EMPTY, "", 0xFFFF7058)
         )));
 
-        list.add(new GuideChapter("管理員建圖工具", "一鍵建圖・進度條", 0xFFFFB040, List.of(
+        // 5. 團隊模式玩法（死鬥・佔點・槍王）
+        list.add(new GuideChapter("5. 團隊模式玩法", "死鬥・佔點・槍王之王", 0xFFFF9048, List.of(
+            new GuideCard("團隊死鬥（TDM）", "20% 前／30% 中／50% 後", List.of(
+                "• 紅藍兩隊對抗，率先達標擊殺數或時間結束分高者勝；階段倍率為 ×1（前期 20%）→ ×2（中期 30%）→ ×4（後期 50%）。",
+                "• 擊殺、助攻（50%）、擊倒（25%）皆有金錢收入；特殊道具改為死亡重生送 1 個，擊殺充能 1 格／助攻 0.5 格滿 2 格再送 1 個。",
+                "• 玻璃可被打破，每塊玻璃於 10 秒後獨立自動復原；敵方重生保護區在二樓也可看到紅色邊界牆。"
+            ), VisualKind.TEAM_BADGE, ItemStack.EMPTY, "", 0xFFFF7058),
+            new GuideCard("據點爭奪（DOM）", "回合制搶佔 A / B / C", List.of(
+                "• 每回合準備期於基地按 " + menuKey + " 購買裝備，開戰後搶佔開放據點或殲滅敵隊得分；死亡清空身上裝備（保留整場特殊道具）。",
+                "• 擊殺 $60／助攻 $30／擊倒 $15／首殺 +$120／站點每秒 +$5，搭配回合勝敗與連敗補償金錢；被打破的玻璃每回合自動復原。"
+            ), VisualKind.ITEM, new ItemStack(Items.BEACON), "", 0xFF60C0FF),
+            new GuideCard("槍王之王（GK）與倒地放棄", "武器階梯＋長按 " + interactKey, List.of(
+                "• 槍王之王：累計擊殺自動切換下一階段武器，率先走完所有武器階梯奪冠。",
+                "• 團隊模式開啟倒地時，倒地血量 50 HP（0.5 HP/秒），可長按 " + interactKey + " 3 秒放棄並直接死亡進入重生（擊殺仍計給擊倒者）。"
+            ), VisualKind.ITEM, new ItemStack(Items.GOLDEN_SWORD), "", 0xFFE8D060)
+        )));
+
+        // 6. 團隊九大職業詳解
+        list.add(new GuideChapter("6. 團隊九大職業", "前排・輸出・偵查・輔助", 0xFF80C8FF, List.of(
+            new GuideCard("全能與突擊前排", "自由人・突擊兵・重裝兵", List.of(
+                "• 自由人（100 HP）：商店 9 折、全槍械解鎖，配裝最彈性。",
+                "• 突擊兵（90 HP）：移動速度 +12%、擊殺回復 20 HP（限步槍／手槍）。",
+                "• 重裝兵（125 HP）：正面受傷害 -15%、移動速度 -10%（限機槍／散彈／手槍）。"
+            ), VisualKind.ITEM, new ItemStack(Items.DIAMOND_CHESTPLATE), "", 0xFF60C0FF),
+            new GuideCard("精準、偵查與突襲", "狙擊手・偵察兵・刺客", List.of(
+                "• 狙擊手（80 HP）：擊殺／助攻／擊倒獲得金錢 +30%，快速發育買高階狙擊與倍鏡（限狙擊／手槍）。",
+                "• 偵察兵（100 HP）：移速 +10%、擊中敵人發光 0.5 秒、每 15 秒自動發光最近敵人 1 秒（限步槍／衝鋒／手槍）。",
+                "• 刺客（70 HP）：拔刀移速 +30%、背刺傷害 ×3、走路聲音 -50%（限衝鋒／手槍，自帶匕首）。"
+            ), VisualKind.ITEM, new ItemStack(Items.SPYGLASS), "", 0xFF58E098),
+            new GuideCard("爆破、醫療與補給", "工兵・醫護兵・支援兵", List.of(
+                "• 工兵（100 HP）：自帶雙雷且擊殺刷新，爆炸傷害 +20%、受炸傷害 -50%（限重武／散彈／手槍）。",
+                "• 醫護兵（100 HP）：6 格光環每秒回隊友 2 HP、用補品快 25% 且 6 格隊友共享 50% 回血、扶人 2 秒（限衝鋒／散彈／手槍）。",
+                "• 支援兵（100 HP）：投擲物上限 4 個（其餘職業 3 個）、重生送 1 雷、陣亡清空；每 20 秒自補 1 雷＋1 補品，6 格隊友補 1 雷或 1 補品。"
+            ), VisualKind.ITEM, new ItemStack(Items.GOLDEN_APPLE), "", 0xFFE8D060)
+        )));
+
+        // 7. 特殊道具、護甲與槍械射程
+        list.add(new GuideChapter("7. 道具・護甲・射程", "62 種技能・抗彈・32 區塊", 0xFFD880FF, List.of(
+            new GuideCard("特殊道具與特性標籤", "預設按 " + specialKey + " 施放", List.of(
+                "• 特殊道具專用「特殊物品欄」（1 格），按 " + specialKey + " 即時施放；點擊本頁上方「道具圖鑑」可搜尋全部 62 種道具。",
+                "• 【可用 2 次】雪牆、彈簧鞋、殘影分身、所有地雷皆可用兩次；【反彈牆壁】雪牆／風暴彈／毒氣彈／定身球／磁人雷撞牆反彈 1 次。",
+                "• 一般大逃殺開放全道具池，競技大逃殺僅出純戰術型道具池。"
+            ), VisualKind.ITEM, new ItemStack(SpecialRegistry.item(SpecialType.FLARE_GUN)), "", 0xFFD880FF),
+            new GuideCard("護甲抗彈率（v5 平衡）", "中高階甲差距明確", List.of(
+                "• 皮革／海龜甲：8%｜鎖鏈／金甲：12%｜鐵甲：18%｜鑽石甲：28%｜獄髓甲：36%。",
+                "• 擊倒／擊殺／助攻皆有專屬不同樣式的戰術旗幟與高亮音效，方便即時判斷戰果。"
+            ), VisualKind.ITEM, new ItemStack(Items.NETHERITE_CHESTPLATE), "", 0xFF80C8FF),
+            new GuideCard("遠距視野與各槍種射程", "雙端 32 區塊（512 格）", List.of(
+                "• 伺服器與客戶端玩家及子彈追蹤渲染上限鎖定為 32 區塊（512 格），搭配原生距離傷害衰減與下墜。",
+                "• 最遠射程：狙擊槍／重武器 512 格｜機槍 256 格｜步槍 220 格｜衝鋒槍 120 格｜手槍 80 格｜散彈槍 48 格。"
+            ), VisualKind.ITEM, new ItemStack(Items.BOW), "", 0xFFFFB040)
+        )));
+
+        // 8. 管理員建圖與維護工具
+        list.add(new GuideChapter("8. 管理員工具與指令", "控制台・場地・維護", 0xFFFFB040, List.of(
             new GuideCard("管理員控制台工具", "免背指令一鍵操作", List.of(
-                "透過創造模式「Proving Grounds」分頁或 /pg give tool admin_panel 取得「管理員控制台」。",
-                "右鍵即可一鍵生成 5 張大逃殺地圖、原地升級、修復陰影光照、生成黑曜地堡、重繪俯視圖或重載設定。"
+                "• 透過創造模式「Proving Grounds」分頁或 /pg give tool admin_panel 取得「管理員控制台」。",
+                "• 右鍵開啟 4 分頁面板：大逃殺地圖（新建／分區重製／獨立光照修復／獨立無形方塊修復）、團隊場地、建圖工具與系統維護。",
+                "• 底部常駐「取消目前作業」按鈕，可隨時中止背景建圖、光照或掃描任務。"
             ), VisualKind.ITEM, new ItemStack(PGBlocks.ADMIN_TOOLS.get(AdminToolItem.Tool.ADMIN_PANEL).get()), "", 0xFFFFB040),
-            new GuideCard("大地圖命名與背景進度條", "視覺化監控", List.of(
-                "管理員在大地圖上按右鍵可傳送至指定座標，並可替大區域新增、修改或刪除區域名稱（亦可用 /pg map label）。",
-                "所有非瞬間完成的建圖、光照修復、俯視圖繪製與掃描任務，畫面上方皆會即時顯示目前階段與進度條。"
-            ), VisualKind.PROGRESS_BADGE, ItemStack.EMPTY, "", 0xFFE8D060)
+            new GuideCard("團隊場地與紅藍重生區自訂", "圓形／四邊獨立方形", List.of(
+                "• 控制台「團隊場地」分頁可切換經典場地、一鍵生成或重建「黑曜地堡」室內地圖。",
+                "• 支援每張地圖獨立設定重生保護形狀：圓形（半徑）或方形（紅隊／藍隊各自獨立調整北／南／西／東四邊，附東西／南北鏡像按鈕）。"
+            ), VisualKind.PROGRESS_BADGE, ItemStack.EMPTY, "", 0xFFE8D060),
+            new GuideCard("常用管理與查詢指令", "快速參考", List.of(
+                "• /pg rank [玩家]：查詢單／雙／三／四排四種競技排位段位與積分。",
+                "• /pg result：重新開啟最近一場大逃殺的完整結算數據。",
+                "• /pg map label：新增／修改／刪除大地圖區域名稱；大地圖上管理員按右鍵可直接傳送。"
+            ), VisualKind.KEY_BADGE, ItemStack.EMPTY, "/pg", 0xFF60C0FF)
         )));
 
         return list;

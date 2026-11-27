@@ -1958,15 +1958,22 @@ public class BattleRoyaleMode {
         }
     }
 
-    /** 競技模式：孤狼死亡或隊伍全滅後直接送回大廳（保留 participants 紀錄以供本局結束結算 RP）。 */
+    /** 競技模式：孤狼死亡或隊伍全滅後直接送至跑庫塔（無跑庫塔時退回大廳；保留 participants 紀錄以供本局結束結算 RP）。 */
     private void returnEliminatedToLobby(Participant part) {
         if (part.returnedToLobby || variant != Variant.COMPETITIVE) return;
         part.returnedToLobby = true;
         ServerPlayer sp = player(part.id);
         if (sp == null) return;
         restore(sp);
-        sp.sendSystemMessage(Component.literal("[競技] 你已淘汰並返回大廳（本局結束後將自動結算排位積分）。")
-            .withStyle(ChatFormatting.YELLOW));
+        com.provinggrounds.venue.Venue parkour = com.provinggrounds.venue.VenueManager.byId("parkour");
+        if (parkour != null) {
+            com.provinggrounds.venue.VenueManager.enter(sp, parkour, false);
+            sp.sendSystemMessage(Component.literal("[競技] 你已淘汰並傳送至跑庫塔（本局結束後將自動結算排位積分）。")
+                .withStyle(ChatFormatting.YELLOW));
+        } else {
+            sp.sendSystemMessage(Component.literal("[競技] 你已淘汰並返回大廳（本局結束後將自動結算排位積分）。")
+                .withStyle(ChatFormatting.YELLOW));
+        }
     }
 
     /** 把觀察者鎖到一位存活隊友的視角；整隊淘汰時放開成自由觀察者。 */

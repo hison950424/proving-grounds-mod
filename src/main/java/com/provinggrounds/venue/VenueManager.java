@@ -155,13 +155,18 @@ public final class VenueManager {
 
     // ── 事件 ─────────────────────────────────────────────────────────────────
 
-    /** 安全區：玩家之間打不到（不是大逃殺參賽者時）。沒進過任何場地的人當作在大廳（安全）。 */
+    /** 安全區：非大逃殺存活參賽者不受世界邊界傷害，且場地內除 PvP 區外玩家之間打不到。 */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onAttack(LivingAttackEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer victim)) return;
-        if (!(event.getSource().getEntity() instanceof ServerPlayer attacker) || attacker == victim) return;
         BattleRoyaleMode br = BattleRoyaleMode.get();
-        if (br.isParticipant(victim.getUUID()) || br.isParticipant(attacker.getUUID())) return;
+        if (event.getSource().is(net.minecraft.world.damagesource.DamageTypes.OUTSIDE_BORDER)
+                && !br.isAliveParticipant(victim.getUUID())) {
+            event.setCanceled(true);
+            return;
+        }
+        if (!(event.getSource().getEntity() instanceof ServerPlayer attacker) || attacker == victim) return;
+        if (br.isAliveParticipant(victim.getUUID()) || br.isAliveParticipant(attacker.getUUID())) return;
         if (com.provinggrounds.modes.arena.ArenaManager.isParticipant(victim.getUUID())
             && com.provinggrounds.modes.arena.ArenaManager.isParticipant(attacker.getUUID())) return; // 對戰中照隊伍規則
         Venue v = current(victim), a = current(attacker);
