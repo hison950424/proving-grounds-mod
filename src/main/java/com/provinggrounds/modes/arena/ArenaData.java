@@ -89,8 +89,10 @@ public final class ArenaData {
         if (root.has("items")) {
             for (JsonElement e : root.getAsJsonArray("items")) {
                 JsonObject o = e.getAsJsonObject();
+                int price = o.get("price").getAsInt();
+                int freePrice = Math.max(1, (int) Math.round(price * 0.90)); // 自由人改為九折
                 items.add(new ShopItem(items.size(), o.get("id").getAsString(), o.get("name").getAsString(),
-                    o.get("price").getAsInt(), o.get("free").getAsInt(), o.get("item").getAsString(),
+                    price, freePrice, o.get("item").getAsString(),
                     o.get("count").getAsInt(), o.get("cat").getAsString(), o.has("atype") ? o.get("atype").getAsString() : ""));
             }
         }

@@ -241,6 +241,7 @@ public abstract class ArenaMode {
             }
             refillConsumables(p, ap, false);
             refillTeamHeals(p, false);
+            if (giveGun && kind() == GameManager.GameMode.TDM) giveSupportRespawnThrowable(p, ap);
         }
         ensureOne(p, cfg.ammoBox.get());
         p.setHealth(p.getMaxHealth());
@@ -312,9 +313,64 @@ public abstract class ArenaMode {
             ItemStack template = RespawnKit.parse(spec);
             if (template.isEmpty()) continue;
             int have = count(p, template);
-            if (have == 0) give(p, template.copy());
-            else if (limit && have > 1) remove(p, template, have - 1);
+            if (have == 0) {
+                if (!template.is(com.provinggrounds.modes.br.HotbarRules.THROWABLE) || countThrowables(p) < maxThrowables(ap)) {
+                    give(p, template.copy());
+                }
+            } else if (limit && have > 1) {
+                remove(p, template, have - 1);
+            }
         }
+    }
+
+    /** 團隊模式投擲物攜帶上限：一般職業 3 個、支援兵 4 個。 */
+    public static int maxThrowables(@Nullable ArenaPlayer ap) {
+        return ap != null && ap.cls == ArenaClass.SUPPORT ? 4 : 3;
+    }
+
+    /** 計算玩家身上目前攜帶的投擲物總數。 */
+    public static int countThrowables(ServerPlayer p) {
+        int n = 0;
+        Inventory inv = p.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack s = inv.getItem(i);
+            if (!s.isEmpty() && s.is(com.provinggrounds.modes.br.HotbarRules.THROWABLE)) n += s.getCount();
+        }
+        return n;
+    }
+
+    /** 清空玩家身上的所有投擲物（支援兵陣亡時呼叫，避免囤雷）。 */
+    public static void clearThrowables(ServerPlayer p) {
+        Inventory inv = p.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack s = inv.getItem(i);
+            if (!s.isEmpty() && s.is(com.provinggrounds.modes.br.HotbarRules.THROWABLE)) inv.setItem(i, ItemStack.EMPTY);
+        }
+    }
+
+    /** 若未達該職業投擲物上限，給予 1 顆隨機投擲物；成功回傳 true。 */
+    protected boolean giveRandomThrowable(ServerPlayer p, ArenaPlayer ap) {
+        if (countThrowables(p) >= maxThrowables(ap)) return false;
+        List<String> pool = ArenaClass.Kits.SUPPORT_THROWABLES;
+        String tid = pool.get(level.random.nextInt(pool.size()));
+        ItemStack stack = RespawnKit.parse(ArenaClass.Kits.throwable(tid));
+        if (stack.isEmpty()) return false;
+        give(p, stack);
+        return true;
+    }
+
+    /** 支援兵重生／開局補給：只給 1 顆隨機投擲物（遵守上限 4 個）。 */
+    protected void giveSupportRespawnThrowable(ServerPlayer p, ArenaPlayer ap) {
+        if (usesClasses() && ap != null && ap.cls == ArenaClass.SUPPORT) {
+            giveRandomThrowable(p, ap);
+        }
+    }
+
+    /** 狙擊手發育加速：擊殺／助攻／擊倒金錢 +30%。 */
+    protected int sniperBonus(ArenaPlayer ap, int base) {
+        return usesClasses() && ap != null && ap.cls == ArenaClass.SNIPER
+            ? (int) Math.round(base * 1.30)
+            : base;
     }
 
     // ── 每 tick ─────────────────────────────────────────────────────────────
@@ -379,8 +435,8 @@ public abstract class ArenaMode {
         if (loadoutOpen()) return; // 開局選角準備期不觸發掃描與補給
         switch (ap.cls) {
             case RECON -> {
-                // 偵察兵：每 20 秒發光最近的敵人 1 秒（自己與同隊可見）
-                if (++ap.reconSec >= 20) {
+                // 偵察兵：每 15 秒發光最近的敵人 1 秒（自己與同隊可見）
+                if (++ap.reconSec >= 15) {
                     ap.reconSec = 0;
                     ServerPlayer nearest = null;
                     double best = Double.MAX_VALUE;
@@ -398,32 +454,44 @@ public abstract class ArenaMode {
                 }
             }
             case SUPPORT -> {
-                // 支援兵：身邊 4 格內的所有隊友（包含自己）每 30 秒補一顆隨機投擲物
-                if (++ap.supportSec >= 30) {
+                // 支援兵：每 20 秒給予自己 1 隨機投擲物（上限 4）＋1 醫療用品；給予 6 格內隊友 1 隨機投擲物（上限 3）或 1 醫療用品
+                if (++ap.supportSec >= 20) {
                     ap.supportSec = 0;
-                    List<String> pool = ArenaClass.Kits.SUPPORT_THROWABLES;
+                    ItemStack medTpl = RespawnKit.parse(ArenaClass.Kits.AI2_MEDKIT);
+                    // 自己：1 隨機投擲物（未達上限）＋ 1 醫療用品
+                    boolean selfThrow = giveRandomThrowable(p, ap);
+                    if (!medTpl.isEmpty()) give(p, medTpl.copy());
+                    p.displayClientMessage(Component.literal(selfThrow
+                        ? "[支援兵] 補給 1 隨機投擲物＋1 醫療用品"
+                        : "[支援兵] 補給 1 醫療用品（投擲物已達上限）").withStyle(ChatFormatting.AQUA), true);
+                    p.playNotifySound(SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.4f, 1.2f);
+
+                    // 6 格內其他隊友：隨機給 1 投擲物（未達 3 個上限）或 1 醫療用品
                     for (ServerPlayer mate : online()) {
                         ArenaPlayer ma = players.get(mate.getUUID());
-                        if (ma == null || !sameSide(ap, ma) || !mate.isAlive() || mate.isSpectator()) continue;
-                        if (mate.distanceToSqr(p) > 16.0) continue; // 4 格內
-                        String tid = pool.get(level.random.nextInt(pool.size()));
-                        ItemStack stack = RespawnKit.parse(ArenaClass.Kits.throwable(tid));
-                        if (!stack.isEmpty()) {
-                            give(mate, stack);
+                        if (mate == p || ma == null || !sameSide(ap, ma) || !mate.isAlive() || mate.isSpectator()) continue;
+                        if (mate.distanceToSqr(p) > 36.0) continue; // 6 格內
+                        boolean wantThrow = level.random.nextBoolean();
+                        boolean gaveThrow = wantThrow && giveRandomThrowable(mate, ma);
+                        if (gaveThrow) {
                             mate.displayClientMessage(Component.literal("[支援兵] 補給一顆隨機投擲物").withStyle(ChatFormatting.AQUA), true);
+                            mate.playNotifySound(SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.4f, 1.2f);
+                        } else if (!medTpl.isEmpty()) {
+                            give(mate, medTpl.copy());
+                            mate.displayClientMessage(Component.literal("[支援兵] 補給一個醫療用品").withStyle(ChatFormatting.AQUA), true);
                             mate.playNotifySound(SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.4f, 1.2f);
                         }
                     }
                 }
             }
             case MEDIC -> {
-                // 醫護兵：身邊 4 格內的隊友每秒回 1 HP
+                // 醫護兵：身邊 6 格內的隊友每秒回 2 HP
                 for (ServerPlayer mate : online()) {
                     ArenaPlayer ma = players.get(mate.getUUID());
                     if (mate == p || ma == null || !sameSide(ap, ma) || !mate.isAlive() || mate.isSpectator()) continue;
                     if (downedEnabled && downed.isDowned(mate.getUUID())) continue;
-                    if (mate.distanceToSqr(p) <= 16.0 && mate.getHealth() < mate.getMaxHealth()) {
-                        mate.heal(1f);
+                    if (mate.distanceToSqr(p) <= 36.0 && mate.getHealth() < mate.getMaxHealth()) {
+                        mate.heal(2f);
                         level.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, mate.getX(), mate.getY() + 1.8, mate.getZ(), 1, 0.2, 0.1, 0.2, 0);
                     }
                 }
@@ -618,6 +686,9 @@ public abstract class ArenaMode {
         v.campTicks = 0;
         int lostStreak = v.streak;
         v.streak = 0;
+        if (usesClasses() && v.cls == ArenaClass.SUPPORT) {
+            clearThrowables(victim); // 支援兵陣亡清空投擲物
+        }
         onDeath(victim, v);
         ArenaPlayer k = killer == null || killer == victim ? null : players.get(killer.getUUID());
         boolean counted = k != null && !sameSide(k, v);
@@ -891,6 +962,11 @@ public abstract class ArenaMode {
         if (stack.isEmpty()) { deny(p, "這個商品目前無法購買（伺服器缺少物品）"); return; }
         GunCompat.fillAmmo(stack);
         boolean armor = stack.getItem() instanceof ArmorItem;
+        if (usesClasses() && stack.is(com.provinggrounds.modes.br.HotbarRules.THROWABLE)
+                && countThrowables(p) + stack.getCount() > maxThrowables(ap)) {
+            deny(p, "投擲物已達上限（" + maxThrowables(ap) + " 個）！");
+            return;
+        }
         if (!armor && p.getInventory().getFreeSlot() < 0) { deny(p, "背包已滿！"); return; }
         ap.money -= price;
         if (armor) {

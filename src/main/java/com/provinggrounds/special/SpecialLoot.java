@@ -19,19 +19,22 @@ import java.util.List;
 public final class SpecialLoot {
 
     public static final ResourceLocation TABLE = new ResourceLocation("br", "special");
+    /** 競技模式專用戰術道具池（過濾整人與過度誇張的特殊道具）。 */
+    public static final ResourceLocation COMPETITIVE_TABLE = new ResourceLocation("br", "special_competitive");
 
     private SpecialLoot() {}
 
-    /** 箱子生成內容後呼叫：依機率放 1 件特殊物品到空格。 */
+    /** 箱子生成內容後呼叫：依機率放 1 件特殊物品到空格。競技模式強制開啟且僅抽戰術型道具池。 */
     public static void maybeAdd(Container crate, Level level) {
         if (!(level instanceof ServerLevel sl)) return;
         SpecialConfig s;
         try { s = SpecialConfig.get(); } catch (IllegalStateException e) { return; }
+        boolean competitive = com.provinggrounds.modes.BattleRoyaleMode.get().isCompetitiveActive();
         boolean airdrop = crate instanceof net.minecraft.world.level.block.entity.BlockEntity be
             && be.getBlockState().is(com.provinggrounds.registry.PGBlocks.CRATE_AIRDROP.get());
         double chance = airdrop ? s.airdropChance.get() : s.chance.get(); // 空投：高風險高回報，預設一定有
-        if (!s.enabled.get() || sl.getRandom().nextDouble() >= chance) return;
-        ItemStack pick = roll(sl);
+        if ((!competitive && !s.enabled.get()) || sl.getRandom().nextDouble() >= chance) return;
+        ItemStack pick = roll(sl, competitive ? COMPETITIVE_TABLE : TABLE);
         if (pick.isEmpty()) return;
         for (int i = 0; i < crate.getContainerSize(); i++) {
             if (crate.getItem(i).isEmpty()) {
@@ -43,7 +46,12 @@ public final class SpecialLoot {
 
     /** 從權重表抽一件。 */
     public static ItemStack roll(ServerLevel level) {
-        LootTable table = level.getServer().getLootData().getLootTable(TABLE);
+        return roll(level, TABLE);
+    }
+
+    /** 從指定權重表抽一件。 */
+    public static ItemStack roll(ServerLevel level, ResourceLocation tableId) {
+        LootTable table = level.getServer().getLootData().getLootTable(tableId);
         List<ItemStack> out = table.getRandomItems(new LootParams.Builder(level).create(LootContextParamSets.EMPTY));
         return out.isEmpty() ? ItemStack.EMPTY : out.get(0);
     }

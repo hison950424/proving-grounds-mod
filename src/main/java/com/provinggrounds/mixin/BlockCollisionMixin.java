@@ -14,14 +14,19 @@ import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Half;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.EntityCollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 檔案: BlockCollisionMixin.java
@@ -34,6 +39,23 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(BlockBehaviour.BlockStateBase.class)
 public abstract class BlockCollisionMixin {
+
+    /** 柵欄／石牆／關閉柵欄門的 1 格整齊高度碰撞箱快取（將外觀水平投影拉齊至 y = 0..1，避免矮牆 0.875 導致 1 格跳不上 2 格）。 */
+    @Unique
+    private static final Map<BlockState, VoxelShape> PROVINGGROUNDS_ONE_BLOCK_FENCE_WALL = new ConcurrentHashMap<>();
+
+    @Unique
+    private static VoxelShape provinggrounds$normalizeOneBlockHeight(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
+        return PROVINGGROUNDS_ONE_BLOCK_FENCE_WALL.computeIfAbsent(state, st -> {
+            VoxelShape visual = st.getShape(level, pos, ctx);
+            if (visual.isEmpty()) return visual;
+            VoxelShape out = Shapes.empty();
+            for (AABB box : visual.toAabbs()) {
+                out = Shapes.or(out, Shapes.box(box.minX, 0.0, box.minZ, box.maxX, 1.0, box.maxZ));
+            }
+            return out.optimize();
+        });
+    }
 
     @Inject(method = { "getCollisionShape(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;",
                        "m_60742_" }, at = @At("HEAD"), cancellable = true, remap = false)
@@ -83,12 +105,12 @@ public abstract class BlockCollisionMixin {
             }
         }
 
-        // 柵欄、石牆與關閉的柵欄門碰撞高度改為與 1 格方塊相同（沿用最高 1 格的外觀碰撞範圍）
+        // 柵欄、石牆與關閉的柵欄門碰撞高度統一為精確 1 格（單層或疊兩層皆為每格 1.0 高，可從 1 格牆順利跳上 2 格牆）
         if (state.is(BlockTags.FENCES) || state.is(BlockTags.WALLS)
                 || (state.is(BlockTags.FENCE_GATES) && state.hasProperty(FenceGateBlock.OPEN) && !state.getValue(FenceGateBlock.OPEN))) {
-            VoxelShape visual = state.getShape(level, pos, ctx);
-            if (!visual.isEmpty()) {
-                cir.setReturnValue(visual);
+            VoxelShape normalized = provinggrounds$normalizeOneBlockHeight(state, level, pos, ctx);
+            if (!normalized.isEmpty()) {
+                cir.setReturnValue(normalized);
             }
         }
     }

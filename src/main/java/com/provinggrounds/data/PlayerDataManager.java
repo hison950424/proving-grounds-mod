@@ -93,6 +93,24 @@ public class PlayerDataManager {
         markDirty();
     }
 
+    /** 競技大逃殺結算：依單／雙／三／四排獨立更新段位積分（RP）、最高分、場次與勝場。 */
+    public com.provinggrounds.modes.br.RankSystem.MatchDelta applyRankedMatch(
+            UUID id, String name, com.provinggrounds.modes.br.RankSystem.Queue queue,
+            int place, int totalTeams, int kills, int assists) {
+        PlayerStats s = getStats(id);
+        if (s.lastName.isEmpty()) s.lastName = name;
+        RankStats rs = s.rank(queue);
+        var res = com.provinggrounds.modes.br.RankSystem.calculate(
+            queue, rs.rp, rs.demotionShield, place, totalTeams, kills, assists);
+        rs.rp = res.afterRp();
+        rs.peakRp = Math.max(rs.peakRp, rs.rp);
+        rs.demotionShield = res.nextShield();
+        rs.games++;
+        if (place == 1 && totalTeams > 1) rs.wins++;
+        markDirty();
+        return res;
+    }
+
     /** 所有玩家的資料（排行榜用，唯讀）。 */
     public Map<UUID, PlayerStats> all() {
         return storage == null ? Map.of() : java.util.Collections.unmodifiableMap(storage.stats);
@@ -138,8 +156,14 @@ public class PlayerDataManager {
         public long xp = 0;
         public String lastName = "";
         public final Map<String, ModeStats> modes = new HashMap<>();
+        /** 競技四種排位（solo／duo／trio／squad）各自獨立的段位積分與統計。 */
+        public final Map<String, RankStats> ranks = new HashMap<>();
 
         public ModeStats mode(String id) { return modes.computeIfAbsent(id, k -> new ModeStats()); }
+
+        public RankStats rank(com.provinggrounds.modes.br.RankSystem.Queue q) {
+            return ranks.computeIfAbsent(q.key, k -> new RankStats());
+        }
 
         public int getLevel() { return levelFor(xp); }
 
@@ -158,6 +182,9 @@ public class PlayerDataManager {
             CompoundTag m = new CompoundTag();
             modes.forEach((id, ms) -> m.put(id, ms.save()));
             t.put("modes", m);
+            CompoundTag r = new CompoundTag();
+            ranks.forEach((id, rs) -> r.put(id, rs.save()));
+            t.put("ranks", r);
             return t;
         }
 
@@ -179,6 +206,10 @@ public class PlayerDataManager {
                 br.deaths = s.deaths;
                 br.assists = s.assists;
                 br.wins = s.wins;
+            }
+            if (t.contains("ranks", 10)) {
+                CompoundTag r = t.getCompound("ranks");
+                for (String id : r.getAllKeys()) s.ranks.put(id, RankStats.load(r.getCompound(id)));
             }
             return s;
         }
@@ -224,6 +255,39 @@ public class PlayerDataManager {
             m.damage = t.getDouble("damage");
             m.aliveTicks = t.getLong("alive_ticks");
             return m;
+        }
+    }
+
+    /** 單一排位（單／雙／三／四排）的段位積分與場次紀錄。 */
+    public static class RankStats {
+        public int rp = 0;
+        public int peakRp = 0;
+        public int games = 0;
+        public int wins = 0;
+        public boolean demotionShield = true;
+
+        public com.provinggrounds.modes.br.RankSystem.Tier tier() {
+            return com.provinggrounds.modes.br.RankSystem.Tier.forRp(rp);
+        }
+
+        CompoundTag save() {
+            CompoundTag t = new CompoundTag();
+            t.putInt("rp", rp);
+            t.putInt("peak_rp", peakRp);
+            t.putInt("games", games);
+            t.putInt("wins", wins);
+            t.putBoolean("shield", demotionShield);
+            return t;
+        }
+
+        static RankStats load(CompoundTag t) {
+            RankStats r = new RankStats();
+            r.rp = Math.max(0, t.getInt("rp"));
+            r.peakRp = Math.max(r.rp, t.getInt("peak_rp"));
+            r.games = Math.max(0, t.getInt("games"));
+            r.wins = Math.max(0, t.getInt("wins"));
+            r.demotionShield = !t.contains("shield") || t.getBoolean("shield");
+            return r;
         }
     }
 

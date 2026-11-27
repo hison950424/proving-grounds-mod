@@ -102,6 +102,10 @@ public class PGCommand {
                     .executes(ctx -> stats(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                     .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> stats(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))
+                .then(Commands.literal("rank")
+                    .executes(ctx -> showRank(ctx.getSource(), ctx.getSource().getPlayerOrException()))
+                    .then(Commands.argument("player", EntityArgument.player())
+                        .executes(ctx -> showRank(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))
 
                 // 管理員工具物品（B6～B10）
                 .then(Commands.literal("give").requires(OP)
@@ -787,6 +791,20 @@ public class PGCommand {
         ok(src, String.format("%s：Lv.%d（XP %d / 下一級 %d）｜擊殺 %d 死亡 %d 助攻 %d｜K/D %.2f｜勝場 %d",
             target.getGameProfile().getName(), lv, s.xp, PlayerDataManager.xpForNextLevel(lv),
             s.kills, s.deaths, s.assists, s.getKD(), s.wins), false);
+        return 1;
+    }
+
+    private static int showRank(CommandSourceStack src, ServerPlayer target) {
+        PlayerDataManager.PlayerStats s = PlayerDataManager.get().getStats(target);
+        src.sendSuccess(() -> Component.literal("── " + target.getGameProfile().getName() + " 競技排位段位 ──")
+            .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
+        for (com.provinggrounds.modes.br.RankSystem.Queue q : com.provinggrounds.modes.br.RankSystem.Queue.values()) {
+            PlayerDataManager.RankStats rs = s.rank(q);
+            var tier = rs.tier();
+            src.sendSuccess(() -> Component.literal(String.format("  %s：%s（%d RP｜最高 %d｜%d 勝 / %d 場）",
+                q.displayName, tier.displayName, rs.rp, rs.peakRp, rs.wins, rs.games))
+                .withStyle(tier.color), false);
+        }
         return 1;
     }
 

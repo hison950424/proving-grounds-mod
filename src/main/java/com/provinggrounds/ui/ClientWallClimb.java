@@ -166,32 +166,44 @@ public final class ClientWallClimb {
         float zOff;
         float xInward;
         float pitchDeg;
-        if (t < 0.32f) {
-            float u = smooth(t / 0.32f);
-            yOff = Mth.lerp(u, -0.45f, 0.28f);
-            zOff = Mth.lerp(u, 0.12f, -0.22f);
-            xInward = Mth.lerp(u, 0.04f, -0.10f);
-            pitchDeg = Mth.lerp(u, -14.0f, 20.0f);
-        } else if (t < 0.85f) {
-            float u = smooth((t - 0.32f) / 0.53f);
-            yOff = Mth.lerp(u, 0.28f, -0.34f);
-            zOff = Mth.lerp(u, -0.22f, -0.06f);
-            xInward = -0.10f - Mth.sin(u * (float) Math.PI) * 0.04f;
-            pitchDeg = Mth.lerp(u, 20.0f, 44.0f);
+        float yawDeg;
+        float rollDeg;
+        if (t < 0.25f) {
+            // 第一段：雙手快速前伸抬高，明確扣住牆頂邊緣
+            float u = smooth(t / 0.25f);
+            yOff = Mth.lerp(u, -0.52f, 0.42f);
+            zOff = Mth.lerp(u, 0.16f, -0.34f);
+            xInward = Mth.lerp(u, 0.06f, -0.14f);
+            pitchDeg = Mth.lerp(u, -22.0f, 28.0f);
+            yawDeg = Mth.lerp(u, -6.0f, -16.0f);
+            rollDeg = Mth.lerp(u, -4.0f, -14.0f);
+        } else if (t < 0.78f) {
+            // 第二段：雙手用力下壓撐起身體（大幅度往下拉＋手腕外展撐頂）
+            float u = smooth((t - 0.25f) / 0.53f);
+            yOff = Mth.lerp(u, 0.42f, -0.56f);
+            zOff = Mth.lerp(u, -0.34f, -0.04f);
+            xInward = -0.14f - Mth.sin(u * (float) Math.PI) * 0.06f;
+            pitchDeg = Mth.lerp(u, 28.0f, 68.0f);
+            yawDeg = Mth.lerp(u, -16.0f, -22.0f);
+            rollDeg = Mth.lerp(u, -14.0f, -24.0f);
         } else {
-            float u = smooth((t - 0.85f) / 0.15f);
-            yOff = Mth.lerp(u, -0.34f, -0.78f);
-            zOff = Mth.lerp(u, -0.06f, 0.14f);
-            xInward = Mth.lerp(u, -0.10f, 0.02f);
-            pitchDeg = Mth.lerp(u, 44.0f, 10.0f);
+            // 第三段：推離平台並迅速收手準備切回武器
+            float u = smooth((t - 0.78f) / 0.22f);
+            yOff = Mth.lerp(u, -0.56f, -0.92f);
+            zOff = Mth.lerp(u, -0.04f, 0.20f);
+            xInward = Mth.lerp(u, -0.14f, 0.04f);
+            pitchDeg = Mth.lerp(u, 68.0f, 12.0f);
+            yawDeg = Mth.lerp(u, -22.0f, -8.0f);
+            rollDeg = Mth.lerp(u, -24.0f, -6.0f);
         }
-        float stagger = side * Mth.sin(t * ((float) Math.PI * 2.0f)) * 0.03f;
+        // 左右手微幅交替撐起，增強攀爬出力節奏感
+        float stagger = side * Mth.sin(t * ((float) Math.PI * 2.0f)) * 0.055f;
 
         ps.pushPose();
-        ps.translate(side * xInward, yOff + stagger, zOff - stagger);
+        ps.translate(side * xInward, yOff + stagger, zOff - stagger * 0.6f);
         ps.mulPose(Axis.XP.rotationDegrees(pitchDeg));
-        ps.mulPose(Axis.YP.rotationDegrees(side * -10.0f));
-        ps.mulPose(Axis.ZP.rotationDegrees(side * -8.0f));
+        ps.mulPose(Axis.YP.rotationDegrees(side * yawDeg));
+        ps.mulPose(Axis.ZP.rotationDegrees(side * rollDeg));
         try {
             mRenderPlayerArm.invoke(renderer, ps, buf, light, 0.0f, 0.0f, arm);
         } catch (ReflectiveOperationException | RuntimeException ignored) {}

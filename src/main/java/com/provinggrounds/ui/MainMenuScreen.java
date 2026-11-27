@@ -210,10 +210,12 @@ public class MainMenuScreen extends Screen {
             if (minecraft != null) minecraft.setScreen(new BigMapScreen());
         });
         y += PITCH;
-        y = choice(sx, y, sw, "縮圈", preset.displayName + "・約 " + estimateText(preset, lobby),
-            java.util.Arrays.stream(CirclePreset.values()).map(p -> p.displayName).toList(), preset.ordinal(), canEdit,
+        boolean comp = variant == BattleRoyaleMode.Variant.COMPETITIVE;
+        com.provinggrounds.modes.br.RankSystem.Queue rq = com.provinggrounds.modes.br.RankSystem.Queue.byOrdinal(lobby != null ? lobby.rankQueueOrdinal() : 0);
+        y = choice(sx, y, sw, "縮圈", (comp ? "慢速（競技鎖定）" : preset.displayName + "・約 " + estimateText(preset, lobby)),
+            java.util.Arrays.stream(CirclePreset.values()).map(p -> p.displayName).toList(), preset.ordinal(), canEdit && !comp,
             i -> send(LobbyManager.Action.SET_PRESET, i));
-        if (preset == CirclePreset.CUSTOM && lobby != null && lobby.customCircle().length >= 5) {
+        if (!comp && preset == CirclePreset.CUSTOM && lobby != null && lobby.customCircle().length >= 5) {
             // 自訂縮圈（計畫書 6 D2、計畫書 10 可直接輸入數字）：－ 輸入框 ＋
             int[] cc = lobby.customCircle();
             y = stepper(sx, y, sw, "階段數", cc[0] + " 階", canEdit, 1, cc[0], LobbyManager.Action.SET_CIRCLE_STAGES, false);
@@ -225,15 +227,21 @@ public class MainMenuScreen extends Screen {
         }
         y = choice(sx, y, sw, "玩法", variant.displayName, java.util.Arrays.stream(BattleRoyaleMode.Variant.values()).map(v -> v.displayName).toList(),
             variant.ordinal(), canEdit, i -> send(LobbyManager.Action.SET_VARIANT, i));
+        if (comp) {
+            y = choice(sx, y, sw, "排位", rq.displayName + "（" + rq.teamSize + "人）",
+                java.util.Arrays.stream(com.provinggrounds.modes.br.RankSystem.Queue.values())
+                    .map(q -> q.displayName + "（" + q.teamSize + "人）").toList(),
+                rq.ordinal(), canEdit, i -> send(LobbyManager.Action.SET_RANK_QUEUE, i));
+        }
         y = choice(sx, y, sw, "槍械", weapon.displayName, java.util.Arrays.stream(com.provinggrounds.core.WeaponMode.values()).map(m -> m.displayName).toList(),
             weapon.ordinal(), canEdit, i -> send(LobbyManager.Action.SET_WEAPON_MODE, i));
-        y = choice(sx, y, sw, "特殊道具", special ? "開" : "關", OFF_ON, special ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_SPECIAL, i));
+        y = choice(sx, y, sw, "特殊道具", comp ? "戰術池（鎖定）" : (special ? "開" : "關"), OFF_ON, special ? 1 : 0, canEdit && !comp, i -> send(LobbyManager.Action.SET_SPECIAL, i));
         boolean ff = lobby != null && lobby.friendlyFire();
-        y = choice(sx, y, sw, "友軍誤傷", ff ? "開" : "關", OFF_ON, ff ? 1 : 0, canEdit, i -> send(LobbyManager.Action.SET_FRIENDLY_FIRE, i));
+        y = choice(sx, y, sw, "友軍誤傷", comp ? "開（競技鎖定）" : (ff ? "開" : "關"), OFF_ON, ff ? 1 : 0, canEdit && !comp, i -> send(LobbyManager.Action.SET_FRIENDLY_FIRE, i));
         int blockDamage = lobby == null ? 1 : lobby.blockDamage(); // 爆炸炸毀方塊（比賽結束自動還原；計畫書 6 D3）
         String[] bdNames = { "關", "全部", "只有槍械", "只有投擲物" };
         int bd = Math.max(0, Math.min(3, blockDamage));
-        y = choice(sx, y, sw, "炸毀方塊", bdNames[bd], List.of(bdNames), bd, canEdit, i -> send(LobbyManager.Action.SET_BLOCK_DAMAGE, i));
+        y = choice(sx, y, sw, "炸毀方塊", comp ? "全部（鎖定）" : bdNames[bd], List.of(bdNames), bd, canEdit && !comp, i -> send(LobbyManager.Action.SET_BLOCK_DAMAGE, i));
         }
         y += 6;
         section(sx, y, "隊伍");

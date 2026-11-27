@@ -52,8 +52,9 @@ public final class BlockProtection {
 
     public static final int BOOM_OFF = 0, BOOM_ALL = 1, BOOM_GUNS = 2, BOOM_THROWABLES = 3;
 
-    /** 大廳設定「炸毀方塊」（伺服器設定 explosion_block_damage_mode_v1）：0 關、1 全部、2 只有槍械、3 只有投擲物。 */
+    /** 大廳設定「炸毀方塊」（伺服器設定 explosion_block_damage_mode_v1）：0 關、1 全部、2 只有槍械、3 只有投擲物；競技模式固定全部破壞。 */
     public static int explosionMode() {
+        if (BattleRoyaleMode.get().isCompetitiveActive()) return BOOM_ALL;
         try { return com.provinggrounds.config.PGConfig.SERVER.brExplosionBlockDamage.get(); }
         catch (IllegalStateException e) { return BOOM_ALL; }
     }

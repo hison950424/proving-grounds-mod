@@ -20,9 +20,12 @@
     "MeleeGlassMixin",
     "ChestMenuMixin",
     "ArmorAbsorbMixin",
-    "BlockCollisionMixin"
+    "BlockCollisionMixin",
+    "PlayerInventoryMixin",
+    "EntityTrackingRangeMixin"
   ],
   "client": [
+    "EntityRenderRangeMixin",
     "HumanoidArmsMixin",
     "ProneAnimMixin",
     "ItemInHandLayerMixin",

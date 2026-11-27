@@ -44,8 +44,8 @@ import java.util.function.Consumer;
 @Mod.EventBusSubscriber(modid = ProvingGroundsMod.MOD_ID)
 public final class WallClimb {
 
-    public static final int DURATION_TICKS = 18;
-    public static final int STOW_TICKS = 4;
+    public static final int DURATION_TICKS = 12;
+    public static final int STOW_TICKS = 3;
     public static final int COOLDOWN_TICKS = 10;
     public static final double CANCEL_PUSH_SPEED = 0.28;
     public static final double CANCEL_PUSH_UP = 0.06;
@@ -79,8 +79,10 @@ public final class WallClimb {
 
     private static final Map<UUID, ClimbState> SERVER_ACTIVE = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> SERVER_COOLDOWN = new ConcurrentHashMap<>();
+    private static final Map<UUID, Double> SERVER_GROUND_Y = new ConcurrentHashMap<>();
 
     private static final Map<Integer, ClimbState> CLIENT_ACTIVE = new ConcurrentHashMap<>();
+    private static final Map<Integer, Double> CLIENT_GROUND_Y = new ConcurrentHashMap<>();
     private static volatile long clientCooldownUntilMs;
     private static volatile @Nullable Consumer<Player> localFinishHandler;
 
@@ -120,31 +122,55 @@ public final class WallClimb {
         double fx = -Math.sin(rad);
         double fz = Math.cos(rad);
 
-        int yTop = Mth.floor(p.getY() + p.getBbHeight() + 1.0);
-        int yBot = Mth.floor(p.getY() + 1.0);
+        double groundY = takeoffGroundY(p);
+        int yTop = Mth.floor(groundY + 3.05);
+        int yBot = Mth.floor(groundY + 1.40);
 
         for (double dist : new double[] { 0.50, 0.78, 1.02 }) {
             for (int by = yTop; by >= yBot; by--) {
                 BlockPos wallPos = BlockPos.containing(p.getX() + fx * dist, by + 0.5, p.getZ() + fz * dist);
-                ClimbTarget target = computeLanding(p, wallPos, p.getYRot(), fx, fz);
+                ClimbTarget target = computeLanding(p, wallPos, p.getYRot(), fx, fz, groundY);
                 if (target != null) return target;
             }
         }
         return null;
     }
 
+    /** 推算本次起跳的地面高度（優先採用起跳前最後一次站地的 Y，避免隨跳躍高度浮動）。 */
+    private static double takeoffGroundY(Player p) {
+        Double rec = p.level().isClientSide
+            ? CLIENT_GROUND_Y.get(p.getId())
+            : SERVER_GROUND_Y.get(p.getUUID());
+        if (rec != null && p.getY() >= rec - 0.5 && p.getY() <= rec + 2.2) {
+            return rec;
+        }
+        Level level = p.level();
+        int bx = Mth.floor(p.getX());
+        int bz = Mth.floor(p.getZ());
+        int startY = Mth.floor(p.getY());
+        for (int by = startY; by >= startY - 2; by--) {
+            BlockPos bp = new BlockPos(bx, by, bz);
+            VoxelShape sh = level.getBlockState(bp).getCollisionShape(level, bp);
+            if (!sh.isEmpty()) {
+                double top = by + sh.max(Direction.Axis.Y);
+                if (top <= p.getY() + 0.05) return top;
+            }
+        }
+        return p.getY();
+    }
+
     @Nullable
-    private static ClimbTarget computeLanding(Player p, BlockPos wallPos, float yaw, double fx, double fz) {
+    private static ClimbTarget computeLanding(Player p, BlockPos wallPos, float yaw, double fx, double fz, double groundY) {
         Level level = p.level();
         BlockState st = level.getBlockState(wallPos);
         VoxelShape shape = st.getCollisionShape(level, wallPos);
         if (shape.isEmpty()) return null;
 
-        double headTopY = p.getY() + p.getBbHeight();
         double topY = wallPos.getY() + shape.max(Direction.Axis.Y);
-        double dy = topY - p.getY();
-        // 攀爬高度範圍（下限與上限皆較原本上調 1 格：相對腳底 1.35 格起，最高可達頭頂上方 1.05 格）
-        if (topY > headTopY + 1.05 || dy < 1.35) return null;
+        double wallHeight = topY - groundY;
+        // 僅翻爬相對起跳地面 1.5 ~ 3.0 格高的方塊（1 格高不觸發攀爬，直接跳上即可）
+        if (wallHeight < 1.45 || wallHeight > 3.05) return null;
+        if (topY <= p.getY() + 0.15 || topY > p.getY() + p.getBbHeight() + 1.55) return null;
 
         AABB sb = shape.bounds();
         double minX = wallPos.getX() + sb.minX;
@@ -294,7 +320,7 @@ public final class WallClimb {
         double rad = Math.toRadians(yaw);
         double fx = -Math.sin(rad);
         double fz = Math.cos(rad);
-        ClimbTarget target = computeLanding(p, wallPos, yaw, fx, fz);
+        ClimbTarget target = computeLanding(p, wallPos, yaw, fx, fz, takeoffGroundY(p));
         if (target == null) return;
 
         int stow = hasHeldItem(p) ? STOW_TICKS : 0;
@@ -329,7 +355,13 @@ public final class WallClimb {
 
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer p)) return;
+        if (event.phase != TickEvent.Phase.END) return;
+        Player any = event.player;
+        if (any.onGround()) {
+            if (any.level().isClientSide) CLIENT_GROUND_Y.put(any.getId(), any.getY());
+            else SERVER_GROUND_Y.put(any.getUUID(), any.getY());
+        }
+        if (!(any instanceof ServerPlayer p)) return;
         ClimbState s = SERVER_ACTIVE.get(p.getUUID());
         if (s == null) return;
 

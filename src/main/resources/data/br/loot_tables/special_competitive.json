@@ -1,0 +1,100 @@
+{
+  "type": "minecraft:empty",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:smoke_burst",
+          "weight": 14
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:snow_wall",
+          "weight": 12
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:adrenaline",
+          "weight": 12
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:blind_orb",
+          "weight": 10
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:silent_boots",
+          "weight": 10
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:armor_repair",
+          "weight": 10
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:enemy_scanner_basic",
+          "weight": 10
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:blast_scanner_basic",
+          "weight": 10
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:recon_mine",
+          "weight": 9
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:first_aid_shot",
+          "weight": 8
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:decoy",
+          "weight": 8
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:land_mine",
+          "weight": 7
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:fire_mine",
+          "weight": 7
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:shock_mine",
+          "weight": 7
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:gas_grenade",
+          "weight": 7
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:enemy_scanner",
+          "weight": 6
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:zone_shelter",
+          "weight": 6
+        },
+        {
+          "type": "minecraft:item",
+          "name": "provinggrounds:flare_gun",
+          "weight": 3
+        }
+      ]
+    }
+  ]
+}

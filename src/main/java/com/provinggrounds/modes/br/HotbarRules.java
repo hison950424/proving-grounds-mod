@@ -485,10 +485,12 @@ public final class HotbarRules {
     /** 把不合規則的物品搬到合法的格子，放不下就掉在腳邊。 */
     public static void normalize(ServerPlayer p) {
         Inventory inv = p.getInventory();
+        boolean changed = false;
         boolean dropped = false;
         for (int i = 0; i <= OFFHAND; i++) {
             ItemStack s = inv.getItem(i);
             if (allowedAt(p, i, s)) continue;
+            changed = true;
             ItemStack moving = inv.removeItemNoUpdate(i);
             insert(p, moving);
             if (!moving.isEmpty()) {
@@ -496,6 +498,7 @@ public final class HotbarRules {
                 dropped = true;
             }
         }
+        if (changed) p.inventoryMenu.broadcastChanges();
         if (dropped) message(p, MSG_DROPPED);
     }
 

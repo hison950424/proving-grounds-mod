@@ -11,22 +11,22 @@ import java.util.Set;
  */
 public enum ArenaClass {
     FREELANCER("自由人", 100, "tacz:glock_17", "SEMI",
-        "商店八折，沒有限定槍械，什麼都能買",
+        "商店九折，沒有限定槍械，什麼都能買",
         Set.of("手槍", "衝鋒槍", "散彈槍", "步槍", "機槍", "狙擊槍", "重武器"),
         List.of(), 0.0, 0.0, 0),
 
     ASSAULT("突擊兵", 90, "tacz:glock_17", "SEMI",
-        "移動速度 +20%，擊殺回復 20 HP",
+        "移動速度 +12%，擊殺回復 20 HP",
         Set.of("手槍", "步槍"),
-        List.of(), 0.20, 0.0, 0),
+        List.of(), 0.12, 0.0, 0),
 
-    HEAVY("重裝兵", 110, "tacz:p320", "SEMI",
-        "正面受到的傷害 -10%，移動速度 -15%",
+    HEAVY("重裝兵", 125, "tacz:p320", "SEMI",
+        "正面受到的傷害 -15%，移動速度 -10%",
         Set.of("手槍", "機槍", "散彈槍"),
-        List.of(), -0.15, 0.0, 0),
+        List.of(), -0.10, 0.0, 0),
 
     SNIPER("狙擊手", 80, "tacz:p320", "SEMI",
-        "用狙擊槍打中的敵人發光 0.5 秒（隊友可見）",
+        "擊殺／助攻／擊倒獲得金錢 +30%（發育更快）",
         Set.of("手槍", "狙擊槍"),
         List.of(), 0.0, 0.0, 0),
 
@@ -36,12 +36,12 @@ public enum ArenaClass {
         List.of(Kits.throwable("m67"), Kits.throwable("rgn")), 0.0, 0.0, 0),
 
     RECON("偵察兵", 100, "tacz:glock_17", "SEMI",
-        "移動速度 +10%，每 20 秒讓最近敵人發光 1 秒",
+        "移動速度 +10%，擊中敵人發光 0.5 秒；每 15 秒發光最近敵人 1 秒",
         Set.of("手槍", "衝鋒槍", "步槍"),
         List.of(), 0.10, 0.0, 0),
 
     SUPPORT("支援兵", 100, "tacz:glock_17", "SEMI",
-        "身邊 4 格內隊友（含自己）每 30 秒補一顆隨機投擲物",
+        "重生送 1 隨機投擲物（上限 4、陣亡清空）；每 20 秒自補 1 投擲物＋1 補品，6 格隊友補 1 投擲物或補品",
         Set.of("手槍", "機槍", "步槍"),
         List.of(), 0.0, 0.0, 0),
 
@@ -51,7 +51,7 @@ public enum ArenaClass {
         List.of(Kits.DAGGER), 0.0, 0.30, 0),
 
     MEDIC("醫護兵", 100, "tacz:glock_17", "SEMI",
-        "身邊 4 格內隊友每秒回 1 HP；扶起隊友只需 2 秒",
+        "身邊 6 格隊友每秒回 2 HP；補品時間 -25% 且 6 格隊友共享 50% 回復；扶人 2 秒",
         Set.of("手槍", "衝鋒槍", "散彈槍"),
         List.of(), 0.0, 0.0, 40);
 
@@ -110,7 +110,7 @@ public enum ArenaClass {
 
     /** 簡短顯示限定槍械文字（選角畫面用）。 */
     public String gunSummary() {
-        if (this == FREELANCER) return "全部槍械（商店八折）";
+        if (this == FREELANCER) return "全部槍械（商店九折）";
         return String.join("、", allowedGunCats.stream().sorted((a, b) -> Integer.compare(GUN_ORDER.indexOf(a), GUN_ORDER.indexOf(b))).toList());
     }
 

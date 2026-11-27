@@ -127,6 +127,7 @@ public class BattleRoyaleMode {
 
         // 死亡 / 復活
         boolean finalDead = false;   // 確定死亡（不能再被復活）
+        boolean returnedToLobby = false; // 競技模式：孤狼死亡或全隊淘汰後已直接送回大廳
         boolean usedAltar = false;   // 競技模式：已用掉祭壇復活機會
         int altarRevived;            // 被復活祭壇救回來幾次（戰績面板顯示，計畫書 6 B1）
         boolean offline;             // 掉線中，原地留著掉線分身（計畫書 7 D）
@@ -176,6 +177,7 @@ public class BattleRoyaleMode {
 
     private Phase phase = Phase.IDLE;
     private Variant variant = Variant.NORMAL;
+    private com.provinggrounds.modes.br.RankSystem.Queue rankQueue = com.provinggrounds.modes.br.RankSystem.Queue.SOLO;
     private CirclePreset preset = CirclePreset.STANDARD;
     @Nullable private MapRegistry.BRMap map;
     @Nullable private ServerLevel level;
@@ -212,6 +214,8 @@ public class BattleRoyaleMode {
     /** 對局進行中（飛機或落地後）。 */
     public boolean isInPlay() { return inPlay(); }
     public boolean isRunning() { return phase != Phase.IDLE; }
+    /** 目前是否正在進行競技大逃殺對局（含準備、跳傘、對戰、結算）。 */
+    public boolean isCompetitiveActive() { return phase != Phase.IDLE && variant == Variant.COMPETITIVE; }
 
     /** 方塊能不能被爆炸、子彈、火破壞：只有大逃殺進行中、而且在這場地圖圓圈外加 64 格內（BlockProtection 用）。 */
     public boolean allowsBlockDamage(net.minecraft.core.BlockPos pos) {
@@ -288,6 +292,13 @@ public class BattleRoyaleMode {
     /** 開始一局 BR。成功回傳 null，失敗回傳錯誤訊息。 */
     @Nullable
     public String start(MinecraftServer server, int mapId, CirclePreset preset, Variant variant) {
+        return start(server, mapId, preset, variant, com.provinggrounds.core.LobbyManager.get().rankQueue());
+    }
+
+    /** 開始一局 BR（指定競技排位類型）。成功回傳 null，失敗回傳錯誤訊息。 */
+    @Nullable
+    public String start(MinecraftServer server, int mapId, CirclePreset preset, Variant variant,
+                        com.provinggrounds.modes.br.RankSystem.Queue queue) {
         if (phase != Phase.IDLE || !GameManager.get().isInLobby()) return "目前已有遊戲進行中。";
         if (com.provinggrounds.data.MarkerScanJob.isRunning()) return "舊箱子 marker 掃描進行中，請等它完成或 /pg loot markers cancel。";
         if (com.provinggrounds.data.MapRenderJob.isRunning()) return "地圖俯視圖產生中，請等它完成或 /pg map render cancel。";
@@ -301,12 +312,19 @@ public class BattleRoyaleMode {
         int min = PGConfig.SERVER.minPlayersToStart.get();
         if (players.size() < min) return "人數不足：需要至少 " + min + " 人，目前 " + players.size() + " 人。";
 
+        com.provinggrounds.modes.br.RankSystem.Queue resolvedQueue = queue != null ? queue : com.provinggrounds.modes.br.RankSystem.Queue.SOLO;
+        if (variant == Variant.COMPETITIVE) {
+            String teamErr = validateCompetitiveTeams(players, resolvedQueue);
+            if (teamErr != null) return teamErr;
+        }
+
         if (!GameManager.get().startGame(GameManager.GameMode.BATTLE_ROYALE)) return "無法切換遊戲狀態。";
 
         this.map = m;
         this.level = server.overworld();
-        this.preset = preset;
+        this.preset = variant == Variant.COMPETITIVE ? CirclePreset.SLOW : preset;
         this.variant = variant;
+        this.rankQueue = resolvedQueue;
         this.gameId = System.currentTimeMillis(); // 新的 id → 所有祭壇自動就緒
         this.circle = null;
         this.tickCount = 0;
@@ -344,6 +362,49 @@ public class BattleRoyaleMode {
         broadcast(Component.literal(String.format("%d 秒後登機。戰利品點位 %d 個，預期 %.0f 箱。",
             phaseTicks / 20, m.lootPoints.size(), LootSpawner.expectedCrates(m))).withStyle(ChatFormatting.GRAY));
         ProvingGroundsMod.LOGGER.info("BR start: map={} preset={} variant={} players={}", m.id, preset, variant, players.size());
+        return null;
+    }
+
+    /** 競技模式嚴格隊伍滿員驗證：單排不可組隊；雙／三／四排每隊必須剛好滿人且至少 2 隊。 */
+    @Nullable
+    private static String validateCompetitiveTeams(List<ServerPlayer> players, com.provinggrounds.modes.br.RankSystem.Queue queue) {
+        TeamManager tm = TeamManager.get();
+        if (queue == com.provinggrounds.modes.br.RankSystem.Queue.SOLO) {
+            List<String> grouped = new ArrayList<>();
+            for (ServerPlayer p : players) {
+                TeamManager.Team t = tm.getTeamOrSolo(p.getUUID());
+                if (t != TeamManager.Team.SOLO) grouped.add(p.getGameProfile().getName() + "(" + t.displayName + ")");
+            }
+            if (!grouped.isEmpty()) {
+                return "競技單排不可組隊，請先清除隊伍：" + String.join("、", grouped);
+            }
+            if (players.size() < 2) return "競技單排至少需要 2 位玩家。";
+            return null;
+        }
+
+        int need = queue.teamSize;
+        Map<TeamManager.Team, List<String>> byTeam = new LinkedHashMap<>();
+        List<String> unassigned = new ArrayList<>();
+        for (ServerPlayer p : players) {
+            TeamManager.Team t = tm.getTeamOrSolo(p.getUUID());
+            if (t == TeamManager.Team.SOLO) unassigned.add(p.getGameProfile().getName());
+            else byTeam.computeIfAbsent(t, k -> new ArrayList<>()).add(p.getGameProfile().getName());
+        }
+        List<String> problems = new ArrayList<>();
+        if (!unassigned.isEmpty()) {
+            problems.add("未組隊（" + String.join("、", unassigned) + "）");
+        }
+        for (var e : byTeam.entrySet()) {
+            if (e.getValue().size() != need) {
+                problems.add(e.getKey().displayName + "（" + e.getValue().size() + "/" + need + "人）");
+            }
+        }
+        if (!problems.isEmpty()) {
+            return "競技" + queue.displayName + "每隊必須剛好 " + need + " 人才能開始：" + String.join("、", problems);
+        }
+        if (byTeam.size() < 2) {
+            return "競技" + queue.displayName + "至少需要 2 隊滿編隊伍（每隊 " + need + " 人）。";
+        }
         return null;
     }
 
@@ -1293,6 +1354,7 @@ public class BattleRoyaleMode {
                     if (members.stream().noneMatch(p -> p.alive)) {
                         for (Participant p : members) {
                             if (!p.finalDead) finalizeDeath(p, "隊伍已全滅");
+                            if (variant == Variant.COMPETITIVE) returnEliminatedToLobby(p);
                         }
                     }
                 }
@@ -1886,7 +1948,7 @@ public class BattleRoyaleMode {
     private void tickSpectators() {
         if (variant != Variant.COMPETITIVE) return;
         for (Participant part : participants.values()) {
-            if (part.alive) continue;
+            if (part.alive || part.returnedToLobby) continue;
             ServerPlayer p = player(part.id);
             if (p == null) continue;
             Entity cam = p.getCamera();
@@ -1894,6 +1956,17 @@ public class BattleRoyaleMode {
                 && isAliveParticipant(target.getUUID()) && TeamManager.get().isSameTeam(target, p);
             if (!watchingTeammate) attachToTeammate(p);
         }
+    }
+
+    /** 競技模式：孤狼死亡或隊伍全滅後直接送回大廳（保留 participants 紀錄以供本局結束結算 RP）。 */
+    private void returnEliminatedToLobby(Participant part) {
+        if (part.returnedToLobby || variant != Variant.COMPETITIVE) return;
+        part.returnedToLobby = true;
+        ServerPlayer sp = player(part.id);
+        if (sp == null) return;
+        restore(sp);
+        sp.sendSystemMessage(Component.literal("[競技] 你已淘汰並返回大廳（本局結束後將自動結算排位積分）。")
+            .withStyle(ChatFormatting.YELLOW));
     }
 
     /** 把觀察者鎖到一位存活隊友的視角；整隊淘汰時放開成自由觀察者。 */
@@ -2022,6 +2095,25 @@ public class BattleRoyaleMode {
                 team == TeamManager.Team.SOLO ? "孤狼" : team.displayName, colorOf(part.id), place, winner, player(part.id) == null,
                 s.kills, s.assists, Math.round(s.damage), s.aliveTicks / 20, s.revives, s.altarRevives, s.xp));
             data.addMatch(part.id, part.name, PlayerDataManager.MODE_BR, winner, s.kills, s.deaths, s.assists, s.damage, s.aliveTicks);
+            if (variant == Variant.COMPETITIVE) {
+                var rd = data.applyRankedMatch(part.id, part.name, rankQueue, place, startTeamCount, s.kills, s.assists);
+                ServerPlayer sp = player(part.id);
+                if (sp != null) {
+                    String sign = rd.delta() >= 0 ? "+" : "";
+                    String scaleNote = rd.teamScale() < 1.0 && rd.teamScale() > 0.0
+                        ? String.format("（%d 隊 %.0f%%）", startTeamCount, rd.teamScale() * 100.0) : "";
+                    String tierChange = rd.afterTier().ordinal() > rd.beforeTier().ordinal()
+                        ? " ▲ 升段至 " + rd.afterTier().displayName + "！"
+                        : rd.afterTier().ordinal() < rd.beforeTier().ordinal()
+                        ? " ▼ 降段至 " + rd.afterTier().displayName
+                        : rd.shieldUsed() ? "（降段保護生效）" : "";
+                    sp.sendSystemMessage(Component.literal(String.format(
+                        "[競技排位・%s]%s 名次 +%d｜戰鬥 +%d｜門票 -%d → %s%d RP｜%s（%d RP）%s",
+                        rd.queue().displayName, scaleNote, rd.placementScore(), rd.combatScore(), rd.entryFee(),
+                        sign, rd.delta(), rd.afterTier().displayName, rd.afterRp(), tierChange))
+                        .withStyle(rd.delta() >= 0 ? ChatFormatting.GOLD : ChatFormatting.RED));
+                }
+            }
         }
         var weights = new com.provinggrounds.modes.br.MatchResult.Weights(c.mvpKill.get().floatValue(), c.mvpAssist.get().floatValue(),
             c.mvpDamagePerPoint.get().floatValue(), c.mvpRevive.get().floatValue(), c.mvpAltar.get().floatValue(), c.mvpWinBonus.get().floatValue());
@@ -2248,6 +2340,7 @@ public class BattleRoyaleMode {
 
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             Participant part = participants.get(p.getUUID());
+            if (part != null && part.returnedToLobby) continue;
             byte self = ClientBRState.SELF_NONE;
             byte progressKind = 0, timerKind = ClientBRState.TIMER_NONE, cards = 0;
             float progress = 0;

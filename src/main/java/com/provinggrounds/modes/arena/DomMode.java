@@ -123,6 +123,7 @@ public final class DomMode extends ArenaMode {
             prepare(p, ap, !hasGun(p)); // 上一回合死掉、東西掉光的人重新發起始槍
             refillConsumables(p, ap, true);
             refillTeamHeals(p, true);
+            giveSupportRespawnThrowable(p, ap);
         }
         String names = String.join(" + ", points.stream().filter(pt -> pt.open).map(pt -> pt.name + " 點").toList());
         broadcastTitle(Component.literal("第 " + round + " 回合").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD),
@@ -252,7 +253,7 @@ public final class DomMode extends ArenaMode {
     @Override
     protected void onKill(ServerPlayer killer, ArenaPlayer k, ServerPlayer victim, ArenaPlayer v) {
         if (phase != Phase.ROUND) return;
-        addMoney(killer, k, cfg.domKillMoney.get(), "擊殺 " + v.name);
+        addMoney(killer, k, sniperBonus(k, cfg.domKillMoney.get()), "擊殺 " + v.name);
         if (!firstBlood) {
             firstBlood = true;
             addMoney(killer, k, cfg.domFirstBloodMoney.get(), "首殺！");
@@ -263,14 +264,14 @@ public final class DomMode extends ArenaMode {
     @Override
     protected void onAssist(ServerPlayer assister, ArenaPlayer ap, String victimName) {
         if (phase != Phase.ROUND) return;
-        int assistPay = Math.max(1, cfg.domKillMoney.get() / 2);
+        int assistPay = Math.max(1, sniperBonus(ap, cfg.domKillMoney.get()) / 2);
         addMoney(assister, ap, assistPay, "助攻 " + victimName);
     }
 
     @Override
     protected void onKnock(ServerPlayer attacker, ArenaPlayer ap, String victimName) {
         if (phase != Phase.ROUND) return;
-        int knockPay = Math.max(1, cfg.domKillMoney.get() / 4);
+        int knockPay = Math.max(1, sniperBonus(ap, cfg.domKillMoney.get()) / 4);
         addMoney(attacker, ap, knockPay, "擊倒 " + victimName);
     }
 

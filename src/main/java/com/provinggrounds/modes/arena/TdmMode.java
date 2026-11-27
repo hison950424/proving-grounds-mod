@@ -157,7 +157,8 @@ public final class TdmMode extends ArenaMode {
         int m = mult();
         boolean losing = losingTeam() == k.team;
         if (k.team == RED) redKills++; else blueKills++;
-        addMoney(killer, k, cfg.tdmKillMoney.get() * m + (losing ? cfg.tdmLoserBonus.get() * m : 0), "擊殺 " + v.name);
+        int pay = sniperBonus(k, cfg.tdmKillMoney.get() * m + (losing ? cfg.tdmLoserBonus.get() * m : 0));
+        addMoney(killer, k, pay, "擊殺 " + v.name);
         refillConsumables(killer, k, false); // 擊殺補投擲物
         if (redKills >= targetKills) win(RED, "達到目標擊殺數！");
         else if (blueKills >= targetKills) win(BLUE, "達到目標擊殺數！");
@@ -167,7 +168,7 @@ public final class TdmMode extends ArenaMode {
     protected void onAssist(ServerPlayer assister, ArenaPlayer ap, String victimName) {
         int m = mult();
         boolean losing = losingTeam() == ap.team;
-        int killPay = cfg.tdmKillMoney.get() * m + (losing ? cfg.tdmLoserBonus.get() * m : 0);
+        int killPay = sniperBonus(ap, cfg.tdmKillMoney.get() * m + (losing ? cfg.tdmLoserBonus.get() * m : 0));
         int assistPay = Math.max(1, killPay / 2);
         addMoney(assister, ap, assistPay, "助攻 " + victimName);
     }
@@ -176,7 +177,7 @@ public final class TdmMode extends ArenaMode {
     protected void onKnock(ServerPlayer attacker, ArenaPlayer ap, String victimName) {
         int m = mult();
         boolean losing = losingTeam() == ap.team;
-        int killPay = cfg.tdmKillMoney.get() * m + (losing ? cfg.tdmLoserBonus.get() * m : 0);
+        int killPay = sniperBonus(ap, cfg.tdmKillMoney.get() * m + (losing ? cfg.tdmLoserBonus.get() * m : 0));
         int knockPay = Math.max(1, killPay / 4);
         addMoney(attacker, ap, knockPay, "擊倒 " + victimName);
     }
@@ -192,6 +193,7 @@ public final class TdmMode extends ArenaMode {
     protected void onRespawned(ServerPlayer p, ArenaPlayer ap) {
         refillConsumables(p, ap, false);
         refillTeamHeals(p, false);
+        giveSupportRespawnThrowable(p, ap);
     }
 
     @Override protected Vec3 spawnOf(ArenaPlayer ap) { return randomTeamSpawn(ap.team); }

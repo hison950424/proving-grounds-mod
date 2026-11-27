@@ -69,7 +69,8 @@ public final class LobbyManager {
         SET_FRIENDLY_FIRE,  // 管理員：所有模式的友軍誤傷開（arg 1）／關（arg 0）（只限槍械子彈；投擲物與爆炸物強制有友傷）
         CONFIRM_CLASS,      // 計畫書 10：強制選角階段確認職業（arg = ArenaClass 順序）
         CONFIRM_SPECIAL,    // 計畫書 10：佔點強制選特殊道具階段確認道具（arg = SpecialType 順序）
-        SET_ARENA_MAP       // 管理員：團隊模式場地（arg = arenaMapChoices 索引）
+        SET_ARENA_MAP,      // 管理員：團隊模式場地（arg = arenaMapChoices 索引）
+        SET_RANK_QUEUE      // 管理員：競技大逃殺排位類型（arg = RankSystem.Queue 順序：0 單排、1 雙排、2 三排、3 四排）
     }
 
     /** 團隊模式可選場地（id, 名稱），第一個固定是設定檔的經典場地，其餘依 id 排序；客戶端以相同順序顯示。 */
@@ -95,11 +96,20 @@ public final class LobbyManager {
     private int mapId = -1; // -1 = 還沒選（用第一張地圖）
     private CirclePreset preset = CirclePreset.STANDARD;
     private BattleRoyaleMode.Variant variant = BattleRoyaleMode.Variant.NORMAL;
+    private com.provinggrounds.modes.br.RankSystem.Queue rankQueue = com.provinggrounds.modes.br.RankSystem.Queue.SOLO;
     private TeamMode teamMode = TeamMode.FREE;
     private int teamCount = 4;
     private WeaponMode weaponMode = WeaponMode.ALL;
     private GameManager.GameMode gameMode = GameManager.GameMode.BATTLE_ROYALE;
     private int tdmKills = -1, tdmMinutes = -1, domScore = -1, gkMultiplier = -1; // -1 = 用伺服器設定的預設值
+
+    /** 目前大廳是否處於競技大逃殺模式。 */
+    public boolean isCompetitiveLobby() {
+        return gameMode == GameManager.GameMode.BATTLE_ROYALE && variant == BattleRoyaleMode.Variant.COMPETITIVE;
+    }
+
+    /** 目前競技排位類型（單／雙／三／四排）。 */
+    public com.provinggrounds.modes.br.RankSystem.Queue rankQueue() { return rankQueue; }
 
     /** 大廳選的模式。 */
     public GameManager.GameMode gameMode() { return gameMode; }
@@ -111,6 +121,9 @@ public final class LobbyManager {
     @Nullable private Boolean friendlyFire;
 
     public boolean friendlyFire() {
+        if (BattleRoyaleMode.get().isCompetitiveActive() || (GameManager.get().isInLobby() && isCompetitiveLobby())) {
+            return true; // 競技模式固定開啟友軍誤傷
+        }
         if (friendlyFire != null) return friendlyFire;
         try { return PGConfig.SERVER.friendlyFireDefault.get(); } catch (IllegalStateException e) { return false; }
     }
@@ -374,6 +387,14 @@ public final class LobbyManager {
             case JOIN_TEAM -> {
                 if (isSpectator(sender)) { deny(sender, "觀戰中不能選隊，請先按「加入遊戲」。"); return; }
                 if (teamMode == TeamMode.ASSIGN && !op) { deny(sender, "目前由管理員分隊。"); return; }
+                if (isCompetitiveLobby() && rankQueue == com.provinggrounds.modes.br.RankSystem.Queue.SOLO) {
+                    deny(sender, "競技單排模式不可組隊。");
+                    return;
+                }
+                if (isCompetitiveLobby() && arg == 0) {
+                    deny(sender, "競技" + rankQueue.displayName + "模式不可當孤狼，請加入隊伍（每隊需滿 " + rankQueue.teamSize + " 人）。");
+                    return;
+                }
                 if (arg < 0 || arg > teamCount) return;
                 if (arg == 0 && twoTeams()) { deny(sender, "團隊死鬥、佔點沒有孤狼，請選紅隊或藍隊。"); return; }
                 TeamManager.get().assignTeam(sender, TeamManager.Team.of(arg));
@@ -422,6 +443,7 @@ public final class LobbyManager {
                 broadcastLobbyMapImage(server);
             }
             case SET_PRESET -> {
+                if (isCompetitiveLobby()) { deny(sender, "競技模式固定為慢速縮圈。"); return false; }
                 CirclePreset[] all = CirclePreset.values();
                 if (arg < 0 || arg >= all.length) return false;
                 preset = all[arg];
@@ -430,8 +452,35 @@ public final class LobbyManager {
                 BattleRoyaleMode.Variant[] all = BattleRoyaleMode.Variant.values();
                 if (arg < 0 || arg >= all.length) return false;
                 variant = all[arg];
+                if (isCompetitiveLobby()) {
+                    preset = CirclePreset.SLOW;
+                    if (rankQueue == com.provinggrounds.modes.br.RankSystem.Queue.SOLO) {
+                        teamCount = 0;
+                        TeamManager.get().clearAssignments();
+                    } else if (teamCount < 2) {
+                        teamCount = 4;
+                    }
+                    broadcastChat(server, Component.literal("[PG] 已切換為競技模式（固定慢速縮圈、友軍誤傷開、全爆炸破壞、戰術道具池）。")
+                        .withStyle(ChatFormatting.GOLD));
+                }
             }
-            case SET_SPECIAL -> com.provinggrounds.special.SpecialConfig.setEnabled(arg != 0);
+            case SET_RANK_QUEUE -> {
+                rankQueue = com.provinggrounds.modes.br.RankSystem.Queue.byOrdinal(arg);
+                if (isCompetitiveLobby()) {
+                    if (rankQueue == com.provinggrounds.modes.br.RankSystem.Queue.SOLO) {
+                        teamCount = 0;
+                        TeamManager.get().clearAssignments();
+                    } else if (teamCount < 2) {
+                        teamCount = 4;
+                    }
+                    broadcastChat(server, Component.literal("[PG] 競技排位模式切換為「" + rankQueue.displayName + "」（每隊需滿 " + rankQueue.teamSize + " 人）。")
+                        .withStyle(ChatFormatting.AQUA));
+                }
+            }
+            case SET_SPECIAL -> {
+                if (isCompetitiveLobby()) { deny(sender, "競技模式固定開啟戰術型特殊道具。"); return false; }
+                com.provinggrounds.special.SpecialConfig.setEnabled(arg != 0);
+            }
             case SET_CIRCLE_STAGES -> setCustom(PGConfig.SERVER.brCustomStages, arg, 2, 8);
             case SET_CIRCLE_INTERVAL -> setCustom(PGConfig.SERVER.brCustomInterval, arg, 15, 600);
             case SET_CIRCLE_WAIT -> setCustom(PGConfig.SERVER.brCustomFirstWait, arg, 0, 600);
@@ -443,6 +492,7 @@ public final class LobbyManager {
                 PGConfig.SERVER.brCustomSpeed.save();
             }
             case SET_BLOCK_DAMAGE -> {
+                if (isCompetitiveLobby()) { deny(sender, "競技模式固定為全部爆炸破壞方塊。"); return false; }
                 if (arg < 0 || arg > 3) return false;
                 com.provinggrounds.config.PGConfig.SERVER.brExplosionBlockDamage.set(arg);
                 com.provinggrounds.config.PGConfig.SERVER.brExplosionBlockDamage.save();
@@ -467,7 +517,10 @@ public final class LobbyManager {
             case SET_DOM_SCORE -> domScore = Math.max(100, Math.min(100_000, arg));
             case SET_GK_MULTIPLIER -> gkMultiplier = Math.max(1, Math.min(20, arg));
             case SET_ARENA_DOWNED -> arenaDowned = arg != 0;
-            case SET_FRIENDLY_FIRE -> friendlyFire = arg != 0;
+            case SET_FRIENDLY_FIRE -> {
+                if (isCompetitiveLobby()) { deny(sender, "競技模式固定開啟友軍誤傷。"); return false; }
+                friendlyFire = arg != 0;
+            }
             case SET_ARENA_MAP -> {
                 List<String[]> choices = arenaMapChoices(server);
                 if (arg < 0 || arg >= choices.size()) return false;
@@ -579,7 +632,8 @@ public final class LobbyManager {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (isSpectator(p)) p.setGameMode(GameType.SPECTATOR);
         }
-        String error = BattleRoyaleMode.get().start(server, m.id, preset, variant);
+        String error = BattleRoyaleMode.get().start(server, m.id,
+            variant == BattleRoyaleMode.Variant.COMPETITIVE ? CirclePreset.SLOW : preset, variant, rankQueue);
         if (error == null) {
             ready.clear();
             countdownTicks = -1;
@@ -690,10 +744,14 @@ public final class LobbyManager {
                 chosenClass(p.getUUID()).ordinal(), draftDone.contains(p.getUUID())));
         }
         int map = resolveMapId(server);
-        return new LobbyStatePacket(GameManager.get().isInLobby(), map, preset.ordinal(), variant.ordinal(),
+        boolean comp = isCompetitiveLobby();
+        CirclePreset shownPreset = comp ? CirclePreset.SLOW : preset;
+        boolean shownSpecial = comp || com.provinggrounds.special.SpecialConfig.enabledSafe();
+        int shownBoom = comp ? com.provinggrounds.core.BlockProtection.BOOM_ALL : com.provinggrounds.core.BlockProtection.explosionMode();
+        return new LobbyStatePacket(GameManager.get().isInLobby(), map, shownPreset.ordinal(), variant.ordinal(),
             teamMode.ordinal(), teamCount, countdownTicks < 0 ? -1 : (countdownTicks + 19) / 20, draftPhase,
-            com.provinggrounds.special.SpecialConfig.enabledSafe(), friendlyFire(), com.provinggrounds.core.BlockProtection.explosionMode(), weaponMode.ordinal(),
-            gameMode.ordinal(), arenaSettings(), customCircle(preset, mapRadius(server, map)),
-            com.provinggrounds.modes.arena.ArenaMapRegistry.get(server).activeId(), players);
+            shownSpecial, friendlyFire(), shownBoom, weaponMode.ordinal(),
+            gameMode.ordinal(), arenaSettings(), customCircle(shownPreset, mapRadius(server, map)),
+            com.provinggrounds.modes.arena.ArenaMapRegistry.get(server).activeId(), rankQueue.ordinal(), players);
     }
 }

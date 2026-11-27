@@ -17,7 +17,7 @@ import java.util.Optional;
 public final class PGNetwork {
 
     /** 封包格式改變時要加 1，舊版客戶端連線時會直接顯示版本不符（7 = 跳傘改版）。 */
-    private static final String VERSION = "36"; // 36 = 團隊場地選單＋大地圖區域名稱＋進度條UI＋管理員控制台＋IME鎖定, 35 = 大廳預覽大逃殺地圖＋管理員右鍵地圖傳送
+    private static final String VERSION = "37"; // 37 = 競技排位模式（單／雙／三／四排）與規則鎖定, 36 = 團隊場地選單＋大地圖區域名稱＋進度條UI＋管理員控制台＋IME鎖定
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ProvingGroundsMod.MOD_ID, "main"),

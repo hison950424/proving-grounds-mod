@@ -52,6 +52,6 @@ public final class HotbarEvents {
         if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer p)) return;
         if (!HotbarRules.active(p)) { HotbarRules.forgetRefill(p.getUUID()); return; }
         HotbarRules.autoRefill(p); // 每 tick：第 4、5 格用完自動補（要即時）
-        if (p.tickCount % 10 == 0) HotbarRules.normalize(p);
+        HotbarRules.normalize(p);  // 每 tick 即時清理（防止 TACZ 卸彈／改裝塞進專用格或鎖定背包格）
     }
 }
