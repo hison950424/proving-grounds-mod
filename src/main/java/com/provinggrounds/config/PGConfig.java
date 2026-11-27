@@ -201,7 +201,7 @@ public class PGConfig {
         // 縮圈：每種模式各自設定（2026-11-23：快速約 5 分、標準約 12 分、慢速約 20 分；鍵名 _v3，舊設定檔的數值不會蓋掉新預設）
         // 管理員也可以在遊戲裡用 /pg circle 指令查看、修改（會寫回這個設定檔）
         brFastRatios = builder.comment("快速方案：各階段半徑 ÷ 地圖半徑（最後一個是 0 = 最終圈縮到一個點）")
-            .defineList("fast_ratios_v3", List.of(0.45, 0.18, 0.0), PGConfig::isRatio);
+            .defineList("fast_ratios_v4", List.of(0.52, 0.24, 0.09, 0.0), PGConfig::isRatio);
         brFastInterval = builder.comment("快速方案：每階段的等待時間與最短縮圈時間（秒）")
             .defineInRange("fast_interval_seconds_v3", 30, 5, 600);
         brFastSpeed = builder.comment("快速方案：圈移動速度上限 = BR 疾跑速度 × 此倍率（1.0 以下都追不上全速疾跑的玩家）")
@@ -209,7 +209,7 @@ public class PGConfig {
         brFastFirstWait = builder.comment("快速方案：開場第一次縮圈前額外多等幾秒")
             .defineInRange("fast_first_wait_seconds_v3", 45, 0, 600);
         brStandardRatios = builder.comment("標準方案：各階段半徑 ÷ 地圖半徑")
-            .defineList("standard_ratios_v3", List.of(0.60, 0.35, 0.15, 0.0), PGConfig::isRatio);
+            .defineList("standard_ratios_v4", List.of(0.62, 0.36, 0.18, 0.07, 0.0), PGConfig::isRatio);
         brStandardInterval = builder.comment("標準方案：每階段的等待時間與最短縮圈時間（秒）")
             .defineInRange("standard_interval_seconds_v3", 75, 5, 600);
         brStandardSpeed = builder.comment("標準方案：圈移動速度上限 = BR 疾跑速度 × 此倍率")
@@ -217,7 +217,7 @@ public class PGConfig {
         brStandardFirstWait = builder.comment("標準方案：開場第一次縮圈前額外多等幾秒")
             .defineInRange("standard_first_wait_seconds_v3", 90, 0, 600);
         brSlowRatios = builder.comment("慢速方案：各階段半徑 ÷ 地圖半徑")
-            .defineList("slow_ratios_v3", List.of(0.70, 0.48, 0.28, 0.12, 0.0), PGConfig::isRatio);
+            .defineList("slow_ratios_v4", List.of(0.72, 0.50, 0.32, 0.17, 0.07, 0.0), PGConfig::isRatio);
         brSlowInterval = builder.comment("慢速方案：每階段的等待時間與最短縮圈時間（秒）")
             .defineInRange("slow_interval_seconds_v3", 112, 5, 600);
         brSlowSpeed = builder.comment("慢速方案：圈移動速度上限 = BR 疾跑速度 × 此倍率")

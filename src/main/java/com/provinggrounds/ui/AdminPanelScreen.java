@@ -85,6 +85,10 @@ public class AdminPanelScreen extends Screen {
         addRenderableWidget(new PGButton(left + panelW - 64, tabY, 54, 18, Component.literal("關閉"),
             false, false, this::onClose));
 
+        // 底部狀態列右側常駐「取消目前作業」按鈕（所有分頁皆可直接一鍵中止背景任務）
+        boolean hasJob = info.jobStatus() != null && !info.jobStatus().isBlank() && !info.jobStatus().contains("閒置");
+        addBtn(left + panelW - 96, bodyBottom + 7, 86, 16, "取消目前作業", hasJob, hasJob, () -> exec("br_cancel", ""));
+
         switch (tab) {
             case BR_MAP -> initBrTab();
             case ARENA -> initArenaTab();
@@ -127,16 +131,18 @@ public class AdminPanelScreen extends Screen {
         addBtn(x, y, w, 20, regenLabel, true, hasSelection, () -> exec("br_regen_layers", targetArg));
 
         y += 22;
+        int tw = (w - 8) / 3;
         String relightAction = selectedMapIdx < 0 ? "br_relight" : "br_relight_one";
         String relightArg = selectedMapIdx < 0 ? "" : String.valueOf(currentMapId());
-        addBtn(x, y, hw, 18, selectedMapIdx < 0 ? "修復全部光照" : "修復此圖光照", false, !info.brMaps().isEmpty(),
+        addBtn(x, y, tw, 18, selectedMapIdx < 0 ? "修復全部光照" : "修復光照", false, !info.brMaps().isEmpty(),
             () -> exec(relightAction, relightArg));
-        addBtn(x + hw + 6, y, hw, 18, "重繪此圖俯視圖", false, selectedMapIdx >= 0 && !info.brMaps().isEmpty(),
+        addBtn(x + tw + 4, y, tw, 18, "修復無形方塊", false, true,
+            () -> exec("sync_chunks", selectedMapIdx < 0 ? "" : String.valueOf(currentMapId())));
+        addBtn(x + (tw + 4) * 2, y, w - (tw + 4) * 2, 18, "重繪俯視圖", false, selectedMapIdx >= 0 && !info.brMaps().isEmpty(),
             () -> exec("br_render", String.valueOf(currentMapId())));
 
         y += 22;
         boolean hasSingleMap = selectedMapIdx >= 0 && !info.brMaps().isEmpty();
-        int tw = (w - 8) / 3;
         addBtn(x, y, tw, 18, "查看大地圖", false, hasSingleMap, () -> {
             int id = currentMapId();
             PGNetwork.sendToServer(AdminPanelPacket.run("br_preview", String.valueOf(id)));
@@ -240,7 +246,7 @@ public class AdminPanelScreen extends Screen {
         addBtn(x, y, hw, 22, "立即還原比賽破壞方塊", true, true, () -> exec("glass_restore", ""));
         addBtn(x + hw + 8, y, hw, 22, "重置遊戲狀態回大廳", false, true, () -> exec("reset", ""));
         y += 28;
-        addBtn(x, y, w, 20, "取消目前背景生成／修復任務", false, true, () -> exec("br_cancel", ""));
+        addBtn(x, y, w, 20, "修復附近無形方塊（重送已載入區塊）", false, true, () -> exec("sync_chunks", ""));
 
         y += 42;
         addBtn(x, y, hw, 22, "重載伺服器設定檔", false, true, () -> exec("reload", ""));
@@ -327,9 +333,9 @@ public class AdminPanelScreen extends Screen {
             case SYSTEM -> renderSystemTab(g);
         }
 
-        // 底部狀態列
-        String status = font.plainSubstrByWidth("目前作業：" + info.jobStatus(), panelW - 24);
-        g.drawString(font, status, left + 12, bodyBottom + 10, DIM, false);
+        // 底部狀態列（右側預留給常駐「取消目前作業」按鈕）
+        String status = font.plainSubstrByWidth("目前作業：" + info.jobStatus(), panelW - 116);
+        g.drawString(font, status, left + 12, bodyBottom + 11, DIM, false);
         super.render(g, mouseX, mouseY, partial);
     }
 

@@ -121,6 +121,10 @@ public record AdminPanelPacket(
                 handleBrPreview(p, arg);
                 return;
             }
+            if ("sync_chunks".equals(action)) {
+                handleSyncChunks(p, arg);
+                return;
+            }
             if (handleToolAction(p, action, arg)) {
                 return;
             }
@@ -132,6 +136,70 @@ public record AdminPanelPacket(
             p.server.getCommands().performPrefixedCommand(src, cmd);
         });
         c.setPacketHandled(true);
+    }
+
+    /**
+     * 獨立的「修復無形方塊（幽靈方塊／空氣牆）」：瞬間將選定地圖範圍內（或玩家周圍 12 區塊）
+     * 所有已載入區塊的完整方塊與光照重新推播給觀看該區塊的玩家，不重算光照引擎。
+     */
+    private static void handleSyncChunks(ServerPlayer sender, String arg) {
+        var level = sender.serverLevel();
+        var chunkSource = level.getChunkSource();
+        var light = chunkSource.getLightEngine();
+        int sentChunks = 0;
+        int sentPackets = 0;
+
+        MapRegistry.BRMap map = null;
+        if (arg != null && arg.trim().matches("\\d+")) {
+            map = MapRegistry.get(sender.server).getMap(Integer.parseInt(arg.trim()));
+        }
+
+        if (map != null && level == sender.server.overworld()) {
+            int reach = (int) Math.ceil(map.radius) + 16;
+            int minCX = ((int) Math.floor(map.centerX) - reach) >> 4;
+            int maxCX = ((int) Math.ceil(map.centerX) + reach) >> 4;
+            int minCZ = ((int) Math.floor(map.centerZ) - reach) >> 4;
+            int maxCZ = ((int) Math.ceil(map.centerZ) + reach) >> 4;
+            for (int cx = minCX; cx <= maxCX; cx++) {
+                for (int cz = minCZ; cz <= maxCZ; cz++) {
+                    var chunk = chunkSource.getChunkNow(cx, cz);
+                    if (chunk == null) continue;
+                    var cp = chunk.getPos();
+                    List<ServerPlayer> watchers = chunkSource.chunkMap.getPlayers(cp, false);
+                    if (watchers.isEmpty()) continue;
+                    var pkt = new net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket(chunk, light, null, null);
+                    for (ServerPlayer wp : watchers) {
+                        wp.connection.send(pkt);
+                        sentPackets++;
+                    }
+                    sentChunks++;
+                }
+            }
+            sender.sendSystemMessage(AdminTools.ok(String.format(
+                "已修復地圖 #%d「%s」的無形方塊：重新同步 %d 個已載入區塊（%d 份封包）。",
+                map.id, map.name, sentChunks, sentPackets)));
+            return;
+        }
+
+        int pcx = sender.blockPosition().getX() >> 4;
+        int pcz = sender.blockPosition().getZ() >> 4;
+        for (int dx = -12; dx <= 12; dx++) {
+            for (int dz = -12; dz <= 12; dz++) {
+                var chunk = chunkSource.getChunkNow(pcx + dx, pcz + dz);
+                if (chunk == null) continue;
+                var cp = chunk.getPos();
+                List<ServerPlayer> watchers = chunkSource.chunkMap.getPlayers(cp, false);
+                if (watchers.isEmpty()) continue;
+                var pkt = new net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket(chunk, light, null, null);
+                for (ServerPlayer wp : watchers) {
+                    wp.connection.send(pkt);
+                    sentPackets++;
+                }
+                sentChunks++;
+            }
+        }
+        sender.sendSystemMessage(AdminTools.ok(String.format(
+            "已修復周圍無形方塊：重新同步 %d 個已載入區塊（%d 份封包）。", sentChunks, sentPackets)));
     }
 
     /** 同步指定大逃殺地圖的俯視圖、祭壇位置、大區域名稱與地圖座標給管理員，供控制台直接預覽大地圖。 */
@@ -271,6 +339,7 @@ public record AdminPanelPacket(
                 if (BRMapGenerator.isRunning()) yield "pg map generate cancel";
                 if (MapRelightJob.isRunning()) yield "pg map relight cancel";
                 if (MapRenderJob.isRunning()) yield "pg map render cancel";
+                if (MarkerScanJob.isRunning()) yield "pg loot markers cancel";
                 if (ArenaMapGenerator.isRunning()) yield "pg arena map cancel";
                 yield "pg map generate status";
             }

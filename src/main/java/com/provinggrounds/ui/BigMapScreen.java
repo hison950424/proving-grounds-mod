@@ -50,8 +50,11 @@ public class BigMapScreen extends Screen {
     private int ctxMapId = -1;
     @Nullable private String ctxNearestLabel;
     private List<String> ctxLabels = List.of();
-    /** 管理員控制台指定預覽的地圖編號（-1 = 依大廳選定地圖）。 */
-    private final int forcedPreviewMapId;
+    /** 管理員指定預覽的地圖編號（-1 = 依大廳選定地圖）。 */
+    private int forcedPreviewMapId;
+    private int seenMenuVer = Integer.MIN_VALUE;
+    private boolean mapDropOpen;
+    private int dropX, dropY, dropW;
 
     public BigMapScreen() {
         this(-1);
@@ -68,6 +71,11 @@ public class BigMapScreen extends Screen {
         mapX = (width - mapSize) / 2;
         mapY = 28;
         ctxOpen = false;
+        mapDropOpen = false;
+        if (ClientMenuData.get() == null) {
+            PGNetwork.sendToServer(new MenuRequestPacket());
+        }
+        seenMenuVer = ClientMenuData.version();
         computeFull();
         if (span <= 0) resetView();
 
@@ -79,6 +87,28 @@ public class BigMapScreen extends Screen {
         // 比賽中也能調 HUD 版面（設定畫面關掉後回到大地圖）
         addRenderableWidget(new PGButton(mapX + 66, 5, 64, 18, Component.literal("HUD 設定"), false, false,
             () -> Minecraft.getInstance().setScreen(new HudEditScreen(this))));
+
+        // 管理員於非對局中可直接在上方工具列切換預覽任意一張大逃殺地圖
+        if (isAdmin() && !isInActiveBR()) {
+            MenuDataPacket menu = ClientMenuData.get();
+            if (menu != null && !menu.maps().isEmpty()) {
+                int availW = (mapX + mapSize - 66) - (mapX + 136);
+                if (availW >= 72) {
+                    MenuDataPacket.MapEntry cur = currentLobbyMap();
+                    String curName = cur == null ? "選擇地圖"
+                        : "#" + cur.id() + " " + (cur.name().isBlank() ? "地圖" : cur.name());
+                    dropW = Math.min(180, availW);
+                    dropX = mapX + 136 + (availW - dropW) / 2;
+                    dropY = 25;
+                    String btnText = font.plainSubstrByWidth(curName, dropW - 18) + " ▾";
+                    addRenderableWidget(new PGButton(dropX, 5, dropW, 18, Component.literal(btnText), mapDropOpen, false, () -> {
+                        ctxOpen = false;
+                        mapDropOpen = !mapDropOpen;
+                    }));
+                }
+            }
+        }
+
         addRenderableWidget(new PGButton(mapX + mapSize - 60, 5, 60, 18, Tr.c("map.close"), false, false, this::onClose));
     }
 
@@ -197,6 +227,28 @@ public class BigMapScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (mapDropOpen) {
+            MenuDataPacket menu = ClientMenuData.get();
+            List<MenuDataPacket.MapEntry> maps = menu != null ? menu.maps() : List.of();
+            int dropH = maps.size() * CTX_ROW_H + CTX_PAD * 2;
+            if (button == 0 && mx >= dropX && mx < dropX + dropW && my >= dropY && my < dropY + dropH) {
+                int idx = ((int) my - dropY - CTX_PAD) / CTX_ROW_H;
+                mapDropOpen = false;
+                if (idx >= 0 && idx < maps.size()) {
+                    MenuDataPacket.MapEntry chosen = maps.get(idx);
+                    PGButton.playClick(1.0f);
+                    forcedPreviewMapId = chosen.id();
+                    seenMapId = Integer.MIN_VALUE;
+                    PGNetwork.sendToServer(com.provinggrounds.network.AdminPanelPacket.run("br_preview", String.valueOf(chosen.id())));
+                    rebuildWidgets();
+                    return true;
+                }
+                return true;
+            }
+            mapDropOpen = false;
+            if (super.mouseClicked(mx, my, button)) return true;
+            return true;
+        }
         if (ctxOpen) {
             if (button == 0 && mx >= ctxX && mx < ctxX + ctxW && my >= ctxY && my < ctxY + ctxH) {
                 int row = ((int) my - ctxY - CTX_PAD) / CTX_ROW_H;
@@ -282,10 +334,15 @@ public class BigMapScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        if (ClientMenuData.version() != seenMenuVer) {
+            rebuildWidgets();
+        }
         renderBackground(g);
         boolean activeBR = isInActiveBR();
         MenuDataPacket.MapEntry lobbyMap = activeBR ? null : currentLobbyMap();
-        ClientMapData.Image curImg = MapRender.image();
+        ClientMapData.Image rawImg = MapRender.image();
+        ClientMapData.Image curImg = (!activeBR && lobbyMap != null && rawImg != null && rawImg.mapId() != lobbyMap.id())
+            ? null : rawImg;
         int curId = curImg != null ? curImg.mapId() : (lobbyMap != null ? lobbyMap.id() : -1);
         long curVer = curImg != null ? curImg.version() : 0L;
         if (fullSpan <= 0 || curId != seenMapId || curVer != seenMapVer) {
@@ -298,7 +355,10 @@ public class BigMapScreen extends Screen {
 
         MapRender.View v = new MapRender.View(mapX, mapY, mapSize, mapSize, viewX, viewZ, span);
         g.enableScissor(mapX, mapY, mapX + mapSize, mapY + mapSize);
-        MapRender.drawTerrain(g, v);
+        if (curImg != null) MapRender.drawTerrain(g, v);
+        else {
+            g.fill(v.x(), v.y(), v.x() + v.w(), v.y() + v.h(), 0xFF1A1F28);
+        }
         BRStatePacket s = ClientBRState.get();
         Entity cam = Minecraft.getInstance().getCameraEntity();
         if (activeBR) {
@@ -347,6 +407,27 @@ public class BigMapScreen extends Screen {
         super.render(g, mouseX, mouseY, partialTick);
 
         if (ctxOpen) renderContextMenu(g, mouseX, mouseY);
+        if (mapDropOpen) renderMapDropdown(g, mouseX, mouseY);
+    }
+
+    private void renderMapDropdown(GuiGraphics g, int mouseX, int mouseY) {
+        MenuDataPacket menu = ClientMenuData.get();
+        List<MenuDataPacket.MapEntry> maps = menu != null ? menu.maps() : List.of();
+        if (maps.isEmpty()) return;
+        int curId = currentLobbyMap() != null ? currentLobbyMap().id() : -1;
+        int dropH = maps.size() * CTX_ROW_H + CTX_PAD * 2;
+        g.fill(dropX - 1, dropY - 1, dropX + dropW + 1, dropY + dropH + 1, BORDER);
+        g.fill(dropX, dropY, dropX + dropW, dropY + dropH, 0xF5121824);
+        for (int i = 0; i < maps.size(); i++) {
+            MenuDataPacket.MapEntry m = maps.get(i);
+            int ry = dropY + CTX_PAD + i * CTX_ROW_H;
+            boolean sel = m.id() == curId;
+            boolean hov = mouseX >= dropX && mouseX < dropX + dropW && mouseY >= ry && mouseY < ry + CTX_ROW_H;
+            if (sel) g.fill(dropX + 2, ry, dropX + dropW - 2, ry + CTX_ROW_H, 0x45E8D060);
+            else if (hov) g.fill(dropX + 2, ry, dropX + dropW - 2, ry + CTX_ROW_H, 0x26FFFFFF);
+            String label = font.plainSubstrByWidth("#" + m.id() + " " + (m.name().isBlank() ? "地圖" : m.name()), dropW - 14);
+            g.drawString(font, label, dropX + 7, ry + 5, sel ? ACCENT : (hov ? 0xFFFFFFFF : TEXT_DIM), false);
+        }
     }
 
     private void renderMapTitle(GuiGraphics g, String mainTitle, @Nullable String subTitle) {
@@ -419,8 +500,9 @@ public class BigMapScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256 && ctxOpen) {
+        if (keyCode == 256 && (ctxOpen || mapDropOpen)) {
             ctxOpen = false;
+            mapDropOpen = false;
             return true;
         }
         if (ClientModEvents.OPEN_MENU.matches(keyCode, scanCode)) {
