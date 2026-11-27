@@ -120,8 +120,8 @@ public final class WallClimb {
         double fx = -Math.sin(rad);
         double fz = Math.cos(rad);
 
-        int yTop = Mth.floor(p.getY() + p.getBbHeight());
-        int yBot = Mth.floor(p.getY());
+        int yTop = Mth.floor(p.getY() + p.getBbHeight() + 1.0);
+        int yBot = Mth.floor(p.getY() + 1.0);
 
         for (double dist : new double[] { 0.50, 0.78, 1.02 }) {
             for (int by = yTop; by >= yBot; by--) {
@@ -143,7 +143,8 @@ public final class WallClimb {
         double headTopY = p.getY() + p.getBbHeight();
         double topY = wallPos.getY() + shape.max(Direction.Axis.Y);
         double dy = topY - p.getY();
-        if (topY > headTopY + 0.05 || dy < 0.35) return null;
+        // 攀爬高度範圍（下限與上限皆較原本上調 1 格：相對腳底 1.35 格起，最高可達頭頂上方 1.05 格）
+        if (topY > headTopY + 1.05 || dy < 1.35) return null;
 
         AABB sb = shape.bounds();
         double minX = wallPos.getX() + sb.minX;

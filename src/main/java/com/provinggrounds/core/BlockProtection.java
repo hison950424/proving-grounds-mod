@@ -175,13 +175,13 @@ public final class BlockProtection {
                 }
             }
         }
-        // 不能炸的：大逃殺範圍外、大廳關掉；箱子、祭壇、墓碑等有內容的方塊（方塊實體）也不炸，避免物資噴出來或祭壇消失
-        // 物資箱可以被炸掉（裡面的東西照常噴出，比賽結束不修復物資箱，計畫書 6 A10）
+        // 不能炸的：大逃殺範圍外、大廳關掉；祭壇、墓碑等非物資箱方塊實體也不炸，避免祭壇或墓碑消失
+        // 物資箱可以被炸掉，但箱子與內容物皆不掉落（比賽結束不修復物資箱）
         event.getAffectedBlocks().removeIf(pos -> !allowsExplosion(level, pos, ex)
             || (level.dimension() == Level.OVERWORLD && level.getBlockEntity(pos) != null && !isCrate(level, pos)));
         if (level.dimension() == Level.OVERWORLD) {
             for (BlockPos pos : event.getAffectedBlocks()) {
-                if (!level.getBlockState(pos).isAir() && !isCrate(level, pos)) EXPLODED.add(pos.immutable());
+                if (!level.getBlockState(pos).isAir()) EXPLODED.add(pos.immutable());
             }
         }
         if (before > 0 && event.getAffectedBlocks().isEmpty()) ProvingGroundsMod.LOGGER.debug("Explosion block damage blocked ({} blocks).", before);

@@ -66,8 +66,8 @@ public class CrateBlock extends BaseEntityBlock {
     @SuppressWarnings("deprecation")
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof CrateBlockEntity crate) {
-            // 系統清理前會先 wipe()，所以這裡只有玩家打破箱子時才會掉出內容
-            Containers.dropContents(level, pos, crate);
+            // 大逃殺物資箱被破壞時不掉落內容物，直接清空並更新鄰近紅石輸出
+            crate.wipe();
             level.updateNeighbourForOutputSignal(pos, this);
         }
         super.onRemove(state, level, pos, newState, moved);
