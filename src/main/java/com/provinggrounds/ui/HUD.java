@@ -102,7 +102,8 @@ public final class HUD {
         g.enableScissor(x, y, x + size, y + size);
         MapRender.drawTerrain(g, v);
         if (s.nextRadius() >= 0) MapRender.drawCircle(g, v, s.nextCx(), s.nextCz(), s.nextRadius(), MapRender.NEXT_ZONE, 0.65f, true); // 下一圈 = 白圈粗度的 65%（計畫書 6 A11）
-        MapRender.drawCircle(g, v, s.cx(), s.cz(), s.radius(), MapRender.ZONE, 1, false);
+        ClientBRState.SmoothCircle sc = ClientBRState.smoothCircle();
+        MapRender.drawCircle(g, v, sc.cx(), sc.cz(), sc.radius(), MapRender.ZONE, 1, false);
         MapRender.drawMarkers(g, font, v, false);
         if (s.selfState() != ClientBRState.SELF_DEAD && s.selfState() != ClientBRState.SELF_NONE) {
             MapRender.drawSelf(g, font, v, cam.getX(), cam.getZ(), cam.getYRot());

@@ -33,6 +33,12 @@ public abstract class ContainerMenuMixin {
             ci.cancel();
             return;
         }
+        // 在其他物品介面拿取並替換自己的背包：舊背包放回另一個物品介面（而非掉在地上或留在游標／自己背包）
+        if (player instanceof ServerPlayer sp
+                && com.provinggrounds.modes.br.Backpack.handleContainerClick((AbstractContainerMenu) (Object) this, slotId, button, type, sp)) {
+            ci.cancel();
+            return;
+        }
         if (!(player instanceof ServerPlayer sp) || !HotbarRules.active(sp)) return;
         HotbarRules.Snapshot[] out = new HotbarRules.Snapshot[1];
         if (HotbarRules.beforeClick((AbstractContainerMenu) (Object) this, slotId, type, sp, out)) {

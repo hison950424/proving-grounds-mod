@@ -23,7 +23,7 @@ import org.joml.Matrix4f;
 public final class CircleRenderer {
 
     private static final double VIEW_RANGE = 160;
-    private static final double SEGMENT_LENGTH = 2.0;
+    private static final double SEGMENT_LENGTH = 1.5;
 
     private CircleRenderer() {}
 
@@ -32,7 +32,8 @@ public final class CircleRenderer {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
         BRStatePacket s = ClientBRState.get();
         if (s.phase() != ClientBRState.PHASE_ACTIVE) return;
-        if (s.radius() < 0 && s.nextRadius() < 0) return; // -1 = 沒有圈（第一次縮圈前沒有白圈，但淺藍下一圈照畫）；最終圈半徑可以是 0
+        ClientBRState.SmoothCircle sc = ClientBRState.smoothCircle();
+        if (sc.radius() < 0 && s.nextRadius() < 0) return; // -1 = 沒有圈（第一次縮圈前沒有白圈，但淺藍下一圈照畫）；最終圈半徑可以是 0
 
         Vec3 cam = event.getCamera().getPosition();
         PoseStack pose = event.getPoseStack();
@@ -49,8 +50,8 @@ public final class CircleRenderer {
 
         BufferBuilder buf = Tesselator.getInstance().getBuilder();
         buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        // 目前圈：白色（同地圖的白色實線），不透明度 circle_wall_opacity（預設 15%）
-        if (s.radius() >= 0) ring(buf, m, s.cx(), s.cz(), s.radius(), cam, cam.y - 48, cam.y + 96, 0xFF, 0xFF, 0xFF, alpha(true));
+        // 目前圈：白色（同地圖的白色實線），使用平滑插值座標與半徑逐幀移動
+        if (sc.radius() >= 0) ring(buf, m, sc.cx(), sc.cz(), sc.radius(), cam, cam.y - 48, cam.y + 96, 0xFF, 0xFF, 0xFF, alpha(true));
         // 下一圈：淺藍 #60C0FF（同地圖的淺藍虛線），不透明度 circle_next_opacity（預設 7.5%），矮一點
         if (s.nextRadius() >= 0) {
             ring(buf, m, s.nextCx(), s.nextCz(), s.nextRadius(), cam, cam.y - 8, cam.y + 8, 0x60, 0xC0, 0xFF, alpha(false));
@@ -81,7 +82,7 @@ public final class CircleRenderer {
         double camDist = Math.hypot(cam.x - cx, cam.z - cz);
         if (Math.abs(camDist - r) > VIEW_RANGE) return;
 
-        int segments = (int) Math.max(32, Math.min(8192, Math.ceil(2 * Math.PI * r / SEGMENT_LENGTH)));
+        int segments = (int) Math.max(64, Math.min(8192, Math.ceil(2 * Math.PI * r / SEGMENT_LENGTH)));
         double step = 2 * Math.PI / segments;
         double rangeSq = VIEW_RANGE * VIEW_RANGE;
         float y0 = (float) yMin, y1 = (float) yMax;

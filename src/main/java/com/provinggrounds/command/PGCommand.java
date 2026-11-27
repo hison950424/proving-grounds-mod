@@ -273,6 +273,13 @@ public class PGCommand {
             .then(Commands.literal("generate").requires(OP)
                 .then(Commands.literal("list").executes(ctx -> mapGenerateList(ctx.getSource())))
                 .then(Commands.literal("all").executes(ctx -> mapGenerateAll(ctx.getSource())))
+                .then(Commands.literal("regen")
+                    .executes(ctx -> mapGenerateRegenAll(ctx.getSource()))
+                    .then(Commands.argument("id", IntegerArgumentType.integer(1))
+                        .then(Commands.argument("preset", StringArgumentType.word())
+                            .executes(ctx -> mapGenerateRegenOne(ctx.getSource(),
+                                IntegerArgumentType.getInteger(ctx, "id"),
+                                StringArgumentType.getString(ctx, "preset"))))))
                 .then(Commands.literal("status").executes(ctx -> {
                     ok(ctx.getSource(), com.provinggrounds.data.BRMapGenerator.statusText(), false);
                     return 1;
@@ -283,14 +290,29 @@ public class PGCommand {
                     return 0;
                 }))
                 .then(Commands.argument("preset", StringArgumentType.word())
-                    .executes(ctx -> mapGenerateOne(ctx.getSource(), StringArgumentType.getString(ctx, "preset")))));
+                    .executes(ctx -> mapGenerateOne(ctx.getSource(), StringArgumentType.getString(ctx, "preset")))))
+            // 重建大逃殺地圖各區塊天空與方塊光照（修復殘留地面陰影）
+            .then(Commands.literal("relight").requires(OP)
+                .executes(ctx -> mapRelightDefault(ctx.getSource()))
+                .then(Commands.literal("all").executes(ctx -> mapRelightAll(ctx.getSource())))
+                .then(Commands.literal("status").executes(ctx -> {
+                    ok(ctx.getSource(), com.provinggrounds.data.MapRelightJob.statusText(), false);
+                    return 1;
+                }))
+                .then(Commands.literal("cancel").executes(ctx -> {
+                    if (com.provinggrounds.data.MapRelightJob.cancel(ctx.getSource())) return 1;
+                    fail(ctx.getSource(), "目前沒有正在修復光照的地圖。");
+                    return 0;
+                }))
+                .then(Commands.argument("id", IntegerArgumentType.integer(1))
+                    .executes(ctx -> mapRelightOne(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id")))));
     }
 
     private static int mapGenerateList(CommandSourceStack src) {
-        ok(src, "可一鍵生成的大逃殺地圖預設（/pg map generate all 或 /pg map generate <名稱|大小>）：", false);
+        ok(src, "可一鍵生成的大逃殺地圖預設（/pg map generate all｜原地升級 /pg map generate regen）：", false);
         for (var p : com.provinggrounds.data.BRMapPresets.all()) {
             int bldCount = p.districts().stream().mapToInt(d -> d.buildingIds().size()).sum();
-            ok(src, String.format("  %s (%d 格)「%s」：區數 %d｜建築 %d 棟｜復活祭壇 %d 座",
+            ok(src, String.format("  %s (%d 格)「%s」：區數 %d｜大建築 %d 棟｜復活祭壇 %d 座",
                 p.key(), p.radius(), p.displayName(), p.districts().size(), bldCount, p.altars().size()), false);
         }
         return com.provinggrounds.data.BRMapPresets.all().size();
@@ -298,6 +320,23 @@ public class PGCommand {
 
     private static int mapGenerateAll(CommandSourceStack src) {
         String err = com.provinggrounds.data.BRMapGenerator.startAll(src.getServer(), src);
+        if (err != null) { fail(src, err); return 0; }
+        return 1;
+    }
+
+    private static int mapGenerateRegenAll(CommandSourceStack src) {
+        String err = com.provinggrounds.data.BRMapGenerator.startRegenAll(src.getServer(), src);
+        if (err != null) { fail(src, err); return 0; }
+        return 1;
+    }
+
+    private static int mapGenerateRegenOne(CommandSourceStack src, int mapId, String token) {
+        var preset = com.provinggrounds.data.BRMapPresets.byKeyOrSize(token);
+        if (preset == null) {
+            fail(src, "找不到地圖預設「" + token + "」。可用：harbor(300)、desert(400)、arctic(500)、imperial(600)、continent(700)");
+            return 0;
+        }
+        String err = com.provinggrounds.data.BRMapGenerator.startRegenOne(src.getServer(), mapId, preset, src);
         if (err != null) { fail(src, err); return 0; }
         return 1;
     }
@@ -313,6 +352,35 @@ public class PGCommand {
         return 1;
     }
 
+    private static int mapRelightDefault(CommandSourceStack src) {
+        MapRegistry reg = MapRegistry.get(src.getServer());
+        java.util.Set<String> presetNames = new java.util.HashSet<>();
+        for (var p : com.provinggrounds.data.BRMapPresets.all()) presetNames.add(p.displayName());
+        java.util.List<MapRegistry.BRMap> targets = new java.util.ArrayList<>();
+        for (MapRegistry.BRMap m : reg.all()) {
+            if (presetNames.contains(m.name)) targets.add(m);
+        }
+        if (targets.isEmpty()) targets.addAll(reg.all());
+        String err = com.provinggrounds.data.MapRelightJob.startList(src.getServer(), targets, src);
+        if (err != null) { fail(src, err); return 0; }
+        return 1;
+    }
+
+    private static int mapRelightAll(CommandSourceStack src) {
+        java.util.List<MapRegistry.BRMap> targets = new java.util.ArrayList<>(MapRegistry.get(src.getServer()).all());
+        String err = com.provinggrounds.data.MapRelightJob.startList(src.getServer(), targets, src);
+        if (err != null) { fail(src, err); return 0; }
+        return 1;
+    }
+
+    private static int mapRelightOne(CommandSourceStack src, int mapId) {
+        MapRegistry.BRMap m = resolveMap(src, mapId);
+        if (m == null) return 0;
+        String err = com.provinggrounds.data.MapRelightJob.startList(src.getServer(), java.util.List.of(m), src);
+        if (err != null) { fail(src, err); return 0; }
+        return 1;
+    }
+
     private static int mapRender(CommandSourceStack src, int mapId) {
         if (!GameManager.get().isInLobby() || BattleRoyaleMode.get().isRunning()) {
             fail(src, "遊戲進行中不能產生地圖，請在大廳時執行。");
@@ -320,6 +388,10 @@ public class PGCommand {
         }
         if (com.provinggrounds.data.BRMapGenerator.isRunning()) {
             fail(src, "地圖生成作業尚未結束，完成後會自動繪製俯視圖。");
+            return 0;
+        }
+        if (com.provinggrounds.data.MapRelightJob.isRunning()) {
+            fail(src, "光照修復作業進行中，請等完成後再執行。");
             return 0;
         }
         MapRegistry.BRMap m = resolveMap(src, mapId);

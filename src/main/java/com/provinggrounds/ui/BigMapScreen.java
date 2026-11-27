@@ -14,9 +14,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.Entity;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * 檔案: BigMapScreen.java
@@ -246,7 +248,8 @@ public class BigMapScreen extends Screen {
         Entity cam = Minecraft.getInstance().getCameraEntity();
         if (activeBR) {
             if (s.nextRadius() >= 0) MapRender.drawCircle(g, v, s.nextCx(), s.nextCz(), s.nextRadius(), MapRender.NEXT_ZONE, 2 * 0.65f, true); // 下一圈 = 白圈粗度的 65%（計畫書 6 A11）
-            MapRender.drawCircle(g, v, s.cx(), s.cz(), s.radius(), MapRender.ZONE, 2, false);
+            ClientBRState.SmoothCircle sc = ClientBRState.smoothCircle();
+            MapRender.drawCircle(g, v, sc.cx(), sc.cz(), sc.radius(), MapRender.ZONE, 2, false);
             MapRender.drawMarkers(g, font, v, true);
             if (cam != null && s.selfState() != ClientBRState.SELF_NONE && s.selfState() != ClientBRState.SELF_DEAD) {
                 MapRender.drawSelf(g, font, v, cam.getX(), cam.getZ(), cam.getYRot());
@@ -272,9 +275,9 @@ public class BigMapScreen extends Screen {
         g.disableScissor();
 
         // 標題、座標、說明
-        String title = (!activeBR && lobbyMap != null ? Tr.t("map.preview_title", lobbyMap.name()) : Tr.t("map.title"))
-            + (curImg == null ? Tr.t("map.no_image") : "");
-        g.drawString(font, title, (width - font.width(title)) / 2, 10, ACCENT, false);
+        String mainTitle = !activeBR && lobbyMap != null ? Tr.t("map.preview_title", lobbyMap.name()) : Tr.t("map.title");
+        String noImgNote = curImg == null ? Tr.t("map.no_image").trim() : null;
+        renderMapTitle(g, mainTitle, noImgNote);
         String keyLabel = ClientModEvents.OPEN_MENU.getTranslatedKeyMessage().getString();
         String help = Tr.t(isAdmin() ? "map.help_admin" : "map.help", keyLabel);
         if (inMap(mouseX, mouseY)) {
@@ -286,6 +289,58 @@ public class BigMapScreen extends Screen {
         super.render(g, mouseX, mouseY, partialTick);
 
         if (ctxOpen) renderContextMenu(g, mouseX, mouseY);
+    }
+
+    private void renderMapTitle(GuiGraphics g, String mainTitle, @Nullable String subTitle) {
+        int sideSpace = mapX - 14;
+        if (sideSpace >= 64) {
+            int maxTextW = sideSpace - 12;
+            List<FormattedCharSequence> mainLines = font.split(Component.literal(mainTitle), maxTextW);
+            List<FormattedCharSequence> subLines = (subTitle != null && !subTitle.isEmpty())
+                ? font.split(Component.literal(subTitle), maxTextW) : List.of();
+            int maxLineW = 0;
+            for (FormattedCharSequence line : mainLines) maxLineW = Math.max(maxLineW, font.width(line));
+            for (FormattedCharSequence line : subLines) maxLineW = Math.max(maxLineW, font.width(line));
+            int boxW = Math.min(sideSpace, maxLineW + 12);
+            int totalLines = mainLines.size() + subLines.size();
+            int boxH = totalLines * 11 + 8;
+            int bx = Math.max(6, mapX - 8 - boxW);
+            int by = mapY;
+            g.fill(bx - 1, by - 1, bx + boxW + 1, by + boxH + 1, BORDER);
+            g.fill(bx, by, bx + boxW, by + boxH, BG);
+            int ty = by + 5;
+            for (FormattedCharSequence line : mainLines) {
+                g.drawString(font, line, bx + 6, ty, ACCENT, false);
+                ty += 11;
+            }
+            for (FormattedCharSequence line : subLines) {
+                g.drawString(font, line, bx + 6, ty, TEXT_DIM, false);
+                ty += 11;
+            }
+            return;
+        }
+
+        String fullTitle = mainTitle + (subTitle != null && !subTitle.isEmpty() ? " " + subTitle : "");
+        int gapLeft = mapX + 136;
+        int gapRight = mapX + mapSize - 66;
+        int gapW = gapRight - gapLeft;
+        if (gapW >= 24) {
+            String clipped = font.width(fullTitle) > gapW
+                ? font.plainSubstrByWidth(fullTitle, Math.max(0, gapW - font.width("…"))) + "…"
+                : fullTitle;
+            int tx = gapLeft + (gapW - font.width(clipped)) / 2;
+            g.drawString(font, clipped, tx, 10, ACCENT, false);
+        } else {
+            int maxW = Math.max(16, mapSize - 12);
+            String clipped = font.width(fullTitle) > maxW
+                ? font.plainSubstrByWidth(fullTitle, Math.max(0, maxW - font.width("…"))) + "…"
+                : fullTitle;
+            int pillW = font.width(clipped) + 8;
+            int bx = mapX + 4;
+            int by = mapY + 4;
+            g.fill(bx, by, bx + pillW, by + 13, 0xC00F141E);
+            g.drawString(font, clipped, bx + 4, by + 3, ACCENT, false);
+        }
     }
 
     private void renderContextMenu(GuiGraphics g, int mouseX, int mouseY) {

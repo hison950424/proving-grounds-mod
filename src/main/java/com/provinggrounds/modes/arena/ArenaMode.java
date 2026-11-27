@@ -93,6 +93,7 @@ public abstract class ArenaMode {
     protected final MinecraftServer server;
     protected final ServerLevel level;
     protected final ArenaConfig cfg = PGConfig.SERVER.arena;
+    protected final ArenaMapRegistry.ActiveArena activeArena;
     protected final Map<UUID, ArenaPlayer> players = new LinkedHashMap<>();
     /** 最近 15 秒內對某位玩家造成過傷害的敵方玩家（victim → attacker → tick），用於助攻音效旗幟與補品（計畫書 10）。 */
     protected final Map<UUID, Map<UUID, Integer>> recentDamagers = new HashMap<>();
@@ -106,6 +107,15 @@ public abstract class ArenaMode {
     protected ArenaMode(MinecraftServer server) {
         this.server = server;
         this.level = server.overworld();
+        this.activeArena = ArenaMapRegistry.get(server).active(cfg);
+    }
+
+    protected List<BlockPos[]> arenaBarriers() {
+        return activeArena.barriers();
+    }
+
+    protected List<Vec3> arenaGkSpawns() {
+        return activeArena.gkSpawns();
     }
 
     // ── 子類別要提供的規則 ─────────────────────────────────────────────────
@@ -437,7 +447,7 @@ public abstract class ArenaMode {
     /** 在敵方任一個重生點的防蹲點範圍內（水平距離；高度差 8 格內）。 */
     public boolean inEnemySpawn(ServerPlayer p, ArenaPlayer ap) {
         if (ap.team != RED && ap.team != BLUE) return false;
-        double r = cfg.antiCampRadius.get();
+        double r = activeArena.antiCampRadius();
         for (Vec3 s : teamSpawns(ap.team == RED ? BLUE : RED)) {
             double dx = p.getX() - s.x, dz = p.getZ() - s.z;
             if (dx * dx + dz * dz <= r * r && Math.abs(p.getY() - s.y) <= 8) return true;
@@ -755,7 +765,7 @@ public abstract class ArenaMode {
 
     public boolean inBase(ServerPlayer p, ArenaPlayer ap) {
         if (!usesShop() || (ap.team != RED && ap.team != BLUE)) return false;
-        int r = cfg.baseRadius.get();
+        int r = activeArena.baseRadius();
         for (Vec3 s : teamSpawns(ap.team)) {
             if (Math.abs(p.getX() - s.x) <= r + 0.5 && Math.abs(p.getZ() - s.z) <= r + 0.5
                 && p.getY() >= s.y - 1 && p.getY() <= s.y + 4) return true;
@@ -956,7 +966,7 @@ public abstract class ArenaMode {
     private void beginBlockLedger() {
         List<Vec3> pts = new ArrayList<>(teamSpawns(RED));
         pts.addAll(teamSpawns(BLUE));
-        pts.addAll(ArenaData.gkSpawns());
+        pts.addAll(arenaGkSpawns());
         double minX = Double.MAX_VALUE, minZ = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
         for (Vec3 v : pts) { minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x); minZ = Math.min(minZ, v.z); maxZ = Math.max(maxZ, v.z); }
         final double x0 = minX - 48, x1 = maxX + 48, z0 = minZ - 48, z1 = maxZ + 48;
@@ -1009,7 +1019,7 @@ public abstract class ArenaMode {
         if (!usesAntiCamp() || !cfg.antiCamp.get() || (viewer.team != RED && viewer.team != BLUE)) return out;
         int enemy = viewer.team == RED ? BLUE : RED;
         for (Vec3 s : teamSpawns(enemy)) {
-            out.add(new ArenaStatePacket.Marker((byte) 1, "", s.x, s.y, s.z, cfg.antiCampRadius.get(), 0xFF3030, false));
+            out.add(new ArenaStatePacket.Marker((byte) 1, "", s.x, s.y, s.z, activeArena.antiCampRadius(), 0xFF3030, false));
         }
         return out;
     }
@@ -1064,19 +1074,13 @@ public abstract class ArenaMode {
     }
 
     protected Vec3 teamSpawn(int team) {
-        Vec3 v = ArenaConfig.vec(team == BLUE ? cfg.blueSpawn.get() : cfg.redSpawn.get());
-        return v != null ? v : Vec3.atBottomCenterOf(level.getSharedSpawnPos());
+        return team == BLUE ? activeArena.blueSpawn() : activeArena.redSpawn();
     }
 
     /** 這隊所有重生點（主重生點＋額外的；計畫書 5 的 H2）。 */
     public List<Vec3> teamSpawns(int team) {
-        List<Vec3> out = new ArrayList<>();
-        out.add(teamSpawn(team));
-        for (String s : team == BLUE ? cfg.blueSpawnsExtra.get() : cfg.redSpawnsExtra.get()) {
-            Vec3 v = ArenaConfig.vec(s);
-            if (v != null) out.add(v);
-        }
-        return out;
+        List<Vec3> list = team == BLUE ? activeArena.blueSpawns() : activeArena.redSpawns();
+        return list.isEmpty() ? List.of(Vec3.atBottomCenterOf(level.getSharedSpawnPos())) : list;
     }
 
     /** 隨機一個重生點。 */
@@ -1158,9 +1162,7 @@ public abstract class ArenaMode {
     }
 
     protected void clearSupplyChests() {
-        for (String s : cfg.supplyChests.get()) {
-            Vec3 v = ArenaConfig.vec(s);
-            if (v == null) continue;
+        for (Vec3 v : activeArena.supplyChests()) {
             if (level.getBlockEntity(BlockPos.containing(v)) instanceof Container c) c.clearContent();
         }
     }

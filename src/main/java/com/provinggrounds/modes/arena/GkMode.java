@@ -358,7 +358,7 @@ public final class GkMode extends ArenaMode {
 
     @Override
     protected Vec3 spawnOf(ArenaPlayer ap) {
-        List<Vec3> spawns = ArenaData.gkSpawns();
+        List<Vec3> spawns = arenaGkSpawns();
         if (spawns.isEmpty()) return teamSpawn(RED);
         return spawns.get(level.random.nextInt(spawns.size()));
     }

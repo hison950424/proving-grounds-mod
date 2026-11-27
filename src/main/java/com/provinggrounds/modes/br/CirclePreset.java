@@ -81,7 +81,7 @@ public enum CirclePreset {
         };
     }
 
-    /** 決賽圈（半徑 7.5 格）停留幾秒後再縮到 0（計畫書 7 B）。 */
+    /** 決賽圈（半徑 11.5 格）停留幾秒後再縮到 0（計畫書 7 B）。 */
     public int finalHoldSeconds() {
         PGConfig c = PGConfig.SERVER;
         return switch (this) {

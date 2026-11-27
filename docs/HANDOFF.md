@@ -1,7 +1,7 @@
 # 交接文件（給接手的 Claude 對話）
 
 > 用途：對話記憶（上下文）快滿時，把重點交接給新的對話。**接手的對話先讀完這份**，記憶到 90% 時更新這份文件、提交，再開新對話交接（使用者會提醒）。
-> 最後更新：2026-11-27（v0.40.0 已實作並準備發佈：新增 5 張半徑 300/400/500/600/700 格區域密集大逃殺地圖一鍵生成器 `BRMapPresets`/`BRMapLayout`/`BRMapGenerator` 含復活祭壇與自動渲染＋大廳大逃殺地圖預覽＋管理員右鍵地圖 TP 傳送，網路版本 `PGNetwork.VERSION="35"`；前版 v0.39.0 已發佈於 `4c43820`）。
+> 最後更新：2026-11-27（v0.40.1 開發中：新增室內團隊地圖「黑曜地堡」`/pg arena map generate`＋多團隊場地管理 `ArenaMapRegistry`＋決賽圈半徑 `11.5` 格＋縮圈邊界逐幀平滑移動 `ClientBRState.smoothCircle`＋其他容器替換背包放回原容器 `Backpack.handleContainerClick`＋HUD 設定面板收起／展開 `HudEditScreen`＋大地圖標題移至左側避開按鈕 `BigMapScreen`＋5 張地圖三層高密度升級與原地重建 `/pg map generate regen`，網路版本維持 `"35"`；前版 v0.40.0 已發佈於 `4ab4c96`）。
 
 ## 1. 使用者與溝通
 - 一律用**繁體中文**；使用者第一次做 Forge 模組、不懂程式：每一步先用白話說明「要做什麼、為什麼、做完會怎樣」，術語第一次出現附一句解釋。
@@ -48,7 +48,15 @@
 - 已提交、**未發佈（v0.26.0）**，說明草稿 `docs/NEXT_RELEASE_NOTES.md`：降落傘（`item/ParachuteItem`、`ui/ParachuteRenderer`、`HumanoidArmsMixin`）、毒氣彈（模糊漸變、真人咳嗽 `tools/extract_cough_clips.py`、方向偏移）、槍聲方向（`tools/mono_gunpack_sounds.py`，已處理客戶端槍包）、管理員 F3+B 精準判定框（`ui/HitboxDebugRenderer`）、隱藏 TACZ 互動字樣、全體孤狼、一般物品優先放背包。
 
 ## 5. 進行中／待決定
-- **v0.40.0（5 張主題大逃殺地圖生成＋大廳地圖預覽＋管理員右鍵傳送，已實作並準備發佈，待實測）**：
+- **v0.40.1（決賽圈 `11.5` 格＋邊界平滑移動＋容器替換背包＋HUD 面板收起與大地圖標題位置調整＋5 張地圖三層高密度升級與原地重建）**：
+  - `BattleRoyaleMode.tick()` 縮圈時 10Hz 同步＋`ClientBRState.smoothCircle()` 逐幀線性插值驅動 `CircleRenderer`／`HUD`／`BigMapScreen`，消除邊界跳格；`Backpack.handleContainerClick()`＋`ContainerMenuMixin` 支援在其他容器內 Shift+點擊或游標點擊替換背包時將舊背包放回原容器。
+  - `HudEditScreen` 支援側邊設定面板「收起／展開設定」；`BigMapScreen.renderMapTitle` 將地圖名稱（含「地圖預覽：xxx」）移至地圖左側顯示（極窄視窗自動退回安全截斷置放），避免與「HUD 設定」按鈕重疊。
+  - 新增室內近距團隊地圖「黑曜地堡」：`ObsidianBunkerBlueprint`（85×14×65 雙層全室內、走道 3～4 格寬、高密度沙包／機櫃／貨櫃掩體、紅藍 3 出口、4 樓梯＋2F 天橋）＋`ArenaMapRegistry`（SavedData 切換 `default` 與自訂場地）＋`ArenaMapGenerator`＋`/pg arena map <generate|regen|list|select|tp|status|cancel>`，連動 `ArenaMode`／`TdmMode`／`DomMode`／`GkMode`；新增 `ObsidianBunkerBlueprintTest` 驗證 3D BFS 屏障封鎖與全圖連通性。
+  - 新增 `MapRelightJob`（`ChunkSkyLightSources` + `ThreadedLevelLightEngine` 天空／方塊光照清空重傳並補送 `ClientboundLightUpdatePacket`）＋`/pg map relight [all|<id>|status|cancel]`，同時接入 `BRMapGenerator` 的 `RELIGHT` 階段與 `initializeLightSources()`，徹底解決 5 張新地圖地面殘留陰影問題。
+  - `Circle.FINAL_RADIUS` 由 `7.5` 改為 `11.5` 格（並同步更新 `CircleCommand`/`CirclePreset`/`PGConfig` 說明）。
+  - 新增 `admin/build/WildStructures.java`（8 種無木箱小型建築 `HOUSE`/`GAS_STATION`/`BUNKER`/`WAREHOUSE`/`MINKA`/`COTTAGE`/`ADOBE`/`ARCTIC_POD`＋4 種野區微據點 `CHECKPOINT`/`FIELD_CAMP`/`CONTAINER_YARD`/`RUIN_WALLS`），擴充 `BRMapLayout` 自動在大城區間填入小房區（帶支線小路）、微據點與密集樹林／岩脊／戰術矮牆掩體，並在 `BRMapGenerator` 加入 `/pg map generate regen` 原地重建機制。
+  - 網路協定維持 `PGNetwork.VERSION="35"`（屬於 `small` 更新）；擴充 `BRMapLayoutTest` 驗證全部三層建築零重疊與數量密度。
+- **v0.40.0（5 張主題大逃殺地圖生成＋大廳地圖預覽＋管理員右鍵傳送，已於 `4ab4c96` 發佈）**：
   - 新增 `BRMapPresets`、`BRMapLayout`、`BRMapGenerator` 與 `/pg map generate <list|all|status|cancel|preset>`：提供 `300 / 400 / 500 / 600 / 700` 五張主題分區密集建築群地圖（共 17/22/30/38/55 棟無木箱建築）、放射與環狀道路及跨河橋、野外戰術掩體、多座復活祭壇（5/7/9/11/13 座並寫入 `AltarLedger`）與自動 `MapRenderJob` 俯視圖；新增 `BRMapLayoutTest` 驗證零重疊與邊界/祭壇配置。
   - `MenuDataPacket.MapEntry` 擴充地圖中心／半徑，`MenuRequestPacket` 與 `LobbyManager` 在玩家進入大廳、開啟選單、切換大逃殺地圖或切回大逃殺模式時同步大逃殺地圖俯視圖（`MapImagePacket`）。
   - `MainMenuScreen` 於大廳大逃殺模式為所有玩家提供「預覽大逃殺地圖」入口；`BigMapScreen` 支援大廳預覽與管理員右鍵點擊任意位置開啟選單並透過 `MapTeleportPacket`（伺服器強制載入區塊＋高程安全檢查）傳送過去。

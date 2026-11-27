@@ -70,21 +70,21 @@ public final class TdmMode extends ArenaMode {
     @Override
     protected void onStart() {
         prepSeconds = 0; // 計畫書 10：選角改在大廳準備後強制完成，開局即進入戰鬥
-        fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.AIR.defaultBlockState(), true);
+        fill(arenaBarriers(), Blocks.AIR.defaultBlockState(), true);
         clearSupplyChests();
         clearFloorItems();
     }
 
     @Override
     protected void onFinish() {
-        fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.AIR.defaultBlockState(), true);
+        fill(arenaBarriers(), Blocks.AIR.defaultBlockState(), true);
     }
 
     @Override
     protected void tickRules() {
         if (prepSeconds > 0) {
             if (ticks % 20 == 0 && --prepSeconds <= 0) {
-                fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.AIR.defaultBlockState(), true); // 拆掉基地出口屏障
+                fill(arenaBarriers(), Blocks.AIR.defaultBlockState(), true); // 拆掉基地出口屏障
                 broadcastTitle(Component.literal("⚔ 戰鬥開始！").withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
                     Component.literal("在基地裡按 M 打開商店").withStyle(ChatFormatting.YELLOW), 40);
                 playAll(SoundEvents.RAID_HORN.value(), 0.6f, 1.2f);

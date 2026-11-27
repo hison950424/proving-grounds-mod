@@ -24,7 +24,7 @@ import java.util.List;
  *   /pg circle set <方案> interval <秒>              每階段的等待時間與最短縮圈時間
  *   /pg circle set <方案> speed <倍率>               圈移動速度上限 = BR 疾跑速度 × 倍率
  *   /pg circle set <方案> first_wait <秒>            開場第一次縮圈前額外多等幾秒
- *   /pg circle set <方案> final_hold <秒>            決賽圈（半徑 7.5 格）停留幾秒後再縮到 0（計畫書 7 B）
+ *   /pg circle set <方案> final_hold <秒>            決賽圈（半徑 11.5 格）停留幾秒後再縮到 0（計畫書 7 B）
  *   /pg circle reset <方案>                          改回預設值
  */
 public final class CircleCommand {
@@ -100,7 +100,7 @@ public final class CircleCommand {
                 .append("｜間隔 ").append(p.intervalSeconds()).append(" 秒")
                 .append("｜速度 疾跑×").append(p.speedFactor())
                 .append("｜開場多等 ").append(p.firstWaitSeconds()).append(" 秒")
-                .append("｜決賽圈（7.5 格）停留 ").append(p.finalHoldSeconds()).append(" 秒");
+                .append("｜決賽圈（11.5 格）停留 ").append(p.finalHoldSeconds()).append(" 秒");
             if (!radii.isEmpty()) {
                 double min = Double.MAX_VALUE, max = 0;
                 for (double r : radii) { double t = p.estimateSeconds(r); min = Math.min(min, t); max = Math.max(max, t); }

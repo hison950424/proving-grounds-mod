@@ -19,7 +19,7 @@ import java.util.List;
  *   側邊面板：
  *     「版面」分頁：每個元件一列 —— 名稱（點一下選取）、顯示／隱藏、－ 大小 ＋、重設。
  *     「其他」分頁：點狀準心、擊殺音效與音量、受擊方向指示、佔點光柱、防蹲點紅牆、戰績面板開法、提示文字大小。
- *     底部：全部重設、面板換邊（面板擋住元件時用）、完成。
+ *     底部：全部重設、面板換邊（面板擋住元件時用）、收起／展開面板、完成。
  *   版面存在 config/provinggrounds-hud.json；其他設定直接改客戶端設定檔（provinggrounds-client.toml）。
  */
 public class HudEditScreen extends Screen {
@@ -39,7 +39,7 @@ public class HudEditScreen extends Screen {
         return modeFilter == 0 || e.group >= 2 || e.group == modeFilter - 1;
     }
     private static int scroll;
-    private static boolean panelRight;
+    private static boolean panelRight, panelCollapsed;
 
     @Nullable private final Screen parent;
     private int px, py, ph, listTop, listBottom;
@@ -64,6 +64,18 @@ public class HudEditScreen extends Screen {
         listBottom = py + ph - 76; // 下面留空間給選取元件的文字／背景透明度（計畫書 7 A1）
         labelHits.clear();
         texts.clear();
+
+        if (panelCollapsed) {
+            int barW = 104;
+            int barX = panelRight ? width - barW - 8 : 8;
+            int barY = 6;
+            addRenderableWidget(new PGButton(barX, barY, 60, 16, Component.literal("展開設定"), true, false, () -> {
+                panelCollapsed = false;
+                rebuildWidgets();
+            }));
+            addRenderableWidget(new PGButton(barX + 64, barY, 40, 16, Component.literal("完成"), false, false, this::onClose));
+            return;
+        }
 
         // 右上：模式篩選（只顯示該模式會出現的元件）
         // 使用者回饋：改成下拉選單
@@ -108,16 +120,22 @@ public class HudEditScreen extends Screen {
             texts.add(new Object[] { px + 10, py + ph - 40, "點一下元件可以調文字、背景透明度", DIM });
         }
 
-        int bw = (PW - 20 - 12) / 3, by = py + ph - 22;
-        addRenderableWidget(new PGButton(px + 10, by, bw, BH, Component.literal("全部重設"), false, false, () -> {
+        int bw = (PW - 20 - 12) / 4, by = py + ph - 22, bx = px + 11;
+        addRenderableWidget(new PGButton(bx, by, bw, BH, Component.literal("重設"), false, false, () -> {
             HudLayout.resetAll();
             rebuildWidgets();
         }));
-        addRenderableWidget(new PGButton(px + 16 + bw, by, bw, BH, Component.literal("面板換邊"), false, false, () -> {
+        addRenderableWidget(new PGButton(bx + bw + 4, by, bw, BH, Component.literal("換邊"), false, false, () -> {
+            Dropdown.close();
             panelRight = !panelRight;
             rebuildWidgets();
         }));
-        addRenderableWidget(new PGButton(px + 22 + 2 * bw, by, bw, BH, Component.literal("完成"), true, false, this::onClose));
+        addRenderableWidget(new PGButton(bx + 2 * (bw + 4), by, bw, BH, Component.literal("收起"), false, false, () -> {
+            Dropdown.close();
+            panelCollapsed = true;
+            rebuildWidgets();
+        }));
+        addRenderableWidget(new PGButton(bx + 3 * (bw + 4), by, bw, BH, Component.literal("完成"), true, false, this::onClose));
     }
 
     private void switchTab(int t) {
@@ -258,7 +276,7 @@ public class HudEditScreen extends Screen {
     // ── 滑鼠與鍵盤 ──────────────────────────────────────────────────────────
 
     private boolean inPanel(double mx, double my) {
-        return mx >= px && mx < px + PW && my >= py && my < py + ph;
+        return !panelCollapsed && mx >= px && mx < px + PW && my >= py && my < py + ph;
     }
 
     @Nullable
@@ -397,32 +415,34 @@ public class HudEditScreen extends Screen {
         HudLayout.El hover = inPanel(mouseX, mouseY) ? null : elementAt(mouseX, mouseY);
         for (HudLayout.El e : HudLayout.El.values()) if (shown(e)) drawElement(g, e, e == selected || e == dragging, e == hover);
 
-        // 側邊面板
-        g.fill(px - 1, py - 1, px + PW + 1, py + ph + 1, BORDER);
-        g.fill(px, py, px + PW, py + ph, BG);
-        g.drawString(font, "HUD 介面設定", px + 10, py + 7, ACCENT, false);
-        g.fill(px + 8, py + 38, px + PW - 8, py + 39, BORDER);
-        g.fill(px + 8, listBottom + 2, px + PW - 8, listBottom + 3, BORDER);
-        for (Object[] t : texts) {
-            String s = (String) t[2];
-            int x = (int) t[0];
-            if (t.length > 4) x += ((int) t[4] - font.width(s)) / 2; // 置中在指定寬度
-            g.drawString(font, s, x, (int) t[1], (int) t[3], false);
-        }
-        int total = tab == 0 ? layoutRowCount() : otherRows + 1;
-        if (total > visibleRows()) {
-            // 捲軸
-            int trackH = listBottom - listTop, barH = Math.max(10, trackH * visibleRows() / total);
-            int barY = listTop + (trackH - barH) * scroll / Math.max(1, total - visibleRows());
-            g.fill(px + PW - 4, listTop, px + PW - 2, listBottom, 0x40FFFFFF);
-            g.fill(px + PW - 4, barY, px + PW - 2, barY + barH, ACCENT);
+        if (!panelCollapsed) {
+            // 側邊面板
+            g.fill(px - 1, py - 1, px + PW + 1, py + ph + 1, BORDER);
+            g.fill(px, py, px + PW, py + ph, BG);
+            g.drawString(font, "HUD 介面設定", px + 10, py + 7, ACCENT, false);
+            g.fill(px + 8, py + 38, px + PW - 8, py + 39, BORDER);
+            g.fill(px + 8, listBottom + 2, px + PW - 8, listBottom + 3, BORDER);
+            for (Object[] t : texts) {
+                String s = (String) t[2];
+                int x = (int) t[0];
+                if (t.length > 4) x += ((int) t[4] - font.width(s)) / 2; // 置中在指定寬度
+                g.drawString(font, s, x, (int) t[1], (int) t[3], false);
+            }
+            int total = tab == 0 ? layoutRowCount() : otherRows + 1;
+            if (total > visibleRows()) {
+                // 捲軸
+                int trackH = listBottom - listTop, barH = Math.max(10, trackH * visibleRows() / total);
+                int barY = listTop + (trackH - barH) * scroll / Math.max(1, total - visibleRows());
+                g.fill(px + PW - 4, listTop, px + PW - 2, listBottom, 0x40FFFFFF);
+                g.fill(px + PW - 4, barY, px + PW - 2, barY + barH, ACCENT);
+            }
         }
         super.render(g, mouseX, mouseY, partial);
         Dropdown.render(g, font, mouseX, mouseY, height); // 下拉選單畫在最上層
 
-        // 下方操作說明（面板另一側的畫面底部）
+        // 下方操作說明（面板另一側的畫面底部；面板收起時置中）
         String help = "拖曳移動｜滾輪縮放｜右鍵顯示／隱藏｜方向鍵微調";
-        int hx = panelRight ? 8 : width - font.width(help) - 8;
+        int hx = panelCollapsed ? (width - font.width(help)) / 2 : (panelRight ? 8 : width - font.width(help) - 8);
         g.drawString(font, help, hx, height - 12, DIM, true);
     }
 

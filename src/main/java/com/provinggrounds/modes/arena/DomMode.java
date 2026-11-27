@@ -58,14 +58,8 @@ public final class DomMode extends ArenaMode {
     public DomMode(MinecraftServer server, int targetScore) {
         super(server);
         this.targetScore = Math.max(100, targetScore);
-        for (String line : cfg.domPoints.get()) {
-            String[] parts = line.split("\\|");
-            if (parts.length < 3) continue;
-            Vec3 c = ArenaConfig.vec(parts[1]);
-            if (c == null) continue;
-            int r;
-            try { r = Integer.parseInt(parts[2].trim()); } catch (NumberFormatException e) { continue; }
-            points.add(new Point(parts[0].trim(), c, r, parts.length > 3 ? ArenaConfig.box(parts[3]) : null));
+        for (ArenaMapRegistry.DomPointDef d : activeArena.domPoints()) {
+            points.add(new Point(d.name(), d.center(), d.radius(), d.floor()));
         }
     }
 
@@ -93,7 +87,7 @@ public final class DomMode extends ArenaMode {
 
     @Override
     protected void onFinish() {
-        fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.AIR.defaultBlockState(), true);
+        fill(arenaBarriers(), Blocks.AIR.defaultBlockState(), true);
         for (Point pt : points) setFloor(pt, false);
         com.provinggrounds.special.DomGear.endMatch(server);
     }
@@ -115,7 +109,7 @@ public final class DomMode extends ArenaMode {
         phaseSeconds = round == 0 ? cfg.domFirstPrepSeconds.get() : cfg.domPrepSeconds.get();
         round++;
         secondOpen = level.random.nextBoolean();
-        fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.BARRIER.defaultBlockState(), true);
+        fill(arenaBarriers(), Blocks.BARRIER.defaultBlockState(), true);
         clearSupplyChests();
         for (ServerPlayer p : online()) {
             ArenaPlayer ap = players.get(p.getUUID());
@@ -144,7 +138,7 @@ public final class DomMode extends ArenaMode {
             refillConsumables(p, ap, true);
             refillTeamHeals(p, true);
         }
-        fill(ArenaConfig.boxes(cfg.barriers.get()), Blocks.AIR.defaultBlockState(), true);
+        fill(arenaBarriers(), Blocks.AIR.defaultBlockState(), true);
         com.provinggrounds.special.DomGear.newRound(server); // 每回合可以再用一次特殊物品（計畫書 8）
         broadcastTitle(Component.literal("⚔ 戰鬥開始！").withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
             Component.literal("佔領將於 " + cfg.domFreezeSeconds.get() + " 秒後開放").withStyle(ChatFormatting.YELLOW), 40);

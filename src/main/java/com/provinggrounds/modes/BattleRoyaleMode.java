@@ -388,7 +388,8 @@ public class BattleRoyaleMode {
             default -> {}
         }
 
-        if (phase != Phase.IDLE && tickCount % 5 == 0) syncClients(server);
+        int syncEvery = (phase == Phase.ACTIVE && circle != null && circle.isShrinking()) ? 2 : 5;
+        if (phase != Phase.IDLE && tickCount % syncEvery == 0) syncClients(server);
         if (phase != Phase.IDLE && tickCount % 20 == 3) syncBoard(server); // 戰績面板（計畫書 6 B1）
         if ((phase == Phase.PLANE || phase == Phase.ACTIVE) && tickCount % 5 == 2) syncMarkers(server); // 地圖標記
     }
