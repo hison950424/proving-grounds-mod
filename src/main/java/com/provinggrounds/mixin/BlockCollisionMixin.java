@@ -92,4 +92,18 @@ public abstract class BlockCollisionMixin {
             }
         }
     }
+
+    /**
+     * 緊鄰下半磚的實心方塊／雙層半磚已提供斜坡碰撞過渡（SlabRampShapes），必須如同原版樓梯回傳 isSuffocating = false；
+     * 否則 LocalPlayer.moveTowardsClosestSpace() 會以整個方塊 X-Z 投影判定玩家腳部卡在實心方塊內，
+     * 每 tick 施加 -0.1 反向推力把玩家推回半磚上而走不上去。
+     */
+    @Inject(method = { "isSuffocating(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)Z",
+                       "m_60828_" }, at = @At("HEAD"), cancellable = true, remap = false)
+    private void provinggrounds$noSuffocateOnSlabRamp(BlockGetter level, BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
+        if (!((Object) this instanceof BlockState state)) return;
+        if (SlabRampShapes.isRampBlock(level, pos, state)) {
+            cir.setReturnValue(false);
+        }
+    }
 }
