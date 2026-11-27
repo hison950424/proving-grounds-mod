@@ -34,18 +34,28 @@ public final class HudLayout {
 
     private static boolean effectsPushed;
 
-    @net.minecraftforge.eventbus.api.SubscribeEvent
+    @net.minecraftforge.eventbus.api.SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
     public static void onOverlayPre(net.minecraftforge.client.event.RenderGuiOverlayEvent.Pre event) {
         if (event.getOverlay() != net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.POTION_ICONS.type()) return;
+        // 開著任何介面（例如 TACZ 按 Z 的槍械配件改裝畫面、物品欄、選單）時，不移動藥水效果 HUD，避免影響其他介面座標
+        if (net.minecraft.client.Minecraft.getInstance().screen != null) return;
         int w = event.getWindow().getGuiScaledWidth(), h = event.getWindow().getGuiScaledHeight();
         if (!enabled(El.EFFECTS)) { event.setCanceled(true); return; }
         apply(event.getGuiGraphics(), El.EFFECTS, w, h);
         effectsPushed = true;
     }
 
-    @net.minecraftforge.eventbus.api.SubscribeEvent
+    @net.minecraftforge.eventbus.api.SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.HIGHEST)
     public static void onOverlayPost(net.minecraftforge.client.event.RenderGuiOverlayEvent.Post event) {
         if (event.getOverlay() != net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.POTION_ICONS.type() || !effectsPushed) return;
+        effectsPushed = false;
+        pop(event.getGuiGraphics());
+    }
+
+    /** 保險：萬一其他模組中途取消事件導致 Post 沒跑到，在整張 HUD 畫完時把矩陣彈出，絕不污染後續 Screen。 */
+    @net.minecraftforge.eventbus.api.SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
+    public static void onGuiRenderPost(net.minecraftforge.client.event.RenderGuiEvent.Post event) {
+        if (!effectsPushed) return;
         effectsPushed = false;
         pop(event.getGuiGraphics());
     }

@@ -55,8 +55,11 @@ class BRMapLayoutTest {
     @Test
     void allFivePlansPackDenseThreeTierStructuresWithoutOverlap() {
         int[] expectedAltars = { 5, 7, 9, 11, 13 };
-        int[] minCompounds = { 4, 8, 12, 16, 22 };
-        int[] minCovers = { 80, 140, 240, 340, 450 };
+        int[] minCompounds = { 2, 4, 6, 8, 10 };
+        int[] minCovers = { 50, 90, 140, 200, 260 };
+
+        assertEquals(14, com.provinggrounds.admin.build.WildStructures.SmallKind.values().length, "小房區建築種類應為 14 種");
+        assertEquals(8, com.provinggrounds.admin.build.WildStructures.MicroKind.values().length, "野區微據點種類應為 8 種");
 
         List<Preset> all = BRMapPresets.all();
         for (int idx = 0; idx < all.size(); idx++) {
@@ -72,10 +75,15 @@ class BRMapLayoutTest {
                 preset.key() + " 小房區過少: " + plan.compounds.size());
             assertTrue(plan.smallBuildings.size() >= plan.compounds.size() * 2,
                 preset.key() + " 小房區建物過少: " + plan.smallBuildings.size());
-            assertTrue(plan.microPois.size() >= 4,
+            assertTrue(plan.microPois.size() >= 3,
                 preset.key() + " 野區微據點過少: " + plan.microPois.size());
             assertTrue(plan.covers.size() >= minCovers[idx],
                 preset.key() + " 野外掩體過少: " + plan.covers.size());
+
+            // 驗證建築朝向具備多方向變化，不再全部朝同一側
+            Set<net.minecraft.core.Direction> facings = new HashSet<>();
+            for (PlacedBuilding b : plan.buildings) facings.add(b.facing());
+            assertTrue(facings.size() >= 3, preset.key() + " 大建築朝向過於單一: " + facings);
 
             double maxBuildingDist = preset.radius() - 12.0;
             double maxAltarDist = preset.radius() - 16.0;

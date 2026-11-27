@@ -106,6 +106,7 @@ public final class MapRenderJob {
         if (current == null) return false;
         current.releaseActive();
         current.say("已取消地圖產生。", ChatFormatting.YELLOW);
+        com.provinggrounds.core.TaskProgress.clear(current.level.getServer());
         current = null;
         return true;
     }
@@ -147,6 +148,8 @@ public final class MapRenderJob {
         releaseActive();
 
         int done = totalBatches - batches.size();
+        com.provinggrounds.core.TaskProgress.update(level.getServer(), "繪製地圖 #" + map.id + " 俯視圖",
+            String.format("讀取區塊 %d / %d 批", done, totalBatches), done / (float) Math.max(1, totalBatches));
         if (done % 20 == 0 && !batches.isEmpty()) {
             say(String.format("地圖產生進度 %d / %d 批", done, totalBatches), ChatFormatting.GRAY);
         }
@@ -220,6 +223,7 @@ public final class MapRenderJob {
             }
         }
         MapImageStore.MapImage img = MapImageStore.save(level.getServer(), map.id, minX, minZ, size, scale, pixels);
+        com.provinggrounds.core.TaskProgress.done(level.getServer(), "繪製地圖 #" + map.id + " 俯視圖", "完成");
         say(String.format("地圖 #%d 俯視圖產生完成（%d × %d、壓縮後 %d KB、耗時 %s）。下一局開始時會傳給玩家。",
             map.id, size, size, img.data().length / 1024, elapsed()),
             ChatFormatting.GREEN);

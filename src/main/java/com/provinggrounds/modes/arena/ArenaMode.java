@@ -636,6 +636,22 @@ public abstract class ArenaMode {
         respawn(p, ap);
     }
 
+    /**
+     * 死亡後讓原版重生直接落在場內（旁觀位置或重生點），避免先在世界出生點（大廳）出現一瞬間再被傳送。
+     * 回傳 null 表示不是參賽者。
+     */
+    @Nullable
+    public Vec3 respawnTargetFor(UUID id) {
+        ArenaPlayer ap = players.get(id);
+        if (ap == null) return null;
+        if (endTicks < 0 && respawnDelaySeconds() > 0 && ap.deathPos != null) return ap.deathPos.add(0, 1.5, 0);
+        return spawnOf(ap);
+    }
+
+    public net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> arenaDimension() {
+        return level.dimension();
+    }
+
     /** 重生：死亡後先在死亡位置旁觀 respawn_delay 秒（計畫書 5），再傳回重生點。佔點覆寫（回合中變旁觀）。 */
     protected void respawn(ServerPlayer p, ArenaPlayer ap) {
         int delay = respawnDelaySeconds();

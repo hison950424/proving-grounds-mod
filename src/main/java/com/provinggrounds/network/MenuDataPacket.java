@@ -17,10 +17,12 @@ public record MenuDataPacket(
     long xp, int level, long nextLevelXp,
     boolean isOp, boolean inLobby, String status,
     List<MapEntry> maps,
-    List<String> venues // 場地選擇（名稱，順序同 VenueManager.visible）
+    List<String> venues, // 場地選擇（名稱，順序同 VenueManager.visible）
+    List<ArenaMapEntry> arenaMaps // 團隊模式場地（順序同 LobbyManager.arenaMapChoices）
 ) {
 
     public record MapEntry(int id, String name, int lootPoints, double cx, double cz, double radius) {}
+    public record ArenaMapEntry(String id, String name) {}
 
     public void encode(FriendlyByteBuf buf) {
         buf.writeVarInt(kills);
@@ -44,6 +46,11 @@ public record MenuDataPacket(
         }
         buf.writeVarInt(venues.size());
         for (String v : venues) buf.writeUtf(v, 64);
+        buf.writeVarInt(arenaMaps.size());
+        for (ArenaMapEntry a : arenaMaps) {
+            buf.writeUtf(a.id(), 64);
+            buf.writeUtf(a.name(), 64);
+        }
     }
 
     public static MenuDataPacket decode(FriendlyByteBuf buf) {
@@ -62,7 +69,10 @@ public record MenuDataPacket(
         int vn = Math.min(buf.readVarInt(), 64);
         List<String> venues = new ArrayList<>(vn);
         for (int i = 0; i < vn; i++) venues.add(buf.readUtf(64));
-        return new MenuDataPacket(kills, deaths, assists, wins, xp, level, next, isOp, inLobby, status, maps, venues);
+        int an = Math.min(buf.readVarInt(), 64);
+        List<ArenaMapEntry> arenaMaps = new ArrayList<>(an);
+        for (int i = 0; i < an; i++) arenaMaps.add(new ArenaMapEntry(buf.readUtf(64), buf.readUtf(64)));
+        return new MenuDataPacket(kills, deaths, assists, wins, xp, level, next, isOp, inLobby, status, maps, venues, arenaMaps);
     }
 
     public double kd() {

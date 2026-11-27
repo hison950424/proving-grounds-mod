@@ -21,11 +21,14 @@ public class MapRegistry extends SavedData {
 
     public static final String FILE = "provinggrounds_maps";
 
+    public record RegionLabel(String name, double x, double z) {}
+
     public static final class BRMap {
         public final int id;
         public String name;
         public double centerX, centerZ, radius;
         public final LinkedHashSet<BlockPos> lootPoints = new LinkedHashSet<>();
+        public final List<RegionLabel> labels = new ArrayList<>();
 
         BRMap(int id, String name, double cx, double cz, double radius) {
             this.id = id; this.name = name; this.centerX = cx; this.centerZ = cz; this.radius = radius;
@@ -117,6 +120,27 @@ public class MapRegistry extends SavedData {
         return n;
     }
 
+    public void setLabels(BRMap map, List<RegionLabel> labels) {
+        map.labels.clear();
+        map.labels.addAll(labels);
+        setDirty();
+    }
+
+    public void setLabel(BRMap map, String name, double x, double z) {
+        String clean = name.trim();
+        if (clean.isEmpty()) return;
+        map.labels.removeIf(l -> l.name().equalsIgnoreCase(clean)
+            || Math.hypot(l.x() - x, l.z() - z) < 12.0);
+        map.labels.add(new RegionLabel(clean, x, z));
+        setDirty();
+    }
+
+    public boolean removeLabel(BRMap map, String name) {
+        boolean removed = map.labels.removeIf(l -> l.name().equalsIgnoreCase(name.trim()));
+        if (removed) setDirty();
+        return removed;
+    }
+
     // ── NBT ─────────────────────────────────────────────────────────────────
 
     @Override
@@ -133,6 +157,15 @@ public class MapRegistry extends SavedData {
             int i = 0;
             for (BlockPos p : m.lootPoints) pts[i++] = p.asLong();
             t.put("points", new LongArrayTag(pts));
+            ListTag lbls = new ListTag();
+            for (RegionLabel lb : m.labels) {
+                CompoundTag lt = new CompoundTag();
+                lt.putString("n", lb.name());
+                lt.putDouble("x", lb.x());
+                lt.putDouble("z", lb.z());
+                lbls.add(lt);
+            }
+            t.put("labels", lbls);
             list.add(t);
         }
         tag.put("maps", list);
@@ -147,6 +180,11 @@ public class MapRegistry extends SavedData {
             BRMap m = new BRMap(t.getInt("id"), t.getString("name"),
                 t.getDouble("cx"), t.getDouble("cz"), t.getDouble("radius"));
             for (long l : t.getLongArray("points")) m.lootPoints.add(BlockPos.of(l));
+            ListTag lbls = t.getList("labels", Tag.TAG_COMPOUND);
+            for (int j = 0; j < lbls.size(); j++) {
+                CompoundTag lt = lbls.getCompound(j);
+                m.labels.add(new RegionLabel(lt.getString("n"), lt.getDouble("x"), lt.getDouble("z")));
+            }
             r.maps.put(m.id, m);
         }
         return r;

@@ -1,11 +1,14 @@
 package com.provinggrounds.client;
 
+import com.provinggrounds.data.MapRegistry;
 import com.provinggrounds.network.MapImagePacket;
 import com.provinggrounds.network.MapMarkersPacket;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
@@ -22,6 +25,7 @@ public final class ClientMapData {
     @Nullable private static volatile Image image;
     private static volatile List<MapMarkersPacket.Marker> markers = List.of();
     private static volatile long markersAt = 0;
+    private static final Map<Integer, List<MapRegistry.RegionLabel>> LABELS = new ConcurrentHashMap<>();
 
     // 分段組裝中
     private static long pendingVersion = -1;
@@ -81,10 +85,30 @@ public final class ClientMapData {
         return System.currentTimeMillis() - markersAt > 2000 ? List.of() : markers;
     }
 
+    public static void setLabels(int mapId, List<MapRegistry.RegionLabel> labels) {
+        LABELS.put(mapId, List.copyOf(labels));
+    }
+
+    public static List<MapRegistry.RegionLabel> labels(int mapId) {
+        return LABELS.getOrDefault(mapId, List.of());
+    }
+
+    private static final java.util.Map<Integer, List<net.minecraft.core.BlockPos>> ALTARS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void setAltars(int mapId, List<net.minecraft.core.BlockPos> altars) {
+        ALTARS.put(mapId, List.copyOf(altars));
+    }
+
+    /** 大廳預覽用的祭壇位置（不會過期）。 */
+    public static List<net.minecraft.core.BlockPos> altars(int mapId) {
+        return ALTARS.getOrDefault(mapId, List.of());
+    }
+
     public static synchronized void clear() {
         image = null;
         parts = null;
         markers = List.of();
         markersAt = 0;
+        LABELS.clear();
     }
 }

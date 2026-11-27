@@ -97,6 +97,7 @@ public final class ArenaMapGenerator {
         if (current == null) return false;
         current = null;
         say(src, "[團隊地圖] 已取消生成作業。", ChatFormatting.YELLOW);
+        com.provinggrounds.core.TaskProgress.clear(src.getServer());
         return true;
     }
 
@@ -154,6 +155,15 @@ public final class ArenaMapGenerator {
         if (j == null) return;
         try {
             long deadline = System.nanoTime() + CHUNK_BUDGET_MS * 1_000_000L;
+            int totalCols = ObsidianBunkerBlueprint.WIDTH * ObsidianBunkerBlueprint.DEPTH;
+            if (!j.chunks.isEmpty()) {
+                com.provinggrounds.core.TaskProgress.update(j.level.getServer(), "生成團隊地圖「" + ObsidianBunkerBlueprint.MAP_NAME + "」",
+                    String.format("放置方塊 %d / %d 區塊", j.doneChunks, j.totalChunks),
+                    0.8f * j.doneChunks / Math.max(1, j.totalChunks));
+            } else {
+                com.provinggrounds.core.TaskProgress.update(j.level.getServer(), "生成團隊地圖「" + ObsidianBunkerBlueprint.MAP_NAME + "」",
+                    "修正玻璃與欄杆連接", 0.8f + 0.2f * j.shapeIdx / Math.max(1, totalCols));
+            }
             if (!j.chunks.isEmpty()) {
                 while (!j.chunks.isEmpty() && System.nanoTime() < deadline) {
                     ChunkPos cp = j.chunks.poll();
@@ -193,6 +203,7 @@ public final class ArenaMapGenerator {
         } catch (Exception e) {
             ProvingGroundsMod.LOGGER.error("ArenaMapGenerator failed", e);
             say(j.src, "[團隊地圖] 生成失敗：" + e.getMessage(), ChatFormatting.RED);
+            com.provinggrounds.core.TaskProgress.clear(j.level.getServer());
             current = null;
         }
     }
@@ -263,6 +274,9 @@ public final class ArenaMapGenerator {
                 .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/pg arena map tp " + def.id()))
                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("執行 /pg arena map tp " + def.id()))));
         j.src.sendSuccess(() -> tpBtn, false);
+        com.provinggrounds.core.TaskProgress.done(j.level.getServer(), "生成團隊地圖「" + def.name() + "」", "完成");
+        com.provinggrounds.network.MenuRequestPacket.sendToAll(j.level.getServer());
+        com.provinggrounds.core.LobbyManager.get().broadcast();
     }
 
     private static boolean needsShapeUpdate(ObsidianBunkerBlueprint.Cell c) {

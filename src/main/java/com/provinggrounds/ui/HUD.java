@@ -34,9 +34,10 @@ public final class HUD {
     private static void render(GuiGraphics g, int w, int h) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.player == null) return;
+        Font font = mc.font;
+        renderTaskProgress(g, font, w);
         BRStatePacket s = ClientBRState.get();
         if (s.phase() == ClientBRState.PHASE_NONE) return;
-        Font font = mc.font;
 
         // 每個元件照原本的位置畫，HudLayout 負責玩家自訂的位置、大小、開關（主選單「HUD 介面設定」）
         renderMinimap(g, font, s, mc, w, h);
@@ -315,6 +316,37 @@ public final class HUD {
         }
         String text = (int) Math.ceil(hp) + (absorb > 0 ? "+" + (int) Math.ceil(absorb) : "") + " / " + (int) Math.ceil(max);
         g.drawString(font, text, x + (bw - font.width(text)) / 2, y + 1, TEXT, true);
+    }
+
+    /** 畫面上方中央的耗時背景作業進度條（大逃殺／團隊地圖生成、光照修復、俯視圖、掃描共用）。 */
+    private static void renderTaskProgress(GuiGraphics g, Font font, int w) {
+        var snap = com.provinggrounds.client.ClientTaskProgress.snapshot();
+        if (snap == null) return;
+        float a = snap.alpha();
+        if (a <= 0.04f) return;
+        int boxW = Math.min(250, w - 24);
+        int boxH = 30;
+        int x = (w - boxW) / 2;
+        int y = 8;
+
+        g.fill(x - 1, y - 1, x + boxW + 1, y + boxH + 1, withAlpha(0xFF2A3344, a));
+        g.fill(x, y, x + boxW, y + boxH, withAlpha(BG, a * 0.94f));
+        int titleColor = snap.done() ? 0xFF4CC864 : ACCENT;
+        g.fill(x, y, x + 2, y + boxH, withAlpha(titleColor, a));
+
+        String pctText = Math.round(snap.progress() * 100f) + "%";
+        g.drawString(font, snap.title(), x + 6, y + 4, withAlpha(titleColor, a), false);
+        g.drawString(font, pctText, x + boxW - font.width(pctText) - 6, y + 4, withAlpha(TEXT, a), false);
+
+        int barX = x + 6, barY = y + 15, barW = boxW - 12, barH = 4;
+        g.fill(barX, barY, barX + barW, barY + barH, withAlpha(0xFF1F2736, a));
+        int fillW = Math.max(2, Math.round(barW * snap.progress()));
+        g.fill(barX, barY, barX + fillW, barY + barH, withAlpha(snap.done() ? 0xFF4CC864 : 0xFF4AB8FF, a));
+
+        String stage = font.width(snap.stage()) > barW
+            ? font.plainSubstrByWidth(snap.stage(), Math.max(0, barW - font.width("…"))) + "…"
+            : snap.stage();
+        g.drawString(font, stage, x + 6, y + 21, withAlpha(TEXT_DIM, a), false);
     }
 
     /** 深色面板 + 左側金黃強調條。 */

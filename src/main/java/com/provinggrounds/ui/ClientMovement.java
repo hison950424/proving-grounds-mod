@@ -41,7 +41,7 @@ public final class ClientMovement {
     private ClientMovement() {}
 
     private static boolean quietDown(Minecraft mc) {
-        return mc.screen == null ? QUIET_WALK.isDown() : Footsteps.localQuiet && QUIET_WALK.isDown();
+        return mc.screen == null ? QUIET_WALK.isDown() : UiWalk.isQuietDown();
     }
 
     private static boolean isProne(LocalPlayer p) {

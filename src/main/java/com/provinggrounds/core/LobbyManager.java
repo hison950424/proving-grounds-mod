@@ -68,7 +68,18 @@ public final class LobbyManager {
         SET_ARENA_DOWNED,   // 管理員：團隊模式倒地開（arg 1）／關（arg 0）（計畫書 7 E）
         SET_FRIENDLY_FIRE,  // 管理員：所有模式的友軍誤傷開（arg 1）／關（arg 0）（只限槍械子彈；投擲物與爆炸物強制有友傷）
         CONFIRM_CLASS,      // 計畫書 10：強制選角階段確認職業（arg = ArenaClass 順序）
-        CONFIRM_SPECIAL     // 計畫書 10：佔點強制選特殊道具階段確認道具（arg = SpecialType 順序）
+        CONFIRM_SPECIAL,    // 計畫書 10：佔點強制選特殊道具階段確認道具（arg = SpecialType 順序）
+        SET_ARENA_MAP       // 管理員：團隊模式場地（arg = arenaMapChoices 索引）
+    }
+
+    /** 團隊模式可選場地（id, 名稱），第一個固定是設定檔的經典場地，其餘依 id 排序；客戶端以相同順序顯示。 */
+    public static List<String[]> arenaMapChoices(MinecraftServer server) {
+        List<String[]> out = new ArrayList<>();
+        out.add(new String[] { com.provinggrounds.modes.arena.ArenaMapRegistry.DEFAULT_ID, "經典場地（設定檔）" });
+        com.provinggrounds.modes.arena.ArenaMapRegistry.get(server).customMaps().stream()
+            .sorted(java.util.Comparator.comparing(com.provinggrounds.modes.arena.ArenaMapRegistry.ArenaMapDef::id))
+            .forEach(d -> out.add(new String[] { d.id().toLowerCase(java.util.Locale.ROOT), d.name() }));
+        return out;
     }
 
     /** 大廳強制選擇階段：0 = 一般大廳、1 = 強制選職業、2 = 佔點強制選特殊道具。 */
@@ -161,6 +172,7 @@ public final class LobbyManager {
     private int draftPhase = DRAFT_NONE;
     private final Set<UUID> draftDone = new HashSet<>();
     private int countdownTicks = -1; // 強制開始倒數，-1 = 沒在倒數
+    private boolean forcedCountdown; // 這次開始流程是否由管理員「強制所有人準備」觸發（倒數副標題用）
     private boolean dirty = true;
 
     private LobbyManager() {}
@@ -250,6 +262,7 @@ public final class LobbyManager {
                 dirty = true;
             } else if (!all && (countdownTicks >= 0 || draftPhase != DRAFT_NONE)) {
                 countdownTicks = -1;
+                forcedCountdown = false;
                 draftPhase = DRAFT_NONE;
                 draftDone.clear();
                 broadcastChat(server, Component.literal("[PG] 有人取消準備，開始流程已停止。").withStyle(ChatFormatting.YELLOW));
@@ -455,6 +468,12 @@ public final class LobbyManager {
             case SET_GK_MULTIPLIER -> gkMultiplier = Math.max(1, Math.min(20, arg));
             case SET_ARENA_DOWNED -> arenaDowned = arg != 0;
             case SET_FRIENDLY_FIRE -> friendlyFire = arg != 0;
+            case SET_ARENA_MAP -> {
+                List<String[]> choices = arenaMapChoices(server);
+                if (arg < 0 || arg >= choices.size()) return false;
+                if (!com.provinggrounds.modes.arena.ArenaMapRegistry.get(server).setActive(choices.get(arg)[0])) return false;
+                broadcastChat(server, Component.literal("[PG] 團隊模式場地已切換為「" + choices.get(arg)[1] + "」。").withStyle(ChatFormatting.AQUA));
+            }
             case SET_TEAM_MODE -> {
                 TeamMode[] all = TeamMode.values();
                 if (arg < 0 || arg >= all.length) return false;
@@ -506,11 +525,13 @@ public final class LobbyManager {
                 // 計畫書 6 A20：強制開始改成「強制所有人準備」，接著走正常準備後流程（團隊模式先選角再倒數）
                 if (countdownTicks >= 0 || draftPhase != DRAFT_NONE) return false;
                 for (ServerPlayer p : participants(server)) ready.add(p.getUUID());
+                forcedCountdown = true;
                 broadcastChat(server, Component.literal("[PG] 管理員讓所有人進入準備狀態。").withStyle(ChatFormatting.GOLD));
             }
             case CANCEL_COUNTDOWN -> {
                 if (countdownTicks < 0 && draftPhase == DRAFT_NONE) return false;
                 countdownTicks = -1;
+                forcedCountdown = false;
                 draftPhase = DRAFT_NONE;
                 draftDone.clear();
                 ready.clear();
@@ -609,7 +630,7 @@ public final class LobbyManager {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             p.connection.send(new ClientboundSetTitlesAnimationPacket(0, 25, 5));
             p.connection.send(new ClientboundSetTitleTextPacket(Component.literal(String.valueOf(seconds)).withStyle(ChatFormatting.GOLD)));
-            p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("管理員強制開始，即將開始遊戲").withStyle(ChatFormatting.WHITE)));
+            p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(forcedCountdown ? "管理員強制開始，即將開始遊戲" : "全員已準備，即將開始遊戲").withStyle(ChatFormatting.WHITE)));
             p.playNotifySound(SoundEvents.NOTE_BLOCK_HAT.value(), SoundSource.MASTER, 1f, seconds <= 3 ? 1.6f : 1.0f);
         }
     }
@@ -648,6 +669,8 @@ public final class LobbyManager {
         com.provinggrounds.data.MapImageStore.MapImage img = com.provinggrounds.data.MapImageStore.get(p.server, id);
         if (img != null) com.provinggrounds.network.MapImagePacket.sendTo(p, img);
         else PGNetwork.sendTo(p, new com.provinggrounds.network.MapImagePacket(id, 0, 0, 0, 0, 1, 0, 1, new byte[0]));
+        MapRegistry.BRMap map = MapRegistry.get(p.server).getMap(id);
+        if (map != null) com.provinggrounds.network.MapLabelsPacket.sendTo(p, map);
     }
 
     /** 大廳切換地圖或切回大逃殺模式時，同步推播目前大逃殺俯視圖給全部玩家。 */
@@ -670,6 +693,7 @@ public final class LobbyManager {
         return new LobbyStatePacket(GameManager.get().isInLobby(), map, preset.ordinal(), variant.ordinal(),
             teamMode.ordinal(), teamCount, countdownTicks < 0 ? -1 : (countdownTicks + 19) / 20, draftPhase,
             com.provinggrounds.special.SpecialConfig.enabledSafe(), friendlyFire(), com.provinggrounds.core.BlockProtection.explosionMode(), weaponMode.ordinal(),
-            gameMode.ordinal(), arenaSettings(), customCircle(preset, mapRadius(server, map)), players);
+            gameMode.ordinal(), arenaSettings(), customCircle(preset, mapRadius(server, map)),
+            com.provinggrounds.modes.arena.ArenaMapRegistry.get(server).activeId(), players);
     }
 }

@@ -205,6 +205,37 @@ public final class MapRender {
         }
     }
 
+    /** 大廳預覽：畫重生祭壇（伺服器以 MapLabelsPacket 同步，不會過期）。 */
+    public static void drawAltarMarkers(GuiGraphics g, View v, java.util.List<net.minecraft.core.BlockPos> altars) {
+        if (altars.isEmpty()) return;
+        g.drawManaged(() -> {
+            for (net.minecraft.core.BlockPos a : altars) {
+                int sx = (int) v.px(a.getX() + 0.5), sz = (int) v.pz(a.getZ() + 0.5);
+                if (sx < v.x() - 4 || sx > v.x() + v.w() + 4 || sz < v.y() - 4 || sz > v.y() + v.h() + 4) continue;
+                altarIcon(g, sx, sz, true);
+            }
+        });
+    }
+
+    /** 大區域名稱：粗體、黑色描邊，畫在區域中心。 */
+    public static void drawRegionLabels(GuiGraphics g, Font font, View v, java.util.List<com.provinggrounds.data.MapRegistry.RegionLabel> labels) {
+        if (labels.isEmpty()) return;
+        g.drawManaged(() -> {
+            for (com.provinggrounds.data.MapRegistry.RegionLabel lb : labels) {
+                int sx = (int) v.px(lb.x()), sz = (int) v.pz(lb.z());
+                if (sx < v.x() || sx > v.x() + v.w() || sz < v.y() || sz > v.y() + v.h()) continue;
+                net.minecraft.network.chat.Component text = net.minecraft.network.chat.Component.literal(lb.name())
+                    .withStyle(net.minecraft.ChatFormatting.BOLD);
+                int tw = font.width(text);
+                int tx = sx - tw / 2, ty = sz - 4;
+                for (int[] d : new int[][] {{-1, 0}, {1, 0}, {0, -1}, {0, 1}}) {
+                    g.drawString(font, text, tx + d[0], ty + d[1], 0xFF000000, false);
+                }
+                g.drawString(font, text, tx, ty, 0xFFFFF2C0, false);
+            }
+        });
+    }
+
     /** 復活祭壇：紫色十字（冷卻中是灰色），外圈黑框。 */
     private static void altarIcon(GuiGraphics g, int x, int z, boolean ready) {
         int c = ready ? 0xFFB070FF : 0xFF808080;

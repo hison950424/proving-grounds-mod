@@ -31,10 +31,26 @@ import java.util.List;
 public final class UiWalk {
 
     private static boolean active; // 這一 tick 是否接管
-    /** 這一 tick 實際按著的前、後、左、右與跳躍。 */
-    private static boolean up, down, left, right, jump;
+    /** 這一 tick 實際按著的前、後、左、右、跳躍、蹲下與靜走。 */
+    private static boolean up, down, left, right, jump, sneak, quiet;
+    private static boolean proneWasDown;
+    private static long lastUiProneMs;
 
     private UiWalk() {}
+
+    /** 開著介面時是否正按著「靜走」鍵（供 ClientMovement 判斷）。 */
+    public static boolean isQuietDown() {
+        return active && quiet;
+    }
+
+    /** 目前畫面是否處於打字狀態（供 WindowsImeLock 判斷是否放行中文輸入法）。 */
+    public static boolean isTypingScreen(@javax.annotation.Nullable Screen screen) {
+        if (screen == null) return false;
+        if (screen instanceof ChatScreen) return true;
+        if (screen instanceof net.minecraft.client.gui.screens.inventory.AbstractSignEditScreen
+            || screen instanceof net.minecraft.client.gui.screens.inventory.BookEditScreen) return true;
+        return hasActiveTextField(screen.children());
+    }
 
     /**
      * 每 tick 開頭讀實際按鍵狀態。注意：Forge 把移動鍵設成「只在遊戲中有效」（KeyConflictContext.IN_GAME），
@@ -47,6 +63,9 @@ public final class UiWalk {
         Screen screen = mc.screen;
         if (mc.player == null || screen == null || !shouldWalk(screen)) {
             active = false;
+            sneak = false;
+            quiet = false;
+            proneWasDown = false;
             return;
         }
         long window = mc.getWindow().getWindow();
@@ -55,10 +74,22 @@ public final class UiWalk {
         left = isPhysicallyDown(window, mc.options.keyLeft.getKey());
         right = isPhysicallyDown(window, mc.options.keyRight.getKey());
         jump = isPhysicallyDown(window, mc.options.keyJump.getKey());
+        sneak = isPhysicallyDown(window, mc.options.keyShift.getKey());
+        quiet = isPhysicallyDown(window, ClientMovement.QUIET_WALK.getKey());
+        // 開著介面時按趴下鍵（邊緣觸發，避免長按重複切換）
+        boolean proneDown = isPhysicallyDown(window, ClientModEvents.PRONE.getKey());
+        if (proneDown && !proneWasDown) {
+            long now = System.currentTimeMillis();
+            if (now - lastUiProneMs >= 250) {
+                lastUiProneMs = now;
+                com.provinggrounds.network.PGNetwork.sendToServer(new com.provinggrounds.network.ProneTogglePacket());
+            }
+        }
+        proneWasDown = proneDown;
         active = true;
     }
 
-    /** 原版算完移動輸入之後（開著畫面時是全部放開），把實際按著的方向鍵與跳躍鍵寫回去。 */
+    /** 原版算完移動輸入之後（開著畫面時是全部放開），把實際按著的方向鍵、跳躍鍵與蹲下鍵寫回去。 */
     @SubscribeEvent
     public static void onMovementInput(net.minecraftforge.client.event.MovementInputUpdateEvent event) {
         Minecraft mc = Minecraft.getInstance();
@@ -69,7 +100,8 @@ public final class UiWalk {
         in.left = left;
         in.right = right;
         in.jumping = jump;
-        float slow = mc.player.isMovingSlowly() ? 0.3f : 1f; // 蹲下、趴下時跟原版一樣變慢
+        in.shiftKeyDown = sneak;
+        float slow = (sneak || mc.player.isMovingSlowly()) ? 0.3f : 1f; // 蹲下、趴下時跟原版一樣變慢
         in.forwardImpulse = (up == down ? 0f : up ? 1f : -1f) * slow;
         in.leftImpulse = (left == right ? 0f : left ? 1f : -1f) * slow;
     }

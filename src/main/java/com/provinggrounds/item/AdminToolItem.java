@@ -41,10 +41,11 @@ public class AdminToolItem extends Item {
         CRATE_CONVERTER("crate_converter", "右鍵：選擇地圖，把舊資料包的箱子標記轉換成箱子生成點"),
         MAP_PAINTER("map_painter", "右鍵：選擇地圖，重新繪製大地圖／小地圖的圖片"),
         BUILDING_PLACER("building_placer", "右鍵：在前方生成建築並自動登記物資點｜蹲下＋右鍵：選擇風格與大型建築"),
-        BUILDING_UNDO("building_undo", "右鍵：復原最近一次放置的建築（含移除該次新增的物資點）");
+        BUILDING_UNDO("building_undo", "右鍵：復原最近一次放置的建築（含移除該次新增的物資點）"),
+        ADMIN_PANEL("admin_panel", "右鍵：開啟管理員控制台（地圖生成／陰影修復／團隊場地／方塊還原與重載一鍵操作）");
 
         public final String id;
-        final String hint;
+        public final String hint;
 
         Tool(String id, String hint) {
             this.id = id;
@@ -85,6 +86,7 @@ public class AdminToolItem extends Item {
                 }
             }
             case BUILDING_UNDO -> p.sendSystemMessage(BuildingCatalog.undo(p));
+            case ADMIN_PANEL -> PGNetwork.sendTo(p, com.provinggrounds.network.AdminPanelPacket.open(p.server));
         }
         p.getCooldowns().addCooldown(this, 5); // 避免連點
         return InteractionResultHolder.success(stack);

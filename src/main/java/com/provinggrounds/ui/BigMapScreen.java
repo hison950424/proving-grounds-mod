@@ -36,7 +36,6 @@ public class BigMapScreen extends Screen {
     private static final int ACCENT = 0xFFE8D060;
     private static final int CTX_ROW_H = 18;
     private static final int CTX_PAD = 3;
-    private static final int CTX_ROWS = 2;
 
     private int mapX, mapY, mapSize;
     private double viewX, viewZ, span;     // 目前看的範圍（世界座標）
@@ -48,6 +47,9 @@ public class BigMapScreen extends Screen {
     private boolean ctxOpen;
     private int ctxX, ctxY, ctxW, ctxH;
     private int tpWorldX, tpWorldZ;
+    private int ctxMapId = -1;
+    @Nullable private String ctxNearestLabel;
+    private List<String> ctxLabels = List.of();
 
     public BigMapScreen() {
         super(Tr.c("map.screen"));
@@ -134,13 +136,34 @@ public class BigMapScreen extends Screen {
     private void openContextMenu(double mx, double my) {
         tpWorldX = (int) Math.floor(viewX + (mx - mapX) / (double) mapSize * span);
         tpWorldZ = (int) Math.floor(viewZ + (my - mapY) / (double) mapSize * span);
-        String tpLabel = Tr.t("map.tp_here") + " (" + tpWorldX + ", " + tpWorldZ + ")";
-        String resetLabel = Tr.t("map.reset_view");
-        ctxW = Math.max(font.width(tpLabel), font.width(resetLabel)) + 16;
-        ctxH = CTX_ROWS * CTX_ROW_H + CTX_PAD * 2;
+        ctxNearestLabel = null;
+        double best = 48;
+        if (ctxMapId >= 0) {
+            for (com.provinggrounds.data.MapRegistry.RegionLabel lb : ClientMapData.labels(ctxMapId)) {
+                double d = Math.hypot(lb.x() - (tpWorldX + 0.5), lb.z() - (tpWorldZ + 0.5));
+                if (d <= best) { best = d; ctxNearestLabel = lb.name(); }
+            }
+        }
+        ctxLabels = contextLabels();
+        int maxW = 0;
+        for (String s : ctxLabels) maxW = Math.max(maxW, font.width(s));
+        ctxW = maxW + 16;
+        ctxH = ctxLabels.size() * CTX_ROW_H + CTX_PAD * 2;
         ctxX = Math.max(4, Math.min(width - ctxW - 4, (int) mx));
         ctxY = Math.max(4, Math.min(height - ctxH - 4, (int) my));
         ctxOpen = true;
+    }
+
+    /** 右鍵選單：傳送、命名區域、（附近有名稱時）刪除名稱、重設視角。 */
+    private List<String> contextLabels() {
+        List<String> out = new java.util.ArrayList<>();
+        out.add(Tr.t("map.tp_here") + " (" + tpWorldX + ", " + tpWorldZ + ")");
+        if (ctxMapId >= 0) {
+            out.add(ctxNearestLabel != null ? "修改區域名稱（" + ctxNearestLabel + "）" : "在此命名大區域");
+            if (ctxNearestLabel != null) out.add("刪除區域名稱（" + ctxNearestLabel + "）");
+        }
+        out.add(Tr.t("map.reset_view"));
+        return out;
     }
 
     // ── 操作 ────────────────────────────────────────────────────────────────
@@ -164,15 +187,33 @@ public class BigMapScreen extends Screen {
             if (button == 0 && mx >= ctxX && mx < ctxX + ctxW && my >= ctxY && my < ctxY + ctxH) {
                 int row = ((int) my - ctxY - CTX_PAD) / CTX_ROW_H;
                 ctxOpen = false;
+                int last = ctxLabels.size() - 1;
                 if (row == 0) {
                     PGButton.playClick(1.0f);
                     PGNetwork.sendToServer(new MapTeleportPacket(tpWorldX, tpWorldZ));
                     onClose();
                     return true;
                 }
-                if (row == 1) {
+                if (row == last) {
                     PGButton.playClick(1.0f);
                     resetView();
+                    return true;
+                }
+                if (row == 1 && ctxMapId >= 0) {
+                    PGButton.playClick(1.0f);
+                    double lx = tpWorldX + 0.5, lz = tpWorldZ + 0.5;
+                    if (ctxNearestLabel != null) {
+                        for (com.provinggrounds.data.MapRegistry.RegionLabel lb : ClientMapData.labels(ctxMapId)) {
+                            if (lb.name().equals(ctxNearestLabel)) { lx = lb.x(); lz = lb.z(); break; }
+                        }
+                    }
+                    Minecraft.getInstance().setScreen(new RegionLabelScreen(this, ctxMapId, lx, lz,
+                        ctxNearestLabel != null ? ctxNearestLabel : ""));
+                    return true;
+                }
+                if (row == 2 && ctxNearestLabel != null && ctxMapId >= 0) {
+                    PGButton.playClick(1.0f);
+                    PGNetwork.sendToServer(new com.provinggrounds.network.MapLabelActionPacket(ctxMapId, true, 0, 0, ctxNearestLabel));
                     return true;
                 }
                 return true;
@@ -258,11 +299,14 @@ public class BigMapScreen extends Screen {
             if (lobbyMap != null && lobbyMap.radius() > 0) {
                 MapRender.drawCircle(g, v, lobbyMap.cx(), lobbyMap.cz(), lobbyMap.radius(), MapRender.ZONE, 1.5f, true);
             }
+            if (curId >= 0) MapRender.drawAltarMarkers(g, v, ClientMapData.altars(curId));
             if (cam != null && cam.getX() >= fullX && cam.getX() <= fullX + fullSpan
                     && cam.getZ() >= fullZ && cam.getZ() <= fullZ + fullSpan) {
                 MapRender.drawSelf(g, font, v, cam.getX(), cam.getZ(), cam.getYRot());
             }
         }
+        if (curId >= 0) MapRender.drawRegionLabels(g, font, v, ClientMapData.labels(curId));
+        ctxMapId = curId;
         if (ctxOpen) {
             int px = (int) Math.round(v.px(tpWorldX + 0.5));
             int pz = (int) Math.round(v.pz(tpWorldZ + 0.5));
@@ -346,15 +390,15 @@ public class BigMapScreen extends Screen {
     private void renderContextMenu(GuiGraphics g, int mouseX, int mouseY) {
         g.fill(ctxX - 1, ctxY - 1, ctxX + ctxW + 1, ctxY + ctxH + 1, BORDER);
         g.fill(ctxX, ctxY, ctxX + ctxW, ctxY + ctxH, 0xF5121824);
-        String[] labels = {
-            Tr.t("map.tp_here") + " (" + tpWorldX + ", " + tpWorldZ + ")",
-            Tr.t("map.reset_view")
-        };
-        for (int i = 0; i < CTX_ROWS; i++) {
+        String[] labels = ctxLabels.toArray(new String[0]);
+        int last = labels.length - 1;
+        for (int i = 0; i < labels.length; i++) {
             int ry = ctxY + CTX_PAD + i * CTX_ROW_H;
             boolean hovered = mouseX >= ctxX && mouseX < ctxX + ctxW && mouseY >= ry && mouseY < ry + CTX_ROW_H;
             if (hovered) g.fill(ctxX + 2, ry, ctxX + ctxW - 2, ry + CTX_ROW_H, 0x40E8D060);
-            int color = i == 0 ? (hovered ? 0xFFFFEA80 : ACCENT) : (hovered ? 0xFFFFFFFF : TEXT_DIM);
+            int color = i == 0 ? (hovered ? 0xFFFFEA80 : ACCENT)
+                : i == last ? (hovered ? 0xFFFFFFFF : TEXT_DIM)
+                : (hovered ? 0xFFB0F0FF : 0xFF80D0F0);
             g.drawString(font, labels[i], ctxX + 8, ry + 5, color, false);
         }
     }

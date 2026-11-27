@@ -213,6 +213,7 @@ public final class ClientForgeEvents {
         ClientMenuData.clear();
         com.provinggrounds.client.ClientLobbyData.clear();
         com.provinggrounds.client.ClientMapData.clear();
+        com.provinggrounds.client.ClientTaskProgress.clear();
         ClientBRState.clear();
         com.provinggrounds.client.ClientArenaState.clear();
         KillHud.clear();

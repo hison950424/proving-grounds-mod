@@ -168,10 +168,33 @@ public final class ArenaManager {
         ServerPlayer killer = event.getSource().getEntity() instanceof ServerPlayer k ? k : null;
         com.provinggrounds.core.KillEvents.setSource(event.getSource());
         current.handleDeath(victim, killer);
+        pinRespawnInArena(victim);
+    }
+
+    /** 原重生點備份（重生後還原，避免影響大廳）。 */
+    private record SavedRespawn(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dim,
+                                @Nullable net.minecraft.core.BlockPos pos, float angle, boolean forced) {}
+    private static final java.util.Map<UUID, SavedRespawn> SAVED_RESPAWN = new java.util.HashMap<>();
+
+    /** 修正「團隊模式死亡等待重生時會閃回大廳一瞬間」：把原版重生點暫時設在場內。 */
+    private static void pinRespawnInArena(ServerPlayer victim) {
+        ArenaMode m = current;
+        if (m == null) return;
+        net.minecraft.world.phys.Vec3 t = m.respawnTargetFor(victim.getUUID());
+        if (t == null) return;
+        SAVED_RESPAWN.putIfAbsent(victim.getUUID(), new SavedRespawn(victim.getRespawnDimension(),
+            victim.getRespawnPosition(), victim.getRespawnAngle(), victim.isRespawnForced()));
+        victim.setRespawnPosition(m.arenaDimension(), net.minecraft.core.BlockPos.containing(t), victim.getYRot(), true, false);
+    }
+
+    private static void restoreRespawn(ServerPlayer p) {
+        SavedRespawn s = SAVED_RESPAWN.remove(p.getUUID());
+        if (s != null) p.setRespawnPosition(s.dim(), s.pos(), s.angle(), s.forced(), false);
     }
 
     @SubscribeEvent
     public static void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        if (event.getEntity() instanceof ServerPlayer sp) restoreRespawn(sp);
         if (current == null || event.isEndConquered() || !(event.getEntity() instanceof ServerPlayer p)) return;
         current.handleRespawn(p);
     }

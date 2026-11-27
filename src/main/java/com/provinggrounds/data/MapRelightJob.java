@@ -104,6 +104,7 @@ public final class MapRelightJob {
         current = null;
         if (j != null) {
             say(src, String.format("[光照修復] 已取消 #%d「%s」與後續排程。", j.map.id, j.map.name), ChatFormatting.YELLOW);
+            com.provinggrounds.core.TaskProgress.clear(src.getServer());
         }
         return true;
     }
@@ -153,6 +154,16 @@ public final class MapRelightJob {
             return;
         }
         try {
+            float phaseFrac = j.chunks.isEmpty() ? 1f : Math.min(1f, j.idx / (float) j.chunks.size());
+            com.provinggrounds.core.TaskProgress.update(j.level.getServer(),
+                String.format("光照修復 #%d「%s」", j.map.id, j.map.name),
+                String.format("%s %d / %d 區塊", switch (j.phase) {
+                    case INIT -> "初始化光源";
+                    case WAIT_INIT, WAIT_PROPAGATE -> "等待光照引擎";
+                    case PROPAGATE -> "傳播光照";
+                    case SYNC -> "同步給玩家";
+                }, j.idx, j.chunks.size()),
+                (j.phase.ordinal() + phaseFrac) / Phase.values().length);
             if (tickJob(j)) {
                 double secs = (System.currentTimeMillis() - j.startMs) / 1000.0;
                 say(j.src, String.format("[光照修復] 地圖 #%d「%s」已完成 %d 個區塊的光照重建（耗時 %.1f 秒）。",
@@ -161,10 +172,13 @@ public final class MapRelightJob {
                     j.map.id, j.map.name, j.chunks.size(), System.currentTimeMillis() - j.startMs);
                 current = null;
                 if (!QUEUE.isEmpty()) launchNext();
+                else com.provinggrounds.core.TaskProgress.done(j.level.getServer(),
+                    String.format("光照修復 #%d「%s」", j.map.id, j.map.name), "完成");
             }
         } catch (Exception e) {
             ProvingGroundsMod.LOGGER.error("MapRelightJob failed on map #{}", j.map.id, e);
             say(j.src, "[光照修復] 發生錯誤：" + e.getMessage(), ChatFormatting.RED);
+            com.provinggrounds.core.TaskProgress.clear(j.level.getServer());
             current = null;
             QUEUE.clear();
         }

@@ -114,6 +114,7 @@ public final class MarkerScanJob {
         if (current == null) return false;
         current.releaseActive();
         current.say("已取消。" + current.summary(), ChatFormatting.YELLOW);
+        com.provinggrounds.core.TaskProgress.clear(current.level.getServer());
         current = null;
         return true;
     }
@@ -152,6 +153,9 @@ public final class MarkerScanJob {
         releaseActive();
 
         int done = totalBatches - batches.size();
+        com.provinggrounds.core.TaskProgress.update(level.getServer(), "掃描地圖 #" + map.id + " marker",
+            String.format("%s %d / %d 批", deleting ? "刪除 marker" : "掃描 marker", done, totalBatches),
+            done / (float) Math.max(1, totalBatches));
         if (done % 10 == 0 && !batches.isEmpty()) {
             say(deleting
                 ? String.format("刪除進度 %d / %d 批，已刪除 %d 個 marker。", done, totalBatches, removed)
@@ -220,6 +224,7 @@ public final class MarkerScanJob {
             if (imported + duplicate == 0) {
                 say("沒有任何點位可確認，不刪除 marker。", ChatFormatting.YELLOW);
                 ProvingGroundsMod.LOGGER.info("Marker MIGRATE on map {}: nothing imported, {}", map.id, summary());
+                com.provinggrounds.core.TaskProgress.done(level.getServer(), "掃描地圖 #" + map.id + " marker", "完成");
                 return true;
             }
             say("開始刪除已確認登記的 marker…", ChatFormatting.YELLOW);
@@ -228,6 +233,7 @@ public final class MarkerScanJob {
             return false;
         }
         say("完成！（耗時 " + elapsed() + "）" + summary(), ChatFormatting.GREEN);
+        com.provinggrounds.core.TaskProgress.done(level.getServer(), "掃描地圖 #" + map.id + " marker", "完成");
         if (timeouts > 0) {
             say(String.format("注意：有 %d 批區塊等太久沒載完，裡面的 marker 可能漏掉，可以再執行一次（重複的點位不會重複登記）。",
                 timeouts), ChatFormatting.RED);

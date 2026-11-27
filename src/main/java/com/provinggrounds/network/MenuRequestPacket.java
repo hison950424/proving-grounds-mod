@@ -57,6 +57,15 @@ public record MenuRequestPacket() {
         return new MenuDataPacket(s.kills, s.deaths, s.assists, s.wins, s.xp, level,
             PlayerDataManager.xpForNextLevel(level), player.hasPermissions(2),
             GameManager.get().isInLobby(), status, maps,
-            com.provinggrounds.venue.VenueManager.visible().stream().map(com.provinggrounds.venue.Venue::name).toList());
+            com.provinggrounds.venue.VenueManager.visible().stream().map(com.provinggrounds.venue.Venue::name).toList(),
+            com.provinggrounds.core.LobbyManager.arenaMapChoices(player.server).stream()
+                .map(a -> new MenuDataPacket.ArenaMapEntry(a[0], a[1])).toList());
+    }
+
+    /** 場地清單等資料變動時（例如新生成團隊地圖），主動推送最新選單資料給所有線上玩家。 */
+    public static void sendToAll(net.minecraft.server.MinecraftServer server) {
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            PGNetwork.sendTo(p, build(p));
+        }
     }
 }

@@ -224,6 +224,7 @@ public final class BRMapGenerator {
             current = null;
         }
         queueSource = null;
+        com.provinggrounds.core.TaskProgress.clear(src.getServer());
         return true;
     }
 
@@ -323,7 +324,18 @@ public final class BRMapGenerator {
         };
     }
 
+    private static void progress(Job job, String stage, float frac) {
+        com.provinggrounds.core.TaskProgress.update(job.level.getServer(),
+            String.format("生成地圖 #%d「%s」", job.mapId, job.preset.displayName()), stage, frac);
+    }
+
+    private static float ratio(int done, int total) {
+        return total <= 0 ? 1f : Math.min(1f, done / (float) total);
+    }
+
     private static boolean tickTerrain(Job job) {
+        progress(job, String.format("建立地形 %d / %d 區塊", job.doneChunks, job.totalChunks),
+            0.35f * ratio(job.doneChunks, job.totalChunks));
         long deadline = System.nanoTime() + CHUNK_BUDGET_MS * 1_000_000L;
         while (!job.terrainChunks.isEmpty() && System.nanoTime() < deadline) {
             ChunkPos cp = job.terrainChunks.poll();
@@ -343,6 +355,8 @@ public final class BRMapGenerator {
     }
 
     private static boolean tickMajorBuildings(Job job) {
+        progress(job, String.format("建造大城區建築 %d / %d", job.majorIdx, job.plan.buildings.size()),
+            0.35f + 0.20f * ratio(job.majorIdx, job.plan.buildings.size()));
         if (job.majorIdx >= job.plan.buildings.size()) {
             job.phase = Phase.SMALL_BUILDINGS;
             say(job.src, String.format("[#%d %s] 大城區完成，開始建造 %d 個小房區聚落（%d 棟建築）…",
@@ -363,6 +377,8 @@ public final class BRMapGenerator {
     }
 
     private static boolean tickSmallBuildings(Job job) {
+        progress(job, String.format("建造小房區建築 %d / %d", job.smallIdx, job.plan.smallBuildings.size()),
+            0.55f + 0.17f * ratio(job.smallIdx, job.plan.smallBuildings.size()));
         for (int k = 0; k < SMALL_PER_TICK && job.smallIdx < job.plan.smallBuildings.size(); k++) {
             SmallBuilding sb = job.plan.smallBuildings.get(job.smallIdx++);
             BuildingCanvas canvas = new BuildingCanvas(job.level, new BlockPos(sb.originX(), sb.y(), sb.originZ()), sb.facing());
@@ -383,6 +399,9 @@ public final class BRMapGenerator {
     }
 
     private static boolean tickAltarsAndWild(Job job) {
+        int wildTotal = job.plan.microPois.size() + job.plan.covers.size();
+        progress(job, String.format("佈置祭壇與野區 %d / %d", job.microIdx + job.coverIdx, wildTotal),
+            0.72f + 0.13f * ratio(job.microIdx + job.coverIdx, wildTotal));
         if (!job.altarsPlaced) {
             AltarLedger ledger = AltarLedger.get(job.level.getServer());
             for (BlockPos altarPos : job.plan.altars) {
@@ -447,6 +466,18 @@ public final class BRMapGenerator {
             MapRegistry.BRMap map = MapRegistry.get(server).getMap(job.mapId);
             double secs = (System.currentTimeMillis() - job.startMs) / 1000.0;
 
+            if (map != null) {
+                java.util.List<MapRegistry.RegionLabel> labels = new java.util.ArrayList<>();
+                for (BRMapLayout.DistrictBox d : job.plan.districts) {
+                    if (d.name() != null && !d.name().isBlank()) {
+                        labels.add(new MapRegistry.RegionLabel(d.name(), d.centerX() + 0.5, d.centerZ() + 0.5));
+                    }
+                }
+                MapRegistry.get(server).setLabels(map, labels);
+                com.provinggrounds.network.MapLabelsPacket.broadcast(server, map);
+            }
+            progress(job, "繪製俯視圖…", 0.95f);
+
             MutableComponent doneMsg = Component.literal(String.format(
                 "[生成地圖] 地圖 #%d「%s」（半徑 %d 格）%s完成（%.1f 秒）：%d 大城區建物＋%d 小房區建物＋%d 微據點、%d 物資點、%d 祭壇 [點此傳送]。",
                 job.mapId, job.preset.displayName(), job.preset.radius(), job.isRegen ? "原地重建" : "建造", secs,
@@ -472,6 +503,8 @@ public final class BRMapGenerator {
         }
         if (MapRenderJob.isRunning()) return false;
         LobbyManager.get().broadcastLobbyMapImage(job.level.getServer());
+        com.provinggrounds.core.TaskProgress.done(job.level.getServer(),
+            String.format("生成地圖 #%d「%s」", job.mapId, job.preset.displayName()), "完成");
         return true;
     }
 
@@ -508,7 +541,10 @@ public final class BRMapGenerator {
                 RoadSeg nearRoad = plan.nearestRoad(wx, wz);
                 double roadDist = nearRoad == null ? Double.MAX_VALUE : pointToSegmentDist(
                     wx + 0.5, wz + 0.5, nearRoad.x0() + 0.5, nearRoad.z0() + 0.5, nearRoad.x1() + 0.5, nearRoad.z1() + 0.5) - nearRoad.halfWidth();
-                boolean road = roadDist <= 0.0;
+                double dDist = districtEdgeDist(plan, wx, wz);
+                double cDist = compoundEdgeDist(plan, wx, wz);
+                // 道路與支線停止於城區／小房區廣場外緣，不直接插進區內地板
+                boolean road = roadDist <= 0.0 && dDist > 1.0 && cDist > 0.5;
                 boolean countryPath = road && nearRoad.countryPath();
                 boolean roadEdge = road && !countryPath && roadDist > -0.9;
 
@@ -529,9 +565,13 @@ public final class BRMapGenerator {
                 } else {
                     topY[lx][lz] = sy;
                     if (countryPath) {
-                        topBlock[lx][lz] = (biome == RegionBiome.DESERT_SAND || biome == RegionBiome.RED_CANYON)
-                            ? Blocks.SMOOTH_SANDSTONE.defaultBlockState()
-                            : Blocks.GRAVEL.defaultBlockState();
+                        double soft = BRMapPresets.hash01(wx, wz, job.preset.seed() ^ 0xA11L);
+                        boolean pathRim = roadDist > -0.6 && soft < 0.35;
+                        topBlock[lx][lz] = pathRim
+                            ? naturalTopBlock(biome, sy, wx, wz, job.preset.seed())
+                            : ((biome == RegionBiome.DESERT_SAND || biome == RegionBiome.RED_CANYON)
+                                ? Blocks.SMOOTH_SANDSTONE.defaultBlockState()
+                                : (soft < 0.72 ? Blocks.GRAVEL.defaultBlockState() : Blocks.COARSE_DIRT.defaultBlockState()));
                         subBlock[lx][lz] = Blocks.COBBLESTONE.defaultBlockState();
                         deepBlock[lx][lz] = Blocks.STONE.defaultBlockState();
                     } else if (road) {
@@ -541,14 +581,37 @@ public final class BRMapGenerator {
                             : (roadEdge ? Blocks.SMOOTH_STONE.defaultBlockState() : Blocks.GRAY_CONCRETE.defaultBlockState());
                         subBlock[lx][lz] = Blocks.COBBLESTONE.defaultBlockState();
                         deepBlock[lx][lz] = Blocks.STONE.defaultBlockState();
-                    } else if (inDistrictPlaza(plan, wx, wz)) {
+                    } else if (dDist <= 0.0) {
                         topBlock[lx][lz] = districtGroundBlock(biome);
                         subBlock[lx][lz] = Blocks.STONE.defaultBlockState();
                         deepBlock[lx][lz] = Blocks.STONE.defaultBlockState();
-                    } else if (inCompoundYard(plan, wx, wz)) {
+                    } else if (dDist <= 7.0) {
+                        // 區域地板與周邊自然方塊間進行 7 格漸層交融（廣場磚 → 過渡碎石/粗泥 → 自然草地/沙）
+                        double fade = 1.0 - dDist / 7.0;
+                        double jitter = (BRMapPresets.hash01(wx, wz, job.preset.seed() ^ 0x919L) - 0.5) * 0.42
+                            + (BRMapPresets.noise2D(wx * 0.16, wz * 0.16, job.preset.seed() ^ 0x91AL) - 0.5) * 0.32;
+                        double v = fade + jitter;
+                        if (v >= 0.72) {
+                            topBlock[lx][lz] = districtGroundBlock(biome);
+                        } else if (v >= 0.34) {
+                            topBlock[lx][lz] = districtTransitionBlock(biome, wx, wz, job.preset.seed());
+                        } else {
+                            topBlock[lx][lz] = naturalTopBlock(biome, sy, wx, wz, job.preset.seed());
+                        }
+                        subBlock[lx][lz] = naturalSubBlock(biome);
+                        deepBlock[lx][lz] = naturalDeepBlock(biome, sy);
+                    } else if (cDist <= 0.0) {
                         topBlock[lx][lz] = compoundYardBlock(biome, wx, wz, job.preset.seed());
                         subBlock[lx][lz] = naturalSubBlock(biome);
                         deepBlock[lx][lz] = Blocks.STONE.defaultBlockState();
+                    } else if (cDist <= 4.0) {
+                        double fade = 1.0 - cDist / 4.0;
+                        double v = fade + (BRMapPresets.hash01(wx, wz, job.preset.seed() ^ 0x920L) - 0.5) * 0.55;
+                        topBlock[lx][lz] = v >= 0.45
+                            ? compoundYardBlock(biome, wx, wz, job.preset.seed())
+                            : naturalTopBlock(biome, sy, wx, wz, job.preset.seed());
+                        subBlock[lx][lz] = naturalSubBlock(biome);
+                        deepBlock[lx][lz] = naturalDeepBlock(biome, sy);
                     } else {
                         topBlock[lx][lz] = naturalTopBlock(biome, sy, wx, wz, job.preset.seed());
                         subBlock[lx][lz] = naturalSubBlock(biome);
@@ -621,18 +684,28 @@ public final class BRMapGenerator {
         return Math.hypot(px - (x0 + t * vx), pz - (z0 + t * vz));
     }
 
-    private static boolean inDistrictPlaza(Plan plan, int wx, int wz) {
+    private static double districtEdgeDist(Plan plan, int wx, int wz) {
+        double min = Double.MAX_VALUE;
         for (BRMapLayout.DistrictBox d : plan.districts) {
-            if (wx >= d.minX() && wx <= d.maxX() && wz >= d.minZ() && wz <= d.maxZ()) return true;
+            double dx = Math.max(0.0, Math.max(d.minX() - wx, wx - d.maxX()));
+            double dz = Math.max(0.0, Math.max(d.minZ() - wz, wz - d.maxZ()));
+            double dist = Math.hypot(dx, dz);
+            if (dist <= 0.0) return 0.0;
+            if (dist < min) min = dist;
         }
-        return false;
+        return min;
     }
 
-    private static boolean inCompoundYard(Plan plan, int wx, int wz) {
+    private static double compoundEdgeDist(Plan plan, int wx, int wz) {
+        double min = Double.MAX_VALUE;
         for (CompoundBox c : plan.compounds) {
-            if (wx >= c.minX() && wx <= c.maxX() && wz >= c.minZ() && wz <= c.maxZ()) return true;
+            double dx = Math.max(0.0, Math.max(c.minX() - wx, wx - c.maxX()));
+            double dz = Math.max(0.0, Math.max(c.minZ() - wz, wz - c.maxZ()));
+            double dist = Math.hypot(dx, dz);
+            if (dist <= 0.0) return 0.0;
+            if (dist < min) min = dist;
         }
-        return false;
+        return min;
     }
 
     private static BlockState districtGroundBlock(RegionBiome biome) {
@@ -642,6 +715,16 @@ public final class BRMapGenerator {
             case ARCTIC_SNOW -> Blocks.POLISHED_DIORITE.defaultBlockState();
             case INDUSTRIAL_YARD -> Blocks.DEEPSLATE_TILES.defaultBlockState();
             default -> Blocks.SMOOTH_STONE.defaultBlockState();
+        };
+    }
+
+    private static BlockState districtTransitionBlock(RegionBiome biome, int wx, int wz, long seed) {
+        double p = BRMapPresets.hash01(wx, wz, seed ^ 0xDDBL);
+        return switch (biome) {
+            case DESERT_SAND, RED_CANYON -> p < 0.55 ? Blocks.SANDSTONE.defaultBlockState() : Blocks.CUT_SANDSTONE.defaultBlockState();
+            case ARCTIC_SNOW -> p < 0.55 ? Blocks.COBBLESTONE.defaultBlockState() : Blocks.GRAVEL.defaultBlockState();
+            case INDUSTRIAL_YARD -> p < 0.55 ? Blocks.POLISHED_ANDESITE.defaultBlockState() : Blocks.GRAVEL.defaultBlockState();
+            default -> p < 0.5 ? Blocks.COBBLESTONE.defaultBlockState() : (p < 0.82 ? Blocks.GRAVEL.defaultBlockState() : Blocks.COARSE_DIRT.defaultBlockState());
         };
     }
 
@@ -846,6 +929,17 @@ public final class BRMapGenerator {
                 canvas.box(-1, 3, 0, 0, 3, 1, rock);
                 canvas.bottomSlab(2, 1, 0, slab);
                 canvas.bottomSlab(-2, 3, 0, slab);
+            }
+            case 6 -> {
+                // 乾草堆＋木柵半掩體（田園／高原聚落外側）
+                canvas.box(-1, 1, 0, 0, 2, 1, Blocks.HAY_BLOCK);
+                canvas.set(1, 1, 0, Blocks.HAY_BLOCK);
+                canvas.box(-2, 1, -1, -2, 1, 1, Blocks.OAK_FENCE);
+            }
+            case 7 -> {
+                // 工業銅管線／鐵欄遮蔽物
+                canvas.box(-2, 1, 0, 2, 1, 0, Blocks.OXIDIZED_COPPER);
+                canvas.box(-1, 2, 0, 1, 2, 0, Blocks.IRON_BARS);
             }
             default -> {
                 // 長條戰術矮牆／田埂半掩體（5 格寬、附半磚探頭位）

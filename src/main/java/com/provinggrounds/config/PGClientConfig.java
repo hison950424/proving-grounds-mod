@@ -44,6 +44,7 @@ public final class PGClientConfig {
     public final ForgeConfigSpec.DoubleValue hudScale, killSoundVolume;
     public final ForgeConfigSpec.BooleanValue scoreboardToggle;
     public final ForgeConfigSpec.BooleanValue forceGuiScale;
+    public final ForgeConfigSpec.BooleanValue imeLockEnabled;
 
     private PGClientConfig(ForgeConfigSpec.Builder builder) {
         builder.push("ui_walk");
@@ -59,6 +60,8 @@ public final class PGClientConfig {
         forceGuiScale = builder.comment("固定把原版「介面大小」設成 3（本模組的介面都以 3 為基準排版）。",
                 "視窗太小放不下 3 時會用能放下的最大值。關掉後可以自己在 選項 → 顯示設定 改")
             .define("force_gui_scale_v1", true);
+        imeLockEnabled = builder.comment("在 Windows 上，除了聊天與輸入框打字時，其餘時候強制鎖定英文輸入法（防止誤觸輸入法切換）")
+            .define("ime_lock_enabled_v1", true);
         builder.pop();
 
         builder.comment("遊戲畫面中的縮圈牆（不影響小地圖、大地圖上畫的圈）").push("circle");

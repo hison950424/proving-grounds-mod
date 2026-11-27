@@ -2305,6 +2305,7 @@ public class BattleRoyaleMode {
         com.provinggrounds.data.MapImageStore.MapImage img = com.provinggrounds.data.MapImageStore.get(level.getServer(), map.id);
         if (img != null) com.provinggrounds.network.MapImagePacket.sendTo(p, img);
         else PGNetwork.sendTo(p, new com.provinggrounds.network.MapImagePacket(map.id, 0, 0, 0, 0, 1, 0, 1, new byte[0])); // 沒有俯視圖：清掉上一張
+        com.provinggrounds.network.MapLabelsPacket.sendTo(p, map);
     }
 
     /** 更新「隊友視野內的敵人」：在 96 格內、在視野角度內、中間沒有方塊擋住。 */

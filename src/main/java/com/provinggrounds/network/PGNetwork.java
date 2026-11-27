@@ -17,7 +17,7 @@ import java.util.Optional;
 public final class PGNetwork {
 
     /** 封包格式改變時要加 1，舊版客戶端連線時會直接顯示版本不符（7 = 跳傘改版）。 */
-    private static final String VERSION = "35"; // 35 = 大廳預覽大逃殺地圖＋管理員右鍵地圖傳送, 34 = 8風格52棟無木箱建築＋物資點貼近掩體優化＋半磚平滑斜坡移動
+    private static final String VERSION = "36"; // 36 = 團隊場地選單＋大地圖區域名稱＋進度條UI＋管理員控制台＋IME鎖定, 35 = 大廳預覽大逃殺地圖＋管理員右鍵地圖傳送
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(ProvingGroundsMod.MOD_ID, "main"),
@@ -117,6 +117,14 @@ public final class PGNetwork {
             WallClimbSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)); // 翻爬動畫與 Hitbox 同步
         CHANNEL.registerMessage(id++, MapTeleportPacket.class, MapTeleportPacket::encode, MapTeleportPacket::decode,
             MapTeleportPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER)); // 管理員右鍵地圖傳送
+        CHANNEL.registerMessage(id++, TaskProgressPacket.class, TaskProgressPacket::encode, TaskProgressPacket::decode,
+            TaskProgressPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)); // 耗時生成／修復作業進度條
+        CHANNEL.registerMessage(id++, MapLabelsPacket.class, MapLabelsPacket::encode, MapLabelsPacket::decode,
+            MapLabelsPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)); // 大逃殺大地圖區域名稱標籤
+        CHANNEL.registerMessage(id++, MapLabelActionPacket.class, MapLabelActionPacket::encode, MapLabelActionPacket::decode,
+            MapLabelActionPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER)); // 管理員命名／刪除區域名稱
+        CHANNEL.registerMessage(id++, AdminPanelPacket.class, AdminPanelPacket::encode, AdminPanelPacket::decode,
+            AdminPanelPacket::handle, Optional.empty()); // 管理員控制台工具（雙向：開控制台／執行操作）
 
     }
 

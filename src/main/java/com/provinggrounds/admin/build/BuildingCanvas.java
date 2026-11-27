@@ -34,6 +34,8 @@ public final class BuildingCanvas {
     private final Map<BlockPos, BlockState> previous = new LinkedHashMap<>();
     private final List<BlockPos> rawLootPoints = new ArrayList<>();
     private final LinkedHashSet<BlockPos> lootPoints = new LinkedHashSet<>();
+    private final Set<BlockPos> protectedStairs = new HashSet<>();
+    private final List<BlockPos> stairEntryAir = new ArrayList<>();
     private BlockState foundationBlock = Blocks.STONE_BRICKS.defaultBlockState();
 
     public BuildingCanvas(ServerLevel level, BlockPos origin, Direction facing) {
@@ -238,17 +240,21 @@ public final class BuildingCanvas {
         set(lxLeft + 1, yBase + 1, lz, upperR);
     }
 
-    /** 玻璃窗（水平沿 X）。 */
+    /** 玻璃窗（水平沿 X；自動夾住 y0 >= 1 防止誤設負數插進地底）。 */
     public void windowX(int x0, int y0, int z, int x1, int y1, Block glass) {
-        for (int y = y0; y <= y1; y++)
-            for (int x = Math.min(x0, x1); x <= Math.max(x0, x1); x++)
+        int loX = Math.min(x0, x1), hiX = Math.max(x0, x1);
+        int loY = Math.max(1, Math.min(y0, y1)), hiY = Math.max(loY, Math.max(y0, y1));
+        for (int y = loY; y <= hiY; y++)
+            for (int x = loX; x <= hiX; x++)
                 set(x, y, z, glass);
     }
 
-    /** 玻璃窗（水平沿 Z）。 */
+    /** 玻璃窗（水平沿 Z；自動夾住 y0 >= 1 防止誤設負數插進地底）。 */
     public void windowZ(int x, int y0, int z0, int z1, int y1, Block glass) {
-        for (int y = y0; y <= y1; y++)
-            for (int z = Math.min(z0, z1); z <= Math.max(z0, z1); z++)
+        int loZ = Math.min(z0, z1), hiZ = Math.max(z0, z1);
+        int loY = Math.max(1, Math.min(y0, y1)), hiY = Math.max(loY, Math.max(y0, y1));
+        for (int y = loY; y <= hiY; y++)
+            for (int z = loZ; z <= hiZ; z++)
                 set(x, y, z, glass);
     }
 
@@ -265,35 +271,68 @@ public final class BuildingCanvas {
         set(lx, ly, lz, slabBlock.defaultBlockState().setValue(SlabBlock.TYPE, SlabType.BOTTOM));
     }
 
-    /** 沿 Z 方向上升的室內樓梯（同時自動清出頭頂通行空間）。 */
+    /** 沿 Z 方向上升的室內樓梯（同時自動清出頭頂與底部上梯空間）。 */
     public void stairsAlongZ(int lx, int yStart, int zStart, int steps, int dzStep, Block stairBlock) {
         Direction dir = dzStep > 0 ? Direction.NORTH : Direction.SOUTH;
+        protectStairAir(lx, yStart, zStart - dzStep);
         for (int i = 0; i < steps; i++) {
             int y = yStart + i;
             int z = zStart + i * dzStep;
             stair(lx, y, z, stairBlock, dir);
-            air(lx, y + 1, z);
-            air(lx, y + 2, z);
-            air(lx, y + 3, z);
+            protectedStairs.add(toWorld(lx, y, z));
+            for (int dy = 1; dy <= 3; dy++) {
+                air(lx, y + dy, z);
+                protectedStairs.add(toWorld(lx, y + dy, z));
+            }
         }
     }
 
-    /** 沿 X 方向上升的室內樓梯（同時清出頭頂空間）。 */
+    /** 沿 X 方向上升的室內樓梯（同時清出頭頂與底部上梯空間）。 */
     public void stairsAlongX(int xStart, int yStart, int lz, int steps, int dxStep, Block stairBlock) {
         Direction dir = dxStep > 0 ? Direction.EAST : Direction.WEST;
+        protectStairAir(xStart - dxStep, yStart, lz);
         for (int i = 0; i < steps; i++) {
             int y = yStart + i;
             int x = xStart + i * dxStep;
             stair(x, y, lz, stairBlock, dir);
-            air(x, y + 1, lz);
-            air(x, y + 2, lz);
-            air(x, y + 3, lz);
+            protectedStairs.add(toWorld(x, y, lz));
+            for (int dy = 1; dy <= 3; dy++) {
+                air(x, y + dy, lz);
+                protectedStairs.add(toWorld(x, y + dy, lz));
+            }
+        }
+    }
+
+    private void protectStairAir(int lx, int baseY, int lz) {
+        for (int dy = 0; dy <= 2; dy++) {
+            air(lx, baseY + dy, lz);
+            BlockPos wp = toWorld(lx, baseY + dy, lz);
+            protectedStairs.add(wp);
+            stairEntryAir.add(wp);
+        }
+    }
+
+    /** 只要原本該格在建築樓板範圍內（不是外牆後方的空氣），清出一格讓上樓動線不卡障礙物。 */
+    private void clearApproachIfInteriorFloor(int lx, int floorY, int lz) {
+        BlockPos floorPos = toWorld(lx, floorY, lz);
+        if (!level.isInWorldBounds(floorPos)) return;
+        if (!level.getBlockState(floorPos).blocksMotion()) return;
+        BlockState atEye = level.getBlockState(floorPos.above(2));
+        // 若正前方是室內裝飾（非實體牆或只有低矮家具）或室內無天花板封牆阻隔，維持暢通入口
+        if (atEye.isAir()) {
+            for (int cy = floorY + 1; cy <= floorY + 3; cy++) {
+                BlockPos wp = toWorld(lx, cy, lz);
+                air(lx, cy, lz);
+                protectedStairs.add(wp);
+                stairEntryAir.add(wp);
+            }
         }
     }
 
     /**
      * 完整樓層連接樓梯（沿 Z 方向上升）：務必在鋪完上層樓板之後呼叫。
-     * 最後一階精準落在 y = upperFloorY 與上層地板齊平，自動切開上層開口且不會挖空最後一階。
+     * 最後一階精準落在 y = upperFloorY 與上層地板齊平，自動切開上層開口、預留底部 2 格上梯走道，
+     * 並保護整座樓梯不受後續海晶燈／家具／物資點覆蓋。
      */
     public void staircaseZ(int x0, int x1, int lowerFloorY, int upperFloorY, int zStart, int dzStep,
                            Block stairBlock, @Nullable Block landingBlock, @Nullable Block underBlock) {
@@ -301,30 +340,56 @@ public final class BuildingCanvas {
         if (steps <= 0) return;
         int minX = Math.min(x0, x1), maxX = Math.max(x0, x1);
         Direction dir = dzStep > 0 ? Direction.NORTH : Direction.SOUTH;
-        int zEntry = zStart - dzStep;
+        Block baseFloor = landingBlock != null ? landingBlock : foundationBlock.getBlock();
+        int zEntry1 = zStart - dzStep;
+        int zEntry2 = zStart - 2 * dzStep;
         for (int x = minX; x <= maxX; x++) {
-            for (int cy = lowerFloorY + 1; cy <= lowerFloorY + 3; cy++) air(x, cy, zEntry);
+            BlockPos f1 = toWorld(x, lowerFloorY, zEntry1);
+            if (!level.getBlockState(f1).blocksMotion()) set(x, lowerFloorY, zEntry1, baseFloor);
+            for (int cy = lowerFloorY + 1; cy <= lowerFloorY + 3; cy++) {
+                air(x, cy, zEntry1);
+                BlockPos wp = toWorld(x, cy, zEntry1);
+                protectedStairs.add(wp);
+                stairEntryAir.add(wp);
+            }
+            clearApproachIfInteriorFloor(x, lowerFloorY, zEntry2);
         }
         for (int i = 0; i < steps; i++) {
             int y = lowerFloorY + 1 + i;
             int z = zStart + i * dzStep;
             int topClear = (i == 0 && steps > 4) ? Math.min(y + 3, upperFloorY - 1) : Math.max(y + 3, upperFloorY + 2);
             for (int x = minX; x <= maxX; x++) {
-                if (underBlock != null && i > 0) set(x, y - 1, z, underBlock);
+                if (underBlock != null && i > 0) {
+                    set(x, y - 1, z, underBlock);
+                    protectedStairs.add(toWorld(x, y - 1, z));
+                }
                 stair(x, y, z, stairBlock, dir);
-                for (int cy = y + 1; cy <= topClear; cy++) air(x, cy, z);
+                protectedStairs.add(toWorld(x, y, z));
+                for (int cy = y + 1; cy <= topClear; cy++) {
+                    air(x, cy, z);
+                    protectedStairs.add(toWorld(x, cy, z));
+                }
             }
         }
         int zLanding = zStart + steps * dzStep;
         for (int x = minX; x <= maxX; x++) {
-            if (landingBlock != null) set(x, upperFloorY, zLanding, landingBlock);
-            for (int cy = upperFloorY + 1; cy <= upperFloorY + 3; cy++) air(x, cy, zLanding);
+            if (landingBlock != null) {
+                set(x, upperFloorY, zLanding, landingBlock);
+                protectedStairs.add(toWorld(x, upperFloorY, zLanding));
+            }
+            for (int cy = upperFloorY + 1; cy <= upperFloorY + 3; cy++) {
+                air(x, cy, zLanding);
+                BlockPos wp = toWorld(x, cy, zLanding);
+                protectedStairs.add(wp);
+                stairEntryAir.add(wp);
+            }
         }
     }
 
     /**
      * 完整樓層連接樓梯（沿 X 方向上升）：務必在鋪完上層樓板之後呼叫。
-     * 最後一階精準落在 y = upperFloorY 與上層地板齊平，自動切開上層開口且不會挖空最後一階。
+     * 最後一階精準落在 y = upperFloorY 與上層地板齊平，自動切開上層開口與底部上梯走道，
+     * 並保護整座樓梯不受後續海晶燈／家具／物資點覆蓋。
      */
     public void staircaseX(int z0, int z1, int lowerFloorY, int upperFloorY, int xStart, int dxStep,
                            Block stairBlock, @Nullable Block landingBlock, @Nullable Block underBlock) {
@@ -332,24 +397,49 @@ public final class BuildingCanvas {
         if (steps <= 0) return;
         int minZ = Math.min(z0, z1), maxZ = Math.max(z0, z1);
         Direction dir = dxStep > 0 ? Direction.EAST : Direction.WEST;
-        int xEntry = xStart - dxStep;
+        Block baseFloor = landingBlock != null ? landingBlock : foundationBlock.getBlock();
+        int xEntry1 = xStart - dxStep;
+        int xEntry2 = xStart - 2 * dxStep;
         for (int z = minZ; z <= maxZ; z++) {
-            for (int cy = lowerFloorY + 1; cy <= lowerFloorY + 3; cy++) air(xEntry, cy, z);
+            BlockPos f1 = toWorld(xEntry1, lowerFloorY, z);
+            if (!level.getBlockState(f1).blocksMotion()) set(xEntry1, lowerFloorY, z, baseFloor);
+            for (int cy = lowerFloorY + 1; cy <= lowerFloorY + 3; cy++) {
+                air(xEntry1, cy, z);
+                BlockPos wp = toWorld(xEntry1, cy, z);
+                protectedStairs.add(wp);
+                stairEntryAir.add(wp);
+            }
+            clearApproachIfInteriorFloor(xEntry2, lowerFloorY, z);
         }
         for (int i = 0; i < steps; i++) {
             int y = lowerFloorY + 1 + i;
             int x = xStart + i * dxStep;
             int topClear = (i == 0 && steps > 4) ? Math.min(y + 3, upperFloorY - 1) : Math.max(y + 3, upperFloorY + 2);
             for (int z = minZ; z <= maxZ; z++) {
-                if (underBlock != null && i > 0) set(x, y - 1, z, underBlock);
+                if (underBlock != null && i > 0) {
+                    set(x, y - 1, z, underBlock);
+                    protectedStairs.add(toWorld(x, y - 1, z));
+                }
                 stair(x, y, z, stairBlock, dir);
-                for (int cy = y + 1; cy <= topClear; cy++) air(x, cy, z);
+                protectedStairs.add(toWorld(x, y, z));
+                for (int cy = y + 1; cy <= topClear; cy++) {
+                    air(x, cy, z);
+                    protectedStairs.add(toWorld(x, cy, z));
+                }
             }
         }
         int xLanding = xStart + steps * dxStep;
         for (int z = minZ; z <= maxZ; z++) {
-            if (landingBlock != null) set(xLanding, upperFloorY, z, landingBlock);
-            for (int cy = upperFloorY + 1; cy <= upperFloorY + 3; cy++) air(xLanding, cy, z);
+            if (landingBlock != null) {
+                set(xLanding, upperFloorY, z, landingBlock);
+                protectedStairs.add(toWorld(xLanding, upperFloorY, z));
+            }
+            for (int cy = upperFloorY + 1; cy <= upperFloorY + 3; cy++) {
+                air(xLanding, cy, z);
+                BlockPos wp = toWorld(xLanding, cy, z);
+                protectedStairs.add(wp);
+                stairEntryAir.add(wp);
+            }
         }
     }
 
@@ -432,12 +522,17 @@ public final class BuildingCanvas {
         for (int z = Math.min(z0, z1); z <= Math.max(z0, z1); z++) stair(lx, yBase, z, stairBlock, faceDir);
     }
 
-    /** 嵌入式天花板照明網格。 */
+    /** 嵌入式天花板照明網格（自動避開樓梯井與樓梯踏階，絕不吃掉樓梯）。 */
     public void ceilingLights(int x0, int x1, int yCeiling, int z0, int z1, int stepX, int stepZ, Block lightBlock) {
         int minX = Math.min(x0, x1), maxX = Math.max(x0, x1);
         int minZ = Math.min(z0, z1), maxZ = Math.max(z0, z1);
         for (int x = minX; x <= maxX; x += Math.max(1, stepX)) {
             for (int z = minZ; z <= maxZ; z += Math.max(1, stepZ)) {
+                BlockPos wp = toWorld(x, yCeiling, z);
+                if (protectedStairs.contains(wp) || protectedStairs.contains(wp.below())) continue;
+                BlockState cur = level.getBlockState(wp);
+                BlockState below = level.getBlockState(wp.below());
+                if (cur.getBlock() instanceof StairBlock || below.getBlock() instanceof StairBlock) continue;
                 set(x, yCeiling, z, lightBlock);
             }
         }
@@ -637,6 +732,8 @@ public final class BuildingCanvas {
 
     private boolean isValidOpenSlot(BlockPos p) {
         return level.isInWorldBounds(p)
+            && !protectedStairs.contains(p)
+            && !protectedStairs.contains(p.above())
             && level.getBlockState(p).isAir()
             && level.getBlockState(p.above()).isAir()
             && isSolidFloor(p.below())
@@ -697,6 +794,13 @@ public final class BuildingCanvas {
                 if (!updated.isAir() && updated != cur) {
                     level.setBlock(pos, updated, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
                 }
+            }
+        }
+        // 確保樓梯出入口最後不會被任何後續放置的傢俱／燈飾封死
+        for (BlockPos airPos : stairEntryAir) {
+            BlockState st = level.getBlockState(airPos);
+            if (!st.isAir() && !(st.getBlock() instanceof StairBlock)) {
+                clearWorldAir(airPos);
             }
         }
         finalizeLootNearCover();

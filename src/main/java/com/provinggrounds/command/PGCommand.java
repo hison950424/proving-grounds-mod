@@ -305,7 +305,57 @@ public class PGCommand {
                     return 0;
                 }))
                 .then(Commands.argument("id", IntegerArgumentType.integer(1))
-                    .executes(ctx -> mapRelightOne(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id")))));
+                    .executes(ctx -> mapRelightOne(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id")))))
+            .then(Commands.literal("label").requires(OP)
+                .then(Commands.literal("add")
+                    .then(Commands.argument("id", IntegerArgumentType.integer(1))
+                        .then(Commands.argument("x", DoubleArgumentType.doubleArg())
+                            .then(Commands.argument("z", DoubleArgumentType.doubleArg())
+                                .then(Commands.argument("name", StringArgumentType.greedyString())
+                                    .executes(ctx -> mapLabelAdd(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id"),
+                                        DoubleArgumentType.getDouble(ctx, "x"), DoubleArgumentType.getDouble(ctx, "z"),
+                                        StringArgumentType.getString(ctx, "name"))))))))
+                .then(Commands.literal("remove")
+                    .then(Commands.argument("id", IntegerArgumentType.integer(1))
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                            .executes(ctx -> mapLabelRemove(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id"),
+                                StringArgumentType.getString(ctx, "name"))))))
+                .then(Commands.literal("list")
+                    .then(Commands.argument("id", IntegerArgumentType.integer(1))
+                        .executes(ctx -> mapLabelList(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "id"))))));
+    }
+
+    private static int mapLabelAdd(CommandSourceStack src, int id, double x, double z, String name) {
+        MapRegistry reg = MapRegistry.get(src.getServer());
+        MapRegistry.BRMap map = reg.getMap(id);
+        if (map == null) { fail(src, "找不到地圖 #" + id + "。"); return 0; }
+        String clean = name.trim();
+        if (clean.isEmpty() || clean.length() > 24) { fail(src, "區域名稱需為 1～24 個字。"); return 0; }
+        reg.setLabel(map, clean, x, z);
+        com.provinggrounds.network.MapLabelsPacket.broadcast(src.getServer(), map);
+        ok(src, String.format("已在地圖 #%d 的 (%.0f, %.0f) 設定區域名稱「%s」。", id, x, z, clean), true);
+        return 1;
+    }
+
+    private static int mapLabelRemove(CommandSourceStack src, int id, String name) {
+        MapRegistry reg = MapRegistry.get(src.getServer());
+        MapRegistry.BRMap map = reg.getMap(id);
+        if (map == null) { fail(src, "找不到地圖 #" + id + "。"); return 0; }
+        if (!reg.removeLabel(map, name)) { fail(src, "地圖 #" + id + " 沒有名為「" + name.trim() + "」的區域。"); return 0; }
+        com.provinggrounds.network.MapLabelsPacket.broadcast(src.getServer(), map);
+        ok(src, "已刪除地圖 #" + id + " 的區域名稱「" + name.trim() + "」。", true);
+        return 1;
+    }
+
+    private static int mapLabelList(CommandSourceStack src, int id) {
+        MapRegistry.BRMap map = MapRegistry.get(src.getServer()).getMap(id);
+        if (map == null) { fail(src, "找不到地圖 #" + id + "。"); return 0; }
+        if (map.labels.isEmpty()) { ok(src, "地圖 #" + id + " 目前沒有區域名稱。", false); return 1; }
+        ok(src, "地圖 #" + id + " 的區域名稱（共 " + map.labels.size() + " 個）：", false);
+        for (MapRegistry.RegionLabel lb : map.labels) {
+            ok(src, String.format("  %s  (%.0f, %.0f)", lb.name(), lb.x(), lb.z()), false);
+        }
+        return 1;
     }
 
     private static int mapGenerateList(CommandSourceStack src) {

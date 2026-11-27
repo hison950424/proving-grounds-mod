@@ -106,12 +106,14 @@ public class MainMenuScreen extends Screen {
             () -> switchTo(View.VENUES)));
         addRenderableWidget(new PGButton(x, top + CONTENT_Y + 70, w, 18, Component.literal("HUD 介面設定"), false, false,
             () -> minecraft.setScreen(new HudEditScreen(this))));
+        addRenderableWidget(new PGButton(x, top + CONTENT_Y + 94, w, 18, Component.literal("圖文教學與道具圖鑑"), false, false,
+            () -> minecraft.setScreen(new GuideBookScreen(this))));
         LobbyStatePacket lobby = ClientLobbyData.get();
         if (lobby != null && lobby.inLobby() && lobby.gameModeOrdinal() == GameManager.GameMode.BATTLE_ROYALE.ordinal()) {
             MenuDataPacket menu = ClientMenuData.get();
             MenuDataPacket.MapEntry map = menu != null ? findMap(menu.maps(), lobby.mapId()) : null;
             String label = map != null ? "預覽大逃殺地圖（" + map.name() + "）" : "預覽大逃殺地圖";
-            addRenderableWidget(new PGButton(x, top + CONTENT_Y + 96, w, 18, Component.literal(label), false, false, () -> {
+            addRenderableWidget(new PGButton(x, top + CONTENT_Y + 118, w, 18, Component.literal(label), false, false, () -> {
                 PGNetwork.sendToServer(new MenuRequestPacket());
                 if (minecraft != null) minecraft.setScreen(new BigMapScreen());
             }));
@@ -310,7 +312,11 @@ public class MainMenuScreen extends Screen {
             addRenderableWidget(end);
         }
         // 計畫書 7 A2：大廳不再有「開始」按鈕（全員準備自動開始，或管理員按「強制所有人準備」）
-        if (op) {
+        // 全員都已準備時不顯示「強制所有人準備」（倒數中仍顯示「取消倒數」）
+        boolean allReady = lobby != null
+            && lobby.players().stream().anyMatch(e -> !e.spectator())
+            && lobby.players().stream().filter(e -> !e.spectator()).allMatch(LobbyStatePacket.Entry::ready);
+        if (op && (counting || !allReady)) {
             PGButton force = new PGButton(bx + 2 * (bw + 8), by, bw, BTN_H, Tr.c(counting ? "lobby.cancel_countdown" : "lobby.force_start"), false, false,
                 () -> send(counting ? LobbyManager.Action.CANCEL_COUNTDOWN : LobbyManager.Action.FORCE_START, 0));
             force.active = canEdit;
@@ -324,6 +330,21 @@ public class MainMenuScreen extends Screen {
     private int arenaRows(int sx, int y, int sw, GameManager.GameMode gm, @Nullable LobbyStatePacket lobby, boolean canEdit, LobbyManager.TeamMode teamMode) {
         var a = lobby != null ? lobby.arena() : new com.provinggrounds.modes.arena.ArenaManager.Settings(100, 10, 1000, 1, false);
         y = row(sx, y, sw, "模式", Tr.t(gm == GameManager.GameMode.TDM ? "mode.tdm" : gm == GameManager.GameMode.DOM ? "mode.dom" : "mode.gk"), false, () -> {});
+        {
+            MenuDataPacket menuData = ClientMenuData.get();
+            List<MenuDataPacket.ArenaMapEntry> arenaMaps = menuData != null ? menuData.arenaMaps() : List.of();
+            if (!arenaMaps.isEmpty()) {
+                String curId = lobby != null ? lobby.arenaMapId() : "default";
+                List<String> names = new java.util.ArrayList<>();
+                int idx = 0;
+                for (int i = 0; i < arenaMaps.size(); i++) {
+                    names.add(arenaMaps.get(i).name());
+                    if (arenaMaps.get(i).id().equalsIgnoreCase(curId)) idx = i;
+                }
+                y = choice(sx, y, sw, "場地", names.get(idx), names, idx, canEdit && names.size() > 1,
+                    i -> send(LobbyManager.Action.SET_ARENA_MAP, i));
+            }
+        }
         switch (gm) {
             case TDM -> {
                 y = stepper(sx, y, sw, "目標擊殺", String.valueOf(a.tdmKills()), canEdit, 10, a.tdmKills(), LobbyManager.Action.SET_TDM_KILLS, false);

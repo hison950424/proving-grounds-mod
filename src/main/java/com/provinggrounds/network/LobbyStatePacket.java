@@ -25,6 +25,7 @@ public record LobbyStatePacket(
     int gameModeOrdinal, // 大廳選的模式（GameManager.GameMode）
     com.provinggrounds.modes.arena.ArenaManager.Settings arena, // 團隊死鬥／佔點／槍王之王設定
     int[] customCircle, // 自訂縮圈：階段數、間隔、速度 × 10、開場等待、最後一圈 %（計畫書 6 D2）
+    String arenaMapId, // 團隊模式目前場地 id（ArenaMapRegistry.activeId）
     List<Entry> players
 ) {
 
@@ -52,6 +53,7 @@ public record LobbyStatePacket(
         buf.writeVarInt(arena.gkMultiplier());
         buf.writeBoolean(arena.downed());
         buf.writeVarIntArray(customCircle);
+        buf.writeUtf(arenaMapId, 64);
         buf.writeVarInt(players.size());
         for (Entry e : players) {
             buf.writeUUID(e.id());
@@ -75,6 +77,7 @@ public record LobbyStatePacket(
         int gameMode = buf.readVarInt();
         var arena = new com.provinggrounds.modes.arena.ArenaManager.Settings(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean());
         int[] customCircle = buf.readVarIntArray(8);
+        String arenaMapId = buf.readUtf(64);
         int n = Math.min(buf.readVarInt(), 1000);
         List<Entry> players = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
@@ -85,7 +88,7 @@ public record LobbyStatePacket(
             int cls = buf.readVarInt();
             players.add(new Entry(id, name, team, (f & 1) != 0, (f & 2) != 0, (f & 4) != 0, (f & 8) != 0, cls, (f & 16) != 0));
         }
-        return new LobbyStatePacket(inLobby, map, preset, variant, teamMode, teamCount, countdown, draftPhase, special, friendlyFire, blockDamage, weapon, gameMode, arena, customCircle, players);
+        return new LobbyStatePacket(inLobby, map, preset, variant, teamMode, teamCount, countdown, draftPhase, special, friendlyFire, blockDamage, weapon, gameMode, arena, customCircle, arenaMapId, players);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {

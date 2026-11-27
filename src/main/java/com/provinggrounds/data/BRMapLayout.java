@@ -370,15 +370,27 @@ public final class BRMapLayout {
                                                      DistrictDef d, BuildingBlueprint bp, int idx, List<PlacedBuilding> allPlaced) {
         double maxCornerR = preset.radius() - CIRCLE_MARGIN;
         Direction[] dirs = Direction.Plane.HORIZONTAL.stream().toArray(Direction[]::new);
+        int dirBase = Math.floorMod(Long.hashCode(preset.seed() ^ (idx * 0x9E3779B9L + dcx * 31L + dcz * 17L)), 4);
+        int scanSignX = (dirBase % 2 == 0) ? 1 : -1;
+        int scanSignZ = (dirBase < 2) ? 1 : -1;
         PlacedBuilding best = null;
         double bestScore = Double.MAX_VALUE;
         for (int shell = 6; shell <= 148; shell += 4) {
-            for (int offX = -shell; offX <= shell; offX += 4) {
-                for (int offZ = -shell; offZ <= shell; offZ += 4) {
-                    if (Math.max(Math.abs(offX), Math.abs(offZ)) != shell) continue;
+            for (int rawX = -shell; rawX <= shell; rawX += 4) {
+                int offX = rawX * scanSignX;
+                for (int rawZ = -shell; rawZ <= shell; rawZ += 4) {
+                    if (Math.max(Math.abs(rawX), Math.abs(rawZ)) != shell) continue;
+                    int offZ = rawZ * scanSignZ;
                     int ox = dcx + offX;
                     int oz = dcz + offZ;
-                    Direction primary = inwardFacing(dcx - ox, dcz - oz, dirs[idx % 4]);
+                    Direction inward = inwardFacing(dcx - ox, dcz - oz, dirs[(idx + dirBase) % 4]);
+                    // 交錯變化朝向（面向廣場、面向街角切線、或朝外側街道）讓建築不再全朝同邊
+                    Direction primary = switch ((idx + dirBase) & 3) {
+                        case 0 -> inward;
+                        case 1 -> inward.getClockWise();
+                        case 2 -> inward.getCounterClockWise();
+                        default -> dirs[dirBase];
+                    };
                     Direction[] tryDirs = { primary, primary.getClockWise(), primary.getCounterClockWise(), primary.getOpposite() };
                     for (Direction f : tryDirs) {
                         int[] box = footprint(bp.width(), bp.depth(), ox, oz, f);
@@ -406,21 +418,28 @@ public final class BRMapLayout {
                                            List<PlacedBuilding> majors, List<DistrictBox> districts,
                                            List<RoadSeg> roads, List<SmallBuilding> outSmall, List<CompoundBox> outCompounds) {
         int lim = preset.radius() - 36;
-        int step = 80;
+        int step = 92;
+        int maxCompounds = Math.max(4, preset.radius() / 32);
         double maxCornerR = preset.radius() - CIRCLE_MARGIN;
         Direction[] dirs = Direction.Plane.HORIZONTAL.stream().toArray(Direction[]::new);
 
-        for (int gx = -lim; gx <= lim; gx += step) {
+        for (int gx = -lim; gx <= lim && outCompounds.size() < maxCompounds; gx += step) {
             int row = Math.floorDiv(gx + lim, step);
             int zShift = (row % 2 == 1) ? step / 2 : 0;
-            for (int gz = -lim + zShift; gz <= lim; gz += step) {
-                int jx = (int) Math.round((BRMapPresets.hash01(gx, gz, preset.seed() ^ 0x444L) - 0.5) * 26.0);
-                int jz = (int) Math.round((BRMapPresets.hash01(gx, gz, preset.seed() ^ 0x555L) - 0.5) * 26.0);
+            for (int gz = -lim + zShift; gz <= lim && outCompounds.size() < maxCompounds; gz += step) {
+                int jx = (int) Math.round((BRMapPresets.hash01(gx, gz, preset.seed() ^ 0x444L) - 0.5) * 44.0);
+                int jz = (int) Math.round((BRMapPresets.hash01(gx, gz, preset.seed() ^ 0x555L) - 0.5) * 44.0);
                 int cx = mapCx + gx + jx;
                 int cz = mapCz + gz + jz;
                 double relX = cx - mapCx;
                 double relZ = cz - mapCz;
                 if (Math.hypot(relX, relZ) > lim) continue;
+
+                // 有機群聚噪聲：只在中高群聚區與隨機散落點放置小房區，避免平均網格感且大幅降低數量
+                double cluster = BRMapPresets.noise2D(relX * 0.011 + 17.0, relZ * 0.011 - 29.0, preset.seed() ^ 0x411L);
+                double sparseGate = BRMapPresets.hash01(gx, gz, preset.seed() ^ 0x412L);
+                if (cluster < 0.44 && sparseGate > 0.22) continue;
+                if (cluster < 0.56 && sparseGate > 0.62) continue;
 
                 // 避開水域（例如港口與護城河），只把房區蓋在陸地上
                 double nh = evalNaturalHeight(preset, relX, relZ);
@@ -429,16 +448,17 @@ public final class BRMapLayout {
                 // 避開各大城區腹地與主幹道正中央
                 boolean nearDistrict = false;
                 for (DistrictBox d : districts) {
-                    if (cx >= d.minX() - 22 && cx <= d.maxX() + 22 && cz >= d.minZ() - 22 && cz <= d.maxZ() + 22) {
+                    if (cx >= d.minX() - 26 && cx <= d.maxX() + 26 && cz >= d.minZ() - 26 && cz <= d.maxZ() + 26) {
                         nearDistrict = true;
                         break;
                     }
                 }
                 if (nearDistrict) continue;
 
+                double minCompDist = (cluster > 0.66) ? 56.0 : 88.0;
                 boolean nearCompound = false;
                 for (CompoundBox cb : outCompounds) {
-                    if (Math.hypot(cb.centerX() - cx, cb.centerZ() - cz) < 58.0) {
+                    if (Math.hypot(cb.centerX() - cx, cb.centerZ() - cz) < minCompDist) {
                         nearCompound = true;
                         break;
                     }
@@ -457,17 +477,17 @@ public final class BRMapLayout {
                         nearRoadZ = (int) Math.round(proj[1]);
                     }
                 }
-                if (minRoadDist < 14.0) continue;
+                if (minRoadDist < 16.0) continue;
 
                 int elev = Math.max(preset.waterLevel() + 2, (int) Math.round(nh));
                 RegionBiome biome = BRMapPresets.biomeAt(preset, relX, relZ);
                 SmallKind[] palette = WildStructures.smallKindsFor(biome);
-                int wantCount = BRMapPresets.hash01(cx, cz, preset.seed() ^ 0x666L) > 0.35 ? 3 : 2;
+                int wantCount = (cluster > 0.65 || BRMapPresets.hash01(cx, cz, preset.seed() ^ 0x666L) > 0.45) ? 3 : 2;
 
                 List<SmallBuilding> group = new ArrayList<>();
                 for (int k = 0; k < wantCount; k++) {
                     SmallKind kind = palette[(int) Math.floor(BRMapPresets.hash01(cx + k * 13L, cz - k * 7L, preset.seed() ^ 0x777L) * palette.length) % palette.length];
-                    SmallBuilding slot = findSmallSlot(mapCx, mapCz, cx, cz, elev, biome, kind, k, maxCornerR, dirs, majors, outSmall, group);
+                    SmallBuilding slot = findSmallSlot(preset.seed(), mapCx, mapCz, cx, cz, elev, biome, kind, k, maxCornerR, dirs, majors, outSmall, group);
                     if (slot != null) {
                         group.add(slot);
                     }
@@ -484,7 +504,7 @@ public final class BRMapLayout {
                         maxZ = Math.max(maxZ, sb.maxZ());
                     }
                     outCompounds.add(new CompoundBox(biome, cx, cz, elev, minX - 4, maxX + 4, minZ - 4, maxZ + 4));
-                    if (minRoadDist <= 185.0) {
+                    if (minRoadDist <= 165.0) {
                         roads.add(new RoadSeg(cx, cz, nearRoadX, nearRoadZ, 1, true));
                     }
                 }
@@ -493,19 +513,30 @@ public final class BRMapLayout {
     }
 
     @Nullable
-    private static SmallBuilding findSmallSlot(int mapCx, int mapCz, int cx, int cz, int elev,
+    private static SmallBuilding findSmallSlot(long seed, int mapCx, int mapCz, int cx, int cz, int elev,
                                                RegionBiome biome, SmallKind kind, int idx, double maxCornerR,
                                                Direction[] dirs, List<PlacedBuilding> majors,
                                                List<SmallBuilding> existingSmall, List<SmallBuilding> group) {
+        int dirSeed = Math.floorMod(Long.hashCode(seed ^ (cx * 73856093L) ^ (cz * 19349663L) ^ idx), 4);
+        int signX = (dirSeed % 2 == 0) ? 1 : -1;
+        int signZ = (dirSeed < 2) ? 1 : -1;
         SmallBuilding best = null;
         double bestDist = Double.MAX_VALUE;
         for (int shell = 4; shell <= 36; shell += 4) {
-            for (int ox = -shell; ox <= shell; ox += 4) {
-                for (int oz = -shell; oz <= shell; oz += 4) {
-                    if (Math.max(Math.abs(ox), Math.abs(oz)) != shell) continue;
+            for (int rawX = -shell; rawX <= shell; rawX += 4) {
+                int ox = rawX * signX;
+                for (int rawZ = -shell; rawZ <= shell; rawZ += 4) {
+                    if (Math.max(Math.abs(rawX), Math.abs(rawZ)) != shell) continue;
+                    int oz = rawZ * signZ;
                     int wx = cx + ox;
                     int wz = cz + oz;
-                    Direction primary = inwardFacing(cx - wx, cz - wz, dirs[idx % 4]);
+                    Direction inward = inwardFacing(cx - wx, cz - wz, dirs[(idx + dirSeed) % 4]);
+                    Direction primary = switch ((idx + dirSeed) & 3) {
+                        case 0 -> inward;
+                        case 1 -> inward.getClockWise();
+                        case 2 -> inward.getCounterClockWise();
+                        default -> dirs[dirSeed];
+                    };
                     int[] box = footprint(kind.width, kind.depth, wx, wz, primary);
                     if (!allCornersWithin(box, mapCx, mapCz, maxCornerR)) continue;
                     if (overlapsAnyMajor(box, majors, MAJOR_GAP)) continue;
@@ -651,20 +682,32 @@ public final class BRMapLayout {
         List<MicroPoi> list = new ArrayList<>();
         int lim = preset.radius() - 26;
         double maxSq = lim * (double) lim;
-        int step = 64;
-        for (int gx = -lim; gx <= lim; gx += step) {
-            for (int gz = -lim; gz <= lim; gz += step) {
-                int jx = (int) Math.round((BRMapPresets.hash01(gx, gz, preset.seed() ^ 0x888L) - 0.5) * 20.0);
-                int jz = (int) Math.round((BRMapPresets.hash01(gx, gz, preset.seed() ^ 0x999L) - 0.5) * 20.0);
+        int step = 76;
+        int maxMicro = Math.max(4, preset.radius() / 36);
+        MicroKind[] roadsidePool = { MicroKind.CHECKPOINT, MicroKind.CONTAINER_YARD, MicroKind.CRASHED_CONVOY, MicroKind.WATER_TOWER };
+        MicroKind[] wildPool = { MicroKind.FIELD_CAMP, MicroKind.RUIN_WALLS, MicroKind.TRENCH_POST, MicroKind.LUMBER_CAMP };
+
+        for (int gx = -lim; gx <= lim && list.size() < maxMicro; gx += step) {
+            for (int gz = -lim; gz <= lim && list.size() < maxMicro; gz += step) {
+                int jx = (int) Math.round((BRMapPresets.hash01(gx, gz, preset.seed() ^ 0x888L) - 0.5) * 30.0);
+                int jz = (int) Math.round((BRMapPresets.hash01(gx, gz, preset.seed() ^ 0x999L) - 0.5) * 30.0);
                 int wx = mapCx + gx + jx;
                 int wz = mapCz + gz + jz;
                 double rx = wx - mapCx, rz = wz - mapCz;
                 if (rx * rx + rz * rz > maxSq) continue;
 
+                double rd = terrain.roadDistance(wx, wz);
+                boolean roadside = rd <= 28.0;
+                double cluster = BRMapPresets.noise2D(rx * 0.014 - 9.0, rz * 0.014 + 21.0, preset.seed() ^ 0x812L);
+                double chance = BRMapPresets.hash01(wx, wz, preset.seed() ^ 0x813L);
+                // 路旁哨站偏重於某些群落段，荒野點非均勻出現且數量減半
+                if (!roadside && cluster < 0.48) continue;
+                if (!roadside && chance > 0.55) continue;
+                if (roadside && chance > 0.65) continue;
+
                 int sy = terrain.surfaceY(wx, wz);
                 if (sy <= preset.waterLevel() + 1) continue;
-                double rd = terrain.roadDistance(wx, wz);
-                if (rd < 4.0) continue;
+                if (rd < 4.5) continue;
                 if (pointHitsAnyBuilding(wx, wz, 9, majors, smalls)) continue;
 
                 boolean skip = false;
@@ -673,16 +716,14 @@ public final class BRMapLayout {
                 }
                 if (skip) continue;
                 for (MicroPoi m : list) {
-                    if (Math.hypot(m.x() - wx, m.z() - wz) < 46.0) { skip = true; break; }
+                    if (Math.hypot(m.x() - wx, m.z() - wz) < 62.0) { skip = true; break; }
                 }
                 if (skip) continue;
 
                 RegionBiome biome = terrain.biomeAtWorld(wx, wz);
-                boolean roadside = rd <= 28.0;
                 double pick = BRMapPresets.hash01(wx, wz, preset.seed() ^ 0xAAAL);
-                MicroKind kind = roadside
-                    ? (pick < 0.55 ? MicroKind.CHECKPOINT : MicroKind.CONTAINER_YARD)
-                    : (pick < 0.52 ? MicroKind.FIELD_CAMP : MicroKind.RUIN_WALLS);
+                MicroKind[] pool = roadside ? roadsidePool : wildPool;
+                MicroKind kind = pool[(int) Math.floor(pick * pool.length) % pool.length];
                 Direction facing = Direction.from2DDataValue(Math.floorMod(wx * 13 + wz * 29, 4));
                 list.add(new MicroPoi(kind, biome, wx, sy, wz, facing));
             }
@@ -696,16 +737,23 @@ public final class BRMapLayout {
         List<CoverSpot> list = new ArrayList<>();
         int lim = preset.radius() - 18;
         double maxSq = lim * (double) lim;
-        int step = 18;
+        int step = 20;
         for (int gx = -lim; gx <= lim; gx += step) {
             for (int gz = -lim; gz <= lim; gz += step) {
-                int jx = (int) Math.round((BRMapPresets.hash01(gx, gz, preset.seed() ^ 0x101L) - 0.5) * 10.0);
-                int jz = (int) Math.round((BRMapPresets.hash01(gx, gz, preset.seed() ^ 0x202L) - 0.5) * 10.0);
+                int jx = (int) Math.round((BRMapPresets.hash01(gx, gz, preset.seed() ^ 0x101L) - 0.5) * 14.0);
+                int jz = (int) Math.round((BRMapPresets.hash01(gx, gz, preset.seed() ^ 0x202L) - 0.5) * 14.0);
                 int wx = mapCx + gx + jx;
                 int wz = mapCz + gz + jz;
                 double rx = wx - mapCx, rz = wz - mapCz;
                 if (rx * rx + rz * rz > maxSq) continue;
-                if (terrain.roadDistance(wx, wz) < 3.5) continue;
+
+                // 非均勻密度噪聲：密林/亂石群密集(80%)、中度(35%)、開闊平原極少(12%)，避免全圖整齊平均塞滿
+                double density = BRMapPresets.noise2D(rx * 0.016 + 33.0, rz * 0.016 - 19.0, preset.seed() ^ 0xC13L);
+                double gate = BRMapPresets.hash01(wx, wz, preset.seed() ^ 0xC14L);
+                double keepProb = density > 0.58 ? 0.80 : (density > 0.36 ? 0.36 : 0.12);
+                if (gate > keepProb) continue;
+
+                if (terrain.roadDistance(wx, wz) < 3.8) continue;
                 int sy = terrain.surfaceY(wx, wz);
                 if (sy <= preset.waterLevel()) continue;
 
@@ -721,22 +769,25 @@ public final class BRMapLayout {
                 if (skip) continue;
 
                 RegionBiome biome = terrain.biomeAtWorld(wx, wz);
-                // 區域生態噪聲決定自然掩體群落（森林帶／岩群／戰術矮牆／車輛／貨櫃／沙包）
-                double cluster = BRMapPresets.noise2D((wx - mapCx) * 0.022, (wz - mapCz) * 0.022, preset.seed() ^ 0xBBBL);
+                double cluster = BRMapPresets.noise2D(rx * 0.024, rz * 0.024, preset.seed() ^ 0xBBBL);
                 double pick = BRMapPresets.hash01(wx, wz, preset.seed() ^ 0x303L);
                 int kind;
-                if (biome != RegionBiome.DESERT_SAND && biome != RegionBiome.RED_CANYON && cluster > 0.54 && pick < 0.72) {
+                if (biome != RegionBiome.DESERT_SAND && biome != RegionBiome.RED_CANYON && cluster > 0.54 && pick < 0.68) {
                     kind = 3; // 成片森林樹叢帶
-                } else if (cluster < 0.28 || pick < 0.26) {
+                } else if (cluster < 0.28 || pick < 0.20) {
                     kind = 4; // 多格巨石／山岩柱／冰丘
-                } else if (pick < 0.48) {
-                    kind = 5; // 長條戰術矮牆／戰壕牆
-                } else if (pick < 0.68) {
+                } else if (pick < 0.36) {
+                    kind = 5; // 長條戰術矮牆
+                } else if (pick < 0.52) {
                     kind = 1; // L 型戰術沙包／石磚掩體
-                } else if (pick < 0.85) {
+                } else if (pick < 0.66) {
                     kind = 0; // 軍車／吉普車
-                } else {
+                } else if (pick < 0.80) {
                     kind = 2; // 貨櫃／斷垣
+                } else if (pick < 0.90) {
+                    kind = 6; // 乾草堆＋木柵掩體
+                } else {
+                    kind = 7; // 工業管線／鐵網掩體
                 }
                 list.add(new CoverSpot(wx, wz, biome, kind));
             }
